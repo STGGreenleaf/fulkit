@@ -186,7 +186,7 @@ export default function Landing() {
         >
           {[
             "The full kit \u2014 everything you need, nothing you don\u2019t.",
-            "A feeling \u2014 from German \u201Cf\u00FChlen\u201D (to feel). A tool designed to feel right.",
+            "A feeling \u2014 a tool designed to feel right.",
             "Your bestie \u2014 the last app you\u2019ll ever need.",
           ].map((def, i) => (
             <div
