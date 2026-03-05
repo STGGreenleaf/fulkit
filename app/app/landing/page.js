@@ -133,7 +133,7 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ─── HERO ─── */}
+      {/* ─── HERO: DICTIONARY ENTRY ─── */}
       <section
         style={{
           minHeight: "100vh",
@@ -146,25 +146,95 @@ export default function Landing() {
       >
         <h1
           style={{
-            fontSize: "clamp(36px, 6vw, 64px)",
+            fontSize: "clamp(48px, 8vw, 96px)",
             fontWeight: "var(--font-weight-black)",
-            letterSpacing: "-1px",
-            lineHeight: 1.05,
-            maxWidth: 720,
-            marginBottom: "var(--space-6)",
+            letterSpacing: "-2px",
+            lineHeight: "var(--line-height-none)",
+            marginBottom: "var(--space-4)",
           }}
         >
-          One app.
-          <br />
-          One bestie.
-          <br />
-          Everything else
-          <br />
-          is noise.
+          Fülkit
         </h1>
-        <p
+        <div
           style={{
             fontSize: "var(--font-size-lg)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-8)",
+          }}
+        >
+          /{"\u02C8"}f{"\u00FC"}{"\u02D0"}l{"\u00B7"}k{"\u026A"}t/
+        </div>
+        <div
+          style={{
+            fontSize: "var(--font-size-sm)",
+            fontStyle: "italic",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-4)",
+          }}
+        >
+          noun.
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-2)",
+            marginBottom: "var(--space-8)",
+            maxWidth: 600,
+          }}
+        >
+          {[
+            "The full kit \u2014 everything you need, nothing you don\u2019t.",
+            "A feeling \u2014 from German \u201Cf\u00FChlen\u201D (to feel). A tool designed to feel right.",
+            "Your bestie \u2014 the last app you\u2019ll ever need.",
+          ].map((def, i) => (
+            <div
+              key={i}
+              style={{
+                fontSize: "var(--font-size-base)",
+                lineHeight: "var(--line-height-relaxed)",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginRight: "var(--space-2)" }}>
+                {i + 1}.
+              </span>
+              {def}
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-dim)",
+            lineHeight: "var(--line-height-relaxed)",
+            maxWidth: 600,
+            marginBottom: "var(--space-10)",
+          }}
+        >
+          <div>
+            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>Origin:</span> German. fühl (to feel) + kit (a set of tools).
+          </div>
+          <div style={{ marginTop: "var(--space-1)" }}>
+            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>See also:</span> the only app that knows what you saved last Tuesday.
+          </div>
+        </div>
+
+        <p
+          style={{
+            fontSize: "var(--font-size-xl)",
+            fontWeight: "var(--font-weight-bold)",
+            lineHeight: "var(--line-height-tight)",
+            maxWidth: 720,
+            marginBottom: "var(--space-4)",
+          }}
+        >
+          One app. One bestie. Everything else is noise.
+        </p>
+        <p
+          style={{
+            fontSize: "var(--font-size-base)",
             fontWeight: "var(--font-weight-normal)",
             color: "var(--color-text-secondary)",
             lineHeight: "var(--line-height-relaxed)",
@@ -172,8 +242,7 @@ export default function Landing() {
             marginBottom: "var(--space-10)",
           }}
         >
-          Fülkit replaces the apps you juggle, connects the thoughts you forget,
-          and gives you a bestie that already knows what you're working on.
+          A friend with benefits — and the benefits are real.
         </p>
         <CTAButton />
       </section>
@@ -830,9 +899,9 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          Refer 7 friends, never pay again.{" "}
+          Friends get benefits. Every friend who joins earns you $1/mo off your subscription.{" "}
           <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-secondary)" }}>
-            Every referral earns $1/mo off your subscription.
+            7 friends = free forever.
           </span>
         </p>
       </section>
@@ -855,6 +924,10 @@ export default function Landing() {
             }}
           >
             Get Fülkit.
+            <br />
+            <span style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-normal)", color: "var(--color-text-secondary)" }}>
+              The benefits are real.
+            </span>
           </h2>
           <p
             style={{

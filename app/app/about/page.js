@@ -53,93 +53,8 @@ export default function About() {
         </Link>
       </nav>
 
-      {/* ─── HERO: DICTIONARY ENTRY ─── */}
-      <section
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "clamp(48px, 8vw, 96px)",
-            fontWeight: "var(--font-weight-black)",
-            letterSpacing: "-2px",
-            lineHeight: "var(--line-height-none)",
-            marginBottom: "var(--space-4)",
-          }}
-        >
-          F{"\u00FC"}lkit
-        </h1>
-        <div
-          style={{
-            fontSize: "var(--font-size-lg)",
-            fontFamily: "var(--font-mono)",
-            color: "var(--color-text-muted)",
-            marginBottom: "var(--space-8)",
-          }}
-        >
-          /{"\u02C8"}f{"\u00FC"}{"\u02D0"}l{"\u00B7"}k{"\u026A"}t/
-        </div>
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            fontStyle: "italic",
-            color: "var(--color-text-muted)",
-            marginBottom: "var(--space-4)",
-          }}
-        >
-          noun.
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-            marginBottom: "var(--space-8)",
-            maxWidth: 600,
-          }}
-        >
-          {[
-            "The full kit \u2014 everything you need, nothing you don\u2019t.",
-            "A feeling \u2014 from German \u201Cf\u00FChlen\u201D (to feel). A tool designed to feel right.",
-            "Your bestie \u2014 the last app you\u2019ll ever need.",
-          ].map((def, i) => (
-            <div
-              key={i}
-              style={{
-                fontSize: "var(--font-size-base)",
-                lineHeight: "var(--line-height-relaxed)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginRight: "var(--space-2)" }}>
-                {i + 1}.
-              </span>
-              {def}
-            </div>
-          ))}
-        </div>
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-dim)",
-            lineHeight: "var(--line-height-relaxed)",
-            maxWidth: 600,
-          }}
-        >
-          <div>
-            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>Origin:</span> German. f{"\u00FC"}hl (to feel) + kit (a set of tools).
-          </div>
-          <div style={{ marginTop: "var(--space-1)" }}>
-            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>See also:</span> the only app that knows what you saved last Tuesday.
-          </div>
-        </div>
-      </section>
+      {/* ─── spacer for fixed nav ─── */}
+      <div style={{ height: "var(--space-24)" }} />
 
       {/* ─── THE {"\u00FC"} ─── */}
       <Section>
@@ -175,10 +90,7 @@ export default function About() {
         <HeritageTitle>DIN</HeritageTitle>
         <HeritageSubtitle>Deutsches Institut f{"\u00FC"}r Normung, 1931</HeritageSubtitle>
         <Body>
-          The typeface you{"\u2019"}re reading right now was designed for German road signs. It was engineered to be legible at 120 kilometers per hour, in rain, at night. The German Institute for Standardization created it because they believed even a road sign deserved to be designed with intention.
-        </Body>
-        <Body>
-          F{"\u00FC"}lkit uses DIN because every word on screen should earn its place. If a typeface built for highway clarity can{"\u2019"}t justify a button label, that label shouldn{"\u2019"}t exist.
+          Designed for German road signs {"\u2014"} legible at 120 km/h, in rain, at night. F{"\u00FC"}lkit uses DIN because every word on screen should earn its place.
         </Body>
       </Section>
 
@@ -187,10 +99,7 @@ export default function About() {
         <HeritageTitle>Bauhaus</HeritageTitle>
         <HeritageSubtitle>Weimar, 1919</HeritageSubtitle>
         <Body>
-          <em>Form follows function.</em> Three words that changed design forever. The Bauhaus school taught that decoration without purpose is dishonesty. A chair should look like what it does. A building should reveal how it works. A tool should feel like exactly what it is.
-        </Body>
-        <Body>
-          F{"\u00FC"}lkit has no gradients pretending to be depth. No shadows pretending to be dimension. No icons pretending to be intuitive. What you see is what it does. The interface disappears so the thinking can happen.
+          <em>Form follows function.</em> Decoration without purpose is dishonesty. F{"\u00FC"}lkit has no gradients pretending to be depth, no shadows pretending to be dimension. The interface disappears so the thinking can happen.
         </Body>
       </Section>
 
@@ -214,13 +123,8 @@ export default function About() {
           {[
             "Good design is innovative.",
             "Good design makes a product useful.",
-            "Good design is aesthetic.",
-            "Good design makes a product understandable.",
             "Good design is unobtrusive.",
             "Good design is honest.",
-            "Good design is long-lasting.",
-            "Good design is thorough down to the last detail.",
-            "Good design is environmentally friendly.",
             "Good design is as little design as possible.",
           ].map((principle, i) => (
             <div
@@ -247,10 +151,7 @@ export default function About() {
         <HeritageTitle>Swiss International Style</HeritageTitle>
         <HeritageSubtitle>Z{"\u00FC"}rich, 1950s</HeritageSubtitle>
         <Body>
-          Grid systems. Objective presentation. Mathematical precision in the service of clarity. The Swiss took German engineering and added structure. Every element on a page exists in relationship to every other element. Nothing is random. Nothing is decorative.
-        </Body>
-        <Body>
-          F{"\u00FC"}lkit{"\u2019"}s layouts are asymmetric but never arbitrary. The whitespace isn{"\u2019"}t empty {"\u2014"} it{"\u2019"}s working. The horizontal rules aren{"\u2019"}t decoration {"\u2014"} they{"\u2019"}re architecture. The left-alignment isn{"\u2019"}t lazy {"\u2014"} it{"\u2019"}s anchored, like a railway timetable or a Braun product sheet.
+          Grid systems. Mathematical precision in the service of clarity. F{"\u00FC"}lkit{"\u2019"}s layouts are asymmetric but never arbitrary {"\u2014"} the whitespace is working, the horizontal rules are architecture.
         </Body>
       </Section>
 
@@ -258,16 +159,7 @@ export default function About() {
       <Section>
         <SectionTitle>The Palette</SectionTitle>
         <Body>
-          <strong>Eggshell, not white.</strong> Pure white is clinical. F{"\u00FC"}lkit{"\u2019"}s background is warm {"\u2014"} like aged paper on a wooden desk. You{"\u2019"}re meant to spend time here. It should feel like somewhere you{"\u2019"}d sit, not somewhere you{"\u2019"}d stand.
-        </Body>
-        <Body>
-          <strong>Deep slate, not black.</strong> Pure black is harsh. F{"\u00FC"}lkit{"\u2019"}s text is a warm, dark tone {"\u2014"} like ink from a good pen. Readable for hours. Easy on the eyes. Noticeably not a screen color.
-        </Body>
-        <Body>
-          <strong>No decorative color.</strong> The only color in F{"\u00FC"}lkit comes from functional indicators {"\u2014"} a purple dot means this note came from Obsidian, a green dot means Google Drive. Color informs. It never decorates.
-        </Body>
-        <Body>
-          This is the achromatic tradition. Let the content be the color. In F{"\u00FC"}lkit{"\u2019"}s case, your ideas are the most colorful things on screen.
+          Eggshell, not white {"\u2014"} warm like aged paper. Deep slate, not black {"\u2014"} like ink from a good pen. No decorative color {"\u2014"} color informs, never decorates. Your ideas are the most colorful things on screen.
         </Body>
       </Section>
 
@@ -341,20 +233,13 @@ export default function About() {
         <Body>
           A tool called {"\u201C"}Productivity Suite 3.0{"\u201D"} gets scrolled past. A tool called <strong>F{"\u00FC"}lkit</strong> gets a reaction. And when someone asks what it means, you get to explain the German design heritage, the feeling philosophy, and the full-kit concept {"\u2014"} all from two syllables.
         </Body>
-        <Body>The brand is the first magic trick. The product is the second.</Body>
+        <Body>The brand is the first magic trick. The benefits are the second.</Body>
       </Section>
 
       {/* ─── WYSIWYG ─── */}
       <Section>
         <SectionTitle>What You See Is What You Get</SectionTitle>
-        <Body>
-          F{"\u00FC"}lkit doesn{"\u2019"}t hide behind complexity. There are no dashboards full of metrics nobody checks. No feature tours that take longer than using the feature. No settings pages with 47 toggles.
-        </Body>
-        <Body>You open it. You talk. It already knows.</Body>
-        <Body>
-          If you want to see the gears {"\u2014"} the data, the preferences, the files, the AI{"\u2019"}s memory {"\u2014"} it{"\u2019"}s all there behind the settings. Clean, organized, deletable. But you{"\u2019"}ll probably never need it. Because the best design is the design you don{"\u2019"}t notice.
-        </Body>
-        <Body>That{"\u2019"}s simplicity at its finest.</Body>
+        <Body>You open it. You talk. It already knows. That{"\u2019"}s simplicity at its finest.</Body>
       </Section>
 
       {/* ─── CLOSING ─── */}
