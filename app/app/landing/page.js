@@ -830,7 +830,6 @@ export default function Landing() {
           style={{
             padding: "var(--space-24) var(--space-8)",
             maxWidth: 900,
-            margin: "0 auto",
           }}
         >
           <h2
