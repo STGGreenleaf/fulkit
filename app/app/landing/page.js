@@ -162,7 +162,7 @@ export default function Landing() {
           Fülkit replaces the apps you juggle, connects the thoughts you forget,
           and gives you a bestie that already knows what you're working on.
         </p>
-        <WaitlistForm />
+        <CTAButton />
       </section>
 
       {/* ─── THE PROBLEM ─── */}
@@ -856,7 +856,7 @@ export default function Landing() {
             Stop catching AI up to speed. Stop switching between 8 apps.
             Just open it and talk. It already knows.
           </p>
-          <WaitlistForm />
+          <CTAButton />
         </section>
 
       {/* ─── FOOTER ─── */}
@@ -912,49 +912,27 @@ export default function Landing() {
   );
 }
 
-function WaitlistForm() {
+function CTAButton() {
   return (
-    <form
-      onSubmit={(e) => e.preventDefault()}
+    <Link
+      href="/login"
       style={{
-        display: "flex",
-        gap: "var(--space-2)",
-        maxWidth: 380,
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "var(--space-2-5) var(--space-5)",
+        background: "var(--color-accent)",
+        color: "var(--color-text-inverse)",
+        border: "none",
+        borderRadius: "var(--radius-sm)",
+        fontSize: "var(--font-size-sm)",
+        fontWeight: "var(--font-weight-semibold)",
+        fontFamily: "var(--font-primary)",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        textDecoration: "none",
       }}
     >
-      <input
-        type="email"
-        placeholder="your@email.com"
-        required
-        style={{
-          flex: 1,
-          padding: "var(--space-2-5) var(--space-4)",
-          background: "transparent",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-sm)",
-          fontSize: "var(--font-size-base)",
-          fontFamily: "var(--font-primary)",
-          color: "var(--color-text)",
-          outline: "none",
-        }}
-      />
-      <button
-        type="submit"
-        style={{
-          padding: "var(--space-2-5) var(--space-5)",
-          background: "var(--color-accent)",
-          color: "var(--color-text-inverse)",
-          border: "none",
-          borderRadius: "var(--radius-sm)",
-          fontSize: "var(--font-size-sm)",
-          fontWeight: "var(--font-weight-semibold)",
-          fontFamily: "var(--font-primary)",
-          cursor: "pointer",
-          whiteSpace: "nowrap",
-        }}
-      >
-        Get Fülkit
-      </button>
-    </form>
+      Get Fülkit
+    </Link>
   );
 }
