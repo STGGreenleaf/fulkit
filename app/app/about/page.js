@@ -40,17 +40,30 @@ export default function About() {
         >
           F{"\u00FC"}lkit
         </Link>
-        <Link
-          href="/login"
-          style={{
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            color: "var(--color-text-secondary)",
-            textDecoration: "none",
-          }}
-        >
-          Sign in
-        </Link>
+        <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+          <Link
+            href="/about"
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              color: "var(--color-text)",
+              textDecoration: "none",
+            }}
+          >
+            WTF
+          </Link>
+          <Link
+            href="/login"
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-medium)",
+              color: "var(--color-text-secondary)",
+              textDecoration: "none",
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
       </nav>
 
       {/* ─── spacer for fixed nav ─── */}
@@ -110,7 +123,7 @@ export default function About() {
         <Body>
           <em>Less, but better.</em> Rams designed the products your grandparents still use. His alarm clocks, his calculators, his radios {"\u2014"} they work the same today as the day they were made. Not because they were trendy. Because they were right.
         </Body>
-        <Body>His ten principles of good design read like F{"\u00FC"}lkit{"\u2019"}s manifesto:</Body>
+        <Body>Five of his principles read like F{"\u00FC"}lkit{"\u2019"}s manifesto:</Body>
         <div
           style={{
             display: "flex",
