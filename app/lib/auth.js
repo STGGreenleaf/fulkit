@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/home`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) console.error("Sign in error:", error.message);
@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/home`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) console.error("Magic link error:", error.message);
