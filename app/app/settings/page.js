@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import { useAuth } from "../../lib/auth";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -347,6 +348,8 @@ function Row({ label, value, action, actionLabel, danger }) {
 }
 
 function AccountTab() {
+  const { signOut } = useAuth();
+
   return (
     <div style={{ maxWidth: 520 }}>
       <SectionTitle>Profile</SectionTitle>
@@ -404,6 +407,27 @@ function AccountTab() {
             </button>
           </div>
         </Card>
+      </div>
+
+      <div style={{ marginTop: "var(--space-8)" }}>
+        <button
+          onClick={signOut}
+          style={{
+            width: "100%",
+            padding: "var(--space-2-5) var(--space-4)",
+            background: "transparent",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-semibold)",
+            fontFamily: "var(--font-primary)",
+            color: "var(--color-error)",
+            cursor: "pointer",
+            transition: "all var(--duration-fast) var(--ease-default)",
+          }}
+        >
+          Sign out
+        </button>
       </div>
     </div>
   );
