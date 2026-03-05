@@ -316,7 +316,7 @@ export default function About() {
             marginBottom: "var(--space-16)",
           }}
         >
-          F{"\u00FC"}lkit your brains out.
+          The full kit for your mind.
         </div>
         <Link
           href="/login"
