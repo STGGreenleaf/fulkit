@@ -917,19 +917,18 @@ function CTAButton() {
     <Link
       href="/login"
       style={{
-        display: "inline-flex",
-        alignItems: "center",
+        display: "block",
+        width: "100%",
         padding: "var(--space-2-5) var(--space-5)",
         background: "var(--color-accent)",
         color: "var(--color-text-inverse)",
-        border: "none",
         borderRadius: "var(--radius-sm)",
         fontSize: "var(--font-size-sm)",
         fontWeight: "var(--font-weight-semibold)",
         fontFamily: "var(--font-primary)",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
+        textAlign: "center",
         textDecoration: "none",
+        cursor: "pointer",
       }}
     >
       Get Fülkit
