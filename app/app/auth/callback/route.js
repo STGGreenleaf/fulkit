@@ -1,5 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -7,34 +5,11 @@ export async function GET(request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/home";
 
+  // Pass code to client-side page that can exchange it
   if (code) {
-    const cookieStore = await cookies();
-    const cookiesToSet = [];
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookies) {
-            cookiesToSet.push(...cookies);
-          },
-        },
-      }
+    return NextResponse.redirect(
+      `${origin}/auth/confirm?code=${code}&next=${encodeURIComponent(next)}`
     );
-
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (!error) {
-      const response = NextResponse.redirect(`${origin}${next}`);
-      cookiesToSet.forEach(({ name, value, options }) => {
-        response.cookies.set(name, value, options);
-      });
-      return response;
-    }
   }
 
   return NextResponse.redirect(`${origin}/login`);
