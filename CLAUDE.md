@@ -11,6 +11,8 @@
 - Never write "FulKit", "FULKIT", "FullKit", or "Ful-kit".
 - Sub-features use their proper names: **The Hum**, **Whispers**, **Ful Gauge**.
 - Inline styles only — no CSS modules, no Tailwind, no styled-components.
+- CTAs are always full-width block `<Link>` buttons — `display: "block"`, `width: "100%"`, `textAlign: "center"`. No email inputs, no forms. One solid bar.
+- The Fulkit logo/wordmark in any nav always links to `/home`.
 - Before context clears, always write a session summary to `md/devlog.md`.
 
 ## Project Structure
