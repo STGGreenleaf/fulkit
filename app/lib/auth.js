@@ -1,18 +1,28 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 const AuthContext = createContext(null);
 
+const REAL_USER = { id: "collin", email: "collin@fulkit.app", name: "Collin" };
+const NEW_USER = { id: "new", email: "new@fulkit.app", name: "", isNew: true };
+
 // Mock auth provider — swap with Supabase Auth later
 export function AuthProvider({ children }) {
-  // Default signed in for dev — set to null to test landing/login flow
-  const [user, setUser] = useState({ id: "dev", email: "collin@fulkit.app", name: "Collin" });
+  const [user, setUser] = useState(REAL_USER);
   const [loading, setLoading] = useState(false);
+
+  // Dev mode: ?auth=none (signed out) or ?auth=new (onboarding)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("auth");
+    if (mode === "none") setUser(null);
+    else if (mode === "new") setUser(NEW_USER);
+  }, []);
 
   const signIn = useCallback(() => {
     // Will be: supabase.auth.signInWithOAuth({ provider: 'google' })
-    setUser({ id: "mock", email: "you@fulkit.app", name: "You" });
+    setUser(REAL_USER);
   }, []);
 
   const signOut = useCallback(() => {

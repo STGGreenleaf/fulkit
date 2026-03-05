@@ -11,6 +11,8 @@ export default function AuthGuard({ children }) {
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/landing");
+    } else if (!loading && user?.isNew) {
+      router.replace("/onboarding");
     }
   }, [user, loading, router]);
 
@@ -45,7 +47,7 @@ export default function AuthGuard({ children }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || user.isNew) return null;
 
   return children;
 }

@@ -46,7 +46,7 @@ export default function Dashboard() {
                   marginBottom: "var(--space-1)",
                 }}
               >
-                {getGreeting()}, user.
+                {getGreeting()}, {user?.name || "friend"}.
               </h1>
               <p
                 style={{

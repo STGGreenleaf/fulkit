@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Check, SkipForward } from "lucide-react";
-import AuthGuard from "../../components/AuthGuard";
+import { useAuth } from "../../lib/auth";
+import { useRouter } from "next/navigation";
 
 const PHASES = [
   {
@@ -237,6 +238,8 @@ const PHASE_DONE_MSGS = [
 ];
 
 export default function Onboarding() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -245,6 +248,13 @@ export default function Onboarding() {
   const [showPhaseDone, setShowPhaseDone] = useState(false);
   const [complete, setComplete] = useState(false);
   const inputRef = useRef(null);
+
+  // No user at all → go to landing
+  useEffect(() => {
+    if (!user) router.replace("/landing");
+  }, [user, router]);
+
+  if (!user) return null;
 
   const phase = PHASES[phaseIdx];
   const question = phase?.questions[questionIdx];
@@ -306,7 +316,7 @@ export default function Onboarding() {
 
   if (complete) {
     return (
-      <AuthGuard>
+      <>
       <div
         style={{
           minHeight: "100vh",
@@ -373,12 +383,12 @@ export default function Onboarding() {
           <ArrowRight size={14} strokeWidth={2.5} />
         </a>
       </div>
-      </AuthGuard>
+      </>
     );
   }
 
   return (
-    <AuthGuard>
+    <>
     <div
       style={{
         minHeight: "100vh",
@@ -679,6 +689,6 @@ export default function Onboarding() {
         )}
       </div>
     </div>
-    </AuthGuard>
+    </>
   );
 }
