@@ -107,17 +107,30 @@ export default function Landing() {
         >
           Fülkit
         </Link>
-        <Link
-          href="/login"
-          style={{
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            color: "var(--color-text-secondary)",
-            textDecoration: "none",
-          }}
-        >
-          Sign in
-        </Link>
+        <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+          <Link
+            href="/about"
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-semibold)",
+              color: "var(--color-text-muted)",
+              textDecoration: "none",
+            }}
+          >
+            WTF
+          </Link>
+          <Link
+            href="/login"
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-medium)",
+              color: "var(--color-text-secondary)",
+              textDecoration: "none",
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
       </nav>
 
       {/* ─── HERO ─── */}
