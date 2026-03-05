@@ -5,6 +5,43 @@
 
 ---
 
+## Session 3 — 2026-03-05 afternoon: CTA, About Page, Auth Fixes
+
+### What was built
+- **CTA evolution**: Dead waitlist form → working Link → full-width solid bar (no email input, one click)
+- **WTF/About page**: `/about` built from `md/wtf-about.md` — 12 sections, design exhibition, dictionary hero, DIN/Bauhaus/Rams/Swiss heritage, pull quotes, Rams principles stacked
+- **`/wtf` redirect**: Server redirect to `/about`
+- **Landing nav**: Added "WTF" link between logo and Sign in
+- **Sign out button**: Settings → Account tab, full-width, error-colored
+- **Supabase URL config**: Site URL set to `https://fulkit.app`, redirect URLs added for fulkit.app, fullkit.app, localhost
+- **Auth race fix**: `await fetchProfile` before `setLoading(false)` in `getSession`
+- **@supabase/ssr**: Switched from vanilla `createClient` to `createBrowserClient` for proper Next.js cookie-based session handling
+- **CLAUDE.md + devlog.md merge**: Validated alternate versions against real codebase, merged best of both
+- **New CLAUDE.md rules**: CTA always full-width block Link, logo always links /home
+
+### Decisions locked
+- CTAs are full-width solid bars — no email inputs, no forms
+- Landing page sandwich layout: hero left, middle centered, final CTA left
+- Logo/wordmark always links `/home`
+- `/wtf` → `/about` redirect (nav says "WTF" because it's on-brand)
+
+### Known issues (BLOCKING)
+- **Google OAuth sign-in redirects to /landing instead of /home** — switched to @supabase/ssr but not yet verified working. This blocks real user sign-in.
+- Owner role not yet set for Collin (blocked by auth)
+
+### Known issues (non-blocking)
+- Magic link delivery untested
+- D-DIN font files not in assets/fonts/ (using system fallback)
+- AI chat untested in production
+
+### What's next
+- **Fix auth** — debug why Google OAuth callback doesn't establish session
+- Set Collin as owner after first successful sign-in
+- Pressure test magic link delivery
+- Build chat interface with Claude API
+
+---
+
 ## Session 2 — 2026-03-05: Auth + Deploy + Owner Portal
 
 ### What was built

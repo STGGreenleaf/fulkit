@@ -13,6 +13,7 @@
 - Inline styles only — no CSS modules, no Tailwind, no styled-components.
 - CTAs are always full-width block `<Link>` buttons — `display: "block"`, `width: "100%"`, `textAlign: "center"`. No email inputs, no forms. One solid bar.
 - The Fulkit logo/wordmark in any nav always links to `/home`.
+- **Auto-checkpoint before context compression**: Update `md/devlog.md` with session work, `TODO.md` with completed items, and commit. Never cold start. This is non-negotiable.
 - Before context clears, always write a session summary to `md/devlog.md`.
 
 ## Project Structure

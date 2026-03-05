@@ -1,40 +1,45 @@
-# Fülkit — Master Action List
+# Fulkit — Master Action List
 
 > Get live. Dogfood. Iterate.
 
 ---
 
-## Phase 1: Deploy (Get it live)
+## Phase 1: Deploy (Get it live) -- DONE
 
-- [ ] Set up Vercel project — connect repo, deploy Next.js app to Fulkit.app
-- [ ] Configure domains — point Fulkit.app DNS to Vercel, set up FullKit.app → Fulkit.app redirect
-- [ ] Add environment variables — `ANTHROPIC_API_KEY` (Claude) to Vercel env vars
-- [ ] Verify build passes clean — `next build` with zero errors before first deploy
+- [x] Set up Vercel project — connect repo, deploy Next.js app to fulkit.app
+- [x] Configure domains — fulkit.app DNS to Vercel, fullkit.app 308 redirect
+- [x] Add environment variables — ANTHROPIC_API_KEY, Supabase keys to Vercel
+- [x] Verify build passes clean — next build with zero errors
 
-## Phase 2: Real Auth + Database (Make it real)
+## Phase 2: Real Auth + Database (Make it real) -- IN PROGRESS
 
-- [ ] Create Supabase project — Postgres + Auth + Storage
-- [ ] Set up Supabase Auth — email magic link (no passwords for MVP)
-- [ ] Design + run migrations — users, notes, preferences tables (see prelaunch.md schema)
-- [ ] Replace mock auth — swap `lib/auth.js` from React state → Supabase Auth
-- [ ] Create your account — collin@fulkit.app, first real user
-- [ ] Add Supabase env vars to Vercel — URL + anon key
+- [x] Create Supabase project — Postgres + Auth + RLS
+- [x] Set up Supabase Auth — Google OAuth + email magic link
+- [x] Design + run migrations — profiles, preferences, actions, notes, referrals tables with RLS
+- [x] Replace mock auth — lib/auth.js now uses Supabase Auth with dev mode overrides
+- [x] Add Supabase env vars to Vercel — URL + anon key + service role key
+- [x] Configure Supabase URL settings — Site URL = https://fulkit.app, redirect URLs added
+- [x] Switch to @supabase/ssr — createBrowserClient for proper Next.js session handling
+- [ ] **FIX: Google OAuth sign-in not establishing session** — redirects to /landing after callback
+- [ ] Create real account — first Google sign-in (blocked by auth bug)
+- [ ] Set Collin as owner — `UPDATE public.profiles SET role = 'owner' WHERE email = '<gmail>';`
+- [ ] Test magic link delivery
 
 ## Phase 3: Action List Feature (The dogfood tool)
 
 - [ ] Build actions table in Supabase — id, user_id, title, status, priority, source, created_at, completed_at
 - [ ] Build Actions page/component — list view with complete, defer, dismiss controls
-- [ ] Import prelaunch.md tasks — parse the checklist into real action items in your account
-- [ ] Wire Claude chat → action creation — "add to my list: deploy to Vercel" creates an action item
-- [ ] Wire Claude chat → action queries — "what's on my list?" pulls your actions into context
+- [ ] Import prelaunch.md tasks — parse the checklist into real action items
+- [ ] Wire Claude chat -> action creation
+- [ ] Wire Claude chat -> action queries
 
-## Phase 4: Dogfood (Fülkit manages Fülkit)
+## Phase 4: Dogfood (Fulkit manages Fulkit)
 
-- [ ] Import buildnotes.md, design.md, features.md as notes — Fülkit's own docs become your knowledge base
-- [ ] Flood your personal todos — everything you're tracking goes into Actions
-- [ ] Use Fülkit daily for 1 week — chat with Chappie about the build, manage tasks, capture ideas
-- [ ] Iterate based on friction — whatever feels off, fix it
+- [ ] Import buildnotes.md, design.md, features.md as notes
+- [ ] Flood personal todos into Actions
+- [ ] Use Fulkit daily for 1 week
+- [ ] Iterate based on friction
 
 ---
 
-**Critical path:** Deploy → Supabase → Real Auth → Actions table → Actions UI → Import tasks → Go.
+**Critical path:** ~~Deploy~~ → ~~Supabase~~ → **Fix Auth** → Owner role → Actions table → Actions UI → Import tasks → Go.
