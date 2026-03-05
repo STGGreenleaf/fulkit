@@ -66,8 +66,60 @@ export default function About() {
         </div>
       </nav>
 
-      {/* ─── spacer for fixed nav ─── */}
-      <div style={{ height: "var(--space-24)" }} />
+      {/* ─── HERO ─── */}
+      <section
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "var(--space-24) var(--space-8)",
+          maxWidth: 900,
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "clamp(48px, 8vw, 96px)",
+            fontWeight: "var(--font-weight-black)",
+            letterSpacing: "-2px",
+            lineHeight: "var(--line-height-none)",
+            marginBottom: "var(--space-6)",
+          }}
+        >
+          WTF
+        </h1>
+        <p
+          style={{
+            fontSize: "var(--font-size-base)",
+            fontWeight: "var(--font-weight-normal)",
+            color: "var(--color-text-muted)",
+            lineHeight: "var(--line-height-relaxed)",
+            maxWidth: 480,
+            marginBottom: "var(--space-10)",
+          }}
+        >
+          Everything you see was chosen. Everything you don{"\u2019"}t was removed.
+        </p>
+        <Link
+          href="/login"
+          style={{
+            display: "block",
+            width: "100%",
+            padding: "var(--space-2-5) var(--space-5)",
+            background: "var(--color-accent)",
+            color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-semibold)",
+            fontFamily: "var(--font-primary)",
+            textAlign: "center",
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          Get F{"\u00FC"}lkit
+        </Link>
+      </section>
 
       {/* ─── THE {"\u00FC"} ─── */}
       <Section>
