@@ -121,7 +121,7 @@ export default function About() {
         </Link>
       </section>
 
-      {/* ─── THE {"\u00FC"} ─── */}
+      {/* ─── THE ü ─── */}
       <Section>
         <SectionTitle>The {"\u00FC"}</SectionTitle>
         <Body>
@@ -140,6 +140,79 @@ export default function About() {
         <Body>
           And yes {"\u2014"} it{"\u2019"}s also a word you won{"\u2019"}t forget. That{"\u2019"}s not an accident either.
         </Body>
+      </Section>
+
+      {/* ─── THE NAME ─── */}
+      <Section>
+        <SectionTitle>The Name</SectionTitle>
+        <Body>Yes. We know what it sounds like.</Body>
+        <Body>
+          The umlaut makes it German. The meaning makes it real. The double-take makes it memorable.
+        </Body>
+        <Body>
+          A tool called {"\u201C"}Productivity Suite 3.0{"\u201D"} gets scrolled past. A tool called <strong>F{"\u00FC"}lkit</strong> gets a reaction. And when someone asks what it means, you get to explain the German design heritage, the feeling philosophy, and the full-kit concept {"\u2014"} all from two syllables.
+        </Body>
+        <Body>The brand is the first magic trick. The benefits are the second.</Body>
+      </Section>
+
+      {/* ─── THE FEELING ─── */}
+      <Section>
+        <SectionTitle>The Feeling</SectionTitle>
+        <Body>A chatbot waits for instructions. A bestie anticipates.</Body>
+        <div
+          style={{
+            padding: "var(--space-6) 0 var(--space-6) var(--space-6)",
+            borderLeft: "2px solid var(--color-border)",
+            marginTop: "var(--space-4)",
+            marginBottom: "var(--space-4)",
+            maxWidth: 600,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-secondary)",
+              lineHeight: "var(--line-height-relaxed)",
+              fontStyle: "italic",
+            }}
+          >
+            You open F{"\u00FC"}lkit on Monday morning and before you type anything, it says: {"\u201C"}Based on your Friday notes, you have 3 action items from the Q2 meeting, your pricing draft is unfinished, and you wanted to follow up with Sarah.{"\u201D"}
+          </div>
+        </div>
+        <Body>You didn{"\u2019"}t ask. It just knew.</Body>
+        <Body>
+          That{"\u2019"}s not artificial intelligence performing a task. That{"\u2019"}s a tool that <strong>feels</strong> like it knows you. That{"\u2019"}s the <strong>f{"\u00FC"}l</strong> in F{"\u00FC"}lkit.
+        </Body>
+      </Section>
+
+      {/* ─── THE WHISPERS ─── */}
+      <Section>
+        <SectionTitle>The Whispers</SectionTitle>
+        <Body>Most apps notify. F{"\u00FC"}lkit whispers.</Body>
+        <Body>
+          A notification demands your attention. It badges. It buzzes. It stacks up and creates anxiety. It exists for the app{"\u2019"}s benefit, not yours.
+        </Body>
+        <Body>
+          A whisper offers. It drifts in {"\u2014"} a quiet card, a suggestion, a thought from a friend. {"\u201C"}It{"\u2019"}s 4pm {"\u2014"} want me to put together a dinner list?{"\u201D"} If you don{"\u2019"}t respond, it fades. No guilt. No badge. No {"\u201C"}you missed this.{"\u201D"} Just a moment that passed, like a real conversation.
+        </Body>
+        <Body>
+          This is the German principle of <strong><em>Zur{"\u00FC"}ckhaltung</em></strong> {"\u2014"} restraint. The design serves you without insisting on your attention. The best tools are the ones you barely notice using.
+        </Body>
+      </Section>
+
+      {/* ─── THE HUM ─── */}
+      <Section>
+        <SectionTitle>The Hum</SectionTitle>
+        <Body>
+          When you enter voice mode, you don{"\u2019"}t see a transcript of your words appearing on screen. You see an orb. Breathing. Pulsing. Alive.
+        </Body>
+        <Body>
+          Most voice interfaces show you your words being typed out in real time. That activates your inner editor. You get self-conscious. You start restructuring sentences mid-thought. The transcript kills the flow.
+        </Body>
+        <Body>
+          The Hum just listens. You talk to a presence, not a form field. When you{"\u2019"}re done, F{"\u00FC"}lkit silently transcribes, extracts action items, identifies topics, files notes. You mentioned three things this morning? Filed. The recipe idea went to recipes. {"\u201C"}Call Sarah{"\u201D"} went to your action list. The startup thought went to Ideas Worth Exploring.
+        </Body>
+        <Body>You talked. It understood. That{"\u2019"}s the whole point.</Body>
       </Section>
 
       {/* ─── THE DESIGN LANGUAGE ─── */}
@@ -218,87 +291,6 @@ export default function About() {
         <Body>
           Grid systems. Mathematical precision in the service of clarity. F{"\u00FC"}lkit{"\u2019"}s layouts are asymmetric but never arbitrary {"\u2014"} the whitespace is working, the horizontal rules are architecture.
         </Body>
-      </Section>
-
-      {/* ─── THE PALETTE ─── */}
-      <Section>
-        <SectionTitle>The Palette</SectionTitle>
-        <Body>
-          Eggshell, not white {"\u2014"} warm like aged paper. Deep slate, not black {"\u2014"} like ink from a good pen. No decorative color {"\u2014"} color informs, never decorates. Your ideas are the most colorful things on screen.
-        </Body>
-      </Section>
-
-      {/* ─── THE FEELING ─── */}
-      <Section>
-        <SectionTitle>The Feeling</SectionTitle>
-        <Body>A chatbot waits for instructions. A bestie anticipates.</Body>
-        <div
-          style={{
-            padding: "var(--space-6) 0 var(--space-6) var(--space-6)",
-            borderLeft: "2px solid var(--color-border)",
-            marginTop: "var(--space-4)",
-            marginBottom: "var(--space-4)",
-            maxWidth: 600,
-          }}
-        >
-          <div
-            style={{
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
-              lineHeight: "var(--line-height-relaxed)",
-              fontStyle: "italic",
-            }}
-          >
-            You open F{"\u00FC"}lkit on Monday morning and before you type anything, it says: {"\u201C"}Based on your Friday notes, you have 3 action items from the Q2 meeting, your pricing draft is unfinished, and you wanted to follow up with Sarah.{"\u201D"}
-          </div>
-        </div>
-        <Body>You didn{"\u2019"}t ask. It just knew.</Body>
-        <Body>
-          That{"\u2019"}s not artificial intelligence performing a task. That{"\u2019"}s a tool that <strong>feels</strong> like it knows you. That{"\u2019"}s the <strong>f{"\u00FC"}l</strong> in F{"\u00FC"}lkit.
-        </Body>
-      </Section>
-
-      {/* ─── THE WHISPERS ─── */}
-      <Section>
-        <SectionTitle>The Whispers</SectionTitle>
-        <Body>Most apps notify. F{"\u00FC"}lkit whispers.</Body>
-        <Body>
-          A notification demands your attention. It badges. It buzzes. It stacks up and creates anxiety. It exists for the app{"\u2019"}s benefit, not yours.
-        </Body>
-        <Body>
-          A whisper offers. It drifts in {"\u2014"} a quiet card, a suggestion, a thought from a friend. {"\u201C"}It{"\u2019"}s 4pm {"\u2014"} want me to put together a dinner list?{"\u201D"} If you don{"\u2019"}t respond, it fades. No guilt. No badge. No {"\u201C"}you missed this.{"\u201D"} Just a moment that passed, like a real conversation.
-        </Body>
-        <Body>
-          This is the German principle of <strong><em>Zur{"\u00FC"}ckhaltung</em></strong> {"\u2014"} restraint. The design serves you without insisting on your attention. The best tools are the ones you barely notice using.
-        </Body>
-      </Section>
-
-      {/* ─── THE HUM ─── */}
-      <Section>
-        <SectionTitle>The Hum</SectionTitle>
-        <Body>
-          When you enter voice mode, you don{"\u2019"}t see a transcript of your words appearing on screen. You see an orb. Breathing. Pulsing. Alive.
-        </Body>
-        <Body>
-          Most voice interfaces show you your words being typed out in real time. That activates your inner editor. You get self-conscious. You start restructuring sentences mid-thought. The transcript kills the flow.
-        </Body>
-        <Body>
-          The Hum just listens. You talk to a presence, not a form field. When you{"\u2019"}re done, F{"\u00FC"}lkit silently transcribes, extracts action items, identifies topics, files notes. You mentioned three things this morning? Filed. The recipe idea went to recipes. {"\u201C"}Call Sarah{"\u201D"} went to your action list. The startup thought went to Ideas Worth Exploring.
-        </Body>
-        <Body>You talked. It understood. That{"\u2019"}s the whole point.</Body>
-      </Section>
-
-      {/* ─── THE NAME ─── */}
-      <Section>
-        <SectionTitle>The Name</SectionTitle>
-        <Body>Yes. We know what it sounds like.</Body>
-        <Body>
-          The umlaut makes it German. The meaning makes it real. The double-take makes it memorable.
-        </Body>
-        <Body>
-          A tool called {"\u201C"}Productivity Suite 3.0{"\u201D"} gets scrolled past. A tool called <strong>F{"\u00FC"}lkit</strong> gets a reaction. And when someone asks what it means, you get to explain the German design heritage, the feeling philosophy, and the full-kit concept {"\u2014"} all from two syllables.
-        </Body>
-        <Body>The brand is the first magic trick. The benefits are the second.</Body>
       </Section>
 
       {/* ─── WYSIWYG ─── */}
