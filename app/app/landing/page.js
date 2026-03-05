@@ -223,11 +223,12 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: "var(--font-size-xl)",
-            fontWeight: "var(--font-weight-bold)",
-            lineHeight: "var(--line-height-tight)",
+            fontSize: "var(--font-size-base)",
+            fontWeight: "var(--font-weight-medium)",
+            color: "var(--color-text-secondary)",
+            lineHeight: "var(--line-height-relaxed)",
             maxWidth: 720,
-            marginBottom: "var(--space-4)",
+            marginBottom: "var(--space-3)",
           }}
         >
           One app. One bestie. Everything else is noise.
