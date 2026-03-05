@@ -1,0 +1,278 @@
+/*
+ * Fülkit Design Tokens
+ * Generated from md/design.md — the single source of truth.
+ * NEVER hardcode values in components. Use var(--token-name) exclusively.
+ * To add a new value: add the token HERE first, then reference it.
+ */
+
+/* ─── Font Faces ─── */
+
+@font-face {
+  font-family: 'D-DIN';
+  src: url('/assets/fonts/d-din-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'D-DIN';
+  src: url('/assets/fonts/d-din-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * DIN Pro — swap in when licensed:
+ *
+ * @font-face {
+ *   font-family: 'DIN Pro';
+ *   src: url('/assets/fonts/din-pro-regular.woff2') format('woff2');
+ *   font-weight: 400;
+ *   font-style: normal;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'DIN Pro';
+ *   src: url('/assets/fonts/din-pro-medium.woff2') format('woff2');
+ *   font-weight: 500;
+ *   font-style: normal;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'DIN Pro';
+ *   src: url('/assets/fonts/din-pro-bold.woff2') format('woff2');
+ *   font-weight: 700;
+ *   font-style: normal;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'DIN Pro';
+ *   src: url('/assets/fonts/din-pro-black.woff2') format('woff2');
+ *   font-weight: 900;
+ *   font-style: normal;
+ *   font-display: swap;
+ * }
+ *
+ * Then update --font-primary to: 'DIN Pro', 'D-DIN', sans-serif
+ */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/assets/fonts/jetbrains-mono.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── Root Tokens ─── */
+
+:root {
+
+  /* ── Colors: Base Palette ── */
+  --color-bg:              #EFEDE8;    /* Eggshell off-white. Noticeably not white. Warm. */
+  --color-bg-alt:          #E7E4DF;    /* Slightly deeper surface for cards, panels */
+  --color-bg-elevated:     #F5F3F0;    /* Lifted surface — modals, dropdowns, tooltips */
+  --color-bg-inverse:      #2A2826;    /* Dark surface — dark cards, footer, P&L block */
+
+  --color-text:            #2A2826;    /* Deep warm slate. Noticeably not black. Ink. */
+  --color-text-secondary:  #5C5955;    /* Body text, descriptions */
+  --color-text-muted:      #8A8784;    /* Labels, captions, timestamps */
+  --color-text-dim:        #B0ADA8;    /* Placeholders, disabled text */
+  --color-text-inverse:    #F0EEEB;    /* Text on dark backgrounds */
+
+  --color-border:          #D4D1CC;    /* Default borders, dividers */
+  --color-border-light:    #E5E2DD;    /* Subtle dividers, card edges */
+  --color-border-focus:    #2A2826;    /* Focus rings */
+
+  --color-accent:          #2A2826;    /* Primary action — buttons, links, active states */
+  --color-accent-hover:    #1A1816;    /* Derived: darken accent 10% */
+  --color-accent-active:   #111010;    /* Derived: darken accent 15% */
+  --color-accent-soft:     #2A282610;  /* Derived: accent at 6% opacity */
+  --color-accent-ring:     #2A282640;  /* Derived: accent at 25% opacity — focus rings */
+
+  /* ── Colors: Semantic ── */
+  --color-success:         #2F8F4E;    /* Positive — connected, synced, profitable */
+  --color-success-soft:    #2F8F4E12;  /* Success tint background */
+  --color-warning:         #C4890A;    /* Caution — syncing, nearing limit */
+  --color-warning-soft:    #C4890A12;  /* Warning tint background */
+  --color-error:           #C43B2E;    /* Negative — failed, over budget */
+  --color-error-soft:      #C43B2E12;  /* Error tint background */
+
+  /* ── Colors: Source Indicators ── */
+  --color-source-obsidian: #7C3AED;    /* Obsidian vault — purple */
+  --color-source-gdrive:   #16A34A;    /* Google Drive — green */
+  --color-source-dropbox:  #2563EB;    /* Dropbox — blue */
+  --color-source-icloud:   #3B82F6;    /* iCloud — light blue */
+  --color-source-fulkit:   #2A2826;    /* Native Fülkit notes — slate */
+
+  /*
+   * ── Derived State Rules (auto-calculated, NEVER manually set) ──
+   * hover:     base color + darken 10%
+   * active:    base color + darken 15%
+   * disabled:  base color at 40% opacity
+   * focus:     2px ring using --color-accent-ring, 2px offset
+   * soft-bg:   base color at 6-8% opacity
+   */
+
+  /* ── Typography: Font Stacks ── */
+  --font-primary:          'D-DIN', -apple-system, sans-serif;
+  --font-mono:             'JetBrains Mono', monospace;
+
+  /* ── Typography: Font Sizes ── */
+  --font-size-2xs:         10px;   /* Fine print, badges */
+  --font-size-xs:          11px;   /* Captions, labels, tags */
+  --font-size-sm:          12px;   /* Secondary text, metadata */
+  --font-size-base:        14px;   /* Body text — primary reading size */
+  --font-size-md:          15px;   /* Slightly emphasized body */
+  --font-size-lg:          16px;   /* Section headers, nav items */
+  --font-size-xl:          18px;   /* Page sub-headers */
+  --font-size-2xl:         22px;   /* Page titles */
+  --font-size-3xl:         28px;   /* Hero text, dashboard titles */
+  --font-size-4xl:         36px;   /* Marketing headlines */
+  --font-size-5xl:         48px;   /* Landing page hero */
+
+  /* ── Typography: Font Weights ── */
+  --font-weight-normal:    400;    /* Body text */
+  --font-weight-medium:    500;    /* Emphasized body, labels */
+  --font-weight-semibold:  600;    /* Sub-headers, active nav */
+  --font-weight-bold:      700;    /* Headers, strong emphasis */
+  --font-weight-black:     900;    /* Hero numbers, KPIs, logo */
+
+  /* ── Typography: Line Heights ── */
+  --line-height-none:      1;      /* Single line text, badges */
+  --line-height-tight:     1.25;   /* Headlines, compact text */
+  --line-height-snug:      1.35;   /* Sub-headers */
+  --line-height-normal:    1.5;    /* Body text — primary */
+  --line-height-relaxed:   1.65;   /* Long-form reading, whispers */
+  --line-height-loose:     1.8;    /* Max readability — AI responses */
+
+  /* ── Typography: Letter Spacing ── */
+  --letter-spacing-tighter: -0.5px;  /* Large headlines */
+  --letter-spacing-tight:   -0.3px;  /* Page titles, logo */
+  --letter-spacing-normal:   0;      /* Body text */
+  --letter-spacing-wide:     0.5px;  /* Small caps, labels */
+  --letter-spacing-wider:    0.8px;  /* All-caps section labels */
+  --letter-spacing-widest:   1.2px;  /* Tiny uppercase badges */
+
+  /* ── Spacing Scale ── */
+  --space-0:    0px;
+  --space-0-5:  2px;     /* Hairline gaps */
+  --space-1:    4px;     /* Tight internal padding */
+  --space-1-5:  6px;     /* Icon-to-text gaps */
+  --space-2:    8px;     /* Compact padding, small gaps */
+  --space-2-5:  10px;    /* Chat bubble padding, form inputs */
+  --space-3:    12px;    /* Standard internal padding */
+  --space-3-5:  14px;    /* Chat bubble horizontal padding */
+  --space-4:    16px;    /* Card padding, section gaps */
+  --space-5:    20px;    /* Comfortable padding */
+  --space-6:    24px;    /* Page margins (mobile), section spacing */
+  --space-8:    32px;    /* Large section gaps */
+  --space-10:   40px;    /* Page header spacing */
+  --space-12:   48px;    /* Major section breaks */
+  --space-16:   64px;    /* Page-level vertical rhythm */
+  --space-20:   80px;    /* Hero spacing */
+  --space-24:   96px;    /* Landing page sections */
+
+  /* ── Border Radius ── */
+  --radius-xs:     4px;     /* Tags, badges, small pills */
+  --radius-sm:     6px;     /* Inputs, small buttons, nav items */
+  --radius-md:     8px;     /* Buttons, dropdowns */
+  --radius-lg:     10px;    /* Cards, panels */
+  --radius-xl:     14px;    /* Large cards, modals */
+  --radius-2xl:    20px;    /* Hero cards, orb containers */
+  --radius-full:   9999px;  /* Circles, pills, avatars */
+
+  /* ── Shadows & Elevation ── */
+  --shadow-none:   none;
+  --shadow-xs:     0 1px 2px rgba(42, 40, 38, 0.04);
+  --shadow-sm:     0 1px 3px rgba(42, 40, 38, 0.06), 0 1px 2px rgba(42, 40, 38, 0.04);
+  --shadow-md:     0 4px 6px rgba(42, 40, 38, 0.06), 0 2px 4px rgba(42, 40, 38, 0.04);
+  --shadow-lg:     0 10px 15px rgba(42, 40, 38, 0.08), 0 4px 6px rgba(42, 40, 38, 0.04);
+  --shadow-xl:     0 20px 25px rgba(42, 40, 38, 0.10), 0 10px 10px rgba(42, 40, 38, 0.04);
+
+  /* ── Transitions & Motion ── */
+  --duration-fast:       100ms;    /* Hover states, toggles */
+  --duration-normal:     200ms;    /* Most transitions */
+  --duration-slow:       300ms;    /* Panel slides, card enters */
+  --duration-slower:     500ms;    /* Page transitions, orb state changes */
+  --duration-slowest:    800ms;    /* Whisper fade-in/out */
+
+  --ease-default:        cubic-bezier(0.22, 1, 0.36, 1);    /* Smooth deceleration */
+  --ease-bounce:         cubic-bezier(0.34, 1.56, 0.64, 1); /* Playful overshoot */
+  --ease-in:             cubic-bezier(0.4, 0, 1, 1);        /* Accelerating exit */
+  --ease-out:            cubic-bezier(0, 0, 0.2, 1);        /* Decelerating entry */
+  --ease-linear:         linear;
+
+  /* ── Layout: Desktop ── */
+  --sidebar-width:         200px;    /* Collapsed: icon rail at 56px */
+  --content-max-width:     none;     /* Fluid */
+  --content-padding:       var(--space-6);
+  --page-header-height:    auto;
+
+  /* ── Layout: Mobile ── */
+  --tab-bar-height:        56px;     /* Bottom tab bar */
+  --input-bar-height:      52px;     /* Persistent bottom input */
+  --mobile-content-padding: var(--space-4);
+  --card-gap:              var(--space-2);
+
+  /* ── Z-Index Scale ── */
+  --z-base:         0;       /* Default content */
+  --z-sticky:       10;      /* Sticky headers */
+  --z-dropdown:     20;      /* Dropdowns, select menus */
+  --z-overlay:      30;      /* Overlay backgrounds */
+  --z-modal:        40;      /* Modals, dialogs */
+  --z-toast:        50;      /* Toast notifications, whispers */
+  --z-tooltip:      60;      /* Tooltips */
+  --z-max:          100;     /* Emergency override only */
+}
+
+/* ── Base Reset ── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+/* ── Selection ── */
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+/* ── Placeholder ── */
+
+::placeholder {
+  color: var(--color-text-dim);
+}
