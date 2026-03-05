@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Check, SkipForward } from "lucide-react";
 import { useAuth } from "../../lib/auth";
 import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
 
 const PHASES = [
   {
@@ -238,7 +239,7 @@ const PHASE_DONE_MSGS = [
 ];
 
 export default function Onboarding() {
-  const { user } = useAuth();
+  const { user, fetchProfile } = useAuth();
   const router = useRouter();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [questionIdx, setQuestionIdx] = useState(0);
@@ -281,7 +282,7 @@ export default function Onboarding() {
     }
   };
 
-  const nextPhase = () => {
+  const nextPhase = async () => {
     setShowPhaseDone(false);
     const nextP = phaseIdx + 1;
     if (nextP < PHASES.length) {
@@ -290,6 +291,23 @@ export default function Onboarding() {
       setTextVal("");
       setMultiSelect([]);
     } else {
+      // Mark profile as onboarded
+      if (user?.id && !user.isNew) {
+        const name = answers.name || user.name || "";
+        await supabase
+          .from("profiles")
+          .update({ onboarded: true, name, updated_at: new Date().toISOString() })
+          .eq("id", user.id);
+        // Save preferences from answers
+        const prefKeys = ["tone", "frequency", "chronotype"];
+        const prefs = prefKeys
+          .filter((k) => answers[k])
+          .map((k) => ({ user_id: user.id, key: k, value: typeof answers[k] === "string" ? answers[k] : JSON.stringify(answers[k]), learned: false }));
+        if (prefs.length > 0) {
+          await supabase.from("preferences").insert(prefs);
+        }
+        fetchProfile(user.id);
+      }
       setComplete(true);
     }
   };

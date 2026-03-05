@@ -1,37 +1,124 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { supabase } from "./supabase";
 
 const AuthContext = createContext(null);
 
-const REAL_USER = { id: "collin", email: "collin@fulkit.app", name: "Collin" };
-const NEW_USER = { id: "new", email: "new@fulkit.app", name: "", isNew: true };
+const DEV_NEW_USER = { id: "new", email: "new@fulkit.app", name: "", isNew: true };
 
-// Mock auth provider — swap with Supabase Auth later
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(REAL_USER);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Dev mode: ?auth=none (signed out) or ?auth=new (onboarding)
+  // Fetch profile from DB
+  const fetchProfile = useCallback(async (userId) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    if (data) {
+      setProfile(data);
+    }
+    return data;
+  }, []);
+
   useEffect(() => {
+    // Dev mode overrides
     const params = new URLSearchParams(window.location.search);
     const mode = params.get("auth");
-    if (mode === "none") setUser(null);
-    else if (mode === "new") setUser(NEW_USER);
+    if (mode === "none") {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    if (mode === "new") {
+      setUser(DEV_NEW_USER);
+      setLoading(false);
+      return;
+    }
+
+    // Real auth — listen to Supabase session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.full_name || "",
+        });
+        fetchProfile(u.id);
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          const u = session.user;
+          setUser({
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.full_name || "",
+          });
+          await fetchProfile(u.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
+
+  const signIn = useCallback(async (provider = "google") => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/home`,
+      },
+    });
+    if (error) console.error("Sign in error:", error.message);
   }, []);
 
-  const signIn = useCallback(() => {
-    // Will be: supabase.auth.signInWithOAuth({ provider: 'google' })
-    setUser(REAL_USER);
+  const signInWithEmail = useCallback(async (email) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/home`,
+      },
+    });
+    if (error) console.error("Magic link error:", error.message);
+    return { error };
   }, []);
 
-  const signOut = useCallback(() => {
-    // Will be: supabase.auth.signOut()
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
   }, []);
+
+  const isOwner = profile?.role === "owner";
+  const isOnboarded = profile?.onboarded ?? false;
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        signIn,
+        signInWithEmail,
+        signOut,
+        isOwner,
+        isOnboarded,
+        fetchProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

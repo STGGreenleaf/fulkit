@@ -1,8 +1,9 @@
 "use client";
 
-import { Home, MessageCircle, Mic, Settings } from "lucide-react";
+import { Home, MessageCircle, Mic, Settings, Crown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../lib/auth";
 import MiniPlayer from "./MiniPlayer";
 
 const NAV = [
@@ -14,6 +15,7 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { isOwner } = useAuth();
 
   return (
     <nav
@@ -100,6 +102,29 @@ export default function Sidebar() {
           );
         })}
       </div>
+
+      {/* Owner link — only visible to owner */}
+      {isOwner && (
+        <Link
+          href="/owner"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            padding: "var(--space-2) var(--space-2-5)",
+            borderRadius: "var(--radius-sm)",
+            color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
+            fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+            fontSize: "var(--font-size-base)",
+            background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
+            textDecoration: "none",
+            marginBottom: "var(--space-2)",
+          }}
+        >
+          <Crown size={18} strokeWidth={1.8} />
+          Owner
+        </Link>
+      )}
 
       {/* Mini Player — bottom of sidebar */}
       <MiniPlayer />
