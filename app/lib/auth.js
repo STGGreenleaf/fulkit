@@ -6,6 +6,7 @@ import { supabase } from "./supabase";
 const AuthContext = createContext(null);
 
 const DEV_NEW_USER = { id: "new", email: "new@fulkit.app", name: "", isNew: true };
+const DEV_TEMPLATE_USER = { id: "dev", email: "dev@fulkit.app", name: "Demo User", isDev: true };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -36,6 +37,12 @@ export function AuthProvider({ children }) {
     }
     if (mode === "new") {
       setUser(DEV_NEW_USER);
+      setLoading(false);
+      return;
+    }
+    if (mode === "dev") {
+      setUser(DEV_TEMPLATE_USER);
+      setProfile({ role: "owner", onboarded: true, seat_type: "standard", messages_this_month: 138 });
       setLoading(false);
       return;
     }
