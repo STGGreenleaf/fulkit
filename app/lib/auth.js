@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
     }
 
     // Real auth — listen to Supabase session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const u = session.user;
         setUser({
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
           email: u.email,
           name: u.user_metadata?.full_name || "",
         });
-        fetchProfile(u.id);
+        await fetchProfile(u.id);
       }
       setLoading(false);
     });
