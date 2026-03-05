@@ -1,32 +1,30 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 
-export default function AuthConfirm() {
+export default function AuthCallback() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const next = searchParams.get("next") || "/home";
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
 
     if (code) {
+      // PKCE flow — exchange code for session
       supabase.auth
         .exchangeCodeForSession(code)
         .then(({ error }) => {
-          if (error) {
-            console.error("Auth exchange error:", error.message);
-            router.replace("/login");
-          } else {
-            router.replace(next);
-          }
+          router.replace(error ? "/login" : "/home");
         });
     } else {
-      router.replace("/login");
+      // Implicit flow — tokens in hash, browser client auto-detects
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        router.replace(session ? "/home" : "/login");
+      });
     }
-  }, [router, searchParams]);
+  }, [router]);
 
   return (
     <div
