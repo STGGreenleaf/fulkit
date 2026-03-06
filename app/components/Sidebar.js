@@ -102,32 +102,30 @@ export default function Sidebar() {
             </Link>
           );
         })}
-        {/* Dev mode toggle — right under Settings */}
+        {/* Owner — right under Settings */}
+        {isOwner && (
+          <Link
+            href="/owner"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-2) var(--space-2-5)",
+              borderRadius: "var(--radius-sm)",
+              color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
+              fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+              fontSize: "var(--font-size-base)",
+              background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
+              textDecoration: "none",
+            }}
+          >
+            <Crown size={18} strokeWidth={1.8} />
+            Owner
+          </Link>
+        )}
+        {/* Dev toggle — under Owner */}
         {isOwner && <DevToggle />}
       </div>
-
-      {/* Owner link — only visible to owner */}
-      {isOwner && (
-        <Link
-          href="/owner"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            padding: "var(--space-2) var(--space-2-5)",
-            borderRadius: "var(--radius-sm)",
-            color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
-            fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-            fontSize: "var(--font-size-base)",
-            background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
-            textDecoration: "none",
-            marginBottom: "var(--space-2)",
-          }}
-        >
-          <Crown size={18} strokeWidth={1.8} />
-          Owner
-        </Link>
-      )}
 
       {/* Mini Player — bottom of sidebar */}
       <MiniPlayer />
