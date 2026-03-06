@@ -102,29 +102,31 @@ export default function Sidebar() {
             </Link>
           );
         })}
-        {/* Owner — right under Settings */}
+        {/* Owner & Dev — separated from nav */}
         {isOwner && (
-          <Link
-            href="/owner"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              padding: "var(--space-2) var(--space-2-5)",
-              borderRadius: "var(--radius-sm)",
-              color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
-              fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-              fontSize: "var(--font-size-base)",
-              background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
-              textDecoration: "none",
-            }}
-          >
-            <Crown size={18} strokeWidth={1.8} />
-            Owner
-          </Link>
+          <>
+            <div style={{ margin: "var(--space-2) var(--space-2-5)", borderTop: "1px solid var(--color-border-light)" }} />
+            <Link
+              href="/owner"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-2-5)",
+                borderRadius: "var(--radius-sm)",
+                color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
+                fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                fontSize: "var(--font-size-base)",
+                background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
+                textDecoration: "none",
+              }}
+            >
+              <Crown size={18} strokeWidth={1.8} />
+              Owner
+            </Link>
+            <DevToggle />
+          </>
         )}
-        {/* Dev toggle — under Owner */}
-        {isOwner && <DevToggle />}
       </div>
 
       {/* Mini Player — bottom of sidebar */}
@@ -155,7 +157,7 @@ function DevToggle() {
         display: "flex",
         alignItems: "center",
         gap: "var(--space-2)",
-        padding: "var(--space-2) var(--space-2-5)",
+        padding: "var(--space-1) var(--space-2-5) var(--space-1) var(--space-8)",
         background: "none",
         border: "none",
         cursor: "pointer",
