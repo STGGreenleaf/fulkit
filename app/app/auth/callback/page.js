@@ -13,6 +13,11 @@ export default function AuthCallback() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
 
+      // Debug: check env vars for invisible characters
+      const url2 = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+      console.log("[auth/callback] SUPABASE_URL length:", url2.length, "ends with:", JSON.stringify(url2.slice(-5)));
+      console.log("[auth/callback] ANON_KEY length:", key.length, "ends with:", JSON.stringify(key.slice(-5)));
       console.log("[auth/callback] code:", code ? "present" : "none");
 
       if (code) {
