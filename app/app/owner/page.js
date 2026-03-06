@@ -15,6 +15,8 @@ import {
   GripVertical,
   ChevronDown,
   ChevronRight,
+  Copy,
+  Check as CheckIcon,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -239,6 +241,8 @@ function QuestionsTab() {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [editingPhase, setEditingPhase] = useState(null);
   const [addingTo, setAddingTo] = useState(null); // phase_id currently adding to
+  const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   const fetchAll = useCallback(async () => {
     const [{ data: p }, { data: q }] = await Promise.all([
@@ -367,10 +371,30 @@ function QuestionsTab() {
             {phases.length} phases, {questions.length} questions
           </p>
         </div>
-        <button onClick={addPhase} style={btnPrimary}>
-          <Plus size={12} /> Add Phase
-        </button>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <button onClick={() => setShowExport(true)} style={btnSmall}>Export</button>
+          <button onClick={() => setShowImport(true)} style={btnSmall}>Import JSON</button>
+          <button onClick={addPhase} style={btnPrimary}>
+            <Plus size={12} /> Add Phase
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <ImportModal
+          phases={phases}
+          onClose={() => setShowImport(false)}
+          onDone={() => { setShowImport(false); setLoading(true); fetchAll(); }}
+        />
+      )}
+
+      {showExport && (
+        <ExportModal
+          phases={phases}
+          questions={questions}
+          onClose={() => setShowExport(false)}
+        />
+      )}
 
       {phases.map((phase) => {
         const phaseQs = questions
@@ -667,5 +691,298 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
         <button onClick={() => onSave(draft)} style={btnPrimary}>Save</button>
       </div>
     </div>
+  );
+}
+
+/* ─── Modal backdrop ─── */
+function Modal({ children, onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "var(--space-6)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--color-bg)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          width: "100%",
+          maxWidth: 640,
+          maxHeight: "80vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ─── JSON template shown in import modal ─── */
+const TEMPLATE_JSON = `{
+  "phases": [
+    {
+      "label": "Phase Name",
+      "intro": "Intro text shown before questions.",
+      "questions": [
+        {
+          "id": "unique_id",
+          "text": "Your question here?",
+          "why": "Why we ask this.",
+          "type": "text",
+          "placeholder": "Optional placeholder",
+          "skippable": false
+        },
+        {
+          "id": "choice_example",
+          "text": "Pick one:",
+          "why": "Reason for asking.",
+          "type": "choice",
+          "multi": false,
+          "options": ["Option A", "Option B", "Option C"],
+          "skippable": false
+        }
+      ]
+    }
+  ]
+}`;
+
+/* ─── Import Modal ─── */
+function ImportModal({ phases, onClose, onDone }) {
+  const [json, setJson] = useState("");
+  const [replaceAll, setReplaceAll] = useState(false);
+  const [error, setError] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyTemplate = () => {
+    navigator.clipboard.writeText(TEMPLATE_JSON);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const doImport = async () => {
+    setError(null);
+    let parsed;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      setError("Invalid JSON. Check syntax and try again.");
+      return;
+    }
+    if (!parsed.phases || !Array.isArray(parsed.phases)) {
+      setError('JSON must have a "phases" array at the top level.');
+      return;
+    }
+    for (const p of parsed.phases) {
+      if (!p.label || !Array.isArray(p.questions)) {
+        setError("Each phase needs a label and a questions array.");
+        return;
+      }
+    }
+
+    setImporting(true);
+    try {
+      // If replace all, wipe existing
+      if (replaceAll) {
+        await supabase.from("questions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        await supabase.from("question_phases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      }
+
+      const maxSort = replaceAll ? 0 : phases.reduce((mx, p) => Math.max(mx, p.sort_order || 0), 0);
+
+      for (let pi = 0; pi < parsed.phases.length; pi++) {
+        const ph = parsed.phases[pi];
+        const { data: newPhase, error: phErr } = await supabase
+          .from("question_phases")
+          .insert({ label: ph.label, intro: ph.intro || "", sort_order: maxSort + pi + 1 })
+          .select()
+          .single();
+        if (phErr) throw new Error(phErr.message);
+
+        if (ph.questions.length > 0) {
+          const rows = ph.questions.map((q, qi) => ({
+            phase_id: newPhase.id,
+            question_id: q.id || `q_${Date.now()}_${qi}`,
+            text: q.text || "",
+            why: q.why || "",
+            type: q.type || "text",
+            multi: q.multi || false,
+            options: q.type === "choice" && q.options
+              ? q.options.map((o) => (typeof o === "string" ? { label: o, value: o.toLowerCase() } : o))
+              : null,
+            placeholder: q.placeholder || "",
+            skippable: q.skippable || false,
+            sort_order: qi,
+          }));
+          const { error: qErr } = await supabase.from("questions").insert(rows);
+          if (qErr) throw new Error(qErr.message);
+        }
+      }
+      onDone();
+    } catch (err) {
+      setError(err.message);
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ padding: "var(--space-4) var(--space-5)", borderBottom: "1px solid var(--color-border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>Import Questionnaire</h3>
+        <button onClick={onClose} style={{ ...btnSmall, padding: "var(--space-1) var(--space-2)" }}>Close</button>
+      </div>
+
+      <div style={{ padding: "var(--space-4) var(--space-5)", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {/* Template */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
+            <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+              JSON Template — copy this and give it to any LLM
+            </label>
+            <button onClick={copyTemplate} style={btnSmall}>
+              {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+            </button>
+          </div>
+          <pre style={{
+            padding: "var(--space-3)",
+            background: "var(--color-bg-surface, var(--color-bg-elevated))",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-xs)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-text-secondary)",
+            overflow: "auto",
+            maxHeight: 160,
+            whiteSpace: "pre-wrap",
+            margin: 0,
+          }}>
+            {TEMPLATE_JSON}
+          </pre>
+        </div>
+
+        {/* Paste area */}
+        <div>
+          <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)", display: "block" }}>
+            Paste your JSON below
+          </label>
+          <textarea
+            value={json}
+            onChange={(e) => { setJson(e.target.value); setError(null); }}
+            rows={10}
+            style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: "var(--font-size-xs)" }}
+            placeholder='{"phases": [...]}'
+          />
+        </div>
+
+        {/* Replace toggle */}
+        <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-sm)", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={replaceAll}
+            onChange={(e) => setReplaceAll(e.target.checked)}
+            style={{ accentColor: "var(--color-accent)" }}
+          />
+          <span style={{ color: replaceAll ? "var(--color-error, #e53e3e)" : "var(--color-text-secondary)" }}>
+            {replaceAll ? "Replace all — this will delete existing questions" : "Append to existing questions"}
+          </span>
+        </label>
+
+        {error && (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-error, #e53e3e)", padding: "var(--space-2) var(--space-3)", background: "rgba(229,62,62,0.08)", borderRadius: "var(--radius-md)" }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: "var(--space-3) var(--space-5)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+        <button onClick={onClose} style={btnSmall}>Cancel</button>
+        <button onClick={doImport} disabled={!json.trim() || importing} style={{ ...btnPrimary, opacity: !json.trim() || importing ? 0.5 : 1 }}>
+          {importing ? "Importing..." : "Import"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ─── Export Modal ─── */
+function ExportModal({ phases, questions, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  const exportData = {
+    phases: phases.map((p) => ({
+      label: p.label,
+      intro: p.intro || "",
+      questions: questions
+        .filter((q) => q.phase_id === p.id)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((q) => ({
+          id: q.question_id,
+          text: q.text,
+          why: q.why || "",
+          type: q.type,
+          ...(q.multi ? { multi: true } : {}),
+          ...(q.type === "choice" && q.options ? { options: q.options.map((o) => (typeof o === "string" ? o : o.label)) } : {}),
+          ...(q.placeholder ? { placeholder: q.placeholder } : {}),
+          skippable: q.skippable || false,
+        })),
+    })),
+  };
+
+  const jsonStr = JSON.stringify(exportData, null, 2);
+
+  const copyExport = () => {
+    navigator.clipboard.writeText(jsonStr);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ padding: "var(--space-4) var(--space-5)", borderBottom: "1px solid var(--color-border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>Export Questionnaire</h3>
+        <button onClick={onClose} style={{ ...btnSmall, padding: "var(--space-1) var(--space-2)" }}>Close</button>
+      </div>
+
+      <div style={{ padding: "var(--space-4) var(--space-5)", overflowY: "auto", flex: 1 }}>
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+          Copy this JSON, refine it with any LLM, then import it back.
+        </p>
+        <pre style={{
+          padding: "var(--space-3)",
+          background: "var(--color-bg-surface, var(--color-bg-elevated))",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-md)",
+          fontSize: "var(--font-size-xs)",
+          fontFamily: "var(--font-mono)",
+          color: "var(--color-text-secondary)",
+          overflow: "auto",
+          maxHeight: 400,
+          whiteSpace: "pre-wrap",
+          margin: 0,
+        }}>
+          {jsonStr}
+        </pre>
+      </div>
+
+      <div style={{ padding: "var(--space-3) var(--space-5)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+        <button onClick={onClose} style={btnSmall}>Close</button>
+        <button onClick={copyExport} style={btnPrimary}>
+          {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy JSON</>}
+        </button>
+      </div>
+    </Modal>
   );
 }
