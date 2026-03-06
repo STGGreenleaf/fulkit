@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check, X } from "lucide-react";
+import LogoMark from "../../components/LogoMark";
 
 const apps = [
   { name: "Obsidian Sync", cost: 8, replaces: "Notes" },
@@ -98,6 +99,9 @@ export default function Landing() {
         <Link
           href="/"
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
             fontSize: "var(--font-size-lg)",
             fontWeight: "var(--font-weight-black)",
             letterSpacing: "var(--letter-spacing-tight)",
@@ -105,6 +109,7 @@ export default function Landing() {
             color: "var(--color-text)",
           }}
         >
+          <LogoMark size={24} />
           Fülkit
         </Link>
         <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
@@ -959,11 +964,15 @@ export default function Landing() {
       >
         <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
             fontSize: "var(--font-size-sm)",
             fontWeight: "var(--font-weight-bold)",
             letterSpacing: "var(--letter-spacing-tight)",
           }}
         >
+          <LogoMark size={18} />
           Fülkit
         </div>
         <div

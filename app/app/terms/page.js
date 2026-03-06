@@ -25,22 +25,12 @@ export default function Terms() {
           textDecoration: "none",
         }}
       >
-        <div
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: "var(--radius-xs)",
-            background: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-inverse)",
-            fontSize: "var(--font-size-2xs)",
-            fontWeight: "var(--font-weight-black)",
-          }}
-        >
-          F
-        </div>
+        <svg width={20} height={20} viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0, borderRadius: "var(--radius-xs)" }}>
+          <circle cx="50" cy="50" r="50" fill="#171717" />
+          <path d="M20 26 V50 A30 30 0 0 1 80 50 V26 H60 V50 A10 10 0 0 0 40 50 V26 Z" fill="#c0c0c0" />
+          <rect x="23" y="11" width="13" height="13" fill="#c0c0c0" />
+          <rect x="63" y="11" width="13" height="13" fill="#c0c0c0" />
+        </svg>
         <span
           style={{
             fontSize: "var(--font-size-sm)",

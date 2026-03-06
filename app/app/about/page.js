@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import LogoMark from "../../components/LogoMark";
 
 export default function About() {
   return (
@@ -31,6 +34,9 @@ export default function About() {
         <Link
           href="/"
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
             fontSize: "var(--font-size-lg)",
             fontWeight: "var(--font-weight-black)",
             letterSpacing: "var(--letter-spacing-tight)",
@@ -38,7 +44,8 @@ export default function About() {
             color: "var(--color-text)",
           }}
         >
-          F{"\u00FC"}lkit
+          <LogoMark size={24} />
+          Fülkit
         </Link>
         <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
           <Link

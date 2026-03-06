@@ -23,15 +23,15 @@ export default function LogoMark({
       style={{ flexShrink: 0, borderRadius: size > 20 ? "var(--radius-sm)" : 2, ...style }}
     >
       <circle cx="50" cy="50" r="50" fill={bg} />
-      {/* U shape */}
+      {/* U shape — thick stems with semicircular bottom */}
       <path
-        d="M28 28h14v32c0 12 -1 18 8 18s8-6 8-18V28h14v32c0 20-8 30-22 30s-22-10-22-30V28z"
+        d="M20 26 V50 A30 30 0 0 1 80 50 V26 H60 V50 A10 10 0 0 0 40 50 V26 Z"
         fill={fill}
       />
       {/* Left dot */}
-      <rect x="30" y="15" width="10" height="10" fill={fill} />
+      <rect x="23" y="11" width="13" height="13" fill={fill} />
       {/* Right dot */}
-      <rect x="60" y="15" width="10" height="10" fill={fill} />
+      <rect x="63" y="11" width="13" height="13" fill={fill} />
     </svg>
   );
 }

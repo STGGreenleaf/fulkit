@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mic, X, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AuthGuard from "../../components/AuthGuard";
+import LogoMark from "../../components/LogoMark";
 
 const CONFIGS = {
   idle: {
@@ -316,22 +317,7 @@ export default function Hum() {
           textDecoration: "none",
         }}
       >
-        <div
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: "var(--radius-xs)",
-            background: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-inverse)",
-            fontSize: "var(--font-size-2xs)",
-            fontWeight: "var(--font-weight-black)",
-          }}
-        >
-          F
-        </div>
+        <LogoMark size={22} />
         <span
           style={{
             fontSize: "var(--font-size-sm)",
