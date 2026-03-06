@@ -28,6 +28,8 @@ export default function Chat() {
   const [conversationId, setConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyWidth, setHistoryWidth] = useState(260);
+  const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const abortRef = useRef(null);
@@ -236,8 +238,32 @@ export default function Chat() {
     if (abortRef.current) abortRef.current.abort();
     setStreaming(false);
     setConversationId(conv.id);
-    setShowHistory(false);
   };
+
+  // Drag-to-resize history panel
+  const startResize = useCallback((e) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    const startX = e.clientX;
+    const startWidth = historyWidth;
+
+    const onMouseMove = (e) => {
+      if (!draggingRef.current) return;
+      // Dragging left edge — moving left = wider, moving right = narrower
+      const delta = startX - e.clientX;
+      const newWidth = Math.max(160, Math.min(400, startWidth + delta));
+      setHistoryWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      draggingRef.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [historyWidth]);
 
   return (
     <AuthGuard>
@@ -325,68 +351,8 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Main area — history panel + messages */}
+          {/* Main area — messages + history on right */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {/* History panel */}
-            {showHistory && (
-              <div
-                style={{
-                  width: 260,
-                  minWidth: 260,
-                  borderRight: "1px solid var(--color-border-light)",
-                  overflowY: "auto",
-                  padding: "var(--space-3)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--space-1)",
-                }}
-              >
-                {conversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversation(conv)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "var(--space-2)",
-                      padding: "var(--space-2) var(--space-2-5)",
-                      borderRadius: "var(--radius-sm)",
-                      border: "none",
-                      background: conv.id === conversationId ? "var(--color-bg-alt)" : "transparent",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      width: "100%",
-                      fontFamily: "var(--font-primary)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "var(--font-size-xs)",
-                        color: conv.id === conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
-                        fontWeight: conv.id === conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        flex: 1,
-                      }}
-                    >
-                      {conv.title}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "var(--font-size-2xs)",
-                        color: "var(--color-text-dim)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {timeAgo(conv.updated_at)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Messages area */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
               <div
@@ -549,6 +515,91 @@ export default function Chat() {
                 </div>
               </div>
             </div>
+
+            {/* History panel — right side, resizable */}
+            {showHistory && (
+              <>
+                {/* Drag handle */}
+                <div
+                  onMouseDown={startResize}
+                  style={{
+                    width: 4,
+                    cursor: "col-resize",
+                    background: "transparent",
+                    flexShrink: 0,
+                    position: "relative",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      width: 1,
+                      background: "var(--color-border-light)",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    width: historyWidth,
+                    minWidth: 160,
+                    maxWidth: 400,
+                    overflowY: "auto",
+                    padding: "var(--space-3)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--space-1)",
+                    userSelect: draggingRef.current ? "none" : "auto",
+                  }}
+                >
+                  {conversations.map((conv) => (
+                    <button
+                      key={conv.id}
+                      onClick={() => openConversation(conv)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "var(--space-2)",
+                        padding: "var(--space-2) var(--space-2-5)",
+                        borderRadius: "var(--radius-sm)",
+                        border: "none",
+                        background: conv.id === conversationId ? "var(--color-bg-alt)" : "transparent",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        width: "100%",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-xs)",
+                          color: conv.id === conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
+                          fontWeight: conv.id === conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                        }}
+                      >
+                        {conv.title}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-2xs)",
+                          color: "var(--color-text-dim)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {timeAgo(conv.updated_at)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
