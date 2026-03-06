@@ -348,63 +348,50 @@ function Row({ label, value, action, actionLabel, danger }) {
 }
 
 function AccountTab() {
-  const { signOut } = useAuth();
+  const { user, profile, signOut, isOwner } = useAuth();
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "—";
 
   return (
     <div style={{ maxWidth: 520 }}>
       <SectionTitle>Profile</SectionTitle>
       <Card>
-        <Row label="Name" value="—" actionLabel="Edit" />
-        <Row label="Email" value="—" actionLabel="Edit" />
-        <Row label="Location" value="—" actionLabel="Edit" />
-        <Row label="Member since" value="—" />
+        <Row label="Name" value={user?.name || profile?.name || "—"} />
+        <Row label="Email" value={user?.email || "—"} />
+        <Row label="Role" value={isOwner ? "Owner" : (profile?.role || "Member")} />
+        <Row label="Member since" value={memberSince} />
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>
-        <SectionTitle>BYOK — Bring Your Own Key</SectionTitle>
+        <SectionTitle>API Key</SectionTitle>
         <Card>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
             <Key size={18} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
                 Anthropic API Key
               </div>
-              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                Use your own key — burn your own Fül.
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                {isOwner
+                  ? "Connected — using owner key (server-side)"
+                  : "Use your own key — burn your own Fül."}
               </div>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <input
-              type="password"
-              placeholder="sk-ant-..."
-              style={{
-                flex: 1,
-                padding: "var(--space-2) var(--space-3)",
-                background: "var(--color-bg)",
-                border: "1px solid var(--color-border)",
+            {isOwner && (
+              <div style={{
+                padding: "var(--space-1) var(--space-2-5)",
+                background: "var(--color-success-soft, rgba(72,187,120,0.1))",
+                color: "var(--color-success, #48bb78)",
                 borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-sm)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text)",
-                outline: "none",
-              }}
-            />
-            <button
-              style={{
-                padding: "var(--space-2) var(--space-4)",
-                background: "var(--color-accent)",
-                color: "var(--color-text-inverse)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-xs)",
+                fontSize: "var(--font-size-2xs)",
                 fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)",
-                cursor: "pointer",
-              }}
-            >
-              Connect
-            </button>
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wider)",
+              }}>
+                Active
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -434,7 +421,9 @@ function AccountTab() {
 }
 
 function SourcesTab() {
-  const [connected, setConnected] = useState(INITIAL_CONNECTED);
+  const { user } = useAuth();
+  const isDev = user?.isDev;
+  const [connected, setConnected] = useState(isDev ? INITIAL_CONNECTED : []);
   const [showBrowser, setShowBrowser] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -609,6 +598,10 @@ function SourcesTab() {
 }
 
 function AITab() {
+  const { user } = useAuth();
+  const isDev = user?.isDev;
+  const prefs = isDev ? PREFERENCES : [];
+
   return (
     <div style={{ maxWidth: 520 }}>
       <SectionTitle>Learned Preferences</SectionTitle>
@@ -616,7 +609,12 @@ function AITab() {
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
           Fülkit learns these from your interactions — not a settings form.
         </div>
-        {PREFERENCES.map((pref, i) => (
+        {prefs.length === 0 && (
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+            No preferences learned yet. Start chatting and I'll pick up on your style.
+          </div>
+        )}
+        {prefs.map((pref, i) => (
           <div
             key={i}
             style={{
@@ -624,7 +622,7 @@ function AITab() {
               alignItems: "center",
               justifyContent: "space-between",
               padding: "var(--space-2) 0",
-              borderBottom: i < PREFERENCES.length - 1 ? "1px solid var(--color-border-light)" : "none",
+              borderBottom: i < prefs.length - 1 ? "1px solid var(--color-border-light)" : "none",
             }}
           >
             <div>
@@ -741,7 +739,7 @@ function AITab() {
           >
             <span style={{ color: "var(--color-text-secondary)" }}>Current frequency</span>
             <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>
-              2x / day
+              {isDev ? "2x / day" : "Not set"}
             </span>
           </div>
         </Card>
@@ -751,7 +749,10 @@ function AITab() {
 }
 
 function ReferralsTab() {
-  const activeRefs = REFERRALS.filter((r) => r.status === "active").length;
+  const { user } = useAuth();
+  const isDev = user?.isDev;
+  const refs = isDev ? REFERRALS : [];
+  const activeRefs = refs.filter((r) => r.status === "active").length;
   const credit = activeRefs * 1;
 
   return (
@@ -836,56 +837,64 @@ function ReferralsTab() {
 
       {/* Referral list */}
       <SectionTitle>Your referrals</SectionTitle>
-      <Card>
-        {REFERRALS.map((ref, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "var(--space-2) 0",
-              borderBottom: i < REFERRALS.length - 1 ? "1px solid var(--color-border-light)" : "none",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "var(--radius-full)",
-                  background: ref.status === "active" ? "var(--color-accent-soft)" : "var(--color-bg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Users size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-                  {ref.name}
-                </div>
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                  Since {ref.since}
-                </div>
-              </div>
-            </div>
-            <span
+      {refs.length > 0 ? (
+        <Card>
+          {refs.map((ref, i) => (
+            <div
+              key={i}
               style={{
-                fontSize: "var(--font-size-2xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                padding: "var(--space-0-5) var(--space-2)",
-                borderRadius: "var(--radius-xs)",
-                background: ref.status === "active" ? "var(--color-success-soft)" : "var(--color-warning-soft)",
-                color: ref.status === "active" ? "var(--color-success)" : "var(--color-warning)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "var(--space-2) 0",
+                borderBottom: i < refs.length - 1 ? "1px solid var(--color-border-light)" : "none",
               }}
             >
-              {ref.status}
-            </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-full)",
+                    background: ref.status === "active" ? "var(--color-accent-soft)" : "var(--color-bg)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Users size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
+                    {ref.name}
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                    Since {ref.since}
+                  </div>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: "var(--font-size-2xs)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  padding: "var(--space-0-5) var(--space-2)",
+                  borderRadius: "var(--radius-xs)",
+                  background: ref.status === "active" ? "var(--color-success-soft)" : "var(--color-warning-soft)",
+                  color: ref.status === "active" ? "var(--color-success)" : "var(--color-warning)",
+                }}
+              >
+                {ref.status}
+              </span>
+            </div>
+          ))}
+        </Card>
+      ) : (
+        <Card>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+            No referrals yet. Share your link to earn credits.
           </div>
-        ))}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

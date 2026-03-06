@@ -102,7 +102,7 @@ export default function Dashboard() {
                   marginBottom: "var(--space-1)",
                 }}
               >
-                {getGreeting()}, {user?.name || profile?.name || "friend"}.
+                {getGreeting()}, {(user?.name || profile?.name || "friend").split(" ")[0]}.
               </h1>
               <p
                 style={{
