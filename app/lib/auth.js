@@ -93,6 +93,7 @@ export function AuthProvider({ children }) {
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { prompt: "select_account" },
       },
     });
     if (error) console.error("Sign in error:", error.message);
