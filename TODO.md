@@ -50,6 +50,18 @@
 - [ ] File/note uploads as alternative context source
 - [ ] Track context status on profile (`has_context` or similar)
 
+## Phase 2.55: Privacy Transparency Dashboard
+
+- [x] Real counts from DB (notes, conversations, actions, preferences)
+- [ ] Expandable rows — click to see every item Fulkit knows
+  - Notes: title, source, date
+  - Conversations: title, date (after Phase 2.6)
+  - Learned preferences: key/value with toggle to forget
+  - Onboarding answers: view/edit what you told Fulkit
+- [ ] Real storage used (Supabase query)
+- [ ] Export wires to real data (markdown dump)
+- [ ] Delete wires to real data (cascade with confirmation)
+
 ## Phase 2.6: Chat Persistence + Recall Rail
 
 - [ ] Conversations table (id, user_id, title, created_at, updated_at)

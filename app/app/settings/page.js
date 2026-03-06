@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Settings as SettingsIcon,
   User,
@@ -23,6 +23,7 @@ import {
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
+import { supabase } from "../../lib/supabase";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -1059,14 +1060,50 @@ function BillingTab() {
 }
 
 function PrivacyTab() {
+  const { user } = useAuth();
+  const isDev = user?.isDev;
+
+  const [counts, setCounts] = useState(null);
+
+  useEffect(() => {
+    if (!user || isDev) return;
+
+    async function fetchCounts() {
+      const [notes, actions, preferences] = await Promise.all([
+        supabase.from("notes").select("id", { count: "exact", head: true }),
+        supabase.from("actions").select("id", { count: "exact", head: true }),
+        supabase.from("preferences").select("id", { count: "exact", head: true }),
+      ]);
+      setCounts({
+        notes: notes.count || 0,
+        actions: actions.count || 0,
+        preferences: preferences.count || 0,
+        conversations: 0, // Phase 2.6
+      });
+    }
+    fetchCounts();
+  }, [user, isDev]);
+
   return (
     <div style={{ maxWidth: 520 }}>
       <SectionTitle>Your data</SectionTitle>
       <Card>
-        <Row label="Notes stored" value="1,247 notes across 4 sources" />
-        <Row label="AI conversations" value="34 conversations" />
-        <Row label="Learned preferences" value="6 active preferences" />
-        <Row label="Storage used" value="12.4 MB" />
+        {isDev ? (
+          <>
+            <Row label="Notes stored" value="1,247 notes across 4 sources" />
+            <Row label="AI conversations" value="34 conversations" />
+            <Row label="Learned preferences" value="6 active preferences" />
+            <Row label="Action items" value="18 actions tracked" />
+            <Row label="Storage used" value="12.4 MB" />
+          </>
+        ) : (
+          <>
+            <Row label="Notes stored" value={counts ? `${counts.notes} note${counts.notes !== 1 ? "s" : ""}` : "Loading..."} />
+            <Row label="AI conversations" value={counts ? `${counts.conversations} conversation${counts.conversations !== 1 ? "s" : ""}` : "Loading..."} />
+            <Row label="Learned preferences" value={counts ? `${counts.preferences} preference${counts.preferences !== 1 ? "s" : ""}` : "Loading..."} />
+            <Row label="Action items" value={counts ? `${counts.actions} action${counts.actions !== 1 ? "s" : ""}` : "Loading..."} />
+          </>
+        )}
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>
