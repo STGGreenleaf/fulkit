@@ -900,6 +900,43 @@ function ReferralsTab() {
 }
 
 function BillingTab() {
+  const { user, profile, isOwner } = useAuth();
+  const isDev = user?.isDev;
+
+  const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
+  const seatType = isDev ? "standard" : (profile?.seat_type || "standard");
+  const seatLimit = SEAT_LIMITS[seatType] || 450;
+  const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
+  const remaining = seatLimit - messagesUsed;
+  const PLAN_LABELS = { standard: "Standard", pro: "Pro", free: "Free" };
+  const PLAN_PRICES = { standard: "$7/mo", pro: "$15/mo", free: "Free" };
+
+  // Owner with own API key = unlimited
+  if (!isDev && isOwner) {
+    return (
+      <div style={{ maxWidth: 520 }}>
+        <SectionTitle>Your plan</SectionTitle>
+        <Card style={{ marginBottom: "var(--space-4)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>
+              Owner
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+              Unlimited — using your own API key
+            </div>
+          </div>
+        </Card>
+
+        <SectionTitle>Referral credits</SectionTitle>
+        <Card>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+            No referral credits yet.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 520 }}>
       <SectionTitle>Your plan</SectionTitle>
@@ -907,27 +944,29 @@ function BillingTab() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
           <div>
             <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>
-              Standard
+              {PLAN_LABELS[seatType] || "Standard"}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              $7/mo — 450 messages
+              {PLAN_PRICES[seatType] || "$7/mo"} — {seatLimit} messages
             </div>
           </div>
-          <button
-            style={{
-              padding: "var(--space-1-5) var(--space-3)",
-              background: "transparent",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--color-text-secondary)",
-              fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-semibold)",
-              fontFamily: "var(--font-primary)",
-              cursor: "pointer",
-            }}
-          >
-            Upgrade to Pro
-          </button>
+          {seatType !== "pro" && (
+            <button
+              style={{
+                padding: "var(--space-1-5) var(--space-3)",
+                background: "transparent",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)",
+                color: "var(--color-text-secondary)",
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                fontFamily: "var(--font-primary)",
+                cursor: "pointer",
+              }}
+            >
+              Upgrade to Pro
+            </button>
+          )}
         </div>
 
         {/* Fül gauge */}
@@ -937,7 +976,7 @@ function BillingTab() {
               Fül remaining
             </span>
             <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>
-              312 / 450
+              {remaining} / {seatLimit}
             </span>
           </div>
           <div
@@ -951,7 +990,7 @@ function BillingTab() {
             <div
               style={{
                 height: "100%",
-                width: `${(312 / 450) * 100}%`,
+                width: `${Math.max(0, (remaining / seatLimit) * 100)}%`,
                 borderRadius: "var(--radius-full)",
                 background: "var(--color-accent)",
                 transition: `width var(--duration-slow) var(--ease-default)`,
@@ -960,7 +999,7 @@ function BillingTab() {
           </div>
         </div>
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-          Resets Mar 15. ~10 messages/day remaining.
+          {isDev ? "Resets Mar 15. ~10 messages/day remaining." : `${remaining} messages remaining this period.`}
         </div>
       </Card>
 
@@ -995,17 +1034,25 @@ function BillingTab() {
 
       <SectionTitle>Referral credits</SectionTitle>
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-            2 active referrals
-          </span>
-          <span style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)", color: "var(--color-success)" }}>
-            -$2/mo
-          </span>
-        </div>
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
-          You pay $5/mo after credits. 5 more referrals for free.
-        </div>
+        {isDev ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+                2 active referrals
+              </span>
+              <span style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)", color: "var(--color-success)" }}>
+                -$2/mo
+              </span>
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
+              You pay $5/mo after credits. 5 more referrals for free.
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+            No referral credits yet.
+          </div>
+        )}
       </Card>
     </div>
   );
