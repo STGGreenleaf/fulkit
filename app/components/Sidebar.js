@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Home, MessageCircle, Mic, Settings, Crown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -103,6 +104,11 @@ export default function Sidebar() {
         })}
       </div>
 
+      {/* Dev mode toggle */}
+      {isOwner && (
+        <DevToggle />
+      )}
+
       {/* Owner link — only visible to owner */}
       {isOwner && (
         <Link
@@ -129,5 +135,68 @@ export default function Sidebar() {
       {/* Mini Player — bottom of sidebar */}
       <MiniPlayer />
     </nav>
+  );
+}
+
+function DevToggle() {
+  const [on, setOn] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("fulkit-dev-mode") === "true";
+    }
+    return false;
+  });
+
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    localStorage.setItem("fulkit-dev-mode", String(next));
+    window.location.reload();
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        padding: "var(--space-2) var(--space-2-5)",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-dim)",
+        fontFamily: "var(--font-primary)",
+        marginBottom: "var(--space-2)",
+      }}
+    >
+      {/* Pill switch */}
+      <div
+        style={{
+          width: 28,
+          height: 16,
+          borderRadius: 8,
+          border: "1.5px solid var(--color-text)",
+          background: on ? "var(--color-text)" : "transparent",
+          position: "relative",
+          transition: "all var(--duration-fast) var(--ease-default)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: on ? "var(--color-bg)" : "var(--color-text)",
+            position: "absolute",
+            top: 1.5,
+            left: on ? 14 : 1.5,
+            transition: "left var(--duration-fast) var(--ease-default)",
+          }}
+        />
+      </div>
+      Dev
+    </button>
   );
 }
