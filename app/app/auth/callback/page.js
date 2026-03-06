@@ -56,36 +56,29 @@ export default function AuthCallback() {
     handleAuth();
   }, [router]);
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--space-4)",
-      }}
-    >
+  if (status.startsWith("Error:")) {
+    return (
       <div
         style={{
-          fontSize: "var(--font-size-2xl)",
-          fontWeight: "var(--font-weight-black)",
-          color: "var(--color-text-dim)",
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        F
+        <div
+          style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-muted)",
+            maxWidth: 400,
+            textAlign: "center",
+          }}
+        >
+          {status}
+        </div>
       </div>
-      <div
-        style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-muted)",
-          maxWidth: 400,
-          textAlign: "center",
-        }}
-      >
-        {status}
-      </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
