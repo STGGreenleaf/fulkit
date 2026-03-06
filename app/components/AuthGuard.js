@@ -3,6 +3,7 @@
 import { useAuth } from "../lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import LogoMark from "./LogoMark";
 
 export default function AuthGuard({ children }) {
   const { user, loading } = useAuth();
@@ -26,22 +27,7 @@ export default function AuthGuard({ children }) {
           justifyContent: "center",
         }}
       >
-        <div
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "var(--radius-sm)",
-            background: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-inverse)",
-            fontSize: "var(--font-size-xs)",
-            fontWeight: "var(--font-weight-black)",
-          }}
-        >
-          F
-        </div>
+        <LogoMark size={24} />
       </div>
     );
   }

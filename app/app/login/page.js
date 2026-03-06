@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Mail } from "lucide-react";
+import LogoMark from "../../components/LogoMark";
 
 export default function Login() {
   const { user, loading, signIn, signInWithEmail } = useAuth();
@@ -47,23 +48,8 @@ export default function Login() {
       }}
     >
       {/* Logo */}
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: "var(--radius-lg)",
-          background: "var(--color-accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--color-text-inverse)",
-          fontSize: "var(--font-size-xl)",
-          fontWeight: "var(--font-weight-black)",
-          letterSpacing: "var(--letter-spacing-tight)",
-          marginBottom: "var(--space-6)",
-        }}
-      >
-        F
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <LogoMark size={48} />
       </div>
 
       <h1

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Check, SkipForward } from "lucide-react";
+import LogoMark from "../../components/LogoMark";
 import { useAuth } from "../../lib/auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
@@ -449,22 +450,7 @@ export default function Onboarding() {
           gap: "var(--space-2)",
         }}
       >
-        <div
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: "var(--radius-xs)",
-            background: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-inverse)",
-            fontSize: "8px",
-            fontWeight: "var(--font-weight-black)",
-          }}
-        >
-          F
-        </div>
+        <LogoMark size={20} />
         <span
           style={{
             fontSize: "var(--font-size-xs)",

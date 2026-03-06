@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="50" fill="#171717"/>
+  <!-- U shape: two legs + semicircle bottom -->
+  <path d="M28 28h14v34c0 11.046 -1.046 16 8 16s8-4.954 8-16V28h14v34c0 19.882-8.118 30-22 30s-22-10.118-22-30V28z" fill="#c0c0c0"/>
+  <!-- Left dot -->
+  <rect x="30" y="16" width="10" height="10" fill="#c0c0c0"/>
+  <!-- Right dot -->
+  <rect x="60" y="16" width="10" height="10" fill="#c0c0c0"/>
+</svg>
