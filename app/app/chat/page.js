@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -8,9 +8,10 @@ import AuthGuard from "../../components/AuthGuard";
 export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const abortRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,35 +24,103 @@ export default function Chat() {
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }, [input]);
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || streaming) return;
 
     const userMsg = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
-    setLoading(true);
+    setStreaming(true);
+
+    // Add empty assistant message that we'll stream into
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: updated }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.message || "Something went wrong." },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Connection error. Try again." },
-      ]);
+
+      if (!res.ok) {
+        const err = await res.json();
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = {
+            role: "assistant",
+            content: err.error || "Something went wrong.",
+          };
+          return copy;
+        });
+        setStreaming(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6);
+          if (payload === "[DONE]") break;
+
+          try {
+            const { text: chunk, error } = JSON.parse(payload);
+            if (error) {
+              setMessages((prev) => {
+                const copy = [...prev];
+                copy[copy.length - 1] = { role: "assistant", content: error };
+                return copy;
+              });
+              break;
+            }
+            if (chunk) {
+              setMessages((prev) => {
+                const copy = [...prev];
+                const last = copy[copy.length - 1];
+                copy[copy.length - 1] = {
+                  ...last,
+                  content: last.content + chunk,
+                };
+                return copy;
+              });
+            }
+          } catch {
+            // skip malformed JSON
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = {
+            role: "assistant",
+            content: "Connection error. Try again.",
+          };
+          return copy;
+        });
+      }
     }
-    setLoading(false);
-  };
+
+    setStreaming(false);
+    abortRef.current = null;
+  }, [input, streaming, messages]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -61,7 +130,9 @@ export default function Chat() {
   };
 
   const clearChat = () => {
+    if (abortRef.current) abortRef.current.abort();
     setMessages([]);
+    setStreaming(false);
   };
 
   return (
@@ -76,7 +147,6 @@ export default function Chat() {
       >
         <Sidebar />
 
-        {/* Main chat area */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div
@@ -99,18 +169,7 @@ export default function Chat() {
                 fontWeight: "var(--font-weight-semibold)",
               }}
             >
-              AI Chat
-            </span>
-            <span
-              style={{
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-muted)",
-                padding: "var(--space-0-5) var(--space-2)",
-                borderRadius: "var(--radius-xs)",
-                background: "var(--color-bg-alt)",
-              }}
-            >
-              Brain-first mode
+              Chat
             </span>
             {messages.length > 0 && (
               <button
@@ -147,7 +206,7 @@ export default function Chat() {
               gap: "var(--space-4)",
             }}
           >
-            {messages.length === 0 && !loading && (
+            {messages.length === 0 && (
               <div
                 style={{
                   flex: 1,
@@ -171,9 +230,9 @@ export default function Chat() {
                     lineHeight: "var(--line-height-relaxed)",
                   }}
                 >
-                  Ask anything about your notes.
+                  Talk to your bestie.
                   <br />
-                  Your bestie reads across all your sources.
+                  Ask anything. Think out loud. Get stuff done.
                 </p>
               </div>
             )}
@@ -185,64 +244,49 @@ export default function Chat() {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: 640,
+                  alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                 }}
               >
                 <div
                   style={{
-                    maxWidth: "80%",
+                    maxWidth: "100%",
                     padding: "var(--space-2-5) var(--space-3-5)",
                     fontSize: "var(--font-size-base)",
-                    lineHeight:
-                      msg.role === "user"
-                        ? "var(--line-height-normal)"
-                        : "var(--line-height-loose)",
+                    lineHeight: "var(--line-height-relaxed)",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                     ...(msg.role === "user"
                       ? {
                           background: "var(--color-accent)",
                           color: "var(--color-text-inverse)",
-                          borderRadius: `var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg)`,
+                          borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg)",
                         }
                       : {
                           background: "var(--color-bg-alt)",
                           color: "var(--color-text)",
                           border: "1px solid var(--color-border-light)",
-                          borderRadius: `var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)`,
+                          borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
                         }),
                   }}
                 >
                   {msg.content}
+                  {streaming && i === messages.length - 1 && msg.role === "assistant" && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 2,
+                        height: "1em",
+                        background: "var(--color-text-muted)",
+                        marginLeft: 2,
+                        animation: "blink 0.8s infinite",
+                        verticalAlign: "text-bottom",
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             ))}
-
-            {loading && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "var(--space-1)",
-                  padding: "var(--space-2-5) var(--space-3-5)",
-                  background: "var(--color-bg-alt)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: `var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)`,
-                  alignSelf: "flex-start",
-                }}
-              >
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "var(--radius-full)",
-                      background: "var(--color-text-muted)",
-                      animation: `pulse 1s ${i * 0.2}s infinite`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
 
             <div ref={messagesEndRef} />
           </div>
@@ -271,7 +315,7 @@ export default function Chat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask your brain..."
+                placeholder="Talk to your bestie..."
                 rows={1}
                 style={{
                   flex: 1,
@@ -290,7 +334,7 @@ export default function Chat() {
               />
               <button
                 onClick={sendMessage}
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || streaming}
                 style={{
                   width: 32,
                   height: 32,
@@ -304,7 +348,7 @@ export default function Chat() {
                   justifyContent: "center",
                   cursor: input.trim() ? "pointer" : "default",
                   border: "none",
-                  transition: `background var(--duration-fast) var(--ease-default)`,
+                  transition: "background var(--duration-fast) var(--ease-default)",
                 }}
               >
                 <ArrowRight size={14} strokeWidth={2.5} color="var(--color-text-inverse)" />
@@ -314,9 +358,9 @@ export default function Chat() {
         </div>
 
         <style>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
           }
         `}</style>
       </div>
