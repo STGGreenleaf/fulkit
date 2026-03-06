@@ -4,42 +4,108 @@
 
 ---
 
-## Phase 1: Deploy (Get it live) -- DONE
+## Phase 1: Deploy -- DONE
 
-- [x] Set up Vercel project — connect repo, deploy Next.js app to fulkit.app
-- [x] Configure domains — fulkit.app DNS to Vercel, fullkit.app 308 redirect
-- [x] Add environment variables — ANTHROPIC_API_KEY, Supabase keys to Vercel
-- [x] Verify build passes clean — next build with zero errors
+- [x] Vercel project + fulkit.app DNS
+- [x] fullkit.app 308 redirect
+- [x] Environment variables on Vercel
+- [x] Clean build
 
-## Phase 2: Real Auth + Database (Make it real) -- IN PROGRESS
+## Phase 2: Auth + Database -- DONE
 
-- [x] Create Supabase project — Postgres + Auth + RLS
-- [x] Set up Supabase Auth — Google OAuth + email magic link
-- [x] Design + run migrations — profiles, preferences, actions, notes, referrals tables with RLS
-- [x] Replace mock auth — lib/auth.js now uses Supabase Auth with dev mode overrides
-- [x] Add Supabase env vars to Vercel — URL + anon key + service role key
-- [x] Configure Supabase URL settings — Site URL = https://fulkit.app, redirect URLs added
-- [x] Switch to @supabase/ssr — createBrowserClient for proper Next.js session handling
-- [ ] **FIX: Google OAuth sign-in not establishing session** — redirects to /landing after callback
-- [ ] Create real account — first Google sign-in (blocked by auth bug)
-- [ ] Set Collin as owner — `UPDATE public.profiles SET role = 'owner' WHERE email = '<gmail>';`
+- [x] Supabase project (Postgres + Auth + RLS)
+- [x] Google OAuth + email magic link
+- [x] DB migrations (profiles, preferences, actions, notes, referrals)
+- [x] Real auth in lib/auth.js with dev mode overrides
+- [x] Supabase env vars on Vercel
+- [x] PKCE auth callback — code exchange, error display
+- [x] Google OAuth confirmed working (sign in → dashboard → sign out loop)
+- [x] Collin's account created, role=owner, onboarded=true
 - [ ] Test magic link delivery
 
-## Phase 3: Action List Feature (The dogfood tool)
+## Phase 2.1: Core Features -- DONE
 
-- [ ] Build actions table in Supabase — id, user_id, title, status, priority, source, created_at, completed_at
-- [ ] Build Actions page/component — list view with complete, defer, dismiss controls
-- [ ] Import prelaunch.md tasks — parse the checklist into real action items
-- [ ] Wire Claude chat -> action creation
-- [ ] Wire Claude chat -> action queries
+- [x] Streaming chat (Claude Sonnet 4.6, SSE)
+- [x] Smart root route (`/` → dashboard or landing)
+- [x] Google Search Console verification
+- [x] Brand mark locked (umlaut.png)
+- [x] D-DIN + JetBrains Mono fonts (WOFF2, no 404s)
+- [x] Sign out → landing redirect
+- [x] Privacy + Terms pages
 
-## Phase 4: Dogfood (Fulkit manages Fulkit)
+## Phase 2.2: Onboarding System -- DONE
+
+- [x] question_phases + questions tables
+- [x] 20 seed questions across 6 phases
+- [x] RLS disabled on config tables
+- [x] Onboarding reads from DB (not hardcoded)
+- [x] Questions tab in Owner portal (full CRUD)
+- [x] Import/Export JSON (LLM round-trip for questionnaire authoring)
+
+## Phase 2.5: Onboarding Context Gate
+
+- [ ] Make onboarding dismissible — accessible from dashboard, not a hard gate
+- [ ] Context check before first chat — need questionnaire OR uploaded files/notes
+- [ ] Dashboard nudge if no context ("Take the quiz or drop in some files")
+- [ ] File/note uploads as alternative context source
+- [ ] Track context status on profile (`has_context` or similar)
+
+## Phase 2.6: Chat Persistence + Recall Rail
+
+- [ ] Conversations table (id, user_id, title, created_at, updated_at)
+- [ ] Messages table (id, conversation_id, role, content, created_at)
+- [ ] Auto-save every message to DB as it streams
+- [ ] Auto-title conversations (first message or AI-generated summary)
+- [ ] Click to resume any past conversation
+- [ ] Right rail — contextual recall strip, not a conversation list
+  - Last ~10 topics as filter chips (auto-tagged from conversation content)
+  - Click a chip to surface every conversation where that topic came up
+  - Quick-reference for part numbers, addresses, names mentioned recently
+  - Feeds into Phase 5 context engine (semantic tags, not folders)
+
+## Phase 3: Action List (The dogfood tool)
+
+- [ ] Actions table in Supabase (id, user_id, title, status, priority, source, timestamps)
+- [ ] Actions page — list view with complete, defer, dismiss
+- [ ] Import prelaunch.md tasks as action items
+- [ ] Claude chat → create actions
+- [ ] Claude chat → query actions
+
+## Phase 4: Dogfood
 
 - [ ] Import buildnotes.md, design.md, features.md as notes
 - [ ] Flood personal todos into Actions
 - [ ] Use Fulkit daily for 1 week
+- [ ] Build Fulkit features by chatting with Fulkit (dogfood the dev loop)
 - [ ] Iterate based on friction
+
+## Phase 5: Context Engine
+
+- [ ] File/note uploads with embedding (vector search)
+- [ ] Claude reads uploaded files as conversation context
+- [ ] Codebase ingestion — feed repo files so Claude knows the project
+- [ ] Persistent memory — Claude remembers across conversations
+- [ ] RAG pipeline — retrieve relevant notes/files per query
+
+## Phase 6: MCP Integrations (plug in everything)
+
+- [ ] Git — commit, push, diff, branch from chat
+- [ ] Spotify — play/pause, playlists, focus mode
+- [ ] Google Calendar — create events, check schedule
+- [ ] Gmail — read, draft, send
+- [ ] Obsidian / markdown vaults — sync notes bidirectionally
+- [ ] Stripe — check revenue, manage subscriptions
+- [ ] Vercel — deploy status, logs, rollback
+- [ ] Custom MCP server scaffold — template for adding any new service
+
+## Phase 7: Fulkit Builds Fulkit
+
+- [ ] Claude can read/write project files through chat
+- [ ] Claude can run commands (build, test, deploy)
+- [ ] Code review and PR creation from chat
+- [ ] Full dev loop inside Fulkit — no terminal, no IDE, no tab switching
+- [ ] Prove the thesis: one surface for your entire life
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Supabase~~ → **Fix Auth** → Owner role → Actions table → Actions UI → Import tasks → Go.
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → **Context gate** → Actions → Dogfood → Context engine → MCP integrations → Self-building.

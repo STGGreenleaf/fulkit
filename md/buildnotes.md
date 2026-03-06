@@ -1029,3 +1029,68 @@ This is a real company if you want it to be. Or it's just the best personal tool
 | **jsx/fulkit-orb.jsx** | The Hum — animated states, mic/stop/back controls | 🟡 Prototype |
 | **jsx/pyramid.jsx** | Owner portal pricing calculator — needs Fül system rebuild | 🟡 Needs update |
 | **assets/** | Brand, fonts, icons, OG images, styles, easter eggs | ⬜ Pending |
+
+---
+
+## Agent Safety Model
+
+> Claude inside Fulkit operates as a **contributor, not an admin.** PR-only workflow. Nothing destructive without confirmation. Nothing irreversible without a branch.
+
+### Core principles
+
+1. **Read-only by default** — every integration starts with read access only. Write access is added per-action behind gates.
+2. **Branch protection** — all code changes happen on feature branches. Main is protected. Claude opens PRs, Collin merges.
+3. **Confirmation gates** — destructive actions (delete, overwrite, drop, push) require explicit user approval before executing.
+4. **No silent side effects** — Claude always tells you what it's about to do before doing it. No background mutations.
+5. **Everything is recoverable** — git reflog for code, soft deletes for data, backups for DB.
+
+### Permission matrix
+
+| Action | Allowed | Gate |
+|:---|:---|:---|
+| Read any file in repo | Yes | None |
+| Search / grep code | Yes | None |
+| Read git log, diff, status | Yes | None |
+| Create branch | Yes | None |
+| Write files on branch | Yes | None |
+| Open pull request | Yes | None |
+| Merge PR | **No** | Owner only |
+| Push to main | **No** | Blocked |
+| Force push | **Never** | Blocked |
+| Delete files | Confirm | User approval |
+| Delete branch | Confirm | User approval |
+| Run tests | Yes | None |
+| Run build | Yes | None |
+| Deploy | **No** | Auto via Vercel on merge |
+| DB read (select) | Yes | Read-only connection |
+| DB write (insert/update) | Confirm | User approval |
+| DB destructive (delete/drop) | **No** | Blocked by default |
+
+### MCP integration safety
+
+Each MCP server exposes a specific tool surface. We control safety by:
+
+- **Scoping tools narrowly** — expose `read_file`, `create_pr`, not raw `git` or `sh`
+- **No shell access** — Claude cannot run arbitrary commands. Only predefined tools.
+- **Per-service permissions** — Spotify gets play/pause, not account management. Gmail gets draft, not send-without-review.
+- **Audit log** — every tool call is logged with timestamp, input, output. Reviewable in Owner portal.
+- **Rate limits** — cap tool calls per minute to prevent runaway loops.
+
+### Escalation path
+
+1. Claude suggests an action → shows what it will do
+2. User approves or denies
+3. If approved, Claude executes via scoped MCP tool
+4. Result is logged and shown to user
+5. If anything fails, Claude reports the error — does not retry destructively
+
+### Database safety
+
+- Chat and read queries use the **anon key** (RLS-scoped)
+- Admin operations use the **service role key** server-side only
+- No `DROP`, `TRUNCATE`, or schema changes from chat — ever
+- Data deletions are soft deletes (`status = 'archived'`) unless explicitly hard-deleted from Owner portal
+
+### The mental model
+
+> Think of Claude in Fulkit as a **junior developer on your team.** Smart, fast, helpful — but every PR gets reviewed. Every destructive action gets a "are you sure?" No deploy access. No admin credentials. A contributor with guardrails.
