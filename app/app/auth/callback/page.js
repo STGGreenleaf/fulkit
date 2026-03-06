@@ -12,33 +12,11 @@ export default function AuthCallback() {
     async function handleAuth() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
-      const hashParams = new URLSearchParams(url.hash.substring(1));
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
 
-      console.log("[auth/callback] code:", code);
-      console.log("[auth/callback] access_token:", accessToken ? "present" : "none");
-      console.log("[auth/callback] refresh_token:", refreshToken ? "present" : "none");
-
-      if (accessToken && refreshToken) {
-        // Implicit flow — manually set session from hash tokens
-        setStatus("Setting session...");
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        console.log("[auth/callback] setSession result:", { error: error?.message });
-        if (error) {
-          setStatus(`Error: ${error.message}`);
-          return;
-        }
-        router.replace("/home");
-        return;
-      }
+      console.log("[auth/callback] code:", code ? "present" : "none");
 
       if (code) {
-        // PKCE flow
-        setStatus("Exchanging code...");
+        // PKCE flow — exchange code for session
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         console.log("[auth/callback] PKCE result:", { error: error?.message });
         if (error) {
