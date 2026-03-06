@@ -102,12 +102,9 @@ export default function Sidebar() {
             </Link>
           );
         })}
+        {/* Dev mode toggle — right under Settings */}
+        {isOwner && <DevToggle />}
       </div>
-
-      {/* Dev mode toggle */}
-      {isOwner && (
-        <DevToggle />
-      )}
 
       {/* Owner link — only visible to owner */}
       {isOwner && (
