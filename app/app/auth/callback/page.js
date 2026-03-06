@@ -19,7 +19,7 @@ export default function AuthCallback() {
           setStatus(`Error: ${error.message}`);
           return;
         }
-        window.location.href = "/home";
+        window.location.href = "/";
         return;
       }
 

@@ -29,7 +29,7 @@ export default function Owner() {
 
   // Non-owners get bounced
   if (!isOwner) {
-    if (typeof window !== "undefined") router.replace("/home");
+    if (typeof window !== "undefined") router.replace("/");
     return null;
   }
 

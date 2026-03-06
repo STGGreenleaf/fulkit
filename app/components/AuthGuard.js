@@ -12,7 +12,7 @@ export default function AuthGuard({ children }) {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace("/landing");
+      router.replace("/");
     }
   }, [user, loading, router]);
 

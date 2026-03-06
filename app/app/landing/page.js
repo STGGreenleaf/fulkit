@@ -96,7 +96,7 @@ export default function Landing() {
         }}
       >
         <Link
-          href="/home"
+          href="/"
           style={{
             fontSize: "var(--font-size-lg)",
             fontWeight: "var(--font-weight-black)",

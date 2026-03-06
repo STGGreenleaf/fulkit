@@ -253,7 +253,7 @@ export default function Onboarding() {
 
   // No user at all → go to landing
   useEffect(() => {
-    if (!user) router.replace("/landing");
+    if (!user) router.replace("/");
   }, [user, router]);
 
   if (!user) return null;
@@ -384,7 +384,7 @@ export default function Onboarding() {
           work. Let's get to it.
         </p>
         <a
-          href="/home"
+          href="/"
           style={{
             padding: "var(--space-2-5) var(--space-6)",
             background: "var(--color-accent)",

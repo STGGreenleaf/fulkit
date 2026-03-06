@@ -304,7 +304,7 @@ export default function Hum() {
 
       {/* Top-left branding */}
       <Link
-        href="/home"
+        href="/"
         style={{
           position: "absolute",
           top: "var(--space-6)",

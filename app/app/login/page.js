@@ -18,7 +18,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/home");
+      router.replace("/");
     }
   }, [user, loading, router]);
 

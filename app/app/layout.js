@@ -15,6 +15,9 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  verification: {
+    google: "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
+  },
   other: {
     "theme-color": "#EFEDE8",
   },

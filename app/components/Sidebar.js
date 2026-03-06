@@ -9,7 +9,7 @@ import MiniPlayer from "./MiniPlayer";
 import LogoMark from "./LogoMark";
 
 const NAV = [
-  { id: "home", icon: Home, href: "/home", label: "Home" },
+  { id: "home", icon: Home, href: "/", label: "Home" },
   { id: "chat", icon: MessageCircle, href: "/chat", label: "Chat" },
   { id: "hum", icon: Mic, href: "/hum", label: "The Hum" },
   { id: "settings", icon: Settings, href: "/settings", label: "Settings" },
@@ -32,11 +32,11 @@ export default function Sidebar() {
     >
       {/* Logo — triple-click to bypass to landing page (dev shortcut) */}
       <Link
-        href="/home"
+        href="/"
         onClick={(e) => {
           if (e.detail === 3) {
             e.preventDefault();
-            window.location.href = "/landing";
+            window.location.href = "/";
           }
         }}
         style={{
