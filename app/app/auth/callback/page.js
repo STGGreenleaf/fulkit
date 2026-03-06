@@ -14,16 +14,20 @@ export default function AuthCallback() {
       const code = url.searchParams.get("code");
       const hashParams = new URLSearchParams(url.hash.substring(1));
       const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
 
-      console.log("[auth/callback] URL:", window.location.href);
       console.log("[auth/callback] code:", code);
       console.log("[auth/callback] access_token:", accessToken ? "present" : "none");
+      console.log("[auth/callback] refresh_token:", refreshToken ? "present" : "none");
 
-      if (code) {
-        // PKCE flow
-        setStatus("Exchanging code...");
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        console.log("[auth/callback] PKCE exchange result:", { data: !!data?.session, error: error?.message });
+      if (accessToken && refreshToken) {
+        // Implicit flow — manually set session from hash tokens
+        setStatus("Setting session...");
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        console.log("[auth/callback] setSession result:", { error: error?.message });
         if (error) {
           setStatus(`Error: ${error.message}`);
           return;
@@ -32,29 +36,21 @@ export default function AuthCallback() {
         return;
       }
 
-      if (accessToken) {
-        // Implicit flow — tokens in hash, client should auto-detect
-        setStatus("Processing tokens...");
-        const { data, error } = await supabase.auth.getSession();
-        console.log("[auth/callback] Implicit session:", { data: !!data?.session, error: error?.message });
-        if (data?.session) {
-          router.replace("/home");
+      if (code) {
+        // PKCE flow
+        setStatus("Exchanging code...");
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        console.log("[auth/callback] PKCE result:", { error: error?.message });
+        if (error) {
+          setStatus(`Error: ${error.message}`);
           return;
         }
-        setStatus(`Error: session not established from hash tokens`);
-        return;
-      }
-
-      // No code or tokens — check if session already exists
-      setStatus("Checking session...");
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
         router.replace("/home");
         return;
       }
 
-      setStatus("No auth code or tokens found in URL. Check console.");
-      console.error("[auth/callback] No code or access_token found. Full URL:", window.location.href);
+      setStatus("No auth tokens found. Check console.");
+      console.error("[auth/callback] No code or access_token in URL");
     }
 
     handleAuth();
