@@ -64,11 +64,11 @@
 
 ## Phase 2.6: Chat Persistence + Recall Rail
 
-- [ ] Conversations table (id, user_id, title, created_at, updated_at)
-- [ ] Messages table (id, conversation_id, role, content, created_at)
-- [ ] Auto-save every message to DB as it streams
-- [ ] Auto-title conversations (first message or AI-generated summary)
-- [ ] Click to resume any past conversation
+- [x] Conversations table (id, user_id, title, created_at, updated_at)
+- [x] Messages table (id, conversation_id, role, content, created_at)
+- [x] Auto-save every message to DB as it streams
+- [x] Auto-title conversations (first message truncated to 60 chars)
+- [x] Click to resume any past conversation (History panel)
 - [ ] Right rail — contextual recall strip, not a conversation list
   - Last ~10 topics as filter chips (auto-tagged from conversation content)
   - Click a chip to surface every conversation where that topic came up
