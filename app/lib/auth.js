@@ -47,6 +47,12 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    // Skip auth init on the callback page — it handles its own exchange
+    if (window.location.pathname === "/auth/callback") {
+      setLoading(false);
+      return;
+    }
+
     // Real auth — listen to Supabase session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
