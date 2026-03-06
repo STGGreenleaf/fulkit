@@ -159,20 +159,19 @@ function DevToggle() {
         background: "none",
         border: "none",
         cursor: "pointer",
-        fontSize: "var(--font-size-xs)",
-        color: "var(--color-text-dim)",
+        fontSize: "var(--font-size-2xs)",
+        color: "var(--color-text-muted)",
         fontFamily: "var(--font-primary)",
-        marginBottom: "var(--space-2)",
       }}
     >
       {/* Pill switch */}
       <div
         style={{
-          width: 28,
-          height: 16,
-          borderRadius: 8,
-          border: "1.5px solid var(--color-text)",
-          background: on ? "var(--color-text)" : "transparent",
+          width: 22,
+          height: 12,
+          borderRadius: 6,
+          border: "1px solid var(--color-text-muted)",
+          background: on ? "var(--color-text-muted)" : "transparent",
           position: "relative",
           transition: "all var(--duration-fast) var(--ease-default)",
           flexShrink: 0,
@@ -180,13 +179,13 @@ function DevToggle() {
       >
         <div
           style={{
-            width: 10,
-            height: 10,
+            width: 8,
+            height: 8,
             borderRadius: "50%",
-            background: on ? "var(--color-bg)" : "var(--color-text)",
+            background: on ? "var(--color-bg)" : "var(--color-text-muted)",
             position: "absolute",
-            top: 1.5,
-            left: on ? 14 : 1.5,
+            top: 1,
+            left: on ? 11 : 1,
             transition: "left var(--duration-fast) var(--ease-default)",
           }}
         />
