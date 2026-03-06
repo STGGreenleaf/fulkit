@@ -53,13 +53,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user || isDev) return;
 
-    // Fetch real actions
+    // Fetch real actions (parents + children)
     supabase
       .from("actions")
       .select("*")
       .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(5)
+      .order("priority", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true })
       .then(({ data }) => { if (data) setActions(data); });
 
     // Fetch real notes
@@ -73,6 +73,14 @@ export default function Dashboard() {
 
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+  const completeAction = async (id) => {
+    setActions((prev) => prev.filter((a) => a.id !== id));
+    await supabase
+      .from("actions")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("id", id);
+  };
+
   const displayActions = isDev ? DEV_ACTIONS : actions;
   const displayNotes = isDev ? DEV_NOTES : notes;
   const displayWhispers = isDev ? DEV_WHISPERS : [];
@@ -165,30 +173,7 @@ export default function Dashboard() {
               {/* Action Items */}
               <SectionLabel icon={CheckSquare}>Action items</SectionLabel>
               {displayActions.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", marginBottom: "var(--space-8)" }}>
-                  {displayActions.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-3)",
-                        padding: "var(--space-2-5) var(--space-4)",
-                        background: "var(--color-bg-elevated)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-md)",
-                      }}
-                    >
-                      <div style={{ width: 18, height: 18, borderRadius: "var(--radius-xs)", border: "1.5px solid var(--color-border)", flexShrink: 0, cursor: "pointer" }} />
-                      <span style={{ flex: 1, fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>
-                        {item.title}
-                      </span>
-                      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-medium)" }}>
-                        {item.source}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <ActionList actions={displayActions} onComplete={completeAction} />
               ) : (
                 <EmptyState message="No action items yet. Tell me what's on your plate." link="/chat" linkLabel="Start chatting" marginBottom="var(--space-8)" />
               )}
@@ -326,6 +311,117 @@ function EmptyState({ message, link, linkLabel, marginBottom }) {
           {linkLabel}
         </Link>
       )}
+    </div>
+  );
+}
+
+function ActionList({ actions, onComplete }) {
+  // Separate parents (no parent_id) and children
+  const parents = actions.filter((a) => !a.parent_id);
+  const children = actions.filter((a) => a.parent_id);
+  // Ungrouped tasks (no parent, no children pointing to them)
+  const parentIds = new Set(parents.map((p) => p.id));
+  const hasChildren = new Set(children.map((c) => c.parent_id));
+  const standalone = parents.filter((p) => !hasChildren.has(p.id));
+  const groups = parents.filter((p) => hasChildren.has(p.id));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
+      {/* Grouped tasks */}
+      {groups.map((parent) => {
+        const kids = children.filter((c) => c.parent_id === parent.id);
+        return (
+          <div key={parent.id}>
+            <div
+              style={{
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wider)",
+                color: "var(--color-text-muted)",
+                padding: "0 var(--space-4)",
+                marginBottom: "var(--space-2)",
+              }}
+            >
+              {parent.title}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+              {kids.map((item) => (
+                <ActionRow key={item.id} item={item} onComplete={onComplete} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {/* Standalone tasks */}
+      {standalone.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+          {standalone.map((item) => (
+            <ActionRow key={item.id} item={item} onComplete={onComplete} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionRow({ item, onComplete }) {
+  const [checked, setChecked] = useState(false);
+
+  const handleCheck = () => {
+    setChecked(true);
+    setTimeout(() => onComplete(item.id), 400);
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        padding: "var(--space-2-5) var(--space-4)",
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        borderRadius: "var(--radius-md)",
+        opacity: checked ? 0.4 : 1,
+        transition: "opacity var(--duration-slow) var(--ease-default)",
+      }}
+    >
+      <div
+        onClick={handleCheck}
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: "var(--radius-xs)",
+          border: checked ? "none" : "1.5px solid var(--color-border)",
+          background: checked ? "var(--color-accent)" : "transparent",
+          flexShrink: 0,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "all var(--duration-fast) var(--ease-default)",
+        }}
+      >
+        {checked && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        )}
+      </div>
+      <span
+        style={{
+          flex: 1,
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text)",
+          textDecoration: checked ? "line-through" : "none",
+        }}
+      >
+        {item.title}
+      </span>
+      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-medium)" }}>
+        {item.source}
+      </span>
     </div>
   );
 }
