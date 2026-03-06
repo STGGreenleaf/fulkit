@@ -5,17 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function AuthGuard({ children }) {
-  const { user, loading, isOnboarded } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
       router.replace("/landing");
-    } else if (user.isNew || !isOnboarded) {
-      router.replace("/onboarding");
     }
-  }, [user, loading, isOnboarded, router]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -48,7 +46,7 @@ export default function AuthGuard({ children }) {
     );
   }
 
-  if (!user || user.isNew || !isOnboarded) return null;
+  if (!user) return null;
 
   return children;
 }
