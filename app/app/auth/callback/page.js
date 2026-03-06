@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 
 export default function AuthCallback() {
-  const router = useRouter();
   const [status, setStatus] = useState("Signing in...");
 
   useEffect(() => {
@@ -21,7 +19,7 @@ export default function AuthCallback() {
           setStatus(`Error: ${error.message}`);
           return;
         }
-        router.replace("/home");
+        window.location.href = "/home";
         return;
       }
 
@@ -30,7 +28,7 @@ export default function AuthCallback() {
     }
 
     handleAuth();
-  }, [router]);
+  }, []);
 
   if (status.startsWith("Error:")) {
     return (
