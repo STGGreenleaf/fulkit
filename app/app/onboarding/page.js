@@ -7,241 +7,11 @@ import { useAuth } from "../../lib/auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
-const PHASES = [
-  {
-    label: "The Basics",
-    intro: "Let me get the fundamentals so I can talk to you like a human, not a robot.",
-    questions: [
-      {
-        id: "name",
-        text: "What should I call you?",
-        why: "Everything starts with a name.",
-        type: "text",
-      },
-      {
-        id: "location",
-        text: "Where are you based?",
-        why: "Helps me with time zones, local recommendations, and context.",
-        type: "text",
-      },
-      {
-        id: "work",
-        text: "What do you do?",
-        why: "Shapes whether I think in terms of bosses, clients, customers, or professors.",
-        type: "choice",
-        options: ["Employee", "Self-employed", "Student", "Between things", "Retired"],
-      },
-      {
-        id: "dayToDay",
-        text: "What's your day-to-day like?",
-        why: "This determines when and how I check in with you.",
-        type: "choice",
-        options: [
-          "Desk job / computer all day",
-          "On my feet / physical work",
-          "Mix of both",
-          "It changes constantly",
-        ],
-      },
-      {
-        id: "scope",
-        text: "Are you here to organize your life, your work, or both?",
-        why: "Decides whether I build you a personal brain, a work brain, or the full thing.",
-        type: "choice",
-        options: ["Personal life", "Work / career", "Both — it's all connected", "I don't know yet"],
-      },
-    ],
-  },
-  {
-    label: "Your People",
-    intro: "I want to know who matters to you so I never ask you to spell their name twice.",
-    questions: [
-      {
-        id: "people",
-        text: "Who are the 2-3 most important people in your life?",
-        why: "I'll remember them, their names, their role in your life.",
-        type: "text",
-        placeholder: "e.g. Sarah (partner), Mike (business partner), Mom",
-      },
-      {
-        id: "workPeople",
-        text: "Anyone I should know about at work?",
-        why: "Helps me give advice that accounts for real dynamics.",
-        type: "choice",
-        options: ["Boss / manager", "Business partner", "Team members", "Clients", "Nobody — I work alone"],
-      },
-    ],
-  },
-  {
-    label: "What's on Your Plate",
-    intro: "I can't help if I don't know what you're carrying. This is where it gets useful.",
-    questions: [
-      {
-        id: "priority",
-        text: "What's the #1 thing you're trying to get done right now?",
-        why: "This becomes your first action item. I'll check in on it.",
-        type: "text",
-      },
-      {
-        id: "drops",
-        text: "What keeps falling through the cracks?",
-        why: "This tells me where to focus my whispers.",
-        type: "choice",
-        options: [
-          "Emails / follow-ups",
-          "Health stuff",
-          "Money / bills",
-          "Personal errands",
-          "Projects I start and don't finish",
-        ],
-      },
-      {
-        id: "organization",
-        text: "How do you feel about your current level of organization?",
-        why: "Tells me how much structure to impose.",
-        type: "choice",
-        options: [
-          "Total chaos",
-          "I have a system but it's messy",
-          "Pretty organized",
-          "Obsessively organized",
-          "I don't think about it",
-        ],
-      },
-    ],
-  },
-  {
-    label: "How You Want Help",
-    intro: "This calibrates how I talk to you and how often I check in.",
-    questions: [
-      {
-        id: "tone",
-        text: "How do you want me to communicate?",
-        why: "Directly sets my tone. This is the most important UX question.",
-        type: "choice",
-        options: [
-          "Short and direct",
-          "Warm and conversational",
-          "Challenge me — push back",
-          "Just be helpful, I'll figure out the vibe",
-        ],
-      },
-      {
-        id: "frequency",
-        text: "How often should I check in with suggestions?",
-        why: "Sets your whisper frequency from day one.",
-        type: "choice",
-        options: [
-          "A couple times a day",
-          "Once a day max",
-          "Only when I ask",
-          "Surprise me",
-        ],
-      },
-      {
-        id: "topics",
-        text: "What topics should I help with?",
-        why: "Scopes what I pay attention to.",
-        type: "choice",
-        multi: true,
-        options: [
-          "Work / productivity",
-          "Health / fitness",
-          "Food / meal planning",
-          "Finance / budgeting",
-          "Personal growth",
-          "All of it",
-        ],
-      },
-      {
-        id: "capture",
-        text: "How do you capture ideas right now?",
-        why: "Tells me whether to push voice mode, quick capture, or meet you where you are.",
-        type: "choice",
-        options: [
-          "Notes app on my phone",
-          "I don't — they just disappear",
-          "Paper / journal",
-          "Voice memos",
-          "A specific app",
-        ],
-      },
-    ],
-  },
-  {
-    label: "Quick Hits",
-    intro: "Rapid fire. These shape your experience behind the scenes.",
-    questions: [
-      {
-        id: "chronotype",
-        text: "Morning person or night owl?",
-        why: "Determines when whispers arrive.",
-        type: "choice",
-        options: ["Early bird", "Night owl", "Depends on the day"],
-      },
-      {
-        id: "briefing",
-        text: "Do you want daily sport scores, news, weather?",
-        why: "Tells me if I should be a morning briefing or stay focused on your brain.",
-        type: "choice",
-        options: [
-          "Sports",
-          "News",
-          "Weather is useful",
-          "None of that — just my stuff",
-          "All of it",
-        ],
-      },
-      {
-        id: "wish",
-        text: "One thing you wish an app could do for you that none of them do?",
-        why: "This tells me what magic moment to create for YOU specifically.",
-        type: "text",
-      },
-    ],
-  },
-  {
-    label: "The Deep Stuff",
-    intro: "Only if you want to go here. Skip any or all.",
-    questions: [
-      {
-        id: "goal",
-        text: "What's one goal you have that you haven't told many people?",
-        why: "I'll quietly track this and check in when the time is right.",
-        type: "text",
-        skippable: true,
-      },
-      {
-        id: "stress",
-        text: "What stresses you out most right now?",
-        why: "I'll be careful around these topics.",
-        type: "choice",
-        skippable: true,
-        options: ["Money", "Health", "Relationships", "Work", "Time", "Everything", "Nothing major"],
-      },
-      {
-        id: "goodDay",
-        text: "What does a really good day look like for you?",
-        why: "This is my north star for how to help.",
-        type: "text",
-        skippable: true,
-      },
-    ],
-  },
-];
-
-const PHASE_DONE_MSGS = [
-  "Got it — I created your profile and know when to check in.",
-  "Your people are saved. I'll remember them.",
-  "I set up your first action item and I know where to focus.",
-  "Your Fülkit is calibrated. I know how to talk to you.",
-  "Preferences set. Whispers are ready.",
-  "I know you a little deeper now. I'll be thoughtful with it.",
-];
-
 export default function Onboarding() {
   const { user, fetchProfile } = useAuth();
   const router = useRouter();
+  const [phases, setPhases] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -251,21 +21,60 @@ export default function Onboarding() {
   const [complete, setComplete] = useState(false);
   const inputRef = useRef(null);
 
+  // Fetch phases + questions from DB
+  useEffect(() => {
+    async function load() {
+      const [{ data: pData }, { data: qData }] = await Promise.all([
+        supabase.from("question_phases").select("*").order("sort_order"),
+        supabase.from("questions").select("*").order("sort_order"),
+      ]);
+      const built = (pData || []).map((p) => ({
+        label: p.label,
+        intro: p.intro || "",
+        questions: (qData || [])
+          .filter((q) => q.phase_id === p.id)
+          .map((q) => ({
+            id: q.question_id,
+            text: q.text,
+            why: q.why || "",
+            type: q.type,
+            multi: q.multi || false,
+            skippable: q.skippable || false,
+            placeholder: q.placeholder || "",
+            options: q.type === "choice" && q.options
+              ? q.options.map((o) => (typeof o === "string" ? o : o.label))
+              : undefined,
+          })),
+      }));
+      setPhases(built);
+      setLoadingData(false);
+    }
+    load();
+  }, []);
+
   // No user at all → go to landing
   useEffect(() => {
     if (!user) router.replace("/");
   }, [user, router]);
 
   if (!user) return null;
+  if (loadingData) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <LogoMark size={28} style={{ opacity: 0.5 }} />
+      </div>
+    );
+  }
+  if (phases.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+        No onboarding questions configured.
+      </div>
+    );
+  }
 
-  const phase = PHASES[phaseIdx];
+  const phase = phases[phaseIdx];
   const question = phase?.questions[questionIdx];
-
-  useEffect(() => {
-    if (question?.type === "text") {
-      inputRef.current?.focus();
-    }
-  }, [phaseIdx, questionIdx, question?.type]);
 
   const advance = (value) => {
     if (value !== undefined && value !== "" && question) {
@@ -286,7 +95,7 @@ export default function Onboarding() {
   const nextPhase = async () => {
     setShowPhaseDone(false);
     const nextP = phaseIdx + 1;
-    if (nextP < PHASES.length) {
+    if (nextP < phases.length) {
       setPhaseIdx(nextP);
       setQuestionIdx(0);
       setTextVal("");
@@ -433,7 +242,7 @@ export default function Onboarding() {
           style={{
             height: "100%",
             background: "var(--color-accent)",
-            width: `${((phaseIdx + (showPhaseDone ? 1 : questionIdx / phase.questions.length)) / PHASES.length) * 100}%`,
+            width: `${((phaseIdx + (showPhaseDone ? 1 : questionIdx / phase.questions.length)) / phases.length) * 100}%`,
             transition: `width var(--duration-slow) var(--ease-default)`,
           }}
         />
@@ -490,7 +299,7 @@ export default function Onboarding() {
                 marginBottom: "var(--space-8)",
               }}
             >
-              {PHASE_DONE_MSGS[phaseIdx]}
+              Phase complete.
             </p>
             <button
               onClick={nextPhase}
@@ -509,7 +318,7 @@ export default function Onboarding() {
                 gap: "var(--space-2)",
               }}
             >
-              {phaseIdx < PHASES.length - 1 ? "Continue" : "Finish"}
+              {phaseIdx < phases.length - 1 ? "Continue" : "Finish"}
               <ArrowRight size={14} strokeWidth={2.5} />
             </button>
           </div>
@@ -610,7 +419,7 @@ export default function Onboarding() {
                     gap: "var(--space-2)",
                   }}
                 >
-                  {question.options.map((opt) => {
+                  {(question.options || []).map((opt) => {
                     const selected = question.multi
                       ? multiSelect.includes(opt)
                       : false;
