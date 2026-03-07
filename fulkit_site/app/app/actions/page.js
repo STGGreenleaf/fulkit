@@ -229,7 +229,7 @@ export default function Actions() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "var(--space-2) var(--space-3)",
+                    padding: "var(--space-3) var(--space-5)",
                     border: "none",
                     borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
                     background: "transparent",
