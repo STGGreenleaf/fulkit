@@ -9,8 +9,11 @@ export async function GET(request) {
     const stateParam = searchParams.get("state");
     const error = searchParams.get("error");
 
-    if (error || !code || !stateParam) {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error", request.url));
+    if (error) {
+      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=spotify_${error}`, request.url));
+    }
+    if (!code || !stateParam) {
+      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=missing_params", request.url));
     }
 
     // Verify HMAC-signed state
@@ -23,10 +26,11 @@ export async function GET(request) {
       if (expected !== decoded.signature) throw new Error("Invalid signature");
       userId = JSON.parse(decoded.payload).userId;
     } catch {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error", request.url));
+      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_state", request.url));
     }
 
     // Exchange code for tokens
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`;
     const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
@@ -38,14 +42,14 @@ export async function GET(request) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`,
+        redirect_uri: redirectUri,
       }),
     });
 
     const tokenData = await tokenRes.json();
     if (tokenData.error || !tokenData.access_token) {
-      console.error("[spotify/callback] Token exchange failed:", tokenData.error);
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error", request.url));
+      console.error("[spotify/callback] Token exchange failed:", tokenData.error, tokenData.error_description);
+      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=token_${tokenData.error}`, request.url));
     }
 
     // Upsert into integrations table
@@ -68,7 +72,7 @@ export async function GET(request) {
 
     if (dbError) {
       console.error("[spotify/callback] DB error:", dbError.message);
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error", request.url));
+      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=db_${dbError.code}`, request.url));
     }
 
     const response = NextResponse.redirect(new URL("/settings?tab=sources&sp=connected", request.url));
