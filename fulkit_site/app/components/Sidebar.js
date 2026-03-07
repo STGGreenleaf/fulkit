@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Home, MessageCircle, CheckSquare, Settings, Crown, ToggleLeft, ToggleRight } from "lucide-react";
+import { Home, MessageCircle, CheckSquare, Settings, Crown, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -143,7 +143,7 @@ export default function Sidebar() {
 function CompactToggle({ compact, onToggle }) {
   const helperOn = !compact;
   return (
-    <Tooltip label={compact ? "Helper mode" : null}>
+    <Tooltip label={compact ? "Expand" : null}>
       <button
         onClick={onToggle}
         style={{
@@ -187,7 +187,7 @@ function CompactToggle({ compact, onToggle }) {
             }}
           />
         </div>
-        {!compact && "Helper"}
+        {!compact && <PanelLeftClose size={12} strokeWidth={1.8} />}
       </button>
     </Tooltip>
   );
