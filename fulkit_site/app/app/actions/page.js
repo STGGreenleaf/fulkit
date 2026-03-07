@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, CodeXml, Home, Trash2 } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
@@ -10,7 +10,7 @@ import { supabase } from "../../lib/supabase";
 const FILTERS = ["active", "done", "deferred", "dismissed"];
 const LENSES = [
   { key: "all", Icon: Layers },
-  { key: "build", Icon: CodeXml },
+  { key: "build", Icon: MessageSquareCode },
   { key: "life", Icon: Home },
 ];
 const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
@@ -789,7 +789,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
             <label style={labelStyle}>Bucket</label>
             <div style={{ display: "flex", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid var(--color-border-light)" }}>
               {[
-                { value: "build", label: "Build", Icon: CodeXml },
+                { value: "build", label: "Build", Icon: MessageSquareCode },
                 { value: "life", label: "Life", Icon: Home },
                 { value: null, label: "None", Icon: X },
               ].map(({ value, label, Icon }, i) => {
