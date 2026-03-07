@@ -143,8 +143,17 @@ export default function Chat() {
     }
 
     // Get auth token for API authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    const authToken = session?.access_token;
+    let authToken = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      authToken = session?.access_token;
+      if (!authToken) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        authToken = refreshed?.access_token;
+      }
+    } catch {
+      // Auth token unavailable
+    }
 
     const controller = new AbortController();
     abortRef.current = controller;
