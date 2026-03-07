@@ -1,20 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, Code, Home } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
 const FILTERS = ["active", "done", "deferred", "dismissed"];
+const LENSES = [
+  { key: "all", Icon: Layers, label: "All" },
+  { key: "build", Icon: Code, label: "Build" },
+  { key: "life", Icon: Home, label: "Life" },
+];
+const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
+const BUCKET_LABELS = { build: "Build", life: "Life" };
 
 const DEV_ACTIONS = [
-  { id: "1", title: "Review Q1 budget draft", source: "Obsidian", status: "active", priority: 1, parent_id: null, created_at: "2026-02-28T10:00:00Z", description: "Compare against last quarter's actual spend. Mike needs this by Friday." },
-  { id: "2", title: "Send Mike the revised proposal", source: "Chat", status: "active", priority: 2, parent_id: null, created_at: "2026-03-01T14:00:00Z", description: null },
-  { id: "3", title: "Book dentist appointment", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-02T09:00:00Z", description: null },
-  { id: "4", title: "Follow up with Sarah", source: "Chat", status: "done", priority: null, parent_id: null, created_at: "2026-02-25T11:00:00Z", completed_at: "2026-03-01T16:00:00Z", description: "She confirmed the budget numbers look good." },
-  { id: "5", title: "Cancel old subscription", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-20T08:00:00Z", description: null },
+  { id: "1", title: "Review Q1 budget draft", source: "Obsidian", status: "active", priority: 1, parent_id: null, created_at: "2026-02-28T10:00:00Z", description: "Compare against last quarter's actual spend. Mike needs this by Friday.", bucket: "build" },
+  { id: "2", title: "Send Mike the revised proposal", source: "Chat", status: "active", priority: 2, parent_id: null, created_at: "2026-03-01T14:00:00Z", description: null, bucket: "build" },
+  { id: "3", title: "Book dentist appointment", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-02T09:00:00Z", description: null, bucket: "life" },
+  { id: "4", title: "Follow up with Sarah", source: "Chat", status: "done", priority: null, parent_id: null, created_at: "2026-02-25T11:00:00Z", completed_at: "2026-03-01T16:00:00Z", description: "She confirmed the budget numbers look good.", bucket: null },
+  { id: "5", title: "Cancel old subscription", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-20T08:00:00Z", description: null, bucket: "life" },
 ];
 
 function timeAgo(dateStr) {
@@ -25,6 +32,22 @@ function timeAgo(dateStr) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
+}
+
+function buildRichCopy(action) {
+  const lines = [`## ${action.title}`];
+  const meta = [];
+  if (action.priority) meta.push(`Priority: ${PRIORITY_LABELS[action.priority] || "—"}`);
+  if (action.bucket) meta.push(`Bucket: ${BUCKET_LABELS[action.bucket] || "—"}`);
+  if (action.source) meta.push(`Source: ${action.source}`);
+  meta.push(`Created: ${new Date(action.created_at).toLocaleDateString()}`);
+  if (action.completed_at) meta.push(`Completed: ${new Date(action.completed_at).toLocaleDateString()}`);
+  lines.push(meta.join(" · "));
+  if (action.description) {
+    lines.push("");
+    lines.push(action.description);
+  }
+  return lines.join("\n");
 }
 
 function PriorityBadge({ priority }) {
@@ -70,6 +93,7 @@ export default function Actions() {
 
   const [actions, setActions] = useState([]);
   const [filter, setFilter] = useState("active");
+  const [lens, setLens] = useState("all");
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [expandedId, setExpandedId] = useState(null);
@@ -88,10 +112,12 @@ export default function Actions() {
     if (data) setActions(data);
   }
 
-  const filtered = (isDev ? DEV_ACTIONS : actions).filter((a) => a.status === filter);
+  const allActions = isDev ? DEV_ACTIONS : actions;
+  const lensed = lens === "all" ? allActions : allActions.filter((a) => a.bucket === lens);
+  const filtered = lensed.filter((a) => a.status === filter);
   const counts = {};
   for (const f of FILTERS) {
-    counts[f] = (isDev ? DEV_ACTIONS : actions).filter((a) => a.status === f).length;
+    counts[f] = lensed.filter((a) => a.status === f).length;
   }
 
   async function updateStatus(id, status) {
@@ -116,14 +142,16 @@ export default function Actions() {
     setNewTitle("");
     setAdding(false);
 
+    const bucket = lens !== "all" ? lens : null;
+
     if (isDev) {
-      setActions((prev) => [...prev, { id: crypto.randomUUID(), title, source: "Manual", status: "active", priority: null, parent_id: null, created_at: new Date().toISOString(), description: null }]);
+      setActions((prev) => [...prev, { id: crypto.randomUUID(), title, source: "Manual", status: "active", priority: null, parent_id: null, created_at: new Date().toISOString(), description: null, bucket }]);
       return;
     }
 
     const { data } = await supabase
       .from("actions")
-      .insert({ user_id: user.id, title, source: "manual", status: "active" })
+      .insert({ user_id: user.id, title, source: "manual", status: "active", bucket })
       .select()
       .single();
     if (data) setActions((prev) => [...prev, data]);
@@ -169,6 +197,47 @@ export default function Actions() {
               <Plus size={12} strokeWidth={2} />
               Add
             </button>
+          </div>
+
+          {/* Lens row */}
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-1)",
+              padding: "0 var(--space-6)",
+              borderBottom: "1px solid var(--color-border-light)",
+            }}
+          >
+            {LENSES.map(({ key, Icon, label }) => {
+              const active = lens === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setLens(key); setExpandedId(null); }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1-5)",
+                    padding: "var(--space-2) var(--space-3)",
+                    border: "none",
+                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
+                    background: "transparent",
+                    borderRadius: 0,
+                    color: active ? "var(--color-text)" : "var(--color-text-dim)",
+                    marginBottom: -1,
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)",
+                    fontWeight: "var(--font-weight-medium)",
+                    cursor: "pointer",
+                    textTransform: "capitalize",
+                  }}
+                  title={label}
+                >
+                  <Icon size={14} strokeWidth={1.8} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Filter tabs */}
@@ -443,11 +512,11 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
           </div>
         </div>
 
-        {/* Copy title */}
+        {/* Rich copy */}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(action.title);
+            navigator.clipboard.writeText(buildRichCopy(action));
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           }}
@@ -463,7 +532,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
             opacity: copied ? 1 : 0.5,
             transition: "opacity var(--duration-fast) var(--ease-default)",
           }}
-          title="Copy title"
+          title="Copy action details"
         >
           {copied ? <Check size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={2} />}
         </button>
@@ -617,6 +686,45 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                   <button
                     key={value}
                     onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { priority: active ? null : value }); }}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-1-5) var(--space-2)",
+                      background: active ? "var(--color-accent)" : "transparent",
+                      color: active ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                      border: "none",
+                      borderRight: i < 2 ? "1px solid var(--color-border-light)" : "none",
+                      fontSize: "var(--font-size-2xs)",
+                      fontFamily: "var(--font-primary)",
+                      fontWeight: "var(--font-weight-medium)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Icon size={10} strokeWidth={2} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bucket selector */}
+          <div>
+            <label style={labelStyle}>Bucket</label>
+            <div style={{ display: "flex", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid var(--color-border-light)" }}>
+              {[
+                { value: "build", label: "Build", Icon: Code },
+                { value: "life", label: "Life", Icon: Home },
+                { value: null, label: "None", Icon: X },
+              ].map(({ value, label, Icon }, i) => {
+                const active = (action.bucket || null) === value;
+                return (
+                  <button
+                    key={label}
+                    onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { bucket: active ? null : value }); }}
                     style={{
                       flex: 1,
                       display: "flex",
