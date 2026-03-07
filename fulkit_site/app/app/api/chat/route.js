@@ -59,11 +59,17 @@ export async function POST(request) {
 
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
-      if (!error && user) userId = user.id;
+      try {
+        const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
+        if (!error && user) userId = user.id;
+      } catch {
+        // Token validation failed
+      }
     }
 
-    if (!userId) {
+    // Dev mode bypass — no auth header means local dev
+    const isDev = !authHeader && process.env.NODE_ENV === "development";
+    if (!userId && !isDev) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -77,11 +83,15 @@ export async function POST(request) {
     const compressed = compressConversation(messages);
 
     // Load user preferences for personality tuning
-    const { data: prefs } = await getSupabaseAdmin()
-      .from("preferences")
-      .select("key, value")
-      .eq("user_id", userId)
-      .in("key", ["tone", "frequency", "chronotype"]);
+    let prefs = null;
+    if (userId) {
+      const { data } = await getSupabaseAdmin()
+        .from("preferences")
+        .select("key, value")
+        .eq("user_id", userId)
+        .in("key", ["tone", "frequency", "chronotype"]);
+      prefs = data;
+    }
 
     // Build system prompt
     let system = BASE_PROMPT;
@@ -113,20 +123,22 @@ export async function POST(request) {
     });
 
     // Increment message count (Fül cap)
-    getSupabaseAdmin()
-      .from("profiles")
-      .select("messages_this_month")
-      .eq("id", userId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          getSupabaseAdmin()
-            .from("profiles")
-            .update({ messages_this_month: (data.messages_this_month || 0) + 1 })
-            .eq("id", userId)
-            .then(() => {});
-        }
-      });
+    if (userId) {
+      getSupabaseAdmin()
+        .from("profiles")
+        .select("messages_this_month")
+        .eq("id", userId)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            getSupabaseAdmin()
+              .from("profiles")
+              .update({ messages_this_month: (data.messages_this_month || 0) + 1 })
+              .eq("id", userId)
+              .then(() => {});
+          }
+        });
+    }
 
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
