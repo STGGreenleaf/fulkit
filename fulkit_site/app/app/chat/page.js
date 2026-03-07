@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic } from "lucide-react";
+import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import VaultGate from "../../components/VaultGate";
@@ -793,6 +794,23 @@ export default function Chat() {
                   >
                     <Paperclip size={15} strokeWidth={2} />
                   </button>
+                  <Link
+                    href="/hum"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--color-text-secondary)",
+                      borderRadius: "var(--radius-md)",
+                      textDecoration: "none",
+                    }}
+                    title="The Hum"
+                  >
+                    <Mic size={15} strokeWidth={2} />
+                  </Link>
                   <input
                     ref={chatFileRef}
                     type="file"

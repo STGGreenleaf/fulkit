@@ -275,7 +275,7 @@ export default function Hum() {
   const router = useRouter();
   const endSession = (e) => {
     if (e.detail >= 2) {
-      router.back();
+      router.push("/chat");
     } else {
       setMode("idle");
     }

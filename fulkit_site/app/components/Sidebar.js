@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Home, MessageCircle, CheckSquare, Mic, Settings, Crown } from "lucide-react";
+import { Home, MessageCircle, CheckSquare, Settings, Crown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -12,7 +12,6 @@ const NAV = [
   { id: "home", icon: Home, href: "/", label: "Home" },
   { id: "chat", icon: MessageCircle, href: "/chat", label: "Chat" },
   { id: "actions", icon: CheckSquare, href: "/actions", label: "Actions" },
-  { id: "hum", icon: Mic, href: "/hum", label: "The Hum" },
   { id: "settings", icon: Settings, href: "/settings", label: "Settings" },
 ];
 
