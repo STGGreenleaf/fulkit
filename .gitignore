@@ -17,6 +17,9 @@ build/
 # personal vault — never push to remote
 ChappieBrain/
 
+# supabase local temp (contains connection strings)
+supabase/.temp/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

@@ -18,18 +18,24 @@
 
 ## Project Structure
 ```
-fulkit/
-  app/            # Next.js project root (Vercel root directory)
-    app/          # Next.js App Router pages
-      tokens.css  # Design tokens (CSS custom properties)
-      globals.css # Global resets, imports tokens.css
-    components/   # Shared React components
-    lib/          # Utilities (auth.js, supabase.js)
-    public/       # Static assets
-  md/             # Docs (design.md, devlog.md, buildnotes.md, etc.)
-  assets/         # Source logos, brand assets, fonts, styles
-    styles/       # tokens.css + tokens.json (source of truth copies)
-  jsx/archive/    # Archived JSX prototypes
+fulkit/                   # Monorepo root (git root)
+  fulkit_site/            # This project
+    app/                  # Next.js project root (Vercel root directory)
+      app/                # Next.js App Router pages
+        tokens.css        # Design tokens (CSS custom properties)
+        globals.css       # Global resets, imports tokens.css
+        actions/          # Actions page
+        chat/             # Chat page (persistent conversations)
+        home/             # Dashboard
+        settings/         # Settings (6 tabs)
+        owner/            # Owner portal
+      components/         # Shared React components
+      lib/                # Utilities (auth.js, supabase.js)
+      public/             # Static assets
+    md/                   # Docs (design.md, devlog.md, buildnotes.md, etc.)
+    assets/               # Source logos, brand assets, fonts, styles
+    jsx/archive/          # Archived JSX prototypes
+  ChappieBrain/           # Obsidian vault (gitignored, not deployed)
 ```
 
 ## Stack
