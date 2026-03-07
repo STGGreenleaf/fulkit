@@ -95,7 +95,7 @@ export async function writeBackSupabase(userId, artifacts, conversationTitle, en
           title: item,
           source: "chat",
           status: "active",
-          priority: "normal",
+          priority: 2,
         });
         written.push({ type: "action", title: item });
       } catch {
