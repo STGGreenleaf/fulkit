@@ -22,7 +22,7 @@ function timeAgo(dateStr) {
 }
 
 export default function Chat() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
   const { getContext, getContextWithMeta, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
@@ -142,18 +142,8 @@ export default function Chat() {
       setContextMeta(result.metadata);
     }
 
-    // Get auth token for API authentication
-    let authToken = null;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      authToken = session?.access_token;
-      if (!authToken) {
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        authToken = refreshed?.access_token;
-      }
-    } catch {
-      // Auth token unavailable
-    }
+    // Use auth token from context (set during login)
+    const authToken = accessToken;
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -260,7 +250,7 @@ export default function Chat() {
 
     setStreaming(false);
     abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev, getContextWithMeta, isReady]);
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, isReady]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {

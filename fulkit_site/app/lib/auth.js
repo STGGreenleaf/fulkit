@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState(null);
 
   // Fetch profile from DB
   const fetchProfile = useCallback(async (userId) => {
@@ -62,6 +63,7 @@ export function AuthProvider({ children }) {
           email: u.email,
           name: u.user_metadata?.full_name || "",
         });
+        setAccessToken(session.access_token);
         await fetchProfile(u.id);
       }
       setLoading(false);
@@ -76,10 +78,12 @@ export function AuthProvider({ children }) {
             email: u.email,
             name: u.user_metadata?.full_name || "",
           });
+          setAccessToken(session.access_token);
           await fetchProfile(u.id);
         } else {
           setUser(null);
           setProfile(null);
+          setAccessToken(null);
         }
         setLoading(false);
       }
@@ -126,6 +130,7 @@ export function AuthProvider({ children }) {
         user,
         profile,
         loading,
+        accessToken,
         signIn,
         signInWithEmail,
         signOut,
