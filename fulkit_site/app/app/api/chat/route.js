@@ -141,41 +141,46 @@ export async function POST(request) {
                 if (parts.some((part) => part.includes(w))) score += 2;
                 if (p.toLowerCase().includes(w)) score += 1;
               }
-              // Boost key files
               const name = p.split("/").pop().toLowerCase();
               if (name === "readme.md" || name === "package.json") score += 1;
               return { path: p, score };
             })
             .filter((f) => f.score > 0)
             .sort((a, b) => b.score - a.score)
-            .slice(0, 10);
+            .slice(0, 5);
 
-          // Fetch the top scored files
-          const fetched = [];
-          let fetchedTokens = 0;
-          const MAX_CODE_TOKENS = 30000;
-          for (const file of scored) {
-            if (fetchedTokens >= MAX_CODE_TOKENS) break;
-            try {
-              const data = await githubFetch(ghToken, `/repos/${repoName}/contents/${file.path}`);
-              if (data.size > 100000) continue; // skip huge files
+          // Fetch files in parallel with a timeout
+          if (scored.length > 0) {
+            const MAX_CODE_TOKENS = 30000;
+            const fetchWithTimeout = (path) =>
+              Promise.race([
+                githubFetch(ghToken, `/repos/${repoName}/contents/${path}`),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000)),
+              ]);
+
+            const results = await Promise.allSettled(scored.map((f) => fetchWithTimeout(f.path)));
+            const fetched = [];
+            let fetchedTokens = 0;
+            for (const result of results) {
+              if (result.status !== "fulfilled") continue;
+              const data = result.value;
+              if (!data.content || data.size > 100000) continue;
               const content = Buffer.from(data.content, "base64").toString("utf-8");
               const tokens = estimateTokens(content);
               if (fetchedTokens + tokens > MAX_CODE_TOKENS) continue;
-              fetched.push({ path: file.path, content });
+              fetched.push({ path: data.path, content });
               fetchedTokens += tokens;
-            } catch {}
-          }
+            }
 
-          // Replace tree-only context with tree + file contents
-          if (fetched.length > 0) {
-            const codeBlock = fetched
-              .map((f) => `### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
-              .join("\n\n");
-            context[i] = {
-              title: context[i].title,
-              content: context[i].content + `\n\n## Relevant source files\n${codeBlock}`,
-            };
+            if (fetched.length > 0) {
+              const codeBlock = fetched
+                .map((f) => `### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
+                .join("\n\n");
+              context[i] = {
+                title: context[i].title,
+                content: context[i].content + `\n\n## Relevant source files\n${codeBlock}`,
+              };
+            }
           }
         }
       }
