@@ -9,9 +9,9 @@ import { supabase } from "../../lib/supabase";
 
 const FILTERS = ["active", "done", "deferred", "dismissed"];
 const LENSES = [
-  { key: "all", Icon: Layers, label: "All" },
-  { key: "build", Icon: Code, label: "Build" },
-  { key: "life", Icon: Home, label: "Life" },
+  { key: "all", Icon: Layers },
+  { key: "build", Icon: Code },
+  { key: "life", Icon: Home },
 ];
 const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
 const BUCKET_LABELS = { build: "Build", life: "Life" };
@@ -219,7 +219,7 @@ export default function Actions() {
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
-            {LENSES.map(({ key, Icon, label }) => {
+            {LENSES.map(({ key, Icon }) => {
               const active = lens === key;
               return (
                 <button
@@ -228,7 +228,7 @@ export default function Actions() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "var(--space-1-5)",
+                    justifyContent: "center",
                     padding: "var(--space-2) var(--space-3)",
                     border: "none",
                     borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
@@ -236,16 +236,11 @@ export default function Actions() {
                     borderRadius: 0,
                     color: active ? "var(--color-text)" : "var(--color-text-dim)",
                     marginBottom: -1,
-                    fontSize: "var(--font-size-2xs)",
-                    fontFamily: "var(--font-primary)",
-                    fontWeight: "var(--font-weight-medium)",
                     cursor: "pointer",
-                    textTransform: "capitalize",
                   }}
-                  title={label}
+                  title={key}
                 >
                   <Icon size={14} strokeWidth={1.8} />
-                  {label}
                 </button>
               );
             })}
