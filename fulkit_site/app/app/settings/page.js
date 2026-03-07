@@ -151,6 +151,7 @@ const INITIAL_CONNECTED = ["obsidian", "gdrive", "dropbox"];
 const FEATURED_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
   { id: "gdrive", name: "Google Drive", cat: "Docs" },
+  { id: "spotify", name: "Spotify", cat: "Media" },
   { id: "notion", name: "Notion", cat: "Notes" },
   { id: "apple_notes", name: "Apple Notes", cat: "Notes" },
   { id: "dropbox", name: "Dropbox", cat: "Files" },
@@ -538,10 +539,11 @@ function SourcesTab() {
   }
 
   const mockNotes = { obsidian: 847, gdrive: 234, dropbox: 166 };
-  const connectedSources = ALL_SOURCES.filter((s) => connected.includes(s.id));
-  const featuredUnconnected = FEATURED_SOURCES.filter((s) => !connected.includes(s.id));
+  const allConnected = spotifyConnected ? [...connected, "spotify"] : connected;
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id));
+  const featuredUnconnected = FEATURED_SOURCES.filter((s) => !allConnected.includes(s.id));
   const browseSources = ALL_SOURCES.filter(
-    (s) => !connected.includes(s.id) && !FEATURED_SOURCES.some((f) => f.id === s.id)
+    (s) => !allConnected.includes(s.id) && !FEATURED_SOURCES.some((f) => f.id === s.id)
   ).filter(
     (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.cat.toLowerCase().includes(search.toLowerCase())
   );
