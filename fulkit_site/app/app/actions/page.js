@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -10,11 +10,11 @@ import { supabase } from "../../lib/supabase";
 const FILTERS = ["active", "done", "deferred", "dismissed"];
 
 const DEV_ACTIONS = [
-  { id: "1", title: "Review Q1 budget draft", source: "Obsidian", status: "active", priority: 1, parent_id: null, created_at: "2026-02-28T10:00:00Z" },
-  { id: "2", title: "Send Mike the revised proposal", source: "Chat", status: "active", priority: 2, parent_id: null, created_at: "2026-03-01T14:00:00Z" },
-  { id: "3", title: "Book dentist appointment", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-02T09:00:00Z" },
-  { id: "4", title: "Follow up with Sarah", source: "Chat", status: "done", priority: null, parent_id: null, created_at: "2026-02-25T11:00:00Z", completed_at: "2026-03-01T16:00:00Z" },
-  { id: "5", title: "Cancel old subscription", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-20T08:00:00Z" },
+  { id: "1", title: "Review Q1 budget draft", source: "Obsidian", status: "active", priority: 1, parent_id: null, created_at: "2026-02-28T10:00:00Z", description: "Compare against last quarter's actual spend. Mike needs this by Friday." },
+  { id: "2", title: "Send Mike the revised proposal", source: "Chat", status: "active", priority: 2, parent_id: null, created_at: "2026-03-01T14:00:00Z", description: null },
+  { id: "3", title: "Book dentist appointment", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-02T09:00:00Z", description: null },
+  { id: "4", title: "Follow up with Sarah", source: "Chat", status: "done", priority: null, parent_id: null, created_at: "2026-02-25T11:00:00Z", completed_at: "2026-03-01T16:00:00Z", description: "She confirmed the budget numbers look good." },
+  { id: "5", title: "Cancel old subscription", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-20T08:00:00Z", description: null },
 ];
 
 function timeAgo(dateStr) {
@@ -27,6 +27,43 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+function PriorityBadge({ priority }) {
+  if (priority == null) return <div style={{ width: 20, flexShrink: 0 }} />;
+  const config = {
+    1: { Icon: ArrowUp, opacity: 1 },
+    2: { Icon: Minus, opacity: 0.5 },
+    3: { Icon: ArrowDown, opacity: 0.35 },
+  };
+  const { Icon, opacity } = config[priority] || config[2];
+  return (
+    <div style={{ width: 20, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity }}>
+      <Icon size={12} strokeWidth={2} />
+    </div>
+  );
+}
+
+const labelStyle = {
+  fontSize: "var(--font-size-2xs)",
+  fontWeight: "var(--font-weight-semibold)",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  color: "var(--color-text-muted)",
+  marginBottom: "var(--space-1)",
+  display: "block",
+};
+
+const fieldInputStyle = {
+  width: "100%",
+  padding: "var(--space-2) var(--space-2-5)",
+  border: "1px solid var(--color-border-light)",
+  borderRadius: "var(--radius-sm)",
+  background: "var(--color-bg-elevated)",
+  color: "var(--color-text)",
+  fontSize: "var(--font-size-sm)",
+  fontFamily: "var(--font-primary)",
+  outline: "none",
+};
+
 export default function Actions() {
   const { user } = useAuth();
   const isDev = user?.isDev;
@@ -35,6 +72,7 @@ export default function Actions() {
   const [filter, setFilter] = useState("active");
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     if (!user || isDev) return;
@@ -65,6 +103,13 @@ export default function Actions() {
     }
   }
 
+  async function updateAction(id, updates) {
+    setActions((prev) => prev.map((a) => a.id === id ? { ...a, ...updates } : a));
+    if (!isDev) {
+      await supabase.from("actions").update(updates).eq("id", id);
+    }
+  }
+
   async function addAction() {
     const title = newTitle.trim();
     if (!title) return;
@@ -72,7 +117,7 @@ export default function Actions() {
     setAdding(false);
 
     if (isDev) {
-      setActions((prev) => [...prev, { id: crypto.randomUUID(), title, source: "Manual", status: "active", priority: null, parent_id: null, created_at: new Date().toISOString() }]);
+      setActions((prev) => [...prev, { id: crypto.randomUUID(), title, source: "Manual", status: "active", priority: null, parent_id: null, created_at: new Date().toISOString(), description: null }]);
       return;
     }
 
@@ -140,7 +185,7 @@ export default function Actions() {
               return (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => { setFilter(f); setExpandedId(null); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -254,6 +299,9 @@ export default function Actions() {
                       action={action}
                       filter={filter}
                       onUpdateStatus={updateStatus}
+                      onUpdateAction={updateAction}
+                      expanded={expandedId === action.id}
+                      onToggleExpand={() => setExpandedId(expandedId === action.id ? null : action.id)}
                     />
                   ))}
                 </div>
@@ -280,161 +328,310 @@ export default function Actions() {
   );
 }
 
-function ActionRow({ action, filter, onUpdateStatus }) {
+function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, onToggleExpand }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState(action.title);
+  const [editDesc, setEditDesc] = useState(action.description || "");
+  const detailRef = useRef(null);
+  const [detailHeight, setDetailHeight] = useState(0);
 
-  const actions = [];
-  if (filter !== "done") actions.push({ label: "Complete", status: "done", icon: Check, color: "var(--color-success)" });
-  if (filter !== "deferred") actions.push({ label: "Defer", status: "deferred", icon: Clock, color: "var(--color-warning)" });
-  if (filter !== "dismissed") actions.push({ label: "Dismiss", status: "dismissed", icon: X, color: "var(--color-text-muted)" });
-  if (filter !== "active") actions.push({ label: "Reactivate", status: "active", icon: ArrowUp, color: "var(--color-accent)" });
+  useEffect(() => { setEditTitle(action.title); }, [action.title]);
+  useEffect(() => { setEditDesc(action.description || ""); }, [action.description]);
+
+  useEffect(() => {
+    if (expanded && detailRef.current) {
+      requestAnimationFrame(() => setDetailHeight(detailRef.current.scrollHeight));
+    } else {
+      setDetailHeight(0);
+    }
+  }, [expanded, editDesc]);
+
+  const menuActions = [];
+  if (filter !== "done") menuActions.push({ label: "Complete", status: "done", icon: Check, color: "var(--color-success)" });
+  if (filter !== "deferred") menuActions.push({ label: "Defer", status: "deferred", icon: Clock, color: "var(--color-warning)" });
+  if (filter !== "dismissed") menuActions.push({ label: "Dismiss", status: "dismissed", icon: X, color: "var(--color-text-muted)" });
+  if (filter !== "active") menuActions.push({ label: "Reactivate", status: "active", icon: ArrowUp, color: "var(--color-accent)" });
 
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-3)",
-        padding: "var(--space-2-5) var(--space-4)",
         background: "var(--color-bg-elevated)",
-        border: "1px solid var(--color-border-light)",
+        border: expanded ? "1px solid var(--color-border)" : "1px solid var(--color-border-light)",
         borderRadius: "var(--radius-md)",
         position: "relative",
+        transition: "border-color var(--duration-fast) var(--ease-default)",
       }}
     >
-      {/* Quick complete checkbox (active only) */}
-      {filter === "active" && (
-        <div
-          onClick={() => onUpdateStatus(action.id, "done")}
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: "var(--radius-xs)",
-            border: "1.5px solid var(--color-border)",
-            flexShrink: 0,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "all var(--duration-fast) var(--ease-default)",
-          }}
-        />
-      )}
-
-      {/* Done checkmark */}
-      {filter === "done" && (
-        <div
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: "var(--radius-xs)",
-            background: "var(--color-success)",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Check size={10} strokeWidth={3} color="white" />
-        </div>
-      )}
-
-      {/* Title + meta */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: filter === "done" ? "var(--color-text-muted)" : "var(--color-text)",
-            textDecoration: filter === "done" ? "line-through" : "none",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {action.title}
-        </div>
-        <div
-          style={{
-            fontSize: "var(--font-size-2xs)",
-            color: "var(--color-text-dim)",
-            marginTop: 2,
-            display: "flex",
-            gap: "var(--space-2)",
-          }}
-        >
-          {action.source && <span>{action.source}</span>}
-          <span>{timeAgo(action.completed_at || action.created_at)}</span>
-        </div>
-      </div>
-
-      {/* Action menu */}
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
+      {/* Summary row */}
+      <div
+        onClick={onToggleExpand}
         style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--color-text-dim)",
           display: "flex",
           alignItems: "center",
-          padding: "var(--space-1)",
-          borderRadius: "var(--radius-sm)",
+          gap: "var(--space-3)",
+          padding: "var(--space-2-5) var(--space-4)",
+          cursor: "pointer",
+          userSelect: "none",
         }}
       >
-        <MoreHorizontal size={14} strokeWidth={2} />
-      </button>
-
-      {/* Dropdown */}
-      {menuOpen && (
-        <>
+        {/* Quick complete checkbox (active only) */}
+        {filter === "active" && (
           <div
-            onClick={() => setMenuOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 9 }}
+            onClick={(e) => { e.stopPropagation(); onUpdateStatus(action.id, "done"); }}
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: "var(--radius-xs)",
+              border: "1.5px solid var(--color-border)",
+              flexShrink: 0,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all var(--duration-fast) var(--ease-default)",
+            }}
           />
+        )}
+
+        {/* Done checkmark */}
+        {filter === "done" && (
           <div
             style={{
-              position: "absolute",
-              right: 0,
-              top: "100%",
-              marginTop: 4,
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-              zIndex: 10,
-              minWidth: 140,
-              overflow: "hidden",
+              width: 18,
+              height: 18,
+              borderRadius: "var(--radius-xs)",
+              background: "var(--color-success)",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {actions.map((a) => (
-              <button
-                key={a.status}
-                onClick={() => {
-                  onUpdateStatus(action.id, a.status);
-                  setMenuOpen(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  width: "100%",
-                  padding: "var(--space-2) var(--space-3)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "var(--font-size-xs)",
-                  fontFamily: "var(--font-primary)",
-                  color: a.color,
-                  textAlign: "left",
-                }}
-              >
-                <a.icon size={12} strokeWidth={2} />
-                {a.label}
-              </button>
-            ))}
+            <Check size={10} strokeWidth={3} color="white" />
           </div>
-        </>
-      )}
+        )}
+
+        {/* Priority badge */}
+        <PriorityBadge priority={action.priority} />
+
+        {/* Title + meta */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "var(--font-size-sm)",
+              color: filter === "done" ? "var(--color-text-muted)" : "var(--color-text)",
+              textDecoration: filter === "done" ? "line-through" : "none",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {action.title}
+          </div>
+          <div
+            style={{
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              marginTop: 2,
+              display: "flex",
+              gap: "var(--space-2)",
+            }}
+          >
+            {action.source && <span>{action.source}</span>}
+            <span>{timeAgo(action.completed_at || action.created_at)}</span>
+          </div>
+        </div>
+
+        {/* Action menu */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-dim)",
+            display: "flex",
+            alignItems: "center",
+            padding: "var(--space-1)",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <MoreHorizontal size={14} strokeWidth={2} />
+        </button>
+
+        {/* Dropdown */}
+        {menuOpen && (
+          <>
+            <div
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
+              style={{ position: "fixed", inset: 0, zIndex: 9 }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                right: "var(--space-4)",
+                top: 44,
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                zIndex: 10,
+                minWidth: 140,
+                overflow: "hidden",
+              }}
+            >
+              {menuActions.map((a) => (
+                <button
+                  key={a.status}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateStatus(action.id, a.status);
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-2)",
+                    width: "100%",
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-primary)",
+                    color: a.color,
+                    textAlign: "left",
+                  }}
+                >
+                  <a.icon size={12} strokeWidth={2} />
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Expandable detail panel */}
+      <div
+        ref={detailRef}
+        style={{
+          maxHeight: expanded ? detailHeight : 0,
+          overflow: "hidden",
+          transition: "max-height var(--duration-slow, 300ms) var(--ease-default, ease)",
+        }}
+      >
+        <div
+          style={{
+            padding: "0 var(--space-4) var(--space-4)",
+            borderTop: "1px solid var(--color-border-light)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-3)",
+            paddingTop: "var(--space-3)",
+          }}
+        >
+          {/* Title edit */}
+          <div>
+            <label style={labelStyle}>Title</label>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={() => {
+                const trimmed = editTitle.trim();
+                if (trimmed && trimmed !== action.title) {
+                  onUpdateAction(action.id, { title: trimmed });
+                } else {
+                  setEditTitle(action.title);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.target.blur();
+                if (e.key === "Escape") { setEditTitle(action.title); e.target.blur(); }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={fieldInputStyle}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={labelStyle}>Notes</label>
+            <textarea
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              onBlur={() => {
+                const val = editDesc.trim() || null;
+                if (val !== (action.description || null)) {
+                  onUpdateAction(action.id, { description: val });
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Add notes..."
+              rows={3}
+              style={{
+                ...fieldInputStyle,
+                resize: "vertical",
+                lineHeight: 1.5,
+              }}
+            />
+          </div>
+
+          {/* Priority selector */}
+          <div>
+            <label style={labelStyle}>Priority</label>
+            <div style={{ display: "flex", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid var(--color-border-light)" }}>
+              {[
+                { value: 1, label: "High", Icon: ArrowUp },
+                { value: 2, label: "Normal", Icon: Minus },
+                { value: 3, label: "Low", Icon: ArrowDown },
+              ].map(({ value, label, Icon }, i) => {
+                const active = action.priority === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { priority: active ? null : value }); }}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-1-5) var(--space-2)",
+                      background: active ? "var(--color-accent)" : "transparent",
+                      color: active ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                      border: "none",
+                      borderRight: i < 2 ? "1px solid var(--color-border-light)" : "none",
+                      fontSize: "var(--font-size-2xs)",
+                      fontFamily: "var(--font-primary)",
+                      fontWeight: "var(--font-weight-medium)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Icon size={10} strokeWidth={2} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Metadata */}
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-4)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              paddingTop: "var(--space-1)",
+            }}
+          >
+            {action.source && <span>Source: {action.source}</span>}
+            <span>Created: {new Date(action.created_at).toLocaleDateString()}</span>
+            {action.completed_at && <span>Completed: {new Date(action.completed_at).toLocaleDateString()}</span>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
