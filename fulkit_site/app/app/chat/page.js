@@ -163,7 +163,9 @@ export default function Chat() {
 
       if (!res.ok) {
         const err = await res.json();
-        const errMsg = err.error || "Something went wrong.";
+        const errMsg = err.debug
+          ? `${err.error} | debug: ${JSON.stringify(err.debug)}`
+          : err.error || "Something went wrong.";
         setMessages((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { role: "assistant", content: errMsg };
