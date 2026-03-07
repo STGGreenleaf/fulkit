@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
@@ -330,6 +330,7 @@ export default function Actions() {
 
 function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, onToggleExpand }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [editTitle, setEditTitle] = useState(action.title);
   const [editDesc, setEditDesc] = useState(action.description || "");
   const detailRef = useRef(null);
@@ -441,6 +442,31 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
             <span>{timeAgo(action.completed_at || action.created_at)}</span>
           </div>
         </div>
+
+        {/* Copy title */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(action.title);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: copied ? "var(--color-text-secondary)" : "var(--color-text-dim)",
+            display: "flex",
+            alignItems: "center",
+            padding: "var(--space-1)",
+            borderRadius: "var(--radius-sm)",
+            opacity: copied ? 1 : 0.5,
+            transition: "opacity var(--duration-fast) var(--ease-default)",
+          }}
+          title="Copy title"
+        >
+          {copied ? <Check size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={2} />}
+        </button>
 
         {/* Action menu */}
         <button
