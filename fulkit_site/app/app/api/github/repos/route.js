@@ -8,7 +8,7 @@ export async function GET(request) {
   if (!token) return Response.json({ error: "GitHub not connected" }, { status: 404 });
 
   try {
-    const repos = await githubFetch(token, "/user/repos?sort=pushed&per_page=50&type=all");
+    const repos = await githubFetch(token, "/user/repos?sort=pushed&per_page=100&type=all");
     return Response.json(
       repos.map((r) => ({
         name: r.name,

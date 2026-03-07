@@ -52,6 +52,7 @@ export default function Chat() {
   const [ghTree, setGhTree] = useState([]);
   const [ghPath, setGhPath] = useState([]);
   const [ghLoading, setGhLoading] = useState(false);
+  const [ghRepoSearch, setGhRepoSearch] = useState("");
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -156,6 +157,7 @@ export default function Chat() {
     setGhSelectedRepo(null);
     setGhTree([]);
     setGhPath([]);
+    setGhRepoSearch("");
     setGhLoading(true);
     try {
       const res = await fetch("/api/github/repos", {
@@ -914,8 +916,34 @@ export default function Chat() {
                         </div>
                       )}
 
+                      {/* Repo search */}
+                      {!ghLoading && !ghSelectedRepo && ghRepos.length > 0 && (
+                        <div style={{ padding: "var(--space-2) var(--space-3)", borderBottom: "1px solid var(--color-border-light)" }}>
+                          <input
+                            type="text"
+                            placeholder="Filter repos..."
+                            value={ghRepoSearch}
+                            onChange={(e) => setGhRepoSearch(e.target.value)}
+                            autoFocus
+                            style={{
+                              width: "100%",
+                              padding: "var(--space-1) var(--space-2)",
+                              background: "var(--color-bg)",
+                              border: "1px solid var(--color-border-light)",
+                              borderRadius: "var(--radius-sm)",
+                              fontSize: "var(--font-size-xs)",
+                              fontFamily: "var(--font-primary)",
+                              color: "var(--color-text)",
+                              outline: "none",
+                            }}
+                          />
+                        </div>
+                      )}
+
                       {/* Repo list */}
-                      {!ghLoading && !ghSelectedRepo && ghRepos.map((repo) => (
+                      {!ghLoading && !ghSelectedRepo && ghRepos
+                        .filter((r) => !ghRepoSearch || r.full_name.toLowerCase().includes(ghRepoSearch.toLowerCase()))
+                        .map((repo) => (
                         <button
                           key={repo.full_name}
                           onClick={() => selectGhRepo(repo)}
