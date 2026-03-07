@@ -5,7 +5,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function getModelConfig(role, seatType) {
   if (role === "owner") {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 120000 };
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000 };
   }
   if (seatType === "pro") {
     return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000 };
