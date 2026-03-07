@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2 } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
-const FILTERS = ["active", "done", "deferred", "dismissed"];
+const FILTERS = [
+  { key: "active", Icon: Activity },
+  { key: "done", Icon: SquareCheckBig },
+  { key: "deferred", Icon: Clock1 },
+  { key: "dismissed", Icon: BrushCleaning },
+];
 const LENSES = [
   { key: "all", Icon: Layers },
   { key: "build", Icon: MessageSquareCode },
@@ -88,7 +93,7 @@ const fieldInputStyle = {
 };
 
 export default function Actions() {
-  const { user } = useAuth();
+  const { user, compactMode } = useAuth();
   const isDev = user?.isDev;
 
   const [actions, setActions] = useState([]);
@@ -117,8 +122,8 @@ export default function Actions() {
   const lensed = lens === "all" ? allActions : allActions.filter((a) => a.bucket === lens);
   const filtered = lensed.filter((a) => a.status === filter);
   const counts = {};
-  for (const f of FILTERS) {
-    counts[f] = lensed.filter((a) => a.status === f).length;
+  for (const { key } of FILTERS) {
+    counts[key] = lensed.filter((a) => a.status === key).length;
   }
 
   async function updateStatus(id, status) {
@@ -185,9 +190,11 @@ export default function Actions() {
             }}
           >
             <CheckSquare size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-              Actions
-            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                Actions
+              </span>
+            )}
             <button
               onClick={() => setAdding(true)}
               style={{
@@ -204,9 +211,10 @@ export default function Actions() {
                 padding: "var(--space-1) var(--space-2)",
                 borderRadius: "var(--radius-sm)",
               }}
+              title="Add action"
             >
               <Plus size={12} strokeWidth={2} />
-              Add
+              {!compactMode && "Add"}
             </button>
           </div>
 
@@ -253,17 +261,17 @@ export default function Actions() {
               padding: "0 var(--space-6)",
             }}
           >
-            {FILTERS.map((f) => {
-              const active = filter === f;
+            {FILTERS.map(({ key, Icon }) => {
+              const active = filter === key;
               return (
                 <button
-                  key={f}
-                  onClick={() => { setFilter(f); setExpandedId(null); setConfirmClear(false); }}
+                  key={key}
+                  onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "var(--space-1)",
-                    padding: "var(--space-2-5) var(--space-3)",
+                    padding: compactMode ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-3)",
                     border: "none",
                     background: "transparent",
                     borderRadius: 0,
@@ -275,9 +283,11 @@ export default function Actions() {
                     cursor: "pointer",
                     textTransform: "capitalize",
                   }}
+                  title={compactMode ? key : undefined}
                 >
-                  {f}
-                  {counts[f] > 0 && (
+                  <Icon size={compactMode ? 14 : 12} strokeWidth={1.8} />
+                  {!compactMode && key}
+                  {counts[key] > 0 && (
                     <span
                       style={{
                         fontSize: "var(--font-size-2xs)",
@@ -286,7 +296,7 @@ export default function Actions() {
                         fontWeight: "var(--font-weight-bold)",
                       }}
                     >
-                      {counts[f]}
+                      {counts[key]}
                     </span>
                   )}
                 </button>

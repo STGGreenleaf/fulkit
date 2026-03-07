@@ -14,6 +14,17 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(null);
   const [githubConnected, setGithubConnected] = useState(false);
+  const [compactMode, setCompactModeState] = useState(false);
+
+  // Initialize compact mode from localStorage
+  useEffect(() => {
+    setCompactModeState(localStorage.getItem("fulkit-compact-mode") === "true");
+  }, []);
+
+  const setCompactMode = useCallback((val) => {
+    setCompactModeState(val);
+    localStorage.setItem("fulkit-compact-mode", String(val));
+  }, []);
 
   // Fetch profile from DB
   const fetchProfile = useCallback(async (userId) => {
@@ -158,6 +169,8 @@ export function AuthProvider({ children }) {
         githubConnected,
         setGithubConnected,
         checkGitHub,
+        compactMode,
+        setCompactMode,
       }}
     >
       {children}
