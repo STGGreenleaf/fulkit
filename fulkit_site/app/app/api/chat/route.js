@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { supabaseAdmin } from "../../../lib/supabase-server";
+import { getSupabaseAdmin } from "../../../lib/supabase-server";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -59,7 +59,7 @@ export async function POST(request) {
 
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
       if (!error && user) userId = user.id;
     }
 
@@ -77,7 +77,7 @@ export async function POST(request) {
     const compressed = compressConversation(messages);
 
     // Load user preferences for personality tuning
-    const { data: prefs } = await supabaseAdmin
+    const { data: prefs } = await getSupabaseAdmin()
       .from("preferences")
       .select("key, value")
       .eq("user_id", userId)
@@ -113,14 +113,14 @@ export async function POST(request) {
     });
 
     // Increment message count (Fül cap)
-    supabaseAdmin
+    getSupabaseAdmin()
       .from("profiles")
       .select("messages_this_month")
       .eq("id", userId)
       .single()
       .then(({ data }) => {
         if (data) {
-          supabaseAdmin
+          getSupabaseAdmin()
             .from("profiles")
             .update({ messages_this_month: (data.messages_this_month || 0) + 1 })
             .eq("id", userId)
