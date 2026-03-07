@@ -77,8 +77,11 @@
 
 ## Phase 3: Action List (The dogfood tool)
 
-- [ ] Actions table in Supabase (id, user_id, title, status, priority, source, timestamps)
-- [ ] Actions page — list view with complete, defer, dismiss
+- [x] Actions table in Supabase (id, user_id, title, status, priority, source, timestamps)
+- [x] Actions page — list view with complete, defer, dismiss, reactivate
+- [x] Add action manually (inline input)
+- [x] Filter tabs (active, done, deferred, dismissed) with counts
+- [x] Actions in sidebar nav
 - [ ] Import prelaunch.md tasks as action items
 - [ ] Claude chat → create actions
 - [ ] Claude chat → query actions
