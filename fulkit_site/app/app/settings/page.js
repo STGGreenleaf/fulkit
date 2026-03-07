@@ -148,14 +148,7 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = ["obsidian", "gdrive", "dropbox"];
 
-const FEATURED_SOURCES = [
-  { id: "obsidian", name: "Obsidian", cat: "Notes" },
-  { id: "gdrive", name: "Google Drive", cat: "Docs" },
-  { id: "spotify", name: "Spotify", cat: "Media" },
-  { id: "notion", name: "Notion", cat: "Notes" },
-  { id: "apple_notes", name: "Apple Notes", cat: "Notes" },
-  { id: "dropbox", name: "Dropbox", cat: "Files" },
-];
+const SUGGESTED_SOURCES = ["obsidian", "dropbox", "notion"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -541,9 +534,9 @@ function SourcesTab() {
   const mockNotes = { obsidian: 847, gdrive: 234, dropbox: 166 };
   const allConnected = spotifyConnected ? [...connected, "spotify"] : connected;
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id));
-  const featuredUnconnected = FEATURED_SOURCES.filter((s) => !allConnected.includes(s.id));
-  const browseSources = ALL_SOURCES.filter(
-    (s) => !allConnected.includes(s.id) && !FEATURED_SOURCES.some((f) => f.id === s.id)
+  const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
+  const otherSources = ALL_SOURCES.filter(
+    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
   ).filter(
     (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.cat.toLowerCase().includes(search.toLowerCase())
   );
@@ -558,13 +551,40 @@ function SourcesTab() {
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
+  const sourceButton = (src) => (
+    <button
+      key={src.id}
+      onClick={() => connect(src.id)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        padding: "var(--space-3)",
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        borderRadius: "var(--radius-md)",
+        cursor: "pointer",
+        fontFamily: "var(--font-primary)",
+        transition: `all var(--duration-fast) var(--ease-default)`,
+      }}
+    >
+      <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {SOURCE_LOGOS[src.id]}
+      </div>
+      <div style={{ textAlign: "left" }}>
+        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
+        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{src.cat}</div>
+      </div>
+    </button>
+  );
+
   return (
     <div style={{ maxWidth: 640 }}>
       {/* Connected */}
       {(connectedSources.length > 0 || githubConnected) && (
         <>
           <SectionTitle>Connected</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
             {/* GitHub — real integration */}
             {githubConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -676,7 +696,7 @@ function SourcesTab() {
                 )}
               </Card>
             )}
-            {/* Other mock sources */}
+            {/* Other connected sources */}
             {connectedSources.map((src) => (
               <Card key={src.id}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -686,13 +706,15 @@ function SourcesTab() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{src.name}</div>
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                      {mockNotes[src.id] || 0} notes synced
+                      {src.id === "spotify" ? "Connected" : `${mockNotes[src.id] || 0} notes synced`}
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                    <button style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", padding: "var(--space-1) var(--space-2)", background: "transparent", border: "none", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
-                      <RefreshCw size={12} strokeWidth={2} /> Sync
-                    </button>
+                    {src.id !== "spotify" && (
+                      <button style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", padding: "var(--space-1) var(--space-2)", background: "transparent", border: "none", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
+                        <RefreshCw size={12} strokeWidth={2} /> Sync
+                      </button>
+                    )}
                     <button onClick={() => disconnect(src.id)} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
                       Disconnect
                     </button>
@@ -704,124 +726,60 @@ function SourcesTab() {
         </>
       )}
 
-      {/* Add a source — featured grid */}
-      {featuredUnconnected.length > 0 && (
+      {/* Search */}
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <Search size={14} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search sources..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              flex: 1,
+              padding: "var(--space-2) 0",
+              background: "transparent",
+              border: "none",
+              borderBottom: "1px solid var(--color-border-light)",
+              fontSize: "var(--font-size-sm)",
+              fontFamily: "var(--font-primary)",
+              color: "var(--color-text)",
+              outline: "none",
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{ padding: "var(--space-1)", background: "transparent", border: "none", color: "var(--color-text-muted)", cursor: "pointer" }}
+            >
+              <X size={14} strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Suggested — only when not searching */}
+      {!search && suggested.length > 0 && (
         <>
-          <SectionTitle>Add a source</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-            {featuredUnconnected.map((src) => (
-              <button
-                key={src.id}
-                onClick={() => connect(src.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  padding: "var(--space-3)",
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-primary)",
-                  transition: `all var(--duration-fast) var(--ease-default)`,
-                }}
-              >
-                <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {SOURCE_LOGOS[src.id]}
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{src.cat}</div>
-                </div>
-              </button>
-            ))}
+          <SectionTitle>Suggested</SectionTitle>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+            {suggested.map(sourceButton)}
           </div>
         </>
       )}
 
-      {/* Browse more */}
-      {!showBrowser ? (
-        <button
-          onClick={() => setShowBrowser(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            padding: "var(--space-2-5) var(--space-4)",
-            background: "transparent",
-            border: "1px dashed var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            color: "var(--color-text-muted)",
-            fontSize: "var(--font-size-xs)",
-            fontFamily: "var(--font-primary)",
-            cursor: "pointer",
-            width: "100%",
-            justifyContent: "center",
-          }}
-        >
-          Search for more sources...
-        </button>
-      ) : (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-            <input
-              type="text"
-              placeholder="Search sources..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              autoFocus
-              style={{
-                flex: 1,
-                padding: "var(--space-2) var(--space-3)",
-                background: "var(--color-bg)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-sm)",
-                fontFamily: "var(--font-primary)",
-                color: "var(--color-text)",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => { setShowBrowser(false); setSearch(""); }}
-              style={{ padding: "var(--space-2)", background: "transparent", border: "none", color: "var(--color-text-muted)", cursor: "pointer" }}
-            >
-              <X size={16} strokeWidth={1.8} />
-            </button>
-          </div>
+      {/* All other sources */}
+      {otherSources.length > 0 && (
+        <>
+          <SectionTitle>{search ? "Results" : "More"}</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
-            {browseSources.map((src) => (
-              <button
-                key={src.id}
-                onClick={() => connect(src.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  padding: "var(--space-3)",
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-primary)",
-                  transition: `all var(--duration-fast) var(--ease-default)`,
-                }}
-              >
-                <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {SOURCE_LOGOS[src.id]}
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{src.cat}</div>
-                </div>
-              </button>
-            ))}
-            {browseSources.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                No matches
-              </div>
-            )}
+            {otherSources.map(sourceButton)}
           </div>
+        </>
+      )}
+      {search && otherSources.length === 0 && (
+        <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+          No matches
         </div>
       )}
     </div>
