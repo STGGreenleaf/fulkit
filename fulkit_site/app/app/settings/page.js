@@ -518,13 +518,12 @@ function SourcesTab() {
 
   async function connectSpotify() {
     if (isDev) { setSpotifyConnected(true); return; }
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || accessToken;
-      if (!token) return;
-      document.cookie = `sp_auth_token=${token}; path=/; max-age=300; SameSite=Lax`;
-      window.location.href = "/api/spotify/connect";
-    } catch {}
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || accessToken;
+    console.log("[spotify] token?", !!token, "session?", !!session);
+    if (!token) { console.error("[spotify] No auth token available"); return; }
+    document.cookie = `sp_auth_token=${token}; path=/; max-age=300; SameSite=Lax`;
+    window.location.href = "/api/spotify/connect";
   }
 
   async function disconnectGitHub() {
