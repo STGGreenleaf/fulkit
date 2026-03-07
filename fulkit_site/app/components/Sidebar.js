@@ -187,10 +187,7 @@ function CompactToggle({ compact, onToggle }) {
             }}
           />
         </div>
-        {compact
-          ? <PanelLeftOpen size={12} strokeWidth={1.8} />
-          : <PanelLeftClose size={12} strokeWidth={1.8} />
-        }
+        {!compact && <PanelLeftClose size={12} strokeWidth={1.8} />}
       </button>
     </Tooltip>
   );
