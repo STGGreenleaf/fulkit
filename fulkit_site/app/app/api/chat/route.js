@@ -5,7 +5,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function getModelConfig(role, seatType) {
   if (role === "owner") {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 120000, beta: true };
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 120000 };
   }
   if (seatType === "pro") {
     return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000 };
@@ -143,9 +143,6 @@ export async function POST(request) {
         content: m.content,
       })),
     };
-    if (config.beta) {
-      streamOpts.betas = ["output-128k-2025-02-19"];
-    }
     const stream = anthropic.messages.stream(streamOpts);
 
     // Increment message count (Fül cap)
