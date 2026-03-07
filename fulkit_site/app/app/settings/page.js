@@ -505,13 +505,17 @@ function SourcesTab() {
     setGithubSaving(false);
   }
 
-  function connectGitHub() {
-    document.cookie = `gh_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
+  async function connectGitHub() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || accessToken;
+    document.cookie = `gh_auth_token=${token}; path=/; max-age=300; SameSite=Lax`;
     window.location.href = "/api/github/connect";
   }
 
-  function connectSpotify() {
-    document.cookie = `sp_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
+  async function connectSpotify() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || accessToken;
+    document.cookie = `sp_auth_token=${token}; path=/; max-age=300; SameSite=Lax`;
     window.location.href = "/api/spotify/connect";
   }
 
