@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import VaultGate from "../../components/VaultGate";
@@ -36,6 +36,9 @@ export default function Chat() {
   const [contextMeta, setContextMeta] = useState(null);
   const [recalledNotes, setRecalledNotes] = useState([]);
   const [recallResults, setRecallResults] = useState(null);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [chatDragOver, setChatDragOver] = useState(false);
+  const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -119,6 +122,20 @@ export default function Chat() {
       .eq("id", convId);
   }
 
+  async function handleChatFiles(files) {
+    const results = [];
+    for (const file of files) {
+      if (!file.name.match(/\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv)$/i)) continue;
+      try {
+        const content = await file.text();
+        results.push({ name: file.name, content });
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
+  }
+
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
@@ -161,6 +178,11 @@ export default function Chat() {
         context.push({ title: rn.title, content: rn.content });
       }
     }
+    // Append attached files as ephemeral context
+    for (const af of attachedFiles) {
+      context.push({ title: af.name, content: af.content });
+    }
+    setAttachedFiles([]);
 
     // Use auth token from context (set during login)
     const authToken = accessToken;
@@ -270,7 +292,7 @@ export default function Chat() {
 
     setStreaming(false);
     abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady]);
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -287,6 +309,7 @@ export default function Chat() {
     setContextMeta(null);
     setRecalledNotes([]);
     setRecallResults(null);
+    setAttachedFiles([]);
   };
 
   const openConversation = (conv) => {
@@ -443,7 +466,31 @@ export default function Chat() {
           {/* Main area — messages + history on right */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {/* Messages area */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <div
+              style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative" }}
+              onDragOver={(e) => { e.preventDefault(); setChatDragOver(true); }}
+              onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget)) return; setChatDragOver(false); }}
+              onDrop={(e) => { e.preventDefault(); setChatDragOver(false); if (e.dataTransfer.files?.length) handleChatFiles(Array.from(e.dataTransfer.files)); }}
+            >
+              {chatDragOver && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "var(--color-bg-alt)",
+                    opacity: 0.9,
+                    zIndex: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+                    Drop files to attach
+                  </span>
+                </div>
+              )}
               <div
                 style={{
                   flex: 1,
@@ -667,6 +714,45 @@ export default function Chat() {
                 </div>
               )}
 
+              {/* Attached files chips */}
+              {attachedFiles.length > 0 && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6) var(--space-1)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 4,
+                  }}
+                >
+                  {attachedFiles.map((af, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 3,
+                        fontSize: "var(--font-size-2xs)",
+                        color: "var(--color-text-secondary)",
+                        background: "var(--color-bg-alt)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        padding: "2px 6px",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <Paperclip size={9} strokeWidth={1.8} />
+                      {af.name}
+                      <X size={9} strokeWidth={2} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Input */}
               <div
                 style={{
@@ -683,9 +769,36 @@ export default function Chat() {
                     gap: "var(--space-1-5)",
                     border: "1px solid var(--color-border)",
                     borderRadius: "var(--radius-lg)",
-                    padding: "var(--space-1) var(--space-1) var(--space-1) var(--space-3-5)",
+                    padding: "var(--space-1) var(--space-1) var(--space-1) var(--space-1)",
                   }}
                 >
+                  <button
+                    onClick={() => chatFileRef.current?.click()}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-dim)",
+                      borderRadius: "var(--radius-md)",
+                    }}
+                    title="Attach files"
+                  >
+                    <Paperclip size={15} strokeWidth={1.8} />
+                  </button>
+                  <input
+                    ref={chatFileRef}
+                    type="file"
+                    accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv"
+                    multiple
+                    onChange={(e) => { if (e.target.files?.length) handleChatFiles(Array.from(e.target.files)); e.target.value = ""; }}
+                    style={{ display: "none" }}
+                  />
                   <textarea
                     ref={textareaRef}
                     value={input}
