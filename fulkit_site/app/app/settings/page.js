@@ -442,13 +442,16 @@ function SourcesTab() {
   const [connected, setConnected] = useState(isDev ? INITIAL_CONNECTED : []);
   const [showBrowser, setShowBrowser] = useState(false);
   const [search, setSearch] = useState("");
-  const [githubRepoCount, setGithubRepoCount] = useState(null);
+  const [githubRepos, setGithubRepos] = useState([]);
+  const [githubActiveRepos, setGithubActiveRepos] = useState([]);
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
+  const [githubExpanded, setGithubExpanded] = useState(false);
+  const [githubSaving, setGithubSaving] = useState(false);
 
-  // Check GitHub connection on mount and fetch repo count
+  // Fetch repos and active state on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
-    if (githubConnected) fetchRepoCount();
+    if (isDev || !accessToken || !githubConnected) return;
+    fetchGithubRepos();
   }, [githubConnected, accessToken, isDev]);
 
   // Refresh GitHub status if we just came back from OAuth
@@ -460,16 +463,35 @@ function SourcesTab() {
     }
   }, [accessToken, checkGitHub]);
 
-  async function fetchRepoCount() {
+  async function fetchGithubRepos() {
     try {
-      const res = await fetch("/api/github/repos", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGithubRepoCount(data.length);
+      const [reposRes, activeRes] = await Promise.all([
+        fetch("/api/github/repos", { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch("/api/github/active", { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
+      if (reposRes.ok) setGithubRepos(await reposRes.json());
+      if (activeRes.ok) {
+        const activeData = await activeRes.json();
+        setGithubActiveRepos(activeData.map((r) => r.repo));
       }
     } catch {}
+  }
+
+  async function toggleGithubRepo(fullName) {
+    const isActive = githubActiveRepos.includes(fullName);
+    const updated = isActive
+      ? githubActiveRepos.filter((r) => r !== fullName)
+      : [...githubActiveRepos, fullName];
+    setGithubActiveRepos(updated);
+    setGithubSaving(true);
+    try {
+      await fetch("/api/github/active", {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ activeRepos: updated }),
+      });
+    } catch {}
+    setGithubSaving(false);
   }
 
   function connectGitHub() {
@@ -518,25 +540,113 @@ function SourcesTab() {
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
             {/* GitHub — real integration */}
             {githubConnected && (
-              <Card>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <button
+                  onClick={() => setGithubExpanded(!githubExpanded)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    width: "100%",
+                    padding: "var(--space-4)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-primary)",
+                    textAlign: "left",
+                  }}
+                >
                   <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {SOURCE_LOGOS.github}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>GitHub</div>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>GitHub</div>
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                      {githubRepoCount !== null ? `${githubRepoCount} repos accessible` : "Connected"}
+                      {githubActiveRepos.length > 0
+                        ? `${githubActiveRepos.length} active source${githubActiveRepos.length !== 1 ? "s" : ""} of ${githubRepos.length}`
+                        : `${githubRepos.length} repos accessible`}
                     </div>
                   </div>
-                  <button
-                    onClick={disconnectGitHub}
-                    disabled={githubDisconnecting}
-                    style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: githubDisconnecting ? 0.5 : 1 }}
-                  >
-                    {githubDisconnecting ? "..." : "Disconnect"}
-                  </button>
-                </div>
+                  <ChevronRight
+                    size={14}
+                    strokeWidth={2}
+                    style={{
+                      color: "var(--color-text-dim)",
+                      transition: "transform var(--duration-fast) var(--ease-default)",
+                      transform: githubExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                      flexShrink: 0,
+                    }}
+                  />
+                </button>
+
+                {githubExpanded && (
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    {githubRepos.length === 0 && (
+                      <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                        Loading repos...
+                      </div>
+                    )}
+                    {githubRepos.map((repo) => {
+                      const isActive = githubActiveRepos.includes(repo.full_name);
+                      return (
+                        <button
+                          key={repo.full_name}
+                          onClick={() => toggleGithubRepo(repo.full_name)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-3)",
+                            width: "100%",
+                            padding: "var(--space-2-5) var(--space-4)",
+                            background: isActive ? "var(--color-bg-alt)" : "transparent",
+                            border: "none",
+                            borderTop: "1px solid var(--color-border-light)",
+                            cursor: "pointer",
+                            fontFamily: "var(--font-primary)",
+                            textAlign: "left",
+                            transition: "background var(--duration-fast) var(--ease-default)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "var(--radius-xs)",
+                              border: isActive ? "none" : "1px solid var(--color-border)",
+                              background: isActive ? "var(--color-accent)" : "transparent",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              transition: "all var(--duration-fast) var(--ease-default)",
+                            }}
+                          >
+                            {isActive && <Check size={10} strokeWidth={3} style={{ color: "var(--color-text-inverse)" }} />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: isActive ? "var(--color-text)" : "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {repo.name}
+                            </div>
+                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                              {repo.full_name}{repo.private ? " · private" : ""}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {/* Disconnect at bottom */}
+                    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        onClick={disconnectGitHub}
+                        disabled={githubDisconnecting}
+                        style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: githubDisconnecting ? 0.5 : 1 }}
+                      >
+                        {githubDisconnecting ? "..." : "Disconnect"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
             {/* Other mock sources */}
