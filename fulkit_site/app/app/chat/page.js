@@ -526,9 +526,11 @@ export default function Chat() {
                         lineHeight: "var(--line-height-relaxed)",
                       }}
                     >
-                      Talk to your bestie.
+                      Add anything. Think out loud. Get stuff done.
                       <br />
-                      Ask anything. Think out loud. Get stuff done.
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                        Drop files, paste code, or just start typing.
+                      </span>
                     </p>
                   </div>
                 )}
@@ -784,12 +786,12 @@ export default function Chat() {
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      color: "var(--color-text-dim)",
+                      color: "var(--color-text-secondary)",
                       borderRadius: "var(--radius-md)",
                     }}
                     title="Attach files"
                   >
-                    <Paperclip size={15} strokeWidth={1.8} />
+                    <Paperclip size={15} strokeWidth={2} />
                   </button>
                   <input
                     ref={chatFileRef}
