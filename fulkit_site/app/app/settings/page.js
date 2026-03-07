@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Settings as SettingsIcon,
   User,
@@ -190,7 +190,14 @@ const REFERRALS = [
 ];
 
 export default function Settings() {
-  const [tab, setTab] = useState("account");
+  // Read ?tab= from URL on mount
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("tab") || "account";
+    }
+    return "account";
+  });
 
   return (
     <AuthGuard>
@@ -430,11 +437,59 @@ function AccountTab() {
 }
 
 function SourcesTab() {
-  const { user } = useAuth();
+  const { user, accessToken, githubConnected, setGithubConnected, checkGitHub } = useAuth();
   const isDev = user?.isDev;
   const [connected, setConnected] = useState(isDev ? INITIAL_CONNECTED : []);
   const [showBrowser, setShowBrowser] = useState(false);
   const [search, setSearch] = useState("");
+  const [githubRepoCount, setGithubRepoCount] = useState(null);
+  const [githubDisconnecting, setGithubDisconnecting] = useState(false);
+
+  // Check GitHub connection on mount and fetch repo count
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    if (githubConnected) fetchRepoCount();
+  }, [githubConnected, accessToken, isDev]);
+
+  // Refresh GitHub status if we just came back from OAuth
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gh") === "connected" && accessToken) {
+      checkGitHub(accessToken);
+    }
+  }, [accessToken, checkGitHub]);
+
+  async function fetchRepoCount() {
+    try {
+      const res = await fetch("/api/github/repos", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGithubRepoCount(data.length);
+      }
+    } catch {}
+  }
+
+  function connectGitHub() {
+    // Set a temporary cookie with the auth token for the connect route
+    document.cookie = `gh_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
+    window.location.href = "/api/github/connect";
+  }
+
+  async function disconnectGitHub() {
+    setGithubDisconnecting(true);
+    try {
+      await fetch("/api/github/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setGithubConnected(false);
+      setGithubRepoCount(null);
+    } catch {}
+    setGithubDisconnecting(false);
+  }
 
   const mockNotes = { obsidian: 847, gdrive: 234, dropbox: 166 };
   const connectedSources = ALL_SOURCES.filter((s) => connected.includes(s.id));
@@ -445,16 +500,46 @@ function SourcesTab() {
     (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.cat.toLowerCase().includes(search.toLowerCase())
   );
 
-  const connect = (id) => setConnected((prev) => [...prev, id]);
-  const disconnect = (id) => setConnected((prev) => prev.filter((x) => x !== id));
+  const connect = (id) => {
+    if (id === "github") { connectGitHub(); return; }
+    setConnected((prev) => [...prev, id]);
+  };
+  const disconnect = (id) => {
+    if (id === "github") { disconnectGitHub(); return; }
+    setConnected((prev) => prev.filter((x) => x !== id));
+  };
 
   return (
     <div style={{ maxWidth: 640 }}>
       {/* Connected */}
-      {connectedSources.length > 0 && (
+      {(connectedSources.length > 0 || githubConnected) && (
         <>
           <SectionTitle>Connected</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
+            {/* GitHub — real integration */}
+            {githubConnected && (
+              <Card>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                  <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {SOURCE_LOGOS.github}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>GitHub</div>
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                      {githubRepoCount !== null ? `${githubRepoCount} repos accessible` : "Connected"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={disconnectGitHub}
+                    disabled={githubDisconnecting}
+                    style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: githubDisconnecting ? 0.5 : 1 }}
+                  >
+                    {githubDisconnecting ? "..." : "Disconnect"}
+                  </button>
+                </div>
+              </Card>
+            )}
+            {/* Other mock sources */}
             {connectedSources.map((src) => (
               <Card key={src.id}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>

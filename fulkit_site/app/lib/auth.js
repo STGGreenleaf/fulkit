@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(null);
+  const [githubConnected, setGithubConnected] = useState(false);
 
   // Fetch profile from DB
   const fetchProfile = useCallback(async (userId) => {
@@ -121,6 +122,23 @@ export function AuthProvider({ children }) {
     window.location.href = "/";
   }, []);
 
+  // Check GitHub connection when we have a token
+  const checkGitHub = useCallback(async (token) => {
+    try {
+      const res = await fetch("/api/github/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGithubConnected(data.connected);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (accessToken) checkGitHub(accessToken);
+  }, [accessToken, checkGitHub]);
+
   const isOwner = profile?.role === "owner";
   const isOnboarded = profile?.onboarded ?? false;
 
@@ -137,6 +155,9 @@ export function AuthProvider({ children }) {
         isOwner,
         isOnboarded,
         fetchProfile,
+        githubConnected,
+        setGithubConnected,
+        checkGitHub,
       }}
     >
       {children}

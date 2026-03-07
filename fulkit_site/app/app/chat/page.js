@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, ChevronRight, FolderOpen, Code } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -22,8 +22,15 @@ function timeAgo(dateStr) {
   return `${days}d`;
 }
 
+// GitHub icon (matches SOURCE_LOGOS in settings)
+const GitHubIcon = ({ size = 15, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={style}>
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+  </svg>
+);
+
 export default function Chat() {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, githubConnected } = useAuth();
   const isDev = user?.isDev;
   const { getContext, getContextWithMeta, recallNotes, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
@@ -39,6 +46,12 @@ export default function Chat() {
   const [recallResults, setRecallResults] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [chatDragOver, setChatDragOver] = useState(false);
+  const [ghBrowserOpen, setGhBrowserOpen] = useState(false);
+  const [ghRepos, setGhRepos] = useState([]);
+  const [ghSelectedRepo, setGhSelectedRepo] = useState(null);
+  const [ghTree, setGhTree] = useState([]);
+  const [ghPath, setGhPath] = useState([]);
+  const [ghLoading, setGhLoading] = useState(false);
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -135,6 +148,75 @@ export default function Chat() {
       }
     }
     if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
+  }
+
+  // GitHub browser functions
+  async function openGhBrowser() {
+    setGhBrowserOpen(true);
+    setGhSelectedRepo(null);
+    setGhTree([]);
+    setGhPath([]);
+    setGhLoading(true);
+    try {
+      const res = await fetch("/api/github/repos", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) setGhRepos(await res.json());
+    } catch {}
+    setGhLoading(false);
+  }
+
+  async function selectGhRepo(repo) {
+    setGhSelectedRepo(repo);
+    setGhPath([]);
+    setGhLoading(true);
+    try {
+      const res = await fetch(`/api/github/tree?repo=${encodeURIComponent(repo.full_name)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) setGhTree(await res.json());
+    } catch {}
+    setGhLoading(false);
+  }
+
+  async function navigateGhDir(dirItem) {
+    setGhPath((prev) => [...prev, dirItem.name]);
+    setGhLoading(true);
+    try {
+      const res = await fetch(`/api/github/tree?repo=${encodeURIComponent(ghSelectedRepo.full_name)}&path=${encodeURIComponent(dirItem.path)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) setGhTree(await res.json());
+    } catch {}
+    setGhLoading(false);
+  }
+
+  async function ghGoUp() {
+    const newPath = ghPath.slice(0, -1);
+    setGhPath(newPath);
+    setGhLoading(true);
+    try {
+      const pathStr = newPath.join("/");
+      const res = await fetch(`/api/github/tree?repo=${encodeURIComponent(ghSelectedRepo.full_name)}${pathStr ? `&path=${encodeURIComponent(pathStr)}` : ""}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) setGhTree(await res.json());
+    } catch {}
+    setGhLoading(false);
+  }
+
+  async function selectGhFile(fileItem) {
+    setGhLoading(true);
+    try {
+      const res = await fetch(`/api/github/file?repo=${encodeURIComponent(ghSelectedRepo.full_name)}&path=${encodeURIComponent(fileItem.path)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttachedFiles((prev) => [...prev, { name: `${ghSelectedRepo.name}/${data.path}`, content: data.content }]);
+      }
+    } catch {}
+    setGhLoading(false);
   }
 
   const sendMessage = useCallback(async () => {
@@ -311,6 +393,7 @@ export default function Chat() {
     setRecalledNotes([]);
     setRecallResults(null);
     setAttachedFiles([]);
+    setGhBrowserOpen(false);
   };
 
   const openConversation = (conv) => {
@@ -730,29 +813,211 @@ export default function Chat() {
                     gap: 4,
                   }}
                 >
-                  {attachedFiles.map((af, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+                  {attachedFiles.map((af, i) => {
+                    const isGh = af.name.includes("/");
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 3,
+                          fontSize: "var(--font-size-2xs)",
+                          color: "var(--color-text-secondary)",
+                          background: "var(--color-bg-alt)",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          padding: "2px 6px",
+                          cursor: "pointer",
+                          fontFamily: "var(--font-primary)",
+                        }}
+                      >
+                        {isGh ? <GitHubIcon size={9} /> : <Paperclip size={9} strokeWidth={1.8} />}
+                        {af.name}
+                        <X size={9} strokeWidth={2} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* GitHub file browser */}
+              {ghBrowserOpen && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6) var(--space-2)",
+                  }}
+                >
+                  <div
+                    style={{
+                      border: "1px solid var(--color-border-light)",
+                      borderRadius: "var(--radius-md)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Header */}
+                    <div
                       style={{
                         display: "flex",
+                        justifyContent: "space-between",
                         alignItems: "center",
-                        gap: 3,
-                        fontSize: "var(--font-size-2xs)",
-                        color: "var(--color-text-secondary)",
+                        padding: "var(--space-2) var(--space-3)",
                         background: "var(--color-bg-alt)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "2px 6px",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-primary)",
+                        borderBottom: "1px solid var(--color-border-light)",
                       }}
                     >
-                      <Paperclip size={9} strokeWidth={1.8} />
-                      {af.name}
-                      <X size={9} strokeWidth={2} />
-                    </button>
-                  ))}
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <GitHubIcon size={12} style={{ color: "var(--color-text-muted)" }} />
+                        <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          {!ghSelectedRepo ? "Select a repo" : (
+                            <>
+                              <button
+                                onClick={() => { setGhSelectedRepo(null); setGhTree([]); setGhPath([]); }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em", padding: 0 }}
+                              >
+                                Repos
+                              </button>
+                              <span style={{ margin: "0 4px" }}>/</span>
+                              {ghPath.length > 0 ? (
+                                <>
+                                  <button
+                                    onClick={() => { setGhPath([]); navigateGhDir({ path: "", name: "" }); selectGhRepo(ghSelectedRepo); }}
+                                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em", padding: 0 }}
+                                  >
+                                    {ghSelectedRepo.name}
+                                  </button>
+                                  <span style={{ margin: "0 4px" }}>/</span>
+                                  {ghPath.join("/")}
+                                </>
+                              ) : ghSelectedRepo.name}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setGhBrowserOpen(false)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", display: "flex" }}
+                      >
+                        <X size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                      {ghLoading && (
+                        <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                          Loading...
+                        </div>
+                      )}
+
+                      {/* Repo list */}
+                      {!ghLoading && !ghSelectedRepo && ghRepos.map((repo) => (
+                        <button
+                          key={repo.full_name}
+                          onClick={() => selectGhRepo(repo)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-2)",
+                            width: "100%",
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "transparent",
+                            border: "none",
+                            borderTop: "1px solid var(--color-border-light)",
+                            cursor: "pointer",
+                            fontFamily: "var(--font-primary)",
+                            textAlign: "left",
+                          }}
+                        >
+                          <Code size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {repo.full_name}
+                          </span>
+                          {repo.private && (
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>private</span>
+                          )}
+                          <ChevronRight size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                        </button>
+                      ))}
+
+                      {/* File tree */}
+                      {!ghLoading && ghSelectedRepo && (
+                        <>
+                          {ghPath.length > 0 && (
+                            <button
+                              onClick={ghGoUp}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "var(--space-2)",
+                                width: "100%",
+                                padding: "var(--space-2) var(--space-3)",
+                                background: "transparent",
+                                border: "none",
+                                borderTop: "1px solid var(--color-border-light)",
+                                cursor: "pointer",
+                                fontFamily: "var(--font-primary)",
+                                textAlign: "left",
+                              }}
+                            >
+                              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>..</span>
+                            </button>
+                          )}
+                          {ghTree
+                            .sort((a, b) => {
+                              if (a.type === b.type) return a.name.localeCompare(b.name);
+                              return a.type === "dir" ? -1 : 1;
+                            })
+                            .map((item) => (
+                            <button
+                              key={item.path}
+                              onClick={() => item.type === "dir" ? navigateGhDir(item) : selectGhFile(item)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "var(--space-2)",
+                                width: "100%",
+                                padding: "var(--space-2) var(--space-3)",
+                                background: "transparent",
+                                border: "none",
+                                borderTop: "1px solid var(--color-border-light)",
+                                cursor: "pointer",
+                                fontFamily: "var(--font-primary)",
+                                textAlign: "left",
+                              }}
+                            >
+                              {item.type === "dir" ? (
+                                <FolderOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                              ) : (
+                                <FileText size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                              )}
+                              <span style={{ flex: 1, fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {item.name}
+                              </span>
+                              {item.type === "file" && item.size > 0 && (
+                                <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                                  {item.size >= 1024 ? `${(item.size / 1024).toFixed(1)}KB` : `${item.size}B`}
+                                </span>
+                              )}
+                              {item.type === "dir" && (
+                                <ChevronRight size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                              )}
+                            </button>
+                          ))}
+                        </>
+                      )}
+
+                      {!ghLoading && !ghSelectedRepo && ghRepos.length === 0 && (
+                        <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                          No repos found.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -811,6 +1076,27 @@ export default function Chat() {
                   >
                     <Mic size={15} strokeWidth={2} />
                   </Link>
+                  {githubConnected && (
+                    <button
+                      onClick={openGhBrowser}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: ghBrowserOpen ? "var(--color-bg-alt)" : "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--color-text-secondary)",
+                        borderRadius: "var(--radius-md)",
+                      }}
+                      title="Browse GitHub repos"
+                    >
+                      <GitHubIcon size={15} />
+                    </button>
+                  )}
                   <input
                     ref={chatFileRef}
                     type="file"
