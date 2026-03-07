@@ -146,7 +146,7 @@ const SOURCE_LOGOS = {
 };
 
 // Mock connected state — will come from DB
-const INITIAL_CONNECTED = ["obsidian", "gdrive", "dropbox"];
+const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = ["obsidian", "dropbox", "notion"];
 
@@ -448,7 +448,7 @@ function SourcesTab() {
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [spotifyConnected, setSpotifyConnected] = useState(isDev);
 
   // Fetch repos and active state on mount
   useEffect(() => {
