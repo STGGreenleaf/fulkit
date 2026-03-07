@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Settings as SettingsIcon,
   User,
@@ -22,6 +22,7 @@ import {
   FolderOpen,
   FileText,
   Search,
+  Paperclip,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1109,7 +1110,7 @@ function formatTokens(n) {
 }
 
 function VaultTab() {
-  const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode } = useVaultContext();
+  const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode, cryptoKey } = useVaultContext();
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
 
@@ -1118,6 +1119,48 @@ function VaultTab() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState("all");
+
+  // File upload state
+  const fileRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+  const [importError, setImportError] = useState("");
+
+  const canUpload = storageMode === "fulkit" || (storageMode === "encrypted" && isUnlocked);
+
+  async function handleFiles(files) {
+    if (!user || isDev || !canUpload) return;
+    const { importNote, importEncryptedNote } = await import("../../lib/vault-fulkit");
+    setImporting(true);
+    setImportError("");
+    let count = 0;
+
+    for (const file of files) {
+      if (!file.name.endsWith(".md") && !file.name.endsWith(".txt")) continue;
+      try {
+        const content = await file.text();
+        const title = file.name.replace(/\.(md|txt)$/, "");
+        if (storageMode === "encrypted" && cryptoKey) {
+          const { encryptNote } = await import("../../lib/vault-crypto");
+          const { ciphertext, iv } = await encryptNote(content, cryptoKey);
+          await importEncryptedNote({ title, ciphertext, iv, source: "upload" }, supabase, user.id);
+        } else {
+          await importNote({ title, content, source: "upload" }, supabase, user.id);
+        }
+        count++;
+      } catch (err) {
+        setImportError(`Failed: ${file.name}`);
+      }
+    }
+
+    setImportedCount(count);
+    setImporting(false);
+    if (count > 0) {
+      loadNotes();
+      setTimeout(() => setImportedCount(0), 3000);
+    }
+  }
 
   const noteCount = isDev ? 12 : notes.length;
 
@@ -1224,6 +1267,44 @@ function VaultTab() {
           </p>
         )}
       </div>
+
+      {/* Drop zone — Models B (unlocked) + C */}
+      {canUpload && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files?.length) handleFiles(Array.from(e.dataTransfer.files)); }}
+          onClick={() => fileRef.current?.click()}
+          style={{
+            padding: "var(--space-3)",
+            borderRadius: "var(--radius-md)",
+            border: dragOver ? "1px solid var(--color-text-muted)" : "1px dashed var(--color-border)",
+            background: dragOver ? "var(--color-bg-alt)" : "transparent",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            transition: "all var(--duration-fast) var(--ease-default)",
+          }}
+        >
+          <Paperclip size={14} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+            {importing ? "Importing..." : importedCount > 0 ? `${importedCount} added` : "Drop .md or .txt files"}
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".md,.txt"
+            multiple
+            onChange={(e) => { if (e.target.files?.length) handleFiles(Array.from(e.target.files)); e.target.value = ""; }}
+            style={{ display: "none" }}
+          />
+        </div>
+      )}
+
+      {importError && (
+        <p style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{importError}</p>
+      )}
 
       {/* Notes browser */}
       {notes.length > 0 && (

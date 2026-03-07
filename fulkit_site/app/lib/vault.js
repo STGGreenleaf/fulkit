@@ -16,8 +16,9 @@ const DEV_NOTES = [
 ];
 
 export function VaultProvider({ children }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const isDev = user?.isDev;
+  const vaultBudget = profile?.role === "owner" ? 100000 : 50000;
 
   const [storageMode, setStorageModeState] = useState("fulkit");
   const [loading, setLoading] = useState(true);
@@ -110,12 +111,12 @@ export function VaultProvider({ children }) {
 
     try {
       const notes = await getRawNotes();
-      return selectContext(notes, message);
+      return selectContext(notes, message, vaultBudget);
     } catch (err) {
       console.error("[vault] getContext error:", err.message);
       return [];
     }
-  }, [getRawNotes, isDev]);
+  }, [getRawNotes, isDev, vaultBudget]);
 
   // Same as getContext but returns metadata for the UI indicator
   const getContextWithMeta = useCallback(async (message) => {
@@ -126,12 +127,12 @@ export function VaultProvider({ children }) {
 
     try {
       const notes = await getRawNotes();
-      return selectContextWithMetadata(notes, message);
+      return selectContextWithMetadata(notes, message, vaultBudget);
     } catch (err) {
       console.error("[vault] getContextWithMeta error:", err.message);
       return { selected: [], metadata: { includedCount: 0, alwaysCount: 0, totalTokens: 0 } };
     }
-  }, [getRawNotes, isDev]);
+  }, [getRawNotes, isDev, vaultBudget]);
 
   // Get note list for settings browser (metadata only, no content)
   const getNoteList = useCallback(async () => {

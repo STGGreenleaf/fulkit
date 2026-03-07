@@ -3,6 +3,16 @@ import { getSupabaseAdmin } from "../../../lib/supabase-server";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+function getModelConfig(role, seatType) {
+  if (role === "owner") {
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 120000, beta: true };
+  }
+  if (seatType === "pro") {
+    return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000 };
+  }
+  return { model: "claude-sonnet-4-6", maxTokens: 2048, compressAt: 80000 };
+}
+
 const BASE_PROMPT = `You are Fülkit — a thinking partner, not an assistant. You're warm, direct, and useful. You have bestie energy — you care, you push back when needed, and you remember what matters.
 
 Guidelines:
@@ -73,6 +83,18 @@ export async function POST(request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Fetch profile for tier-based model selection
+    let profile = null;
+    if (userId) {
+      const { data } = await getSupabaseAdmin()
+        .from("profiles")
+        .select("role, seat_type")
+        .eq("id", userId)
+        .single();
+      profile = data;
+    }
+    const config = getModelConfig(profile?.role, profile?.seat_type);
+
     const { messages, context = [] } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -80,7 +102,7 @@ export async function POST(request) {
     }
 
     // Compress conversation if it's getting long
-    const compressed = compressConversation(messages);
+    const compressed = compressConversation(messages, config.compressAt);
 
     // Load user preferences for personality tuning
     let prefs = null;
@@ -112,15 +134,19 @@ export async function POST(request) {
       system += `\n\n## User's Notes & Context\nThe following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.\n\n${contextBlock}`;
     }
 
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+    const streamOpts = {
+      model: config.model,
+      max_tokens: config.maxTokens,
       system: system,
       messages: compressed.map((m) => ({
         role: m.role,
         content: m.content,
       })),
-    });
+    };
+    if (config.beta) {
+      streamOpts.betas = ["output-128k-2025-02-19"];
+    }
+    const stream = anthropic.messages.stream(streamOpts);
 
     // Increment message count (Fül cap)
     if (userId) {
