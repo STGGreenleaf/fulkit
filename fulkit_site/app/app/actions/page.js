@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, Code, Home } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, Code, Home, Trash2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
@@ -97,6 +97,7 @@ export default function Actions() {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
     if (!user || isDev) return;
@@ -133,6 +134,16 @@ export default function Actions() {
     setActions((prev) => prev.map((a) => a.id === id ? { ...a, ...updates } : a));
     if (!isDev) {
       await supabase.from("actions").update(updates).eq("id", id);
+    }
+  }
+
+  async function clearDone() {
+    const doneIds = filtered.filter((a) => a.status === "done").map((a) => a.id);
+    if (doneIds.length === 0) return;
+    setActions((prev) => prev.filter((a) => !doneIds.includes(a.id)));
+    setConfirmClear(false);
+    if (!isDev) {
+      await supabase.from("actions").delete().in("id", doneIds);
     }
   }
 
@@ -213,7 +224,7 @@ export default function Actions() {
               return (
                 <button
                   key={key}
-                  onClick={() => { setLens(key); setExpandedId(null); }}
+                  onClick={() => { setLens(key); setExpandedId(null); setConfirmClear(false); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -254,7 +265,7 @@ export default function Actions() {
               return (
                 <button
                   key={f}
-                  onClick={() => { setFilter(f); setExpandedId(null); }}
+                  onClick={() => { setFilter(f); setExpandedId(null); setConfirmClear(false); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -356,6 +367,73 @@ export default function Actions() {
                   >
                     <X size={14} strokeWidth={2} />
                   </button>
+                </div>
+              )}
+
+              {/* Clear done */}
+              {filter === "done" && filtered.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "var(--space-2)",
+                    marginBottom: "var(--space-2)",
+                  }}
+                >
+                  {confirmClear ? (
+                    <>
+                      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>
+                        Clear {filtered.length} done?
+                      </span>
+                      <button
+                        onClick={clearDone}
+                        style={{
+                          padding: "var(--space-1) var(--space-2)",
+                          background: "var(--color-accent)",
+                          color: "var(--color-text-inverse)",
+                          border: "none",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "var(--font-size-2xs)",
+                          fontWeight: "var(--font-weight-semibold)",
+                          fontFamily: "var(--font-primary)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmClear(false)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--color-text-muted)",
+                          fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-primary)",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmClear(true)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--color-text-dim)",
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "var(--space-1)",
+                        borderRadius: "var(--radius-sm)",
+                      }}
+                      title="Clear done items"
+                    >
+                      <Trash2 size={14} strokeWidth={1.8} />
+                    </button>
+                  )}
                 </div>
               )}
 
