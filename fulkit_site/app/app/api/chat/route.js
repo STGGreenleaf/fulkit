@@ -57,24 +57,20 @@ export async function POST(request) {
     const authHeader = request.headers.get("authorization");
     let userId = null;
 
-    let authDebug = { hasHeader: !!authHeader, tokenLen: 0, getUserError: null };
-
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      authDebug.tokenLen = token.length;
       try {
         const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
-        if (error) authDebug.getUserError = error.message;
         if (!error && user) userId = user.id;
-      } catch (e) {
-        authDebug.getUserError = e.message;
+      } catch {
+        // Token validation failed
       }
     }
 
     // Dev mode bypass — no auth header means local dev
     const isDev = !authHeader && process.env.NODE_ENV === "development";
     if (!userId && !isDev) {
-      return Response.json({ error: "Unauthorized", debug: authDebug }, { status: 401 });
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { messages, context = [] } = await request.json();

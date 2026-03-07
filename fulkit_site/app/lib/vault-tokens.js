@@ -1,7 +1,7 @@
 // Token budget manager — shared by all three vault models
 // Estimates token counts, scores relevance, selects notes that fit within budget
 
-const TOKEN_BUDGET = 50000; // ~50K tokens for vault context (conservative)
+const TOKEN_BUDGET = 25000; // ~25K tokens — fits Tier 1 rate limits, forces smart selection
 
 export function estimateTokens(text) {
   if (!text) return 0;
