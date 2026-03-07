@@ -57,7 +57,6 @@ export function AuthProvider({ children }) {
     if (mode === "dev" || localStorage.getItem("fulkit-dev-mode") === "true") {
       setUser(DEV_TEMPLATE_USER);
       setProfile({ role: "owner", onboarded: true, seat_type: "standard", messages_this_month: 138 });
-      setGithubConnected(true);
       setLoading(false);
       return;
     }
