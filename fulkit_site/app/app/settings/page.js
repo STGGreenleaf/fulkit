@@ -454,6 +454,7 @@ function SourcesTab() {
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -468,7 +469,19 @@ function SourcesTab() {
     if (params.get("gh") === "connected" && accessToken) {
       checkGitHub(accessToken);
     }
+    if (params.get("sp") === "connected") {
+      setSpotifyConnected(true);
+    }
   }, [accessToken, checkGitHub]);
+
+  // Check Spotify connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/spotify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setSpotifyConnected(data.connected); })
+      .catch(() => {});
+  }, [accessToken, isDev]);
 
   async function fetchGithubRepos() {
     try {
@@ -502,9 +515,13 @@ function SourcesTab() {
   }
 
   function connectGitHub() {
-    // Set a temporary cookie with the auth token for the connect route
     document.cookie = `gh_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
     window.location.href = "/api/github/connect";
+  }
+
+  function connectSpotify() {
+    document.cookie = `sp_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
+    window.location.href = "/api/spotify/connect";
   }
 
   async function disconnectGitHub() {
@@ -531,6 +548,7 @@ function SourcesTab() {
 
   const connect = (id) => {
     if (id === "github") { connectGitHub(); return; }
+    if (id === "spotify") { connectSpotify(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {

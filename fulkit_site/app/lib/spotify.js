@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { useAuth } from "./auth";
 
 const SpotifyContext = createContext(null);
 
-// Mock data — replace with real Spotify Web API calls
+// Mock data for dev mode
 const MOCK_TRACKS = [
   { id: "1", title: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", duration: 243, art: null },
   { id: "2", title: "Tadow", artist: "Masego, FKJ", album: "Tadow", duration: 295, art: null },
@@ -23,29 +24,121 @@ const MOCK_PLAYLISTS = [
 ];
 
 export function SpotifyProvider({ children }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(MOCK_TRACKS[0]);
-  const [queue, setQueue] = useState(MOCK_TRACKS.slice(1, 5));
-  const [flagged, setFlagged] = useState([]);
-  const [playlists] = useState(MOCK_PLAYLISTS);
-  const [progress, setProgress] = useState(0); // 0-1
-  const [connected] = useState(true); // mock connected
+  const { user, accessToken } = useAuth();
+  const isDev = user?.isDev;
 
-  const play = useCallback(() => setIsPlaying(true), []);
-  const pause = useCallback(() => setIsPlaying(false), []);
-  const toggle = useCallback(() => setIsPlaying((p) => !p), []);
+  const [connected, setConnected] = useState(isDev ? true : false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
+  const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
+  const [flagged, setFlagged] = useState([]);
+  const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
+  const [progress, setProgress] = useState(0);
+  const pollRef = useRef(null);
+
+  // Helper for authenticated API calls
+  const apiFetch = useCallback(async (endpoint, options = {}) => {
+    if (!accessToken) return null;
+    const res = await fetch(endpoint, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }, [accessToken]);
+
+  // Check connection status
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    apiFetch("/api/spotify/status").then((data) => {
+      if (data) setConnected(data.connected);
+    });
+  }, [accessToken, isDev, apiFetch]);
+
+  // Fetch playlists when connected
+  useEffect(() => {
+    if (isDev || !connected || !accessToken) return;
+    apiFetch("/api/spotify/playlists").then((data) => {
+      if (data?.playlists) setPlaylists(data.playlists);
+    });
+  }, [connected, accessToken, isDev, apiFetch]);
+
+  // Poll now playing every 4s when connected
+  useEffect(() => {
+    if (isDev || !connected || !accessToken) return;
+
+    const fetchNowPlaying = async () => {
+      const data = await apiFetch("/api/spotify/now-playing");
+      if (!data) return;
+      setIsPlaying(data.isPlaying);
+      if (data.track) {
+        setCurrentTrack((prev) => {
+          // Only update if track changed or progress jumped
+          if (!prev || prev.id !== data.track.id) return data.track;
+          return { ...prev, progress: data.track.progress, progressMs: data.track.progressMs };
+        });
+        setProgress(data.track.progress);
+      } else {
+        setCurrentTrack(null);
+        setProgress(0);
+      }
+    };
+
+    fetchNowPlaying();
+    pollRef.current = setInterval(fetchNowPlaying, 4000);
+    return () => clearInterval(pollRef.current);
+  }, [connected, accessToken, isDev, apiFetch]);
+
+  // Controls — send to API
+  const sendControl = useCallback(async (action) => {
+    if (isDev) return;
+    await apiFetch("/api/spotify/controls", {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    });
+  }, [isDev, apiFetch]);
+
+  const play = useCallback(() => {
+    setIsPlaying(true);
+    sendControl("play");
+  }, [sendControl]);
+
+  const pause = useCallback(() => {
+    setIsPlaying(false);
+    sendControl("pause");
+  }, [sendControl]);
+
+  const toggle = useCallback(() => {
+    setIsPlaying((p) => {
+      sendControl(p ? "pause" : "play");
+      return !p;
+    });
+  }, [sendControl]);
 
   const skip = useCallback(() => {
-    if (queue.length === 0) return;
-    setCurrentTrack(queue[0]);
-    setQueue((q) => q.slice(1));
-    setProgress(0);
-    setIsPlaying(true);
-  }, [queue]);
+    if (isDev) {
+      if (queue.length === 0) return;
+      setCurrentTrack(queue[0]);
+      setQueue((q) => q.slice(1));
+      setProgress(0);
+      setIsPlaying(true);
+      return;
+    }
+    sendControl("next");
+    // Optimistic: poll will catch the actual track shortly
+  }, [isDev, queue, sendControl]);
 
   const prev = useCallback(() => {
-    setProgress(0);
-  }, []);
+    if (isDev) {
+      setProgress(0);
+      return;
+    }
+    sendControl("previous");
+  }, [isDev, sendControl]);
 
   const flag = useCallback((track) => {
     setFlagged((prev) => {
@@ -83,7 +176,7 @@ export function SpotifyProvider({ children }) {
         flagged,
         playlists,
         progress,
-        allTracks: MOCK_TRACKS,
+        allTracks: isDev ? MOCK_TRACKS : [],
         play,
         pause,
         toggle,
