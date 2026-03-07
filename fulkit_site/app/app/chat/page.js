@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import VaultGate from "../../components/VaultGate";
 import { useAuth } from "../../lib/auth";
+import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
+import { extractArtifacts, writeBackLocal, writeBackSupabase } from "../../lib/vault-writeback";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -21,6 +24,7 @@ function timeAgo(dateStr) {
 export default function Chat() {
   const { user } = useAuth();
   const isDev = user?.isDev;
+  const { getContext, getContextWithMeta, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -29,6 +33,7 @@ export default function Chat() {
   const [conversations, setConversations] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(260);
+  const [contextMeta, setContextMeta] = useState(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -129,6 +134,18 @@ export default function Chat() {
     // Add empty assistant message that we'll stream into
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
+    // Assemble vault context from user's chosen source
+    let context = [];
+    if (isReady) {
+      const result = await getContextWithMeta(text);
+      context = result.selected;
+      setContextMeta(result.metadata);
+    }
+
+    // Get auth token for API authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    const authToken = session?.access_token;
+
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -137,8 +154,11 @@ export default function Chat() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updated }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ messages: updated, context }),
         signal: controller.signal,
       });
 
@@ -214,11 +234,24 @@ export default function Chat() {
     if (fullResponse && convId) {
       await saveMessage(convId, "assistant", fullResponse);
       loadConversations();
+
+      // Write-back loop — extract artifacts and file them
+      if (!isDev) {
+        const artifacts = extractArtifacts(fullResponse);
+        if (artifacts.actionItems.length > 0) {
+          const title = messages[0]?.content?.slice(0, 60) || "Chat";
+          if (storageMode === "local" && directoryHandle) {
+            writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
+          } else {
+            writeBackSupabase(user.id, artifacts, title).catch(() => {});
+          }
+        }
+      }
     }
 
     setStreaming(false);
     abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev]);
+  }, [input, streaming, messages, conversationId, user, isDev, getContextWithMeta, isReady]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -232,6 +265,7 @@ export default function Chat() {
     setMessages([]);
     setConversationId(null);
     setStreaming(false);
+    setContextMeta(null);
   };
 
   const openConversation = (conv) => {
@@ -303,6 +337,23 @@ export default function Chat() {
             </span>
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {/* Context indicator */}
+              {contextMeta && contextMeta.includedCount > 0 && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-dim)",
+                    padding: "var(--space-1) var(--space-2)",
+                  }}
+                >
+                  <FileText size={11} strokeWidth={1.8} />
+                  {contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens
+                </span>
+              )}
+
               {/* History toggle */}
               {!isDev && conversations.length > 0 && (
                 <button
@@ -376,6 +427,7 @@ export default function Chat() {
                       gap: "var(--space-3)",
                     }}
                   >
+                    <VaultGate />
                     <MessageCircle
                       size={28}
                       strokeWidth={1.5}

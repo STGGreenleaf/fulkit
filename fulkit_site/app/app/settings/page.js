@@ -19,15 +19,20 @@ import {
   X,
   Bell,
   Zap,
+  FolderOpen,
+  FileText,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import StorageModeSelector from "../../components/StorageModeSelector";
 import { useAuth } from "../../lib/auth";
+import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
   { id: "sources", label: "Sources", icon: RefreshCw },
+  { id: "vault", label: "Vault", icon: FolderOpen },
   { id: "ai", label: "AI & Memory", icon: Brain },
   { id: "referrals", label: "Get Fülkit", icon: Gift },
   { id: "billing", label: "Billing", icon: CreditCard },
@@ -259,6 +264,7 @@ export default function Settings() {
         <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
             {tab === "account" && <AccountTab />}
             {tab === "sources" && <SourcesTab />}
+            {tab === "vault" && <VaultTab />}
             {tab === "ai" && <AITab />}
             {tab === "referrals" && <ReferralsTab />}
             {tab === "billing" && <BillingTab />}
@@ -1055,6 +1061,280 @@ function BillingTab() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+function ContextModeToggle({ mode, onChange, disabled }) {
+  const modes = [
+    { key: "always", label: "Always", symbol: "\u25CF" },
+    { key: "available", label: "Available", symbol: "\u25CB" },
+    { key: "off", label: "Off", symbol: "\u2715" },
+  ];
+
+  return (
+    <div style={{ display: "flex", gap: 0, borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid var(--color-border-light)" }}>
+      {modes.map((m) => (
+        <button
+          key={m.key}
+          onClick={() => !disabled && onChange(m.key)}
+          title={m.label}
+          style={{
+            width: 24,
+            height: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 10,
+            fontFamily: "var(--font-primary)",
+            border: "none",
+            cursor: disabled ? "default" : "pointer",
+            opacity: disabled ? 0.5 : 1,
+            background: mode === m.key ? "var(--color-accent)" : "transparent",
+            color: mode === m.key ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+            transition: "background var(--duration-fast) var(--ease-default)",
+          }}
+        >
+          {m.symbol}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function formatTokens(n) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return `${n}`;
+}
+
+function VaultTab() {
+  const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode } = useVaultContext();
+  const isDev = useAuth().user?.isDev;
+
+  const [noteCount, setNoteCount] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  useEffect(() => {
+    if (isDev) { setNoteCount(12); return; }
+    if (storageMode === "local") return;
+    supabase
+      .from("notes")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setNoteCount(count || 0));
+  }, [isDev, storageMode]);
+
+  // Load notes list
+  useEffect(() => {
+    loadNotes();
+  }, [storageMode, vaultConnected, isUnlocked, isDev]);
+
+  async function loadNotes() {
+    setNotesLoading(true);
+    try {
+      const list = await getNoteList();
+      setNotes(list);
+    } catch {
+      setNotes([]);
+    }
+    setNotesLoading(false);
+  }
+
+  async function handleModeChange(noteId, mode) {
+    await updateNoteMode(noteId, mode);
+    setNotes((prev) => prev.map((n) => n.id === noteId ? { ...n, context_mode: mode } : n));
+  }
+
+  async function handleDelete(noteId) {
+    const { deleteNote } = await import("../../lib/vault-fulkit");
+    await deleteNote(noteId, supabase);
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    setDeleteConfirm(null);
+    if (noteCount !== null) setNoteCount(noteCount - 1);
+  }
+
+  const isLocal = storageMode === "local";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", maxWidth: 480 }}>
+      <StorageModeSelector />
+
+      {/* Mode-specific status */}
+      <div
+        style={{
+          padding: "var(--space-3)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--color-border-light)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Status
+        </p>
+
+        {storageMode === "local" && (
+          <>
+            <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+              {vaultConnected ? "Vault connected. Files read at chat-time." : "No vault connected."}
+            </p>
+            {vaultConnected ? (
+              <button
+                onClick={disconnectVault}
+                style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", textAlign: "left", padding: 0 }}
+              >
+                Disconnect vault
+              </button>
+            ) : (
+              <button
+                onClick={connectVault}
+                style={{ fontSize: "var(--font-size-xs)", color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", textAlign: "left", padding: 0, fontWeight: "var(--font-weight-semibold)" }}
+              >
+                Connect vault folder
+              </button>
+            )}
+          </>
+        )}
+
+        {storageMode === "encrypted" && (
+          <>
+            <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+              {isUnlocked ? "Vault unlocked." : "Vault locked."} {noteCount !== null ? `${noteCount} encrypted notes.` : ""}
+            </p>
+            {isUnlocked && (
+              <button
+                onClick={lockVault}
+                style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", textAlign: "left", padding: 0 }}
+              >
+                Lock vault
+              </button>
+            )}
+          </>
+        )}
+
+        {storageMode === "fulkit" && (
+          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+            {noteCount !== null ? `${noteCount} notes stored.` : "Loading..."} Encrypted at rest.
+          </p>
+        )}
+      </div>
+
+      {/* Notes browser */}
+      {notes.length > 0 && (
+        <div>
+          <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "var(--space-2)" }}>
+            Your Notes
+          </p>
+
+          {isLocal && (
+            <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-relaxed)" }}>
+              Context is managed by folder structure. <code style={{ fontSize: "var(--font-size-2xs)", background: "var(--color-bg-alt)", padding: "1px 4px", borderRadius: "var(--radius-xs)" }}>_CHAPPIE/</code> files are always included.
+            </p>
+          )}
+
+          <div
+            style={{
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-md)",
+              overflow: "hidden",
+              maxHeight: 320,
+              overflowY: "auto",
+            }}
+          >
+            {notes.map((note, i) => (
+              <div
+                key={note.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  padding: "var(--space-2) var(--space-3)",
+                  borderTop: i > 0 ? "1px solid var(--color-border-light)" : "none",
+                }}
+              >
+                <FileText size={13} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: "var(--font-size-xs)",
+                    color: note.context_mode === "off" ? "var(--color-text-dim)" : "var(--color-text-secondary)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    textDecoration: note.context_mode === "off" ? "line-through" : "none",
+                  }}
+                >
+                  {note.title}
+                </span>
+
+                {note.source && note.source !== "local" && SOURCE_LOGOS[note.source] && (
+                  <span style={{ color: "var(--color-text-dim)", flexShrink: 0, display: "flex" }}>
+                    {SOURCE_LOGOS[note.source]}
+                  </span>
+                )}
+
+                <span
+                  style={{
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-dim)",
+                    flexShrink: 0,
+                    minWidth: 32,
+                    textAlign: "right",
+                  }}
+                >
+                  {formatTokens(note.tokenEstimate)}
+                </span>
+
+                <ContextModeToggle
+                  mode={note.context_mode}
+                  onChange={(mode) => handleModeChange(note.id, mode)}
+                  disabled={isLocal}
+                />
+
+                {!isLocal && (
+                  deleteConfirm === note.id ? (
+                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleDelete(note.id)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-error)", display: "flex" }}
+                        title="Confirm delete"
+                      >
+                        <Check size={12} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", display: "flex" }}
+                        title="Cancel"
+                      >
+                        <X size={12} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirm(note.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", flexShrink: 0, display: "flex" }}
+                      title="Delete note"
+                    >
+                      <Trash2 size={12} strokeWidth={1.8} />
+                    </button>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: "var(--space-2)" }}>
+            Always = every prompt &middot; Available = when relevant &middot; Off = excluded
+          </p>
+        </div>
+      )}
+
+      {notesLoading && notes.length === 0 && (
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Loading notes...</p>
+      )}
     </div>
   );
 }

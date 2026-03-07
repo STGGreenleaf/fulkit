@@ -1,5 +1,6 @@
 import "./globals.css";
 import { AuthProvider } from "../lib/auth";
+import { VaultProvider } from "../lib/vault";
 import { SpotifyProvider } from "../lib/spotify";
 import DevInspector from "../components/DevInspector";
 
@@ -28,10 +29,12 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <AuthProvider>
-          <SpotifyProvider>
-            {children}
-            <DevInspector />
-          </SpotifyProvider>
+          <VaultProvider>
+            <SpotifyProvider>
+              {children}
+              <DevInspector />
+            </SpotifyProvider>
+          </VaultProvider>
         </AuthProvider>
       </body>
     </html>
