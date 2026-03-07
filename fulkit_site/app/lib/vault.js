@@ -6,7 +6,7 @@ import { supabase } from "./supabase";
 import { selectContext, selectContextWithMetadata, estimateTokens } from "./vault-tokens";
 import { isFileSystemAccessSupported, pickVaultDirectory, restoreDirectoryHandle, disconnectVault as disconnectLocal, readLocalVault } from "./vault-local";
 import { deriveKey, generateSalt, encryptNote, decryptNote, cacheKey, getCachedKey, clearCachedKey } from "./vault-crypto";
-import { readFulkitNotes, readEncryptedNotes, updateContextMode, listNotes } from "./vault-fulkit";
+import { readFulkitNotes, readEncryptedNotes, updateContextMode, listNotes, searchNotes } from "./vault-fulkit";
 
 const VaultContext = createContext(null);
 
@@ -170,6 +170,16 @@ export function VaultProvider({ children }) {
     await updateContextMode(noteId, mode, supabase);
   }, [isDev, storageMode]);
 
+  // Search all notes (including off) by title/folder — for /recall
+  const recallNotes = useCallback(async (query) => {
+    if (isDev) {
+      return DEV_NOTES.filter((n) => n.title.toLowerCase().includes(query.toLowerCase()))
+        .map((n, i) => ({ id: `dev-${i}`, title: n.title, content: n.content, context_mode: "available", folder: "", tokenEstimate: estimateTokens(n.content) }));
+    }
+    if (storageMode === "local") return [];
+    return await searchNotes(query, supabase);
+  }, [isDev, storageMode]);
+
   // Model A: connect vault directory
   const connectVault = useCallback(async () => {
     if (!isFileSystemAccessSupported()) return;
@@ -242,6 +252,7 @@ export function VaultProvider({ children }) {
         getContextWithMeta,
         getNoteList,
         updateNoteMode,
+        recallNotes,
 
         // Model A
         connectVault,

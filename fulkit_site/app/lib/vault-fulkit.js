@@ -98,6 +98,31 @@ export async function updateContextMode(id, mode, supabase) {
   if (error) throw new Error(error.message);
 }
 
+export async function searchNotes(query, supabase) {
+  const q = query.toLowerCase();
+  const { data, error } = await supabase
+    .from("notes")
+    .select("id, title, content, context_mode, source, folder")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("[vault-fulkit] searchNotes error:", error.message);
+    return [];
+  }
+
+  return (data || []).filter((n) => {
+    const haystack = `${n.title} ${n.folder}`.toLowerCase();
+    return haystack.includes(q);
+  }).map((n) => ({
+    id: n.id,
+    title: n.title,
+    content: n.content,
+    context_mode: n.context_mode,
+    folder: n.folder,
+    tokenEstimate: n.content ? Math.ceil(n.content.length / 4) : 0,
+  }));
+}
+
 export async function listNotes(supabase) {
   const { data, error } = await supabase
     .from("notes")

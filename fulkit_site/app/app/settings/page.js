@@ -21,6 +21,7 @@ import {
   Zap,
   FolderOpen,
   FileText,
+  Search,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1115,8 +1116,17 @@ function VaultTab() {
   const [notes, setNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [search, setSearch] = useState("");
+  const [modeFilter, setModeFilter] = useState("all");
 
   const noteCount = isDev ? 12 : notes.length;
+
+  const filteredNotes = notes.filter((n) => {
+    if (modeFilter !== "all" && n.context_mode !== modeFilter) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (n.title || "").toLowerCase().includes(q) || (n.folder || "").toLowerCase().includes(q);
+  });
 
   // Load notes list — re-fires when auth token refreshes
   useEffect(() => {
@@ -1228,6 +1238,57 @@ function VaultTab() {
             </p>
           )}
 
+          {/* Search + filter */}
+          <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <Search size={13} strokeWidth={1.8} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="Search notes..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px 6px 30px",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  background: "var(--color-bg-alt)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 2, marginBottom: "var(--space-2)" }}>
+            {["all", "always", "available", "off"].map((f) => {
+              const count = f === "all" ? notes.length : notes.filter((n) => n.context_mode === f).length;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setModeFilter(f)}
+                  style={{
+                    flex: 1,
+                    padding: "4px 0",
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)",
+                    background: modeFilter === f ? "var(--color-text-primary)" : "var(--color-bg-alt)",
+                    color: modeFilter === f ? "var(--color-bg)" : "var(--color-text-muted)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-xs)",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {f} ({count})
+                </button>
+              );
+            })}
+          </div>
+
           <div
             style={{
               border: "1px solid var(--color-border-light)",
@@ -1237,7 +1298,12 @@ function VaultTab() {
               overflowY: "auto",
             }}
           >
-            {notes.map((note, i) => (
+            {filteredNotes.length === 0 && (
+              <p style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", textAlign: "center" }}>
+                No notes match.
+              </p>
+            )}
+            {filteredNotes.map((note, i) => (
               <div
                 key={note.id}
                 style={{
@@ -1261,7 +1327,7 @@ function VaultTab() {
                     textDecoration: note.context_mode === "off" ? "line-through" : "none",
                   }}
                 >
-                  {note.title}
+                  {search && note.folder ? <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)" }}>{note.folder}/</span> : null}{note.title}
                 </span>
 
                 {note.source && note.source !== "local" && SOURCE_LOGOS[note.source] && (

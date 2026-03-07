@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import VaultGate from "../../components/VaultGate";
@@ -24,7 +24,7 @@ function timeAgo(dateStr) {
 export default function Chat() {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
-  const { getContext, getContextWithMeta, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
+  const { getContext, getContextWithMeta, recallNotes, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -34,6 +34,8 @@ export default function Chat() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(260);
   const [contextMeta, setContextMeta] = useState(null);
+  const [recalledNotes, setRecalledNotes] = useState([]);
+  const [recallResults, setRecallResults] = useState(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -121,11 +123,23 @@ export default function Chat() {
     const text = input.trim();
     if (!text || streaming) return;
 
+    // Handle /recall command
+    const recallMatch = text.match(/^\/recall\s+(.+)/i);
+    if (recallMatch) {
+      setInput("");
+      setRecallResults(null);
+      const query = recallMatch[1].trim();
+      const results = await recallNotes(query);
+      setRecallResults({ query, results });
+      return;
+    }
+
     const userMsg = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
     setStreaming(true);
+    setRecallResults(null);
 
     // Ensure conversation exists + save user message
     const convId = await ensureConversation(text);
@@ -134,12 +148,18 @@ export default function Chat() {
     // Add empty assistant message that we'll stream into
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-    // Assemble vault context from user's chosen source
+    // Assemble vault context from user's chosen source + recalled notes
     let context = [];
     if (isReady) {
       const result = await getContextWithMeta(text);
       context = result.selected;
       setContextMeta(result.metadata);
+    }
+    // Append recalled notes (deduplicated by title)
+    for (const rn of recalledNotes) {
+      if (!context.find((c) => c.title === rn.title)) {
+        context.push({ title: rn.title, content: rn.content });
+      }
     }
 
     // Use auth token from context (set during login)
@@ -250,7 +270,7 @@ export default function Chat() {
 
     setStreaming(false);
     abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, isReady]);
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -265,6 +285,8 @@ export default function Chat() {
     setConversationId(null);
     setStreaming(false);
     setContextMeta(null);
+    setRecalledNotes([]);
+    setRecallResults(null);
   };
 
   const openConversation = (conv) => {
@@ -350,6 +372,23 @@ export default function Chat() {
                 >
                   <FileText size={11} strokeWidth={1.8} />
                   {contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens
+                </span>
+              )}
+              {recalledNotes.length > 0 && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-secondary)",
+                    padding: "var(--space-1) var(--space-2)",
+                    background: "var(--color-bg-alt)",
+                    borderRadius: "var(--radius-sm)",
+                  }}
+                >
+                  <Search size={10} strokeWidth={2} />
+                  {recalledNotes.length} recalled
                 </span>
               )}
 
@@ -500,6 +539,133 @@ export default function Chat() {
 
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Recall results */}
+              {recallResults && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6)",
+                  }}
+                >
+                  <div
+                    style={{
+                      border: "1px solid var(--color-border-light)",
+                      borderRadius: "var(--radius-md)",
+                      overflow: "hidden",
+                      marginBottom: "var(--space-2)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "var(--space-2) var(--space-3)",
+                        background: "var(--color-bg-alt)",
+                        borderBottom: "1px solid var(--color-border-light)",
+                      }}
+                    >
+                      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        Recall: &ldquo;{recallResults.query}&rdquo; — {recallResults.results.length} match{recallResults.results.length !== 1 ? "es" : ""}
+                      </span>
+                      <button
+                        onClick={() => setRecallResults(null)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", display: "flex" }}
+                      >
+                        <X size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+                    {recallResults.results.length === 0 && (
+                      <p style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", textAlign: "center" }}>
+                        No notes found.
+                      </p>
+                    )}
+                    <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                      {recallResults.results.map((note) => {
+                        const isAdded = recalledNotes.some((rn) => rn.id === note.id);
+                        return (
+                          <button
+                            key={note.id}
+                            onClick={() => {
+                              if (isAdded) {
+                                setRecalledNotes((prev) => prev.filter((rn) => rn.id !== note.id));
+                              } else {
+                                setRecalledNotes((prev) => [...prev, note]);
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "var(--space-2)",
+                              width: "100%",
+                              padding: "var(--space-2) var(--space-3)",
+                              background: isAdded ? "var(--color-bg-alt)" : "transparent",
+                              border: "none",
+                              borderTop: "1px solid var(--color-border-light)",
+                              cursor: "pointer",
+                              fontFamily: "var(--font-primary)",
+                              textAlign: "left",
+                            }}
+                          >
+                            <FileText size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                            <span style={{ flex: 1, fontSize: "var(--font-size-xs)", color: isAdded ? "var(--color-text-primary)" : "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {note.folder ? <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)" }}>{note.folder}/</span> : null}{note.title}
+                            </span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                              {note.tokenEstimate >= 1000 ? `${(note.tokenEstimate / 1000).toFixed(1)}K` : note.tokenEstimate}
+                            </span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: isAdded ? "var(--color-text-primary)" : "var(--color-text-dim)", flexShrink: 0, width: 14, textAlign: "center" }}>
+                              {isAdded ? "−" : "+"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recalled notes chips */}
+              {recalledNotes.length > 0 && !recallResults && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6) var(--space-1)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 4,
+                  }}
+                >
+                  {recalledNotes.map((rn) => (
+                    <button
+                      key={rn.id}
+                      onClick={() => setRecalledNotes((prev) => prev.filter((n) => n.id !== rn.id))}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 3,
+                        fontSize: "var(--font-size-2xs)",
+                        color: "var(--color-text-secondary)",
+                        background: "var(--color-bg-alt)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        padding: "2px 6px",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <FileText size={9} strokeWidth={1.8} />
+                      {rn.title}
+                      <X size={9} strokeWidth={2} />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Input */}
               <div
