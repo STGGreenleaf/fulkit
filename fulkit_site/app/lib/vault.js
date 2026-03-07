@@ -38,13 +38,13 @@ export function VaultProvider({ children }) {
 
     async function init() {
       // Read storage_mode from preferences
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("preferences")
         .select("value")
         .eq("key", "storage_mode")
-        .single();
+        .maybeSingle();
 
-      const mode = data?.value || "fulkit";
+      const mode = error ? "fulkit" : (data?.value || "fulkit");
       setStorageModeState(mode);
 
       // Model A: try to restore directory handle
