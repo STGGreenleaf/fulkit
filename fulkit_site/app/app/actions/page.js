@@ -14,9 +14,9 @@ const FILTERS = [
   { key: "dismissed", Icon: BrushCleaning },
 ];
 const LENSES = [
-  { key: "all", Icon: Layers },
-  { key: "build", Icon: MessageSquareCode },
-  { key: "life", Icon: Home },
+  { key: "all", label: "All", Icon: Layers },
+  { key: "build", label: "Build", Icon: MessageSquareCode },
+  { key: "life", label: "Life", Icon: Home },
 ];
 const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
 const BUCKET_LABELS = { build: "Build", life: "Life" };
@@ -226,7 +226,7 @@ export default function Actions() {
               padding: "0 var(--space-6)",
             }}
           >
-            {LENSES.map(({ key, Icon }) => {
+            {LENSES.map(({ key, label, Icon }) => {
               const active = lens === key;
               return (
                 <button
@@ -236,6 +236,7 @@ export default function Actions() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: "var(--space-1)",
                     padding: "var(--space-3) var(--space-5)",
                     border: "none",
                     background: "transparent",
@@ -244,10 +245,14 @@ export default function Actions() {
                     opacity: active ? 1 : 0.25,
                     cursor: "pointer",
                     transition: "opacity var(--duration-fast) var(--ease-default)",
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-primary)",
+                    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                   }}
-                  title={key}
+                  title={compactMode ? label : undefined}
                 >
                   <Icon size={active ? 16 : 14} strokeWidth={1.8} />
+                  {!compactMode && label}
                 </button>
               );
             })}
