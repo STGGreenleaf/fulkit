@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export default function Tooltip({ label, children, delay = 200 }) {
   const [visible, setVisible] = useState(false);
   const timeout = useRef(null);
+
+  // Reset when label changes (e.g. compact toggle flips label to null)
+  useEffect(() => {
+    if (!label) {
+      clearTimeout(timeout.current);
+      setVisible(false);
+    }
+  }, [label]);
 
   const show = useCallback(() => {
     timeout.current = setTimeout(() => setVisible(true), delay);
