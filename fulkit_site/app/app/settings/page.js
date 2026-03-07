@@ -1109,33 +1109,28 @@ function formatTokens(n) {
 
 function VaultTab() {
   const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode } = useVaultContext();
-  const isDev = useAuth().user?.isDev;
+  const { user, accessToken } = useAuth();
+  const isDev = user?.isDev;
 
-  const [noteCount, setNoteCount] = useState(null);
   const [notes, setNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  useEffect(() => {
-    if (isDev) { setNoteCount(12); return; }
-    if (storageMode === "local") return;
-    supabase
-      .from("notes")
-      .select("id", { count: "exact", head: true })
-      .then(({ count }) => setNoteCount(count || 0));
-  }, [isDev, storageMode]);
+  const noteCount = isDev ? 12 : notes.length;
 
-  // Load notes list
+  // Load notes list — re-fires when auth token refreshes
   useEffect(() => {
+    if (!isDev && !accessToken) return;
     loadNotes();
-  }, [storageMode, vaultConnected, isUnlocked, isDev]);
+  }, [storageMode, vaultConnected, isUnlocked, isDev, accessToken]);
 
   async function loadNotes() {
     setNotesLoading(true);
     try {
       const list = await getNoteList();
       setNotes(list);
-    } catch {
+    } catch (err) {
+      console.error("[VaultTab] loadNotes error:", err.message);
       setNotes([]);
     }
     setNotesLoading(false);
@@ -1151,7 +1146,6 @@ function VaultTab() {
     await deleteNote(noteId, supabase);
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
     setDeleteConfirm(null);
-    if (noteCount !== null) setNoteCount(noteCount - 1);
   }
 
   const isLocal = storageMode === "local";
@@ -1201,7 +1195,7 @@ function VaultTab() {
         {storageMode === "encrypted" && (
           <>
             <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-              {isUnlocked ? "Vault unlocked." : "Vault locked."} {noteCount !== null ? `${noteCount} encrypted notes.` : ""}
+              {isUnlocked ? "Vault unlocked." : "Vault locked."} {notesLoading ? "" : `${noteCount} encrypted notes.`}
             </p>
             {isUnlocked && (
               <button
@@ -1216,7 +1210,7 @@ function VaultTab() {
 
         {storageMode === "fulkit" && (
           <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-            {noteCount !== null ? `${noteCount} notes stored.` : "Loading..."} Encrypted at rest.
+            {notesLoading ? "Loading..." : `${noteCount} notes stored.`} Encrypted at rest.
           </p>
         )}
       </div>
