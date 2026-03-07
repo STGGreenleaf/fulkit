@@ -202,13 +202,13 @@ export default function Chat() {
       context.push({ title: af.name, content: af.content });
     }
     setAttachedFiles([]);
-    // Append active GitHub repos as context (repo name + file tree)
+    // Append active GitHub repos as context (full recursive tree)
     for (const repo of ghContext) {
       const treeStr = repo.tree
-        .sort((a, b) => a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1)
-        .map((f) => `${f.type === "dir" ? "📁" : "  "} ${f.name}`)
+        .filter((f) => f.type === "file")
+        .map((f) => f.path)
         .join("\n");
-      context.push({ title: `GitHub: ${repo.repo}`, content: `Repository file structure:\n${treeStr}` });
+      context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
     }
 
     // Use auth token from context (set during login)

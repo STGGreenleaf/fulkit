@@ -1,7 +1,7 @@
 import { authenticateUser, getGitHubToken, githubFetch } from "../../../../lib/github";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
-// GET — return active repos with their top-level file trees
+// GET — return active repos with their full recursive file trees
 export async function GET(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,14 +20,18 @@ export async function GET(request) {
   const activeRepos = data?.metadata?.activeRepos || [];
   if (activeRepos.length === 0) return Response.json([]);
 
-  // Fetch top-level tree for each active repo
+  // Fetch full recursive tree for each active repo
   const results = [];
   for (const repoName of activeRepos) {
     try {
-      const contents = await githubFetch(token, `/repos/${repoName}/contents/`);
-      const tree = Array.isArray(contents)
-        ? contents.map((f) => ({ name: f.name, type: f.type === "dir" ? "dir" : "file", size: f.size || 0 }))
-        : [];
+      // Get default branch first
+      const repo = await githubFetch(token, `/repos/${repoName}`);
+      const branch = repo.default_branch || "main";
+      // Use the git trees API with recursive flag for the full tree
+      const treeData = await githubFetch(token, `/repos/${repoName}/git/trees/${branch}?recursive=1`);
+      const tree = (treeData.tree || [])
+        .filter((f) => f.type === "blob" || f.type === "tree")
+        .map((f) => ({ path: f.path, type: f.type === "tree" ? "dir" : "file", size: f.size || 0 }));
       results.push({ repo: repoName, tree });
     } catch {
       results.push({ repo: repoName, tree: [], error: true });
