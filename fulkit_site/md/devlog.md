@@ -5,6 +5,36 @@
 
 ---
 
+## Session 5 — 2026-03-06: Settings cleanup, Chat persistence, Actions page
+
+### What was built
+- **BillingTab real data** — owner sees "Unlimited — using your own API key", no fake gauge. Dev mode keeps template. Standard users pull from profile.
+- **PrivacyTab real counts** — queries notes, actions, preferences tables for live counts. Added Phase 2.55 (Privacy Transparency Dashboard) to TODO for expandable detail views.
+- **Chat persistence** — conversations + messages tables in Supabase (RLS scoped to user). Auto-saves messages as they stream. Auto-titles from first message. History panel toggles open.
+- **History panel on right** — layout is sidebar | chat | history. Drag-to-resize handle (160-400px range, default 260px).
+- **Actions page** — `/actions` with filter tabs (active, done, deferred, dismissed + counts), inline add, per-action dropdown menu (complete/defer/dismiss/reactivate). Added to sidebar nav.
+- **Monorepo restructure** — project moved from `app/` to `fulkit_site/`. ChappieBrain (Obsidian vault) added, gitignored. Root CLAUDE.md updated.
+- **TODO roadmap expanded** — Phases 2.5-7 added (Context Gate, Privacy Dashboard, Chat Persistence, Actions, Dogfood, Context Engine, MCP, Self-Building). Agent safety model documented in buildnotes.
+- **Recall rail concept** — Phase 2.6 updated: right rail as contextual filter chips (auto-tagged topics), not a conversation list. Feeds into Phase 5 context engine.
+
+### Decisions locked
+- History panel lives on the RIGHT (sidebar | chat | history)
+- History panel is drag-resizable (min 160px, max 400px)
+- Owner with BYOK = unlimited Fül, no gauge shown
+- Privacy tab = transparency dashboard (expandable detail views planned)
+- Recall rail > bookmarks/folders — semantic tags, not structure
+
+### Vercel action needed
+- Root directory may need updating from `app` to `fulkit_site/app` after monorepo restructure
+
+### Next up (critical path)
+- Verify Vercel builds with new monorepo structure
+- Phase 2.5: Context Gate (make onboarding dismissible, context check before chat)
+- Phase 3 remaining: chat → create actions, chat → query actions
+- Phase 4: Dogfood — import docs as notes, use Fulkit daily
+
+---
+
 ## Session 3 — 2026-03-05 afternoon: CTA, About Page, Auth Fixes
 
 ### What was built
