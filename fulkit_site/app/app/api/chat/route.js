@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
+import { getGitHubToken, githubFetch } from "../../../lib/github";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -113,6 +114,71 @@ export async function POST(request) {
         .eq("user_id", userId)
         .in("key", ["tone", "frequency", "chronotype"]);
       prefs = data;
+    }
+
+    // Enrich GitHub tree context with actual file contents
+    if (userId && Array.isArray(context)) {
+      const ghToken = await getGitHubToken(userId);
+      if (ghToken) {
+        const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
+        const words = lastMessage.split(/\W+/).filter((w) => w.length > 2);
+
+        for (let i = 0; i < context.length; i++) {
+          if (!context[i].title?.startsWith("GitHub: ")) continue;
+          const repoName = context[i].title.replace("GitHub: ", "");
+          const filePaths = context[i].content
+            .split("\n")
+            .filter((l) => l && !l.startsWith("Full repository"));
+
+          // Score each file path against the user's message
+          const CODE_EXTS = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|css|html|json|sql|sh|yaml|yml|toml|md|txt|env|mjs|cjs)$/i;
+          const scored = filePaths
+            .filter((p) => CODE_EXTS.test(p))
+            .map((p) => {
+              const parts = p.toLowerCase().split(/[/.]/);
+              let score = 0;
+              for (const w of words) {
+                if (parts.some((part) => part.includes(w))) score += 2;
+                if (p.toLowerCase().includes(w)) score += 1;
+              }
+              // Boost key files
+              const name = p.split("/").pop().toLowerCase();
+              if (name === "readme.md" || name === "package.json") score += 1;
+              return { path: p, score };
+            })
+            .filter((f) => f.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+
+          // Fetch the top scored files
+          const fetched = [];
+          let fetchedTokens = 0;
+          const MAX_CODE_TOKENS = 30000;
+          for (const file of scored) {
+            if (fetchedTokens >= MAX_CODE_TOKENS) break;
+            try {
+              const data = await githubFetch(ghToken, `/repos/${repoName}/contents/${file.path}`);
+              if (data.size > 100000) continue; // skip huge files
+              const content = Buffer.from(data.content, "base64").toString("utf-8");
+              const tokens = estimateTokens(content);
+              if (fetchedTokens + tokens > MAX_CODE_TOKENS) continue;
+              fetched.push({ path: file.path, content });
+              fetchedTokens += tokens;
+            } catch {}
+          }
+
+          // Replace tree-only context with tree + file contents
+          if (fetched.length > 0) {
+            const codeBlock = fetched
+              .map((f) => `### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
+              .join("\n\n");
+            context[i] = {
+              title: context[i].title,
+              content: context[i].content + `\n\n## Relevant source files\n${codeBlock}`,
+            };
+          }
+        }
+      }
     }
 
     // Build system prompt
