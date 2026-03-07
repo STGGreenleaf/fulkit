@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import Tooltip from "../../components/Tooltip";
+
+const TAB_ICON_SIZE = 14;
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
@@ -229,31 +232,31 @@ export default function Actions() {
             {LENSES.map(({ key, label, Icon }) => {
               const active = lens === key;
               return (
-                <button
-                  key={key}
-                  onClick={() => { setLens(key); setExpandedId(null); setConfirmClear(false); }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "var(--space-1)",
-                    padding: "var(--space-3) var(--space-5)",
-                    border: "none",
-                    background: "transparent",
-                    borderRadius: 0,
-                    color: "var(--color-text)",
-                    opacity: active ? 1 : 0.25,
-                    cursor: "pointer",
-                    transition: "opacity var(--duration-fast) var(--ease-default)",
-                    fontSize: "var(--font-size-xs)",
-                    fontFamily: "var(--font-primary)",
-                    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                  }}
-                  title={compactMode ? label : undefined}
-                >
-                  <Icon size={active ? 16 : 14} strokeWidth={1.8} />
-                  {!compactMode && label}
-                </button>
+                <Tooltip key={key} label={compactMode ? label : null}>
+                  <button
+                    onClick={() => { setLens(key); setExpandedId(null); setConfirmClear(false); }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-3) var(--space-5)",
+                      border: "none",
+                      background: "transparent",
+                      borderRadius: 0,
+                      color: "var(--color-text)",
+                      opacity: active ? 1 : 0.25,
+                      cursor: "pointer",
+                      transition: "opacity var(--duration-fast) var(--ease-default)",
+                      fontSize: "var(--font-size-xs)",
+                      fontFamily: "var(--font-primary)",
+                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                    }}
+                  >
+                    <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                    {!compactMode && label}
+                  </button>
+                </Tooltip>
               );
             })}
           </div>
@@ -269,42 +272,42 @@ export default function Actions() {
             {FILTERS.map(({ key, Icon }) => {
               const active = filter === key;
               return (
-                <button
-                  key={key}
-                  onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    padding: compactMode ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-3)",
-                    border: "none",
-                    background: "transparent",
-                    borderRadius: 0,
-                    color: active ? "var(--color-text)" : "var(--color-text-dim)",
-                    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                    fontSize: "var(--font-size-xs)",
-                    transition: "color var(--duration-fast) var(--ease-default)",
-                    fontFamily: "var(--font-primary)",
-                    cursor: "pointer",
-                    textTransform: "capitalize",
-                  }}
-                  title={compactMode ? key : undefined}
-                >
-                  <Icon size={compactMode ? 14 : 12} strokeWidth={1.8} />
-                  {!compactMode && key}
-                  {counts[key] > 0 && (
-                    <span
-                      style={{
-                        fontSize: "var(--font-size-2xs)",
-                        fontFamily: "var(--font-mono)",
-                        color: active ? "var(--color-text-secondary)" : "var(--color-text-dim)",
-                        fontWeight: "var(--font-weight-bold)",
-                      }}
-                    >
-                      {counts[key]}
-                    </span>
-                  )}
-                </button>
+                <Tooltip key={key} label={compactMode ? key : null}>
+                  <button
+                    onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-2-5) var(--space-3)",
+                      border: "none",
+                      background: "transparent",
+                      borderRadius: 0,
+                      color: active ? "var(--color-text)" : "var(--color-text-dim)",
+                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                      fontSize: "var(--font-size-xs)",
+                      transition: "color var(--duration-fast) var(--ease-default)",
+                      fontFamily: "var(--font-primary)",
+                      cursor: "pointer",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                    {!compactMode && key}
+                    {counts[key] > 0 && (
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-mono)",
+                          color: active ? "var(--color-text-secondary)" : "var(--color-text-dim)",
+                          fontWeight: "var(--font-weight-bold)",
+                        }}
+                      >
+                        {counts[key]}
+                      </span>
+                    )}
+                  </button>
+                </Tooltip>
               );
             })}
           </div>

@@ -27,7 +27,10 @@ import {
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import StorageModeSelector from "../../components/StorageModeSelector";
+import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
+
+const TAB_ICON_SIZE = 14;
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 
@@ -190,6 +193,7 @@ const REFERRALS = [
 ];
 
 export default function Settings() {
+  const { compactMode } = useAuth();
   // Read ?tab= from URL on mount
   const [tab, setTab] = useState(() => {
     if (typeof window !== "undefined") {
@@ -224,9 +228,11 @@ export default function Settings() {
           }}
         >
           <SettingsIcon size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-          <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-            Settings
-          </span>
+          {!compactMode && (
+            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+              Settings
+            </span>
+          )}
         </div>
 
         {/* Horizontal tab bar */}
@@ -241,30 +247,31 @@ export default function Settings() {
           {TABS.map((t) => {
             const active = tab === t.id;
             return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1-5)",
-                  padding: "var(--space-2-5) var(--space-3)",
-                  border: "none",
-                  borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
-                  background: "transparent",
-                  borderRadius: 0,
-                  color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                  fontWeight: "var(--font-weight-medium)",
-                  marginBottom: -1,
-                  fontSize: "var(--font-size-xs)",
-                  fontFamily: "var(--font-primary)",
-                  cursor: "pointer",
-                  transition: `all var(--duration-fast) var(--ease-default)`,
-                }}
-              >
-                <t.icon size={14} strokeWidth={1.8} />
-                {t.label}
-              </button>
+              <Tooltip key={t.id} label={compactMode ? t.label : null}>
+                <button
+                  onClick={() => setTab(t.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1-5)",
+                    padding: "var(--space-2-5) var(--space-3)",
+                    border: "none",
+                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
+                    background: "transparent",
+                    borderRadius: 0,
+                    color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                    marginBottom: -1,
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-primary)",
+                    cursor: "pointer",
+                    transition: `all var(--duration-fast) var(--ease-default)`,
+                  }}
+                >
+                  <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                  {!compactMode && t.label}
+                </button>
+              </Tooltip>
             );
           })}
         </div>

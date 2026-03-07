@@ -14,11 +14,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(null);
   const [githubConnected, setGithubConnected] = useState(false);
-  const [compactMode, setCompactModeState] = useState(false);
+  const [compactMode, setCompactModeState] = useState(true);
 
-  // Initialize compact mode from localStorage
+  // Initialize compact mode from localStorage (default: compact/minimal)
   useEffect(() => {
-    setCompactModeState(localStorage.getItem("fulkit-compact-mode") === "true");
+    const stored = localStorage.getItem("fulkit-compact-mode");
+    setCompactModeState(stored === null ? true : stored === "true");
   }, []);
 
   const setCompactMode = useCallback((val) => {
