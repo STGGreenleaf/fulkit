@@ -21,7 +21,6 @@ import {
   Zap,
   FolderOpen,
   FileText,
-  Search,
   Paperclip,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
@@ -441,14 +440,12 @@ function SourcesTab() {
   const { user, accessToken, githubConnected, setGithubConnected, checkGitHub } = useAuth();
   const isDev = user?.isDev;
   const [connected, setConnected] = useState(isDev ? INITIAL_CONNECTED : []);
-  const [showBrowser, setShowBrowser] = useState(false);
-  const [search, setSearch] = useState("");
   const [githubRepos, setGithubRepos] = useState([]);
   const [githubActiveRepos, setGithubActiveRepos] = useState([]);
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
-  const [spotifyConnected, setSpotifyConnected] = useState(isDev);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -537,8 +534,6 @@ function SourcesTab() {
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
-  ).filter(
-    (s) => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.cat.toLowerCase().includes(search.toLowerCase())
   );
 
   const connect = (id) => {
@@ -726,40 +721,8 @@ function SourcesTab() {
         </>
       )}
 
-      {/* Search */}
-      <div style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <Search size={14} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search sources..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "var(--space-2) 0",
-              background: "transparent",
-              border: "none",
-              borderBottom: "1px solid var(--color-border-light)",
-              fontSize: "var(--font-size-sm)",
-              fontFamily: "var(--font-primary)",
-              color: "var(--color-text)",
-              outline: "none",
-            }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              style={{ padding: "var(--space-1)", background: "transparent", border: "none", color: "var(--color-text-muted)", cursor: "pointer" }}
-            >
-              <X size={14} strokeWidth={1.8} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Suggested — only when not searching */}
-      {!search && suggested.length > 0 && (
+      {/* Suggested */}
+      {suggested.length > 0 && (
         <>
           <SectionTitle>Suggested</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
@@ -771,16 +734,11 @@ function SourcesTab() {
       {/* All other sources */}
       {otherSources.length > 0 && (
         <>
-          <SectionTitle>{search ? "Results" : "More"}</SectionTitle>
+          <SectionTitle>More</SectionTitle>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
             {otherSources.map(sourceButton)}
           </div>
         </>
-      )}
-      {search && otherSources.length === 0 && (
-        <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-          No matches
-        </div>
       )}
     </div>
   );
