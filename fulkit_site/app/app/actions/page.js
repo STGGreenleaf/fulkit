@@ -216,7 +216,6 @@ export default function Actions() {
               display: "flex",
               gap: "var(--space-1)",
               padding: "0 var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
             }}
           >
             {LENSES.map(({ key, Icon }) => {
@@ -231,16 +230,16 @@ export default function Actions() {
                     justifyContent: "center",
                     padding: "var(--space-3) var(--space-5)",
                     border: "none",
-                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
                     background: "transparent",
                     borderRadius: 0,
-                    color: active ? "var(--color-text)" : "var(--color-text-dim)",
-                    marginBottom: -1,
+                    color: "var(--color-text)",
+                    opacity: active ? 1 : 0.25,
                     cursor: "pointer",
+                    transition: "opacity var(--duration-fast) var(--ease-default)",
                   }}
                   title={key}
                 >
-                  <Icon size={14} strokeWidth={1.8} />
+                  <Icon size={active ? 16 : 14} strokeWidth={1.8} />
                 </button>
               );
             })}
@@ -252,7 +251,6 @@ export default function Actions() {
               display: "flex",
               gap: "var(--space-1)",
               padding: "0 var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
             }}
           >
             {FILTERS.map((f) => {
@@ -267,13 +265,12 @@ export default function Actions() {
                     gap: "var(--space-1)",
                     padding: "var(--space-2-5) var(--space-3)",
                     border: "none",
-                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
                     background: "transparent",
                     borderRadius: 0,
-                    color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                    fontWeight: "var(--font-weight-medium)",
-                    marginBottom: -1,
+                    color: active ? "var(--color-text)" : "var(--color-text-dim)",
+                    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                     fontSize: "var(--font-size-xs)",
+                    transition: "color var(--duration-fast) var(--ease-default)",
                     fontFamily: "var(--font-primary)",
                     cursor: "pointer",
                     textTransform: "capitalize",
