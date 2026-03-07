@@ -135,7 +135,7 @@ export default function Sidebar() {
       </div>
 
       {/* Mini Player — bottom of sidebar */}
-      {!compactMode && <MiniPlayer />}
+      <MiniPlayer compact={compactMode} />
     </nav>
   );
 }

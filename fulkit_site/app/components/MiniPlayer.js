@@ -4,13 +4,102 @@ import { Play, Pause, SkipForward, SkipBack, Plus, Check } from "lucide-react";
 import Link from "next/link";
 import { useSpotify } from "../lib/spotify";
 
-export default function MiniPlayer() {
+export default function MiniPlayer({ compact }) {
   const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged } =
     useSpotify();
 
   if (!connected || !currentTrack) return null;
 
   const flaggedNow = isFlagged(currentTrack.id);
+
+  if (compact) {
+    return (
+      <div
+        style={{
+          borderTop: "1px solid var(--color-border-light)",
+          padding: "var(--space-2) 0",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        <button
+          onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "var(--radius-full)",
+            background: flaggedNow ? "var(--color-text)" : "transparent",
+            border: flaggedNow ? "none" : "1px solid var(--color-border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            transition: `all var(--duration-fast) var(--ease-default)`,
+          }}
+        >
+          {flaggedNow ? (
+            <Check size={10} strokeWidth={2.5} color="var(--color-text-inverse)" />
+          ) : (
+            <Plus size={10} strokeWidth={2} color="var(--color-text-muted)" />
+          )}
+        </button>
+        <button
+          onClick={prev}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "var(--radius-full)",
+            background: "transparent",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <SkipBack size={12} strokeWidth={2} color="var(--color-text-muted)" />
+        </button>
+        <button
+          onClick={toggle}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: "var(--radius-full)",
+            background: "var(--color-bg-inverse)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          {isPlaying ? (
+            <Pause size={12} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" />
+          ) : (
+            <Play size={12} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 1 }} />
+          )}
+        </button>
+        <button
+          onClick={skip}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "var(--radius-full)",
+            background: "transparent",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <SkipForward size={12} strokeWidth={2} color="var(--color-text-muted)" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
