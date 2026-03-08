@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc } from "lucide-react";
 
 // Minimal pause mark — two vertical lines, no circle
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
@@ -175,6 +175,18 @@ export default function MiniPlayer({ compact }) {
           <button onClick={skip} style={{ ...bareBtn, width: 24, height: 24 }}>
             <ChevronDown size={12} strokeWidth={2} color="var(--color-text-muted)" />
           </button>
+          <Link
+            href="/spotify"
+            style={{
+              ...bareBtn,
+              width: 24, height: 24,
+              marginTop: "var(--space-2)",
+              textDecoration: "none",
+              color: "var(--color-text-dim)",
+            }}
+          >
+            <Disc size={12} strokeWidth={1.5} />
+          </Link>
         </div>
       </div>
     );
@@ -311,6 +323,17 @@ export default function MiniPlayer({ compact }) {
             <button onClick={skip} style={bareBtn}>
               <ChevronRight size={16} strokeWidth={2} color="var(--color-text-muted)" />
             </button>
+            <Link
+              href="/spotify"
+              style={{
+                ...bareBtn,
+                textDecoration: "none",
+                color: "var(--color-text-dim)",
+                marginLeft: "var(--space-1)",
+              }}
+            >
+              <Disc size={14} strokeWidth={1.5} />
+            </Link>
           </div>
         </div>
       </div>

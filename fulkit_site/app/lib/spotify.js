@@ -115,6 +115,18 @@ export function SpotifyProvider({ children }) {
     return () => clearInterval(pollRef.current);
   }, [connected, accessToken, isDev, apiFetch]);
 
+  // Smooth progress interpolation between polls
+  useEffect(() => {
+    if (!isPlaying || !currentTrack?.duration) return;
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        const step = 0.25 / currentTrack.duration;
+        return Math.min(p + step, 1);
+      });
+    }, 250);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack?.duration]);
+
   // Controls — send to API
   const sendControl = useCallback(async (action) => {
     if (isDev) return;
@@ -176,8 +188,11 @@ export function SpotifyProvider({ children }) {
   }, [isDev, apiFetch]);
 
   // Fetch audio features for tracks we haven't fetched yet
+  // Note: Spotify deprecated /audio-features for Dev Mode apps (Nov 2024).
+  // This will gracefully return empty until the app is in Extended Quota Mode.
+  const featuresFailed = useRef(false);
   useEffect(() => {
-    if (isDev || !connected || !accessToken) return;
+    if (isDev || !connected || !accessToken || featuresFailed.current) return;
     const ids = [];
     if (currentTrack?.id && !audioFeatures[currentTrack.id] && !featuresRequested.current.has(currentTrack.id)) {
       ids.push(currentTrack.id);
@@ -188,7 +203,12 @@ export function SpotifyProvider({ children }) {
     if (ids.length === 0) return;
     ids.forEach((id) => featuresRequested.current.add(id));
     apiFetch(`/api/spotify/audio-features?ids=${ids.join(",")}`).then((data) => {
-      if (data?.features) setAudioFeatures((prev) => ({ ...prev, ...data.features }));
+      if (data?.features && Object.keys(data.features).length > 0) {
+        setAudioFeatures((prev) => ({ ...prev, ...data.features }));
+      } else {
+        // Endpoint likely deprecated — stop retrying
+        featuresFailed.current = true;
+      }
     });
   }, [currentTrack?.id, flagged, connected, accessToken, isDev, apiFetch, audioFeatures]);
 
