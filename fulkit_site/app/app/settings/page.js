@@ -517,20 +517,10 @@ function SourcesTab() {
     window.location.href = "/api/github/connect";
   }
 
-  async function connectSpotify() {
+  function connectSpotify() {
     if (isDev) { setSpotifyConnected(true); return; }
     if (!accessToken) return;
-    try {
-      const res = await fetch("/api/spotify/connect", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err) {
-      console.error("[spotify] connect failed:", err);
-    }
+    window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
   }
 
   async function disconnectGitHub() {
@@ -567,6 +557,26 @@ function SourcesTab() {
     if (id === "github") { disconnectGitHub(); return; }
     if (id === "spotify") { setSpotifyConnected(false); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
+  };
+
+  // Smooth expand/collapse drawer
+  const Drawer = ({ open, children }) => {
+    const ref = useRef(null);
+    const [height, setHeight] = useState(0);
+    useEffect(() => {
+      if (open && ref.current) {
+        setHeight(ref.current.scrollHeight);
+      } else {
+        setHeight(0);
+      }
+    }, [open, children]);
+    return (
+      <div style={{ maxHeight: height, overflow: "hidden", transition: "max-height 200ms ease" }}>
+        <div ref={ref}>
+          {children}
+        </div>
+      </div>
+    );
   };
 
   // Shared expandable card header
@@ -708,7 +718,7 @@ function SourcesTab() {
                   githubExpanded,
                   () => setGithubExpanded(!githubExpanded)
                 )}
-                {githubExpanded && (
+                <Drawer open={githubExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     {githubRepos.length === 0 && (
                       <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
@@ -765,7 +775,7 @@ function SourcesTab() {
                     })}
                     {disconnectFooter(disconnectGitHub, githubDisconnecting)}
                   </div>
-                )}
+                </Drawer>
               </Card>
             )}
 
@@ -779,12 +789,12 @@ function SourcesTab() {
                   spotifyExpanded,
                   () => setSpotifyExpanded(!spotifyExpanded)
                 )}
-                {spotifyExpanded && (
+                <Drawer open={spotifyExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
                     {disconnectFooter(() => disconnect("spotify"), false)}
                   </div>
-                )}
+                </Drawer>
               </Card>
             )}
 
@@ -800,11 +810,11 @@ function SourcesTab() {
                     isExpanded,
                     () => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }))
                   )}
-                  {isExpanded && (
+                  <Drawer open={isExpanded}>
                     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                       {disconnectFooter(() => disconnect(src.id), false)}
                     </div>
-                  )}
+                  </Drawer>
                 </Card>
               );
             })}

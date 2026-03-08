@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import crypto from "crypto";
 
@@ -12,19 +13,24 @@ const SCOPES = [
 
 export async function GET(request) {
   try {
-    // Accept Bearer token (like all other routes)
-    const auth = request.headers.get("Authorization");
-    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+    // Accept token from query param, Authorization header, or cookie
+    const url = new URL(request.url);
+    const tokenFromParam = url.searchParams.get("token");
+    const authHeader = request.headers.get("Authorization");
+    const tokenFromHeader = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const tokenFromCookie = request.cookies.get("sp_auth_token")?.value;
+    const token = tokenFromParam || tokenFromHeader || tokenFromCookie;
+
     if (!token) {
-      return Response.json({ error: "Not authenticated" }, { status: 401 });
+      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=no_token", request.url));
     }
 
     const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
     if (error || !user) {
-      return Response.json({ error: "Invalid session" }, { status: 401 });
+      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_token", request.url));
     }
 
-    // HMAC-signed state (same pattern as GitHub)
+    // HMAC-signed state
     const payload = JSON.stringify({ userId: user.id, nonce: crypto.randomUUID() });
     const hmac = crypto.createHmac("sha256", process.env.SPOTIFY_CLIENT_SECRET);
     hmac.update(payload);
@@ -41,9 +47,9 @@ export async function GET(request) {
       state,
     });
 
-    return Response.json({ url: `https://accounts.spotify.com/authorize?${params.toString()}` });
+    return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
   } catch (err) {
     console.error("[spotify/connect]", err.message);
-    return Response.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=server", request.url));
   }
 }
