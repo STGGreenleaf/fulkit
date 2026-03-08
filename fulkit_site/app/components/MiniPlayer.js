@@ -53,55 +53,74 @@ export default function MiniPlayer({ compact }) {
 
   if (compact) {
     return (
-      <div>
-        {/* Volume slider — horizontal, full width, IS the top border */}
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={displayVolume}
-          className="fulkit-vol-v"
-          onMouseDown={() => setDragging(true)}
-          onMouseUp={() => setDragging(false)}
-          onTouchStart={() => setDragging(true)}
-          onTouchEnd={() => setDragging(false)}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            localVolume.current = v;
-            setVolume(v);
-          }}
-          style={{
-            display: "block",
-            width: "100%",
-            height: 3,
-            WebkitAppearance: "none",
-            appearance: "none",
-            background: "var(--color-border)",
-            borderRadius: 0,
-            outline: "none",
-            cursor: "pointer",
-            margin: 0,
-            padding: 0,
-          }}
-        />
+      <div
+        style={{
+          borderTop: "1px solid var(--color-border-light)",
+          display: "flex",
+          alignItems: "stretch",
+        }}
+      >
+        {/* Vertical volume slider — left edge */}
+        <div style={{ position: "relative", width: 14, flexShrink: 0 }}>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={displayVolume}
+            className="fulkit-vol-v"
+            onMouseDown={() => setDragging(true)}
+            onMouseUp={() => setDragging(false)}
+            onTouchStart={() => setDragging(true)}
+            onTouchEnd={() => setDragging(false)}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              localVolume.current = v;
+              setVolume(v);
+            }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 7,
+              width: "var(--_vol-h, 100px)",
+              height: 3,
+              WebkitAppearance: "none",
+              appearance: "none",
+              background: "var(--color-border)",
+              borderRadius: 0,
+              outline: "none",
+              cursor: "pointer",
+              margin: 0,
+              padding: 0,
+              transformOrigin: "bottom left",
+              transform: "rotate(-90deg)",
+            }}
+            ref={(el) => {
+              if (el && el.parentElement) {
+                el.style.setProperty("--_vol-h", el.parentElement.offsetHeight + "px");
+              }
+            }}
+          />
+        </div>
         <style>{`
           .fulkit-vol-v::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 2px;
-            height: 12px;
+            width: 12px;
+            height: 2px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
+            transform: rotate(45deg);
           }
           .fulkit-vol-v::-moz-range-thumb {
-            width: 2px;
-            height: 12px;
+            width: 12px;
+            height: 2px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
+            transform: rotate(45deg);
           }
           .fulkit-vol-v::-moz-range-track {
             height: 3px;
@@ -113,6 +132,7 @@ export default function MiniPlayer({ compact }) {
         {/* Controls column */}
         <div
           style={{
+            flex: 1,
             padding: "var(--space-3) 0",
             display: "flex",
             flexDirection: "column",
