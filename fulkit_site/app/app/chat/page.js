@@ -23,7 +23,7 @@ function timeAgo(dateStr) {
 }
 
 export default function Chat() {
-  const { user, accessToken, githubConnected } = useAuth();
+  const { user, accessToken, githubConnected, compactMode } = useAuth();
   const isDev = user?.isDev;
   const { getContext, getContextWithMeta, recallNotes, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
@@ -147,19 +147,20 @@ export default function Chat() {
     return null;
   }
 
-  // Save a single message to DB
+  // Save a single message to DB, returns the inserted row id
   async function saveMessage(convId, role, content) {
-    if (!convId || isDev) return;
-    await supabase.from("messages").insert({
-      conversation_id: convId,
-      role,
-      content,
-    });
+    if (!convId || isDev) return null;
+    const { data } = await supabase
+      .from("messages")
+      .insert({ conversation_id: convId, role, content })
+      .select("id")
+      .single();
     // Touch updated_at
     await supabase
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", convId);
+    return data?.id || null;
   }
 
   async function handleChatFiles(files) {
@@ -241,7 +242,12 @@ export default function Chat() {
 
     // Ensure conversation exists + save user message
     const convId = await ensureConversation(text);
-    await saveMessage(convId, "user", text);
+    const userMsgId = await saveMessage(convId, "user", text);
+    if (userMsgId) {
+      setMessages((prev) =>
+        prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: userMsgId } : m))
+      );
+    }
 
     // Add empty assistant message that we'll stream into
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -366,7 +372,12 @@ export default function Chat() {
 
     // Save assistant response
     if (fullResponse && convId) {
-      await saveMessage(convId, "assistant", fullResponse);
+      const asstMsgId = await saveMessage(convId, "assistant", fullResponse);
+      if (asstMsgId) {
+        setMessages((prev) =>
+          prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: asstMsgId } : m))
+        );
+      }
       loadConversations();
 
       // Write-back loop — extract artifacts and file them
@@ -464,14 +475,16 @@ export default function Chat() {
               strokeWidth={1.8}
               style={{ color: "var(--color-text-muted)" }}
             />
-            <span
-              style={{
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-semibold)",
-              }}
-            >
-              Chat
-            </span>
+            {!compactMode && (
+              <span
+                style={{
+                  fontSize: "var(--font-size-sm)",
+                  fontWeight: "var(--font-weight-semibold)",
+                }}
+              >
+                Chat
+              </span>
+            )}
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Context indicator */}
@@ -487,7 +500,7 @@ export default function Chat() {
                   }}
                 >
                   <FileText size={11} strokeWidth={1.8} />
-                  {contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens
+                  {!compactMode && (<>{contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens</>)}
                 </span>
               )}
               {recalledNotes.length > 0 && (
@@ -504,7 +517,7 @@ export default function Chat() {
                   }}
                 >
                   <Search size={10} strokeWidth={2} />
-                  {recalledNotes.length} recalled
+                  {!compactMode && `${recalledNotes.length} recalled`}
                 </span>
               )}
 
@@ -527,7 +540,7 @@ export default function Chat() {
                   }}
                 >
                   <Pin size={12} strokeWidth={2} />
-                  Pins
+                  {!compactMode && "Pins"}
                 </button>
               )}
 
@@ -550,7 +563,7 @@ export default function Chat() {
                   }}
                 >
                   <Clock size={12} strokeWidth={2} />
-                  History
+                  {!compactMode && "History"}
                 </button>
               )}
 
@@ -573,7 +586,7 @@ export default function Chat() {
                   }}
                 >
                   <Plus size={12} strokeWidth={2} />
-                  New
+                  {!compactMode && "New"}
                 </button>
               )}
             </div>
