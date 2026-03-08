@@ -364,24 +364,20 @@ function Row({ label, value, action, actionLabel, danger }) {
 }
 
 function CardHeader({ logo, name, subtitle, isExpanded, onToggle }) {
-  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onToggle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         display: "flex",
         alignItems: "center",
         gap: "var(--space-3)",
         width: "100%",
         padding: "var(--space-3) var(--space-4)",
-        background: hovered ? "var(--color-accent-soft)" : "transparent",
+        background: "transparent",
         border: "none",
         cursor: "pointer",
         fontFamily: "var(--font-primary)",
         textAlign: "left",
-        transition: "background 100ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -395,13 +391,45 @@ function CardHeader({ logo, name, subtitle, isExpanded, onToggle }) {
         size={14}
         strokeWidth={2}
         style={{
-          color: hovered ? "var(--color-text-secondary)" : "var(--color-text-dim)",
-          transition: "transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), color 100ms cubic-bezier(0.22, 1, 0.36, 1)",
+          color: "var(--color-text-dim)",
+          transition: "transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)",
           transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
           flexShrink: 0,
         }}
       />
     </button>
+  );
+}
+
+// Stable module-level components — must NOT be inside SourcesTab or React
+// will unmount/remount on every render, killing CSS transitions.
+function Drawer({ open, children }) {
+  const [overflow, setOverflow] = useState("hidden");
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => setOverflow("visible"), 300);
+      return () => clearTimeout(t);
+    }
+    setOverflow("hidden");
+  }, [open]);
+  return (
+    <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
+      <div style={{ overflow, minHeight: 0 }}>{children}</div>
+    </div>
+  );
+}
+
+function DrawerItem({ index = 0, visible, children }) {
+  return (
+    <div style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(4px)",
+      transition: visible
+        ? `opacity 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms, transform 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms`
+        : "opacity 150ms cubic-bezier(0.4, 0, 1, 1), transform 150ms cubic-bezier(0.4, 0, 1, 1)",
+    }}>
+      {children}
+    </div>
   );
 }
 
@@ -559,10 +587,15 @@ function SourcesTab() {
     window.location.href = "/api/github/connect";
   }
 
-  function connectSpotify() {
+  async function connectSpotify() {
     if (isDev) { setSpotifyConnected(true); return; }
-    if (!accessToken) return;
-    window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
+    // Force fresh session — accessToken from context can be stale/expired
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session?.access_token) {
+      console.error("[spotify] No valid session:", error?.message);
+      return;
+    }
+    window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(session.access_token);
   }
 
   async function disconnectGitHub() {
@@ -600,36 +633,6 @@ function SourcesTab() {
     if (id === "spotify") { setSpotifyConnected(false); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
-
-  // grid-template-rows drawer — no JS measurement, no flash
-  const Drawer = ({ open, children }) => {
-    const [overflow, setOverflow] = useState("hidden");
-    useEffect(() => {
-      if (open) {
-        const t = setTimeout(() => setOverflow("visible"), 300);
-        return () => clearTimeout(t);
-      }
-      setOverflow("hidden");
-    }, [open]);
-    return (
-      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
-        <div style={{ overflow, minHeight: 0 }}>{children}</div>
-      </div>
-    );
-  };
-
-  // Staggered fade-in for drawer content rows
-  const DrawerItem = ({ index = 0, visible, children }) => (
-    <div style={{
-      opacity: visible ? 1 : 0,
-      transform: visible ? "translateY(0)" : "translateY(4px)",
-      transition: visible
-        ? `opacity 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms, transform 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms`
-        : "opacity 150ms cubic-bezier(0.4, 0, 1, 1), transform 150ms cubic-bezier(0.4, 0, 1, 1)",
-    }}>
-      {children}
-    </div>
-  );
 
   // Shared checkbox row
   const checkboxRow = (label, checked, onChange) => (
