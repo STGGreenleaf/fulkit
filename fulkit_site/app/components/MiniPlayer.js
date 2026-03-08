@@ -1,7 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, CirclePause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
+
+// Minimal pause mark — two vertical lines, no circle
+function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
+  const w = size;
+  const h = size;
+  const gap = w * 0.28;
+  const x1 = w / 2 - gap;
+  const x2 = w / 2 + gap;
+  const py = h * 0.22;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none">
+      <line x1={x1} y1={py} x2={x1} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <line x1={x2} y1={py} x2={x2} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </svg>
+  );
+}
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
@@ -81,16 +97,16 @@ export default function MiniPlayer({ compact }) {
         <style>{`
           .fulkit-vol-v::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 2px;
-            height: 12px;
+            width: 12px;
+            height: 2px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
           }
           .fulkit-vol-v::-moz-range-thumb {
-            width: 2px;
-            height: 12px;
+            width: 12px;
+            height: 2px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
@@ -137,7 +153,7 @@ export default function MiniPlayer({ compact }) {
           </button>
           <button onClick={toggle} style={{ ...bareBtn, width: 24, height: 24 }}>
             {isPlaying ? (
-              <CirclePause size={14} strokeWidth={2} color="var(--color-text)" />
+              <PauseLines size={14} strokeWidth={2} color="var(--color-text)" />
             ) : (
               <Play size={14} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
             )}
@@ -273,7 +289,7 @@ export default function MiniPlayer({ compact }) {
             </button>
             <button onClick={toggle} style={bareBtn}>
               {isPlaying ? (
-                <CirclePause size={16} strokeWidth={2} color="var(--color-text)" />
+                <PauseLines size={16} strokeWidth={2} color="var(--color-text)" />
               ) : (
                 <Play size={16} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
               )}
