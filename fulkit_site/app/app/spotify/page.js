@@ -28,7 +28,7 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
 const T_LAYERS = 40;
 const T_POINTS = 80;
 
-function SignalTerrain({ height = 220, bpm = 100, energy = 50, danceability = 50, valence = 50, active = false }) {
+function SignalTerrain({ height = 220, active = false }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const containerRef = useRef(null);
@@ -53,13 +53,13 @@ function SignalTerrain({ height = 220, bpm = 100, energy = 50, danceability = 50
     return () => ro.disconnect();
   }, []);
 
-  // Generate new seed when track changes (energy shift = new track likely)
+  // Generate new seed on mount
   useEffect(() => {
     const s = [];
     for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
     seedRef.current = s;
     historyRef.current = [];
-  }, [bpm, energy]);
+  }, []);
 
   // Render loop
   useEffect(() => {
@@ -83,37 +83,29 @@ function SignalTerrain({ height = 220, bpm = 100, energy = 50, danceability = 50
       const h = canvas.height;
       const seed = seedRef.current;
 
-      // BPM → phase advance per frame
-      const beatsPerSec = bpm / 60;
-      const phaseStep = (beatsPerSec / 20) * Math.PI * 2; // full cycle per beat
-      phaseRef.current += active ? phaseStep : phaseStep * 0.08; // idle: slow drift
-
+      // Phase advance — gentle drift when idle, livelier when playing
+      const phaseStep = active ? 0.045 : 0.008;
+      phaseRef.current += phaseStep;
       const phase = phaseRef.current;
-      const nrgScale = energy / 100; // 0–1
-      const dncScale = danceability / 100;
-      const moodScale = valence / 100;
 
-      // Generate terrain points from BPM-synced oscillators + seed
+      // Generate terrain points from layered oscillators + seed
       const points = [];
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
         const s = seed[i] || 0.5;
 
-        // Base shape: multiple sine waves at BPM-related frequencies
-        const beat = Math.sin(phase + t * Math.PI * 2 * (2 + dncScale * 3)) * 0.5 + 0.5;
-        const sub = Math.sin(phase * 0.5 + t * Math.PI * 4 + s * 6) * 0.3;
-        const hi = Math.sin(phase * 2 + t * Math.PI * 8 + s * 12) * 0.12 * dncScale;
+        // Layered sine waves at different speeds
+        const wave1 = Math.sin(phase + t * Math.PI * 4 + s * 6) * 0.35;
+        const wave2 = Math.sin(phase * 0.6 + t * Math.PI * 7 + s * 10) * 0.2;
+        const wave3 = Math.sin(phase * 1.8 + t * Math.PI * 12 + s * 4) * 0.1;
 
-        // Envelope: louder in center, tapers at edges
+        // Envelope: taper at edges
         const envelope = Math.sin(t * Math.PI);
-
-        // Mood shifts the terrain character: high valence = rounder peaks, low = jagged
-        const jag = moodScale < 0.4 ? Math.abs(Math.sin(phase * 3 + t * 20 + s * 8)) * 0.15 * (1 - moodScale) : 0;
 
         // Combine
         const amplitude = active
-          ? (beat * 0.5 + sub + hi + jag + s * 0.2) * envelope * (0.15 + nrgScale * 0.65)
-          : (s * 0.15 + Math.sin(phase * 0.3 + t * 3) * 0.05) * envelope * 0.3; // idle: gentle hills
+          ? (wave1 + wave2 + wave3 + s * 0.2) * envelope * 0.55
+          : (s * 0.15 + Math.sin(phase * 0.3 + t * 3) * 0.05) * envelope * 0.3;
 
         points.push(Math.max(0, Math.min(1, amplitude)));
       }
@@ -196,7 +188,7 @@ function SignalTerrain({ height = 220, bpm = 100, energy = 50, danceability = 50
       running = false;
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [canvasWidth, bpm, energy, danceability, valence, active]);
+  }, [canvasWidth, active]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
@@ -229,26 +221,6 @@ function Label({ children, style }) {
   );
 }
 
-// Energy/danceability bar — thin segmented readout
-function MeterBar({ value = 0, width = 80 }) {
-  const segments = 10;
-  const filled = Math.round((value / 100) * segments);
-  return (
-    <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
-      {Array.from({ length: segments }, (_, i) => (
-        <div
-          key={i}
-          style={{
-            width: (width - (segments - 1) * 2) / segments,
-            height: 4,
-            background: i < filled ? "var(--color-text)" : "var(--color-border)",
-            transition: "background 0.2s",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function SpotifyPage() {
   const {
@@ -257,7 +229,6 @@ export default function SpotifyPage() {
     flagged,
     playlists,
     progress,
-    audioFeatures,
     toggle,
     skip,
     prev,
@@ -276,8 +247,6 @@ export default function SpotifyPage() {
   // Pad grid — 16 slots, fill with flagged tracks
   const PADS = 16;
   const pads = Array.from({ length: PADS }, (_, i) => flagged[i] || null);
-
-  const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
@@ -368,41 +337,6 @@ export default function SpotifyPage() {
 
             {/* Readout panel */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {/* BPM + Key — big hardware readout */}
-              <div style={{ display: "flex", gap: "var(--space-8)", alignItems: "baseline" }}>
-                <div>
-                  <Label>BPM</Label>
-                  <div
-                    style={{
-                      fontSize: 42,
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: "var(--font-weight-bold)",
-                      lineHeight: 1,
-                      letterSpacing: "-2px",
-                      color: "var(--color-text)",
-                      marginTop: 2,
-                    }}
-                  >
-                    {features?.bpm || "---"}
-                  </div>
-                </div>
-                <div>
-                  <Label>KEY</Label>
-                  <div
-                    style={{
-                      fontSize: 28,
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: "var(--font-weight-semibold)",
-                      lineHeight: 1,
-                      color: "var(--color-text)",
-                      marginTop: 2,
-                    }}
-                  >
-                    {features?.key || "--"}
-                  </div>
-                </div>
-              </div>
-
               {/* Track info */}
               <div>
                 <div
@@ -427,22 +361,6 @@ export default function SpotifyPage() {
                   }}
                 >
                   {currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}
-                </div>
-              </div>
-
-              {/* Meters */}
-              <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
-                <div>
-                  <Label style={{ marginBottom: 3 }}>Energy</Label>
-                  <MeterBar value={features?.energy || 0} width={80} />
-                </div>
-                <div>
-                  <Label style={{ marginBottom: 3 }}>Dance</Label>
-                  <MeterBar value={features?.danceability || 0} width={80} />
-                </div>
-                <div>
-                  <Label style={{ marginBottom: 3 }}>Mood</Label>
-                  <MeterBar value={features?.valence || 0} width={80} />
                 </div>
               </div>
 
@@ -561,14 +479,7 @@ export default function SpotifyPage() {
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
-            <SignalTerrain
-              height={200}
-              bpm={features?.bpm || 100}
-              energy={features?.energy || 50}
-              danceability={features?.danceability || 50}
-              valence={features?.valence || 50}
-              active={isPlaying}
-            />
+            <SignalTerrain height={200} active={isPlaying} />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
@@ -595,7 +506,6 @@ export default function SpotifyPage() {
                 }}
               >
                 {pads.map((track, i) => {
-                  const feat = track ? audioFeatures[track.id] : null;
                   const isActive = track && currentTrack?.id === track.id;
                   return (
                     <button
@@ -658,19 +568,6 @@ export default function SpotifyPage() {
                           >
                             {track.title}
                           </div>
-                          {/* BPM in corner */}
-                          {feat && (
-                            <div
-                              style={{
-                                fontSize: 8,
-                                fontFamily: "var(--font-mono)",
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                                opacity: 0.7,
-                              }}
-                            >
-                              {feat.bpm}
-                            </div>
-                          )}
                         </>
                       ) : (
                         <div
@@ -762,7 +659,6 @@ export default function SpotifyPage() {
                 )}
 
                 {flagged.map((track, i) => {
-                  const feat = audioFeatures[track.id];
                   const isActive = currentTrack?.id === track.id;
                   const isDragTarget = dragOverIdx === i && dragIdx !== i;
                   return (
@@ -841,22 +737,6 @@ export default function SpotifyPage() {
                         >
                           {track.artist}
                         </div>
-                      </div>
-
-                      {/* BPM + Key */}
-                      <div style={{ flexShrink: 0, textAlign: "right" }}>
-                        {feat ? (
-                          <>
-                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>
-                              {feat.bpm}
-                            </div>
-                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
-                              {feat.key}
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>···</div>
-                        )}
                       </div>
 
                       {/* Remove from set */}
