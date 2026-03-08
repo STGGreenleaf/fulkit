@@ -22,6 +22,7 @@ import {
   FolderOpen,
   FileText,
   Paperclip,
+  Search,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
