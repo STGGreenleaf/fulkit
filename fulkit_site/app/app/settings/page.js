@@ -7,7 +7,7 @@ import {
   Key,
   Shield,
   CreditCard,
-  RefreshCw,
+  Quote,
   Download,
   Trash2,
   Gift,
@@ -35,7 +35,7 @@ import { supabase } from "../../lib/supabase";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
-  { id: "sources", label: "Sources", icon: RefreshCw },
+  { id: "sources", label: "Sources", icon: Quote },
   { id: "vault", label: "Vault", icon: FolderOpen },
   { id: "ai", label: "AI & Memory", icon: Brain },
   { id: "referrals", label: "Get Fülkit", icon: Gift },
