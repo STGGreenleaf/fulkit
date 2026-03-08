@@ -4,13 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc } from "lucide-react";
 
 // Minimal pause mark — two vertical lines, no circle
-function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
-  const w = size;
-  const h = size;
-  const gap = w * 0.28;
-  const x1 = w / 2 - gap;
-  const x2 = w / 2 + gap;
-  const py = h * 0.22;
+function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
+  const w = size, h = size;
+  const gap = w * 0.3;
+  const x1 = w / 2 - gap, x2 = w / 2 + gap;
+  const py = h * 0.18;
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none">
       <line x1={x1} y1={py} x2={x1} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
@@ -18,8 +16,15 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
     </svg>
   );
 }
+
 import Link from "next/link";
 import { useSpotify } from "../lib/spotify";
+
+// Normalized icon size for all controls
+const IC = 14;
+const IC_SM = 12;
+const STROKE = 2.2;
+const STROKE_BOLD = 2.8;
 
 export default function MiniPlayer({ compact }) {
   const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, volume, setVolume } =
@@ -44,14 +49,22 @@ export default function MiniPlayer({ compact }) {
   const flaggedNow = isFlagged(currentTrack.id);
   const displayVolume = dragging ? localVolume.current : volume;
 
-  // Shared bare button style — no circle, just the mark
-  const bareBtn = {
+  // Universal control button — same hit area for everything
+  const ctrlBtn = {
     width: 28, height: 28,
-    background: "transparent", border: "none", outline: "none",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: "pointer", padding: 0,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
   };
 
+  /* ═══════════════════════════════════════════
+   * COMPACT / VERTICAL
+   * ═══════════════════════════════════════════ */
   if (compact) {
     return (
       <div
@@ -65,40 +78,24 @@ export default function MiniPlayer({ compact }) {
         <div style={{ position: "relative", width: 14, flexShrink: 0 }}>
           <input
             type="range"
-            min={0}
-            max={100}
-            step={1}
+            min={0} max={100} step={1}
             value={displayVolume}
             className="fulkit-vol-v"
             onMouseDown={() => setDragging(true)}
             onMouseUp={() => setDragging(false)}
             onTouchStart={() => setDragging(true)}
             onTouchEnd={() => setDragging(false)}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              localVolume.current = v;
-              setVolume(v);
-            }}
+            onChange={(e) => { const v = Number(e.target.value); localVolume.current = v; setVolume(v); }}
             style={{
-              position: "absolute",
-              bottom: 0,
-              left: 7,
-              width: "var(--_vol-h, 100px)",
-              height: 3,
-              WebkitAppearance: "none",
-              appearance: "none",
-              background: "var(--color-border)",
-              borderRadius: 0,
-              outline: "none",
-              cursor: "pointer",
-              margin: 0,
-              padding: 0,
-              transformOrigin: "bottom left",
-              transform: "rotate(-90deg)",
+              position: "absolute", bottom: 0, left: 7,
+              width: "var(--_vol-h, 100px)", height: 3,
+              WebkitAppearance: "none", appearance: "none",
+              background: "var(--color-border)", borderRadius: 0,
+              outline: "none", cursor: "pointer", margin: 0, padding: 0,
+              transformOrigin: "bottom left", transform: "rotate(-90deg)",
             }}
             ref={(el) => {
               if (el && el.parentElement) {
-                // Shorten slider so its top aligns with the flag button's top edge
                 const pad = parseFloat(getComputedStyle(el.parentElement.parentElement).getPropertyValue("--space-4") || "16");
                 el.style.setProperty("--_vol-h", (el.parentElement.offsetHeight - pad) + "px");
               }
@@ -106,157 +103,104 @@ export default function MiniPlayer({ compact }) {
           />
         </div>
         <style>{`
-          .fulkit-vol-v::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 2px;
-            border-radius: 0;
-            background: var(--color-text);
-            border: none;
-            cursor: pointer;
-            transform: rotate(90deg);
-          }
-          .fulkit-vol-v::-moz-range-thumb {
-            width: 12px;
-            height: 2px;
-            border-radius: 0;
-            background: var(--color-text);
-            border: none;
-            cursor: pointer;
-            transform: rotate(90deg);
-          }
-          .fulkit-vol-v::-moz-range-track {
-            height: 3px;
-            background: var(--color-border);
-            border-radius: 0;
-          }
+          .fulkit-vol-v::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:2px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; transform:rotate(90deg); }
+          .fulkit-vol-v::-moz-range-thumb { width:12px; height:2px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; transform:rotate(90deg); }
+          .fulkit-vol-v::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
         `}</style>
 
-        {/* Controls column */}
+        {/* Controls column — all same size, even spacing */}
         <div
           style={{
             flex: 1,
-            padding: "var(--space-4) 0",
+            padding: "var(--space-5) 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "var(--space-3)",
+            justifyContent: "space-between",
+            gap: "var(--space-4)",
           }}
         >
+          {/* Flag */}
           <button
             onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
             style={{
-              width: 24, height: 24,
+              ...ctrlBtn,
               borderRadius: "var(--radius-full)",
               background: flaggedNow ? "var(--color-text)" : "transparent",
               border: flaggedNow ? "none" : "1px solid var(--color-border)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-              transition: `all var(--duration-fast) var(--ease-default)`,
-              marginBottom: "var(--space-2)",
+              transition: "all 150ms",
             }}
           >
-            {flaggedNow ? (
-              <Check size={10} strokeWidth={2.5} color="var(--color-text-inverse)" />
-            ) : (
-              <Plus size={10} strokeWidth={2} color="var(--color-text-muted)" />
-            )}
+            {flaggedNow
+              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
+              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+            }
           </button>
-          <button onClick={prev} style={{ ...bareBtn, width: 24, height: 24 }}>
-            <ChevronUp size={12} strokeWidth={2} color="var(--color-text-muted)" />
+
+          {/* Prev */}
+          <button onClick={prev} style={ctrlBtn}>
+            <ChevronUp size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
-          <button onClick={toggle} style={{ ...bareBtn, width: 24, height: 24 }}>
-            {isPlaying ? (
-              <PauseLines size={14} strokeWidth={2} color="var(--color-text)" />
-            ) : (
-              <Play size={14} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
-            )}
+
+          {/* Play/Pause — thicker */}
+          <button onClick={toggle} style={ctrlBtn}>
+            {isPlaying
+              ? <PauseLines size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" />
+              : <Play size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
+            }
           </button>
-          <button onClick={skip} style={{ ...bareBtn, width: 24, height: 24 }}>
-            <ChevronDown size={12} strokeWidth={2} color="var(--color-text-muted)" />
+
+          {/* Next */}
+          <button onClick={skip} style={ctrlBtn}>
+            <ChevronDown size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
-          <Link
-            href="/spotify"
-            style={{
-              ...bareBtn,
-              width: 24, height: 24,
-              marginTop: "var(--space-2)",
-              textDecoration: "none",
-              color: "var(--color-text-dim)",
-            }}
-          >
-            <Disc size={12} strokeWidth={1.5} />
+
+          {/* Deck link */}
+          <Link href="/spotify" style={{ ...ctrlBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+            <Disc size={IC} strokeWidth={1.8} />
           </Link>
         </div>
       </div>
     );
   }
 
+  /* ═══════════════════════════════════════════
+   * EXPANDED / HORIZONTAL
+   * ═══════════════════════════════════════════ */
   return (
     <div>
       {/* Volume slider — IS the divider rule */}
       <input
         type="range"
-        min={0}
-        max={100}
-        step={1}
+        min={0} max={100} step={1}
         value={displayVolume}
         className="fulkit-vol"
         onMouseDown={() => setDragging(true)}
         onMouseUp={() => setDragging(false)}
         onTouchStart={() => setDragging(true)}
         onTouchEnd={() => setDragging(false)}
-        onChange={(e) => {
-          const v = Number(e.target.value);
-          localVolume.current = v;
-          setVolume(v);
-        }}
+        onChange={(e) => { const v = Number(e.target.value); localVolume.current = v; setVolume(v); }}
         style={{
-          display: "block",
-          width: "100%",
-          height: 3,
-          WebkitAppearance: "none",
-          appearance: "none",
-          background: "var(--color-border)",
-          borderRadius: 0,
-          outline: "none",
-          cursor: "pointer",
-          margin: 0,
-          padding: 0,
+          display: "block", width: "100%", height: 3,
+          WebkitAppearance: "none", appearance: "none",
+          background: "var(--color-border)", borderRadius: 0,
+          outline: "none", cursor: "pointer", margin: 0, padding: 0,
         }}
       />
       <style>{`
-        .fulkit-vol::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 2px;
-          height: 12px;
-          border-radius: 0;
-          background: var(--color-text);
-          border: none;
-          cursor: pointer;
-        }
-        .fulkit-vol::-moz-range-thumb {
-          width: 2px;
-          height: 12px;
-          border-radius: 0;
-          background: var(--color-text);
-          border: none;
-          cursor: pointer;
-        }
-        .fulkit-vol::-moz-range-track {
-          height: 3px;
-          background: var(--color-border);
-          border-radius: 0;
-        }
+        .fulkit-vol::-webkit-slider-thumb { -webkit-appearance:none; width:2px; height:12px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; }
+        .fulkit-vol::-moz-range-thumb { width:2px; height:12px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; }
+        .fulkit-vol::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
       `}</style>
 
       <div style={{ padding: "var(--space-2-5) var(--space-2-5) var(--space-3)" }}>
         {/* Track info — links to /spotify */}
-        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-2)" }}>
+        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-3)" }}>
           <div
             style={{
               fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-medium)",
+              fontWeight: "var(--font-weight-bold)",
+              fontFamily: "var(--font-primary)",
               color: "var(--color-text)",
               whiteSpace: "nowrap",
               overflow: "hidden",
@@ -278,7 +222,7 @@ export default function MiniPlayer({ compact }) {
           </div>
         </Link>
 
-        {/* Controls — bare marks, no circles */}
+        {/* Controls — all same size, full width, evenly spaced */}
         <div
           style={{
             display: "flex",
@@ -286,55 +230,46 @@ export default function MiniPlayer({ compact }) {
             justifyContent: "space-between",
           }}
         >
+          {/* Flag */}
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              flag(currentTrack);
-            }}
+            onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
             title={flaggedNow ? "Flagged" : "Flag this track"}
             style={{
-              width: 28, height: 28,
+              ...ctrlBtn,
               borderRadius: "var(--radius-full)",
               background: flaggedNow ? "var(--color-text)" : "transparent",
               border: flaggedNow ? "none" : "1px solid var(--color-border)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-              transition: `all var(--duration-fast) var(--ease-default)`,
+              transition: "all 150ms",
             }}
           >
-            {flaggedNow ? (
-              <Check size={12} strokeWidth={2.5} color="var(--color-text-inverse)" />
-            ) : (
-              <Plus size={12} strokeWidth={2} color="var(--color-text-muted)" />
-            )}
+            {flaggedNow
+              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
+              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+            }
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <button onClick={prev} style={bareBtn}>
-              <ChevronLeft size={16} strokeWidth={2} color="var(--color-text-muted)" />
-            </button>
-            <button onClick={toggle} style={bareBtn}>
-              {isPlaying ? (
-                <PauseLines size={16} strokeWidth={2} color="var(--color-text)" />
-              ) : (
-                <Play size={16} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
-              )}
-            </button>
-            <button onClick={skip} style={bareBtn}>
-              <ChevronRight size={16} strokeWidth={2} color="var(--color-text-muted)" />
-            </button>
-            <Link
-              href="/spotify"
-              style={{
-                ...bareBtn,
-                textDecoration: "none",
-                color: "var(--color-text-dim)",
-                marginLeft: "var(--space-1)",
-              }}
-            >
-              <Disc size={14} strokeWidth={1.5} />
-            </Link>
-          </div>
+          {/* Prev */}
+          <button onClick={prev} style={ctrlBtn}>
+            <ChevronLeft size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
+          </button>
+
+          {/* Play/Pause — thicker */}
+          <button onClick={toggle} style={ctrlBtn}>
+            {isPlaying
+              ? <PauseLines size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" />
+              : <Play size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
+            }
+          </button>
+
+          {/* Next */}
+          <button onClick={skip} style={ctrlBtn}>
+            <ChevronRight size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
+          </button>
+
+          {/* Deck link */}
+          <Link href="/spotify" style={{ ...ctrlBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+            <Disc size={IC} strokeWidth={1.8} />
+          </Link>
         </div>
       </div>
     </div>
