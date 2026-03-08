@@ -203,9 +203,9 @@ export default function MiniPlayer({ compact }) {
         .fulkit-vol::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
       `}</style>
 
-      <div style={{ padding: "var(--space-2-5) var(--space-2-5) var(--space-3)" }}>
+      <div style={{ padding: "var(--space-2) 0 var(--space-2)" }}>
         {/* Track info — links to /spotify */}
-        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-3)" }}>
+        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-2)", padding: "0 var(--space-2-5)" }}>
           <div
             style={{
               fontSize: "var(--font-size-xs)",
