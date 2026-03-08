@@ -516,7 +516,12 @@ function SourcesTab() {
   const [expanded, setExpanded] = useState({});
   const [googleExpanded, setGoogleExpanded] = useState(false);
   const [googleServices, setGoogleServices] = useState({ drive: false, gmail: false, calendar: false });
+  const [numbrlyConnected, setNumbrlyConnected] = useState(false);
   const [numbrlyExpanded, setNumbrlyExpanded] = useState(false);
+  const [numbrlyKeyInput, setNumbrlyKeyInput] = useState("");
+  const [numbrlyConnecting, setNumbrlyConnecting] = useState(false);
+  const [numbrlyError, setNumbrlyError] = useState("");
+  const [numbrlyDisconnecting, setNumbrlyDisconnecting] = useState(false);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -542,6 +547,15 @@ function SourcesTab() {
     fetch("/api/spotify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setSpotifyConnected(data.connected); })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Numbrly connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setNumbrlyConnected(data.connected); })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -618,12 +632,48 @@ function SourcesTab() {
     localStorage.setItem("fulkit-spotify-player", String(next));
   }
 
+  async function connectNumbrly() {
+    if (!numbrlyKeyInput.trim()) return;
+    setNumbrlyConnecting(true);
+    setNumbrlyError("");
+    try {
+      const res = await fetch("/api/numbrly/connect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: numbrlyKeyInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNumbrlyError(data.error || "Connection failed");
+      } else {
+        setNumbrlyConnected(true);
+        setNumbrlyKeyInput("");
+      }
+    } catch {
+      setNumbrlyError("Connection failed");
+    }
+    setNumbrlyConnecting(false);
+  }
+
+  async function disconnectNumbrly() {
+    setNumbrlyDisconnecting(true);
+    try {
+      await fetch("/api/numbrly/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setNumbrlyConnected(false);
+    } catch {}
+    setNumbrlyDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
     ...(spotifyConnected ? ["spotify"] : []),
+    ...(numbrlyConnected ? ["numbrly"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify" && s.id !== "github");
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify" && s.id !== "github" && s.id !== "numbrly");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
@@ -632,11 +682,13 @@ function SourcesTab() {
   const connect = (id) => {
     if (id === "github") { connectGitHub(); return; }
     if (id === "spotify") { connectSpotify(); return; }
+    if (id === "numbrly") { setNumbrlyExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
     if (id === "github") { disconnectGitHub(); return; }
     if (id === "spotify") { setSpotifyConnected(false); return; }
+    if (id === "numbrly") { disconnectNumbrly(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -725,7 +777,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || spotifyConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || spotifyConnected || numbrlyConnected || connectedSources.length > 0;
 
   return (
     <div style={{ maxWidth: 640 }}>
@@ -864,8 +916,8 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Numbrly */}
-            {allConnected.includes("numbrly") && (
+            {/* Numbrly — connected */}
+            {numbrlyConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
                   logo={SOURCE_LOGOS.numbrly}
@@ -882,8 +934,76 @@ function SourcesTab() {
                       </div>
                     </DrawerItem>
                     <DrawerItem index={1} visible={numbrlyExpanded}>
-                      {disconnectFooter(() => disconnect("numbrly"), false)}
+                      {disconnectFooter(disconnectNumbrly, numbrlyDisconnecting)}
                     </DrawerItem>
+                  </div>
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Numbrly — API key input (not yet connected, tile was clicked) */}
+            {!numbrlyConnected && numbrlyExpanded && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.numbrly}
+                  name="Numbrly"
+                  subtitle="Paste your API key"
+                  isExpanded={numbrlyExpanded}
+                  onToggle={() => { setNumbrlyExpanded(false); setNumbrlyError(""); }}
+                />
+                <Drawer open={numbrlyExpanded}>
+                  <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)" }}>
+                    <DrawerItem index={0} visible={numbrlyExpanded}>
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                        Generate a key in Numbrly at Settings &rarr; Developer &rarr; API Access.
+                      </div>
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={numbrlyExpanded}>
+                      <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                        <input
+                          type="password"
+                          placeholder="nbl_sk_..."
+                          value={numbrlyKeyInput}
+                          onChange={(e) => { setNumbrlyKeyInput(e.target.value); setNumbrlyError(""); }}
+                          style={{
+                            flex: 1,
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "var(--color-bg)",
+                            border: numbrlyError ? "1px solid var(--color-error)" : "1px solid var(--color-border)",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)",
+                            fontFamily: "var(--font-primary)",
+                            color: "var(--color-text)",
+                            outline: "none",
+                          }}
+                        />
+                        <button
+                          onClick={connectNumbrly}
+                          disabled={numbrlyConnecting || !numbrlyKeyInput.trim()}
+                          style={{
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "var(--color-accent)",
+                            border: "none",
+                            borderRadius: "var(--radius-sm)",
+                            color: "var(--color-text-inverse)",
+                            fontSize: "var(--font-size-xs)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            fontFamily: "var(--font-primary)",
+                            cursor: numbrlyConnecting || !numbrlyKeyInput.trim() ? "default" : "pointer",
+                            opacity: numbrlyConnecting || !numbrlyKeyInput.trim() ? 0.5 : 1,
+                          }}
+                        >
+                          {numbrlyConnecting ? "..." : "Connect"}
+                        </button>
+                      </div>
+                    </DrawerItem>
+                    {numbrlyError && (
+                      <DrawerItem index={2} visible={numbrlyExpanded}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
+                          {numbrlyError}
+                        </div>
+                      </DrawerItem>
+                    )}
                   </div>
                 </Drawer>
               </Card>

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import { getGitHubToken, githubFetch } from "../../../lib/github";
+import { getNumbrlyToken, numbrlyFetch } from "../../../lib/numbrly";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -184,6 +185,19 @@ export async function POST(request) {
           }
         }
       }
+    }
+
+    // Inject Numbrly business context if connected
+    if (userId) {
+      try {
+        const nblKey = await getNumbrlyToken(userId);
+        if (nblKey) {
+          const nblData = await numbrlyFetch(nblKey, "fulkit_context");
+          if (nblData?.message) {
+            context.push({ title: "Numbrly (Business Data)", content: nblData.message });
+          }
+        }
+      } catch {}
     }
 
     // Build system prompt
