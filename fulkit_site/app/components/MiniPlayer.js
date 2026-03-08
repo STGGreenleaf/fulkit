@@ -40,6 +40,15 @@ export default function MiniPlayer({ compact }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  // Release drag even if pointer leaves the slider
+  useEffect(() => {
+    if (!dragging) return;
+    const up = () => setDragging(false);
+    window.addEventListener("mouseup", up);
+    window.addEventListener("touchend", up);
+    return () => { window.removeEventListener("mouseup", up); window.removeEventListener("touchend", up); };
+  }, [dragging]);
+
   useEffect(() => {
     if (!dragging) localVolume.current = volume;
   }, [volume, dragging]);

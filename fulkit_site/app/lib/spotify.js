@@ -55,6 +55,7 @@ export function SpotifyProvider({ children }) {
   const [audioFeatures, setAudioFeatures] = useState(isDev ? MOCK_FEATURES : {});
   const pollRef = useRef(null);
   const volumeTimer = useRef(null);
+  const volumeLockedUntil = useRef(0);
   const featuresRequested = useRef(new Set());
 
   // Helper for authenticated API calls
@@ -98,7 +99,7 @@ export function SpotifyProvider({ children }) {
       const data = await apiFetch("/api/spotify/now-playing");
       if (!data) return;
       setIsPlaying(data.isPlaying);
-      if (data.volume != null) setVolumeState(data.volume);
+      if (data.volume != null && Date.now() > volumeLockedUntil.current) setVolumeState(data.volume);
       if (data.track) {
         setCurrentTrack((prev) => {
           // Only update if track changed or progress jumped
@@ -179,6 +180,8 @@ export function SpotifyProvider({ children }) {
   const setVolume = useCallback((val) => {
     const v = Math.max(0, Math.min(100, Math.round(val)));
     setVolumeState(v);
+    // Suppress poll-based volume updates for 5s so the slider doesn't snap back
+    volumeLockedUntil.current = Date.now() + 5000;
     if (isDev) return;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
@@ -186,7 +189,7 @@ export function SpotifyProvider({ children }) {
         method: "POST",
         body: JSON.stringify({ action: "volume", value: v }),
       });
-    }, 200);
+    }, 300);
   }, [isDev, apiFetch]);
 
   // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
