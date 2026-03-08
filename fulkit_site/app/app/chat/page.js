@@ -518,7 +518,7 @@ export default function Chat() {
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Context indicator */}
-              {contextMeta && contextMeta.includedCount > 0 && (
+              {contextMeta && contextMeta.includedCount > 0 && !compactMode && (
                 <span
                   style={{
                     display: "flex",
@@ -533,7 +533,7 @@ export default function Chat() {
                   {!compactMode && (<>{contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens</>)}
                 </span>
               )}
-              {recalledNotes.length > 0 && (
+              {recalledNotes.length > 0 && !compactMode && (
                 <span
                   style={{
                     display: "flex",

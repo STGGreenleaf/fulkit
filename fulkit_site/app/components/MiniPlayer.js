@@ -18,6 +18,7 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
     </svg>
   );
 }
+import Link from "next/link";
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
@@ -238,8 +239,8 @@ export default function MiniPlayer({ compact }) {
       `}</style>
 
       <div style={{ padding: "var(--space-2-5) var(--space-2-5) var(--space-3)" }}>
-        {/* Track info */}
-        <div style={{ marginBottom: "var(--space-2)" }}>
+        {/* Track info — links to /spotify */}
+        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-2)" }}>
           <div
             style={{
               fontSize: "var(--font-size-xs)",
@@ -263,7 +264,7 @@ export default function MiniPlayer({ compact }) {
           >
             {currentTrack.artist}
           </div>
-        </div>
+        </Link>
 
         {/* Controls — bare marks, no circles */}
         <div

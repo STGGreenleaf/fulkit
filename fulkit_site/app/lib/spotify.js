@@ -23,6 +23,17 @@ const MOCK_PLAYLISTS = [
   { id: "p3", name: "Sunday Morning", tracks: 31, description: "Slow start, no rush" },
 ];
 
+const MOCK_FEATURES = {
+  "1": { bpm: 105, key: "Am", energy: 78, danceability: 62, valence: 45 },
+  "2": { bpm: 98, key: "Fm", energy: 65, danceability: 71, valence: 58 },
+  "3": { bpm: 112, key: "C", energy: 42, danceability: 55, valence: 38 },
+  "4": { bpm: 120, key: "Dm", energy: 35, danceability: 48, valence: 30 },
+  "5": { bpm: 130, key: "Eb", energy: 55, danceability: 60, valence: 25 },
+  "6": { bpm: 138, key: "Em", energy: 88, danceability: 45, valence: 35 },
+  "7": { bpm: 100, key: "G", energy: 50, danceability: 65, valence: 70 },
+  "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72 },
+};
+
 export function SpotifyProvider({ children }) {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
@@ -31,12 +42,20 @@ export function SpotifyProvider({ children }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
   const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
-  const [flagged, setFlagged] = useState([]);
+  const [flagged, setFlagged] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("fulkit-flagged-tracks");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
   const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(50);
+  const [audioFeatures, setAudioFeatures] = useState(isDev ? MOCK_FEATURES : {});
   const pollRef = useRef(null);
   const volumeTimer = useRef(null);
+  const featuresRequested = useRef(new Set());
 
   // Helper for authenticated API calls
   const apiFetch = useCallback(async (endpoint, options = {}) => {
@@ -156,12 +175,40 @@ export function SpotifyProvider({ children }) {
     }, 200);
   }, [isDev, apiFetch]);
 
+  // Fetch audio features for tracks we haven't fetched yet
+  useEffect(() => {
+    if (isDev || !connected || !accessToken) return;
+    const ids = [];
+    if (currentTrack?.id && !audioFeatures[currentTrack.id] && !featuresRequested.current.has(currentTrack.id)) {
+      ids.push(currentTrack.id);
+    }
+    for (const t of flagged) {
+      if (!audioFeatures[t.id] && !featuresRequested.current.has(t.id)) ids.push(t.id);
+    }
+    if (ids.length === 0) return;
+    ids.forEach((id) => featuresRequested.current.add(id));
+    apiFetch(`/api/spotify/audio-features?ids=${ids.join(",")}`).then((data) => {
+      if (data?.features) setAudioFeatures((prev) => ({ ...prev, ...data.features }));
+    });
+  }, [currentTrack?.id, flagged, connected, accessToken, isDev, apiFetch, audioFeatures]);
+
+  const reorderFlagged = useCallback((fromIndex, toIndex) => {
+    setFlagged((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      try { localStorage.setItem("fulkit-flagged-tracks", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
   const flag = useCallback((track) => {
     setFlagged((prev) => {
-      if (prev.some((t) => t.id === track.id)) {
-        return prev.filter((t) => t.id !== track.id);
-      }
-      return [...prev, track];
+      const next = prev.some((t) => t.id === track.id)
+        ? prev.filter((t) => t.id !== track.id)
+        : [...prev, track];
+      try { localStorage.setItem("fulkit-flagged-tracks", JSON.stringify(next)); } catch {}
+      return next;
     });
   }, []);
 
@@ -193,6 +240,7 @@ export function SpotifyProvider({ children }) {
         playlists,
         progress,
         allTracks: isDev ? MOCK_TRACKS : [],
+        audioFeatures,
         play,
         pause,
         toggle,
@@ -200,6 +248,7 @@ export function SpotifyProvider({ children }) {
         prev,
         flag,
         isFlagged,
+        reorderFlagged,
         playTrack,
         setProgress,
         volume,

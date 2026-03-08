@@ -1,138 +1,62 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Plus,
-  Check,
-  Shuffle,
-  Repeat,
-  List,
-  Music,
-  Flag,
-} from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Play, SkipForward, SkipBack, Plus, Check, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useSpotify } from "../../lib/spotify";
 
-function TrackRow({ track, index, onPlay, onFlag, isFlagged, isActive }) {
+// Minimal pause mark — two vertical lines
+function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
+  const w = size, h = size;
+  const gap = w * 0.28;
+  const x1 = w / 2 - gap, x2 = w / 2 + gap;
+  const py = h * 0.22;
   return (
-    <button
-      onClick={() => onPlay(track)}
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none">
+      <line x1={x1} y1={py} x2={x1} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <line x1={x2} y1={py} x2={x2} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Hardware section label — silk-screened look
+function Label({ children, style }) {
+  return (
+    <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-3)",
-        padding: "var(--space-2-5) var(--space-3)",
-        background: isActive ? "var(--color-bg-alt)" : "transparent",
-        border: "none",
-        borderRadius: "var(--radius-sm)",
-        cursor: "pointer",
-        width: "100%",
-        textAlign: "left",
-        fontFamily: "var(--font-primary)",
-        transition: `background var(--duration-fast) var(--ease-default)`,
+        fontSize: 9,
+        fontFamily: "var(--font-mono)",
+        fontWeight: "var(--font-weight-medium)",
+        textTransform: "uppercase",
+        letterSpacing: "var(--letter-spacing-wider)",
+        color: "var(--color-text-dim)",
+        ...style,
       }}
     >
-      {/* Track number / playing indicator */}
-      <div
-        style={{
-          width: 20,
-          fontSize: "var(--font-size-2xs)",
-          fontFamily: "var(--font-mono)",
-          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
-          textAlign: "center",
-          fontWeight: isActive ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
-        }}
-      >
-        {isActive ? (
-          <div style={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "flex-end", height: 12 }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{
-                  width: 2,
-                  height: 4 + Math.random() * 8,
-                  background: "var(--color-text)",
-                  borderRadius: 1,
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          index + 1
-        )}
-      </div>
+      {children}
+    </div>
+  );
+}
 
-      {/* Track info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+// Energy/danceability bar — thin segmented readout
+function MeterBar({ value = 0, width = 80 }) {
+  const segments = 10;
+  const filled = Math.round((value / 100) * segments);
+  return (
+    <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+      {Array.from({ length: segments }, (_, i) => (
         <div
+          key={i}
           style={{
-            fontSize: "var(--font-size-sm)",
-            fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-            color: "var(--color-text)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            width: (width - (segments - 1) * 2) / segments,
+            height: 4,
+            background: i < filled ? "var(--color-text)" : "var(--color-border)",
+            transition: "background 0.2s",
           }}
-        >
-          {track.title}
-        </div>
-        <div
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-muted)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {track.artist}
-        </div>
-      </div>
-
-      {/* Duration */}
-      <div
-        style={{
-          fontSize: "var(--font-size-2xs)",
-          fontFamily: "var(--font-mono)",
-          color: "var(--color-text-dim)",
-          flexShrink: 0,
-        }}
-      >
-        {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, "0")}
-      </div>
-
-      {/* Flag button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onFlag(track);
-        }}
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: "var(--radius-full)",
-          background: isFlagged ? "var(--color-text)" : "transparent",
-          border: isFlagged ? "none" : "1px solid var(--color-border-light)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          flexShrink: 0,
-          transition: `all var(--duration-fast) var(--ease-default)`,
-        }}
-      >
-        {isFlagged ? (
-          <Check size={10} strokeWidth={2.5} color="var(--color-text-inverse)" />
-        ) : (
-          <Plus size={10} strokeWidth={2} color="var(--color-text-dim)" />
-        )}
-      </button>
-    </button>
+        />
+      ))}
+    </div>
   );
 }
 
@@ -140,472 +64,615 @@ export default function SpotifyPage() {
   const {
     isPlaying,
     currentTrack,
-    queue,
     flagged,
     playlists,
-    allTracks,
     progress,
+    audioFeatures,
     toggle,
     skip,
     prev,
     flag,
     isFlagged,
+    reorderFlagged,
     playTrack,
     formatTime,
     setProgress,
   } = useSpotify();
 
-  const [view, setView] = useState("now"); // now | queue | mixes | flagged
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const dragNode = useRef(null);
 
-  const views = [
-    { id: "now", label: "Now Playing", icon: Music },
-    { id: "queue", label: "Queue", icon: List },
-    { id: "mixes", label: "Mixes", icon: Shuffle },
-    { id: "flagged", label: "Flagged", icon: Flag },
-  ];
+  // Pad grid — 16 slots, fill with flagged tracks
+  const PADS = 16;
+  const pads = Array.from({ length: PADS }, (_, i) => flagged[i] || null);
+
+  const features = currentTrack ? audioFeatures[currentTrack.id] : null;
+
+  // Drag handlers for the setlist
+  const handleDragStart = useCallback((e, idx) => {
+    setDragIdx(idx);
+    dragNode.current = e.target;
+    e.dataTransfer.effectAllowed = "move";
+    // Slight delay to let the drag image render
+    setTimeout(() => { if (dragNode.current) dragNode.current.style.opacity = "0.4"; }, 0);
+  }, []);
+
+  const handleDragOver = useCallback((e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (idx !== dragOverIdx) setDragOverIdx(idx);
+  }, [dragOverIdx]);
+
+  const handleDrop = useCallback((e, toIdx) => {
+    e.preventDefault();
+    if (dragIdx != null && dragIdx !== toIdx) {
+      reorderFlagged(dragIdx, toIdx);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+    if (dragNode.current) dragNode.current.style.opacity = "1";
+  }, [dragIdx, reorderFlagged]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIdx(null);
+    setDragOverIdx(null);
+    if (dragNode.current) dragNode.current.style.opacity = "1";
+  }, []);
+
+  // Bare button base
+  const bareBtn = {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   return (
     <AuthGuard>
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
 
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Top bar with view tabs */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--color-bg)",
+            overflow: "hidden",
+          }}
+        >
+          {/* ═══ THE DECK ═══ */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              padding: "0 var(--space-6)",
               borderBottom: "1px solid var(--color-border-light)",
+              padding: "var(--space-6) var(--space-8)",
+              display: "flex",
+              gap: "var(--space-8)",
+              alignItems: "center",
+              minHeight: 0,
             }}
           >
-            {views.map((v) => {
-              const active = view === v.id;
-              return (
-                <button
-                  key={v.id}
-                  onClick={() => setView(v.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1-5)",
-                    padding: "var(--space-2-5) var(--space-3)",
-                    border: "none",
-                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
-                    background: "transparent",
-                    color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                    fontWeight: "var(--font-weight-medium)",
-                    fontSize: "var(--font-size-xs)",
-                    fontFamily: "var(--font-primary)",
-                    cursor: "pointer",
-                    marginBottom: -1,
-                  }}
-                >
-                  <v.icon size={14} strokeWidth={1.8} />
-                  {v.label}
-                  {v.id === "flagged" && flagged.length > 0 && (
-                    <span
-                      style={{
-                        fontSize: "var(--font-size-2xs)",
-                        fontFamily: "var(--font-mono)",
-                        background: "var(--color-text)",
-                        color: "var(--color-text-inverse)",
-                        borderRadius: "var(--radius-full)",
-                        padding: "0 5px",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      {flagged.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+            {/* Album art */}
+            <div
+              style={{
+                width: 180,
+                height: 180,
+                flexShrink: 0,
+                background: "var(--color-bg-inverse)",
+                borderRadius: "var(--radius-sm)",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                filter: "grayscale(1)",
+              }}
+            >
+              {currentTrack?.art ? (
+                <img
+                  src={currentTrack.art}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="1">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+              )}
+            </div>
 
-          {/* Content area */}
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            {/* Now Playing hero */}
-            {view === "now" && currentTrack && (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-8)" }}>
-                {/* Album art */}
+            {/* Readout panel */}
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {/* BPM + Key — big hardware readout */}
+              <div style={{ display: "flex", gap: "var(--space-8)", alignItems: "baseline" }}>
+                <div>
+                  <Label>BPM</Label>
+                  <div
+                    style={{
+                      fontSize: 42,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: "var(--font-weight-bold)",
+                      lineHeight: 1,
+                      letterSpacing: "-2px",
+                      color: "var(--color-text)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {features?.bpm || "---"}
+                  </div>
+                </div>
+                <div>
+                  <Label>KEY</Label>
+                  <div
+                    style={{
+                      fontSize: 28,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: "var(--font-weight-semibold)",
+                      lineHeight: 1,
+                      color: "var(--color-text)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {features?.key || "--"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Track info */}
+              <div>
                 <div
                   style={{
-                    width: 280,
-                    height: 280,
-                    borderRadius: "var(--radius-md)",
-                    background: "var(--color-bg-inverse)",
-                    marginBottom: "var(--space-8)",
+                    fontSize: "var(--font-size-lg)",
+                    fontWeight: "var(--font-weight-bold)",
+                    letterSpacing: "var(--letter-spacing-tight)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {currentTrack?.title || "No track"}
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}
+                </div>
+              </div>
+
+              {/* Meters */}
+              <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+                <div>
+                  <Label style={{ marginBottom: 3 }}>Energy</Label>
+                  <MeterBar value={features?.energy || 0} width={80} />
+                </div>
+                <div>
+                  <Label style={{ marginBottom: 3 }}>Dance</Label>
+                  <MeterBar value={features?.danceability || 0} width={80} />
+                </div>
+                <div>
+                  <Label style={{ marginBottom: 3 }}>Mood</Label>
+                  <MeterBar value={features?.valence || 0} width={80} />
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div style={{ maxWidth: 400 }}>
+                <div
+                  style={{
+                    width: "100%",
+                    height: 3,
+                    background: "var(--color-border)",
+                    cursor: "pointer",
+                    position: "relative",
+                  }}
+                  onClick={(e) => {
+                    if (!currentTrack) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setProgress((e.clientX - rect.left) / rect.width);
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${progress * 100}%`,
+                      height: "100%",
+                      background: "var(--color-text)",
+                      transition: "width 0.1s linear",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 3,
+                    fontSize: 9,
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                  }}
+                >
+                  <span>{currentTrack ? formatTime(progress * currentTrack.duration) : "0:00"}</span>
+                  <span>{currentTrack ? formatTime(currentTrack.duration) : "0:00"}</span>
+                </div>
+              </div>
+
+              {/* Transport */}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <button
+                  onClick={() => currentTrack && flag(currentTrack)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "var(--radius-full)",
+                    background: currentTrack && isFlagged(currentTrack?.id) ? "var(--color-text)" : "transparent",
+                    border: currentTrack && isFlagged(currentTrack?.id) ? "none" : "1px solid var(--color-border)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    filter: "grayscale(1)",
-                    overflow: "hidden",
+                    cursor: "pointer",
+                    transition: "all 150ms",
                   }}
                 >
-                  {currentTrack.art ? (
-                    <img
-                      src={currentTrack.art}
-                      alt={currentTrack.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
+                  {currentTrack && isFlagged(currentTrack?.id) ? (
+                    <Check size={12} strokeWidth={2.5} color="var(--color-text-inverse)" />
                   ) : (
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="1.2">
-                      <path d="M9 18V5l12-2v13" />
-                      <circle cx="6" cy="18" r="3" />
-                      <circle cx="18" cy="16" r="3" />
-                    </svg>
+                    <Plus size={12} strokeWidth={2} color="var(--color-text-muted)" />
                   )}
-                </div>
+                </button>
 
-                {/* Track info */}
-                <div style={{ textAlign: "center", marginBottom: "var(--space-6)", maxWidth: 400 }}>
-                  <div
-                    style={{
-                      fontSize: "var(--font-size-xl)",
-                      fontWeight: "var(--font-weight-black)",
-                      letterSpacing: "var(--letter-spacing-tight)",
-                      marginBottom: "var(--space-1)",
-                    }}
-                  >
-                    {currentTrack.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "var(--font-size-sm)",
-                      color: "var(--color-text-muted)",
-                    }}
-                  >
-                    {currentTrack.artist} — {currentTrack.album}
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div style={{ width: "100%", maxWidth: 400, marginBottom: "var(--space-6)" }}>
-                  <div
-                    style={{
-                      width: "100%",
-                      height: 3,
-                      background: "var(--color-border)",
-                      borderRadius: 2,
-                      cursor: "pointer",
-                      position: "relative",
-                    }}
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setProgress((e.clientX - rect.left) / rect.width);
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${progress * 100}%`,
-                        height: "100%",
-                        background: "var(--color-text)",
-                        borderRadius: 2,
-                        transition: "width 0.1s linear",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: "var(--space-1)",
-                      fontSize: "var(--font-size-2xs)",
-                      fontFamily: "var(--font-mono)",
-                      color: "var(--color-text-dim)",
-                    }}
-                  >
-                    <span>{formatTime(progress * currentTrack.duration)}</span>
-                    <span>{formatTime(currentTrack.duration)}</span>
-                  </div>
-                </div>
-
-                {/* Controls */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-                  <button
-                    onClick={() => flag(currentTrack)}
-                    title={isFlagged(currentTrack.id) ? "Flagged" : "Flag"}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "var(--radius-full)",
-                      background: isFlagged(currentTrack.id) ? "var(--color-text)" : "transparent",
-                      border: isFlagged(currentTrack.id) ? "none" : "1px solid var(--color-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      transition: `all var(--duration-fast) var(--ease-default)`,
-                    }}
-                  >
-                    {isFlagged(currentTrack.id) ? (
-                      <Check size={14} strokeWidth={2.5} color="var(--color-text-inverse)" />
-                    ) : (
-                      <Plus size={14} strokeWidth={2} color="var(--color-text-muted)" />
-                    )}
-                  </button>
-
-                  <button onClick={prev} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
-                    <SkipBack size={20} strokeWidth={1.8} color="var(--color-text-secondary)" />
-                  </button>
-
-                  <button
-                    onClick={toggle}
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: "var(--radius-full)",
-                      background: "var(--color-bg-inverse)",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {isPlaying ? (
-                      <Pause size={22} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" />
-                    ) : (
-                      <Play size={22} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 2 }} />
-                    )}
-                  </button>
-
-                  <button onClick={skip} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
-                    <SkipForward size={20} strokeWidth={1.8} color="var(--color-text-secondary)" />
-                  </button>
-
-                  <button style={{ background: "transparent", border: "none", cursor: "pointer", padding: 4 }}>
-                    <Shuffle size={16} strokeWidth={1.8} color="var(--color-text-dim)" />
-                  </button>
-                </div>
+                <button onClick={prev} style={bareBtn}>
+                  <SkipBack size={18} strokeWidth={1.8} color="var(--color-text-secondary)" />
+                </button>
+                <button
+                  onClick={toggle}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "var(--radius-full)",
+                    background: "var(--color-bg-inverse)",
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  {isPlaying ? (
+                    <PauseLines size={18} strokeWidth={2.5} color="var(--color-text-inverse)" />
+                  ) : (
+                    <Play size={18} strokeWidth={2.5} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 2 }} />
+                  )}
+                </button>
+                <button onClick={skip} style={bareBtn}>
+                  <SkipForward size={18} strokeWidth={1.8} color="var(--color-text-secondary)" />
+                </button>
               </div>
-            )}
+            </div>
+          </div>
 
-            {/* Queue view */}
-            {view === "queue" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6)" }}>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  Now playing
-                </div>
-                {currentTrack && (
-                  <TrackRow
-                    track={currentTrack}
-                    index={0}
-                    onPlay={playTrack}
-                    onFlag={flag}
-                    isFlagged={isFlagged(currentTrack.id)}
-                    isActive={true}
-                  />
-                )}
-                <div
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    color: "var(--color-text-muted)",
-                    marginTop: "var(--space-6)",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  Up next
-                </div>
-                {queue.map((track, i) => (
-                  <TrackRow
-                    key={track.id}
-                    track={track}
-                    index={i + 1}
-                    onPlay={playTrack}
-                    onFlag={flag}
-                    isFlagged={isFlagged(track.id)}
-                    isActive={false}
-                  />
-                ))}
-                {queue.length === 0 && (
-                  <div style={{ padding: "var(--space-8)", textAlign: "center", color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)" }}>
-                    Queue is empty
-                  </div>
-                )}
-              </div>
-            )}
+          {/* ═══ CRATE + SET ═══ */}
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-            {/* Mixes view */}
-            {view === "mixes" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6)" }}>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "var(--space-4)",
-                  }}
-                >
-                  Your mixes
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
-                  {playlists.map((pl) => (
+            {/* THE CRATE — 4x4 pad grid */}
+            <div
+              style={{
+                flex: 1,
+                padding: "var(--space-5) var(--space-8)",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-3)",
+              }}
+            >
+              <Label>Crate</Label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: 6,
+                  maxWidth: 520,
+                }}
+              >
+                {pads.map((track, i) => {
+                  const feat = track ? audioFeatures[track.id] : null;
+                  const isActive = track && currentTrack?.id === track.id;
+                  return (
                     <button
-                      key={pl.id}
+                      key={i}
+                      onClick={() => track && playTrack(track)}
                       style={{
-                        padding: "var(--space-5) var(--space-4)",
-                        background: "var(--color-bg-elevated)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-md)",
-                        cursor: "pointer",
-                        textAlign: "left",
+                        aspectRatio: "1",
+                        background: isActive
+                          ? "var(--color-bg-inverse)"
+                          : track
+                            ? "var(--color-bg-elevated)"
+                            : "transparent",
+                        border: track
+                          ? isActive
+                            ? "none"
+                            : "1px solid var(--color-border)"
+                          : "1px dashed var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        cursor: track ? "pointer" : "default",
+                        padding: "var(--space-2)",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
                         fontFamily: "var(--font-primary)",
+                        transition: "all 120ms",
+                        position: "relative",
+                        overflow: "hidden",
+                        minHeight: 0,
                       }}
                     >
-                      <div
-                        style={{
-                          width: "100%",
-                          aspectRatio: "1",
-                          borderRadius: "var(--radius-sm)",
-                          background: "var(--color-bg-inverse)",
-                          marginBottom: "var(--space-3)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="1.2">
-                          <path d="M9 18V5l12-2v13" />
-                          <circle cx="6" cy="18" r="3" />
-                          <circle cx="18" cy="16" r="3" />
-                        </svg>
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "var(--font-size-sm)",
-                          fontWeight: "var(--font-weight-semibold)",
-                          marginBottom: "var(--space-1)",
-                        }}
-                      >
-                        {pl.name}
-                      </div>
-                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                        {pl.description}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-mono)",
-                          color: "var(--color-text-dim)",
-                          marginTop: "var(--space-2)",
-                        }}
-                      >
-                        {pl.tracks} tracks
-                      </div>
+                      {track ? (
+                        <>
+                          {/* Pad number */}
+                          <div
+                            style={{
+                              fontSize: 8,
+                              fontFamily: "var(--font-mono)",
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                              opacity: 0.6,
+                            }}
+                          >
+                            {String(i + 1).padStart(2, "0")}
+                          </div>
+                          {/* Track name */}
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: "var(--font-weight-semibold)",
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                              lineHeight: 1.2,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              textAlign: "left",
+                              width: "100%",
+                            }}
+                          >
+                            {track.title}
+                          </div>
+                          {/* BPM in corner */}
+                          {feat && (
+                            <div
+                              style={{
+                                fontSize: 8,
+                                fontFamily: "var(--font-mono)",
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                                opacity: 0.7,
+                              }}
+                            >
+                              {feat.bpm}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div
+                          style={{
+                            fontSize: 8,
+                            fontFamily: "var(--font-mono)",
+                            color: "var(--color-text-dim)",
+                            opacity: 0.4,
+                            alignSelf: "center",
+                            marginTop: "auto",
+                            marginBottom: "auto",
+                          }}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </div>
+                      )}
                     </button>
-                  ))}
-
-                  {/* AI generate new mix */}
-                  <button
-                    style={{
-                      padding: "var(--space-5) var(--space-4)",
-                      background: "transparent",
-                      border: "1px dashed var(--color-border)",
-                      borderRadius: "var(--radius-md)",
-                      cursor: "pointer",
-                      textAlign: "center",
-                      fontFamily: "var(--font-primary)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "var(--space-2)",
-                      color: "var(--color-text-muted)",
-                    }}
-                  >
-                    <Plus size={20} strokeWidth={1.5} />
-                    <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>
-                      Ask Chappie to build a mix
-                    </div>
-                    <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                      From your flags, mood, or vibe
-                    </div>
-                  </button>
-                </div>
+                  );
+                })}
               </div>
-            )}
 
-            {/* Flagged view */}
-            {view === "flagged" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6)" }}>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  Flagged tracks ({flagged.length})
-                </div>
-                {flagged.length > 0 ? (
-                  <>
-                    {flagged.map((track, i) => (
-                      <TrackRow
-                        key={track.id}
-                        track={track}
-                        index={i}
-                        onPlay={playTrack}
-                        onFlag={flag}
-                        isFlagged={true}
-                        isActive={currentTrack?.id === track.id}
-                      />
-                    ))}
-                    <div style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+              {/* Mixes section below crate */}
+              {playlists.length > 0 && (
+                <>
+                  <Label style={{ marginTop: "var(--space-4)" }}>Mixes</Label>
+                  <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                    {playlists.map((pl) => (
                       <button
+                        key={pl.id}
                         style={{
-                          padding: "var(--space-2) var(--space-4)",
-                          background: "var(--color-bg-inverse)",
-                          color: "var(--color-text-inverse)",
-                          border: "none",
+                          padding: "var(--space-2) var(--space-3)",
+                          background: "var(--color-bg-elevated)",
+                          border: "1px solid var(--color-border-light)",
                           borderRadius: "var(--radius-sm)",
-                          fontSize: "var(--font-size-xs)",
-                          fontWeight: "var(--font-weight-semibold)",
-                          fontFamily: "var(--font-primary)",
                           cursor: "pointer",
+                          fontFamily: "var(--font-primary)",
+                          textAlign: "left",
                         }}
                       >
-                        Build a mix from these
+                        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>
+                          {pl.name}
+                        </div>
+                        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                          {pl.tracks} trk
+                        </div>
                       </button>
-                    </div>
-                  </>
-                ) : (
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* THE SET — draggable setlist rail */}
+            <div
+              style={{
+                width: 260,
+                flexShrink: 0,
+                borderLeft: "1px solid var(--color-border-light)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "var(--space-5) var(--space-4)",
+                  borderBottom: "1px solid var(--color-border-light)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Label>Set · {flagged.length}</Label>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                {flagged.length === 0 && (
                   <div
                     style={{
-                      padding: "var(--space-16)",
+                      padding: "var(--space-10) var(--space-4)",
                       textAlign: "center",
                     }}
                   >
-                    <Plus size={24} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: 8 }} />
-                    <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
-                      No flagged tracks yet
-                    </div>
+                    <Plus size={16} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: 6 }} />
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                      Hit + on any track to save it here
+                      Flag tracks to build your set
                     </div>
                   </div>
                 )}
+
+                {flagged.map((track, i) => {
+                  const feat = audioFeatures[track.id];
+                  const isActive = currentTrack?.id === track.id;
+                  const isDragTarget = dragOverIdx === i && dragIdx !== i;
+                  return (
+                    <div
+                      key={track.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, i)}
+                      onDragOver={(e) => handleDragOver(e, i)}
+                      onDrop={(e) => handleDrop(e, i)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => playTrack(track)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-2)",
+                        padding: "var(--space-2) var(--space-4)",
+                        borderBottom: "1px solid var(--color-border-light)",
+                        borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
+                        background: isActive ? "var(--color-bg-alt)" : "transparent",
+                        cursor: "grab",
+                        transition: "background 100ms",
+                        userSelect: "none",
+                      }}
+                    >
+                      {/* Index */}
+                      <div
+                        style={{
+                          width: 16,
+                          fontSize: 9,
+                          fontFamily: "var(--font-mono)",
+                          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
+                          textAlign: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isActive ? (
+                          <div style={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "flex-end", height: 10 }}>
+                            {[0, 1, 2].map((j) => (
+                              <div
+                                key={j}
+                                style={{
+                                  width: 1.5,
+                                  height: 3 + Math.random() * 7,
+                                  background: "var(--color-text)",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          String(i + 1).padStart(2, "0")
+                        )}
+                      </div>
+
+                      {/* Track info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                            color: "var(--color-text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {track.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 9,
+                            color: "var(--color-text-dim)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {track.artist}
+                        </div>
+                      </div>
+
+                      {/* BPM + Key */}
+                      <div style={{ flexShrink: 0, textAlign: "right" }}>
+                        {feat ? (
+                          <>
+                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>
+                              {feat.bpm}
+                            </div>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                              {feat.key}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>···</div>
+                        )}
+                      </div>
+
+                      {/* Remove from set */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          flag(track);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 2,
+                          color: "var(--color-text-dim)",
+                          display: "flex",
+                          flexShrink: 0,
+                          opacity: 0.5,
+                        }}
+                      >
+                        <X size={10} strokeWidth={2} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
