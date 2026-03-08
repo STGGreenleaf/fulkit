@@ -141,7 +141,7 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly", "notion"];
+const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly"];
 
 const REAL_INTEGRATIONS = ["github", "spotify", "google", "numbrly"];
 
