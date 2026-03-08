@@ -97,7 +97,9 @@ export default function MiniPlayer({ compact }) {
             }}
             ref={(el) => {
               if (el && el.parentElement) {
-                el.style.setProperty("--_vol-h", el.parentElement.offsetHeight + "px");
+                // Shorten slider so its top aligns with the flag button's top edge
+                const pad = parseFloat(getComputedStyle(el.parentElement.parentElement).getPropertyValue("--space-4") || "16");
+                el.style.setProperty("--_vol-h", (el.parentElement.offsetHeight - pad) + "px");
               }
             }}
           />
