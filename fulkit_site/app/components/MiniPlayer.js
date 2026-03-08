@@ -26,6 +26,8 @@ export default function MiniPlayer({ compact }) {
   const [enabled, setEnabled] = useState(true);
   const [dragging, setDragging] = useState(false);
   const localVolume = useRef(volume);
+  const volContainerRef = useRef(null);
+  const volInputRef = useRef(null);
 
   useEffect(() => {
     setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
@@ -37,6 +39,15 @@ export default function MiniPlayer({ compact }) {
   useEffect(() => {
     if (!dragging) localVolume.current = volume;
   }, [volume, dragging]);
+
+  // Size vertical slider to match container height
+  useEffect(() => {
+    const el = volContainerRef.current;
+    const input = volInputRef.current;
+    if (!el || !input) return;
+    const h = el.offsetHeight;
+    input.style.width = h + "px";
+  });
 
   if (!enabled || !connected || !currentTrack) return null;
 
@@ -61,8 +72,9 @@ export default function MiniPlayer({ compact }) {
         }}
       >
         {/* Vertical volume slider — left edge */}
-        <div style={{ display: "flex", alignItems: "center", width: 14, flexShrink: 0 }}>
+        <div ref={volContainerRef} style={{ position: "relative", width: 14, flexShrink: 0 }}>
           <input
+            ref={volInputRef}
             type="range"
             min={0}
             max={100}
@@ -79,18 +91,20 @@ export default function MiniPlayer({ compact }) {
               setVolume(v);
             }}
             style={{
-              writingMode: "vertical-lr",
-              direction: "rtl",
-              width: 3,
-              height: "100%",
+              position: "absolute",
+              bottom: 0,
+              left: 7,
+              height: 3,
               WebkitAppearance: "none",
               appearance: "none",
               background: "var(--color-border)",
               borderRadius: 0,
               outline: "none",
               cursor: "pointer",
-              margin: "0 auto",
+              margin: 0,
               padding: 0,
+              transformOrigin: "bottom left",
+              transform: "rotate(-90deg)",
             }}
           />
         </div>
