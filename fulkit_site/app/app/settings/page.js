@@ -587,28 +587,23 @@ function SourcesTab() {
     window.location.href = "/api/github/connect";
   }
 
-  async function connectSpotify() {
+  function connectSpotify() {
     if (isDev) { setSpotifyConnected(true); return; }
-    try {
-      // Refresh session to get a guaranteed-fresh token
-      const { data, error } = await supabase.auth.refreshSession();
-      const token = data?.session?.access_token;
-      if (error || !token) {
-        // Fallback: try getSession in case refreshSession fails
-        const { data: fallback } = await supabase.auth.getSession();
-        const fbToken = fallback?.session?.access_token;
-        if (!fbToken) {
-          alert("Please sign in again to connect Spotify.");
-          return;
-        }
-        window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(fbToken);
-        return;
-      }
-      window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(token);
-    } catch (err) {
-      console.error("[spotify] connect error:", err);
-      alert("Something went wrong connecting Spotify. Please try signing out and back in.");
+    if (accessToken) {
+      window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
+      return;
     }
+    // No token in context — try to grab one synchronously from supabase cache
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(token);
+      } else {
+        alert("No active session. Please sign out and sign back in, then try again.");
+      }
+    }).catch(() => {
+      alert("Session error. Please sign out and sign back in.");
+    });
   }
 
   async function disconnectGitHub() {
