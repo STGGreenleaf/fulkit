@@ -363,6 +363,48 @@ function Row({ label, value, action, actionLabel, danger }) {
   );
 }
 
+function CardHeader({ logo, name, subtitle, isExpanded, onToggle }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        width: "100%",
+        padding: "var(--space-3) var(--space-4)",
+        background: hovered ? "var(--color-accent-soft)" : "transparent",
+        border: "none",
+        cursor: "pointer",
+        fontFamily: "var(--font-primary)",
+        textAlign: "left",
+        transition: "background 100ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
+      <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {logo}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{name}</div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{subtitle}</div>
+      </div>
+      <ChevronRight
+        size={14}
+        strokeWidth={2}
+        style={{
+          color: hovered ? "var(--color-text-secondary)" : "var(--color-text-dim)",
+          transition: "transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), color 100ms cubic-bezier(0.22, 1, 0.36, 1)",
+          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+          flexShrink: 0,
+        }}
+      />
+    </button>
+  );
+}
+
 function AccountTab() {
   const { user, profile, signOut, isOwner } = useAuth();
   const memberSince = profile?.created_at
@@ -559,61 +601,34 @@ function SourcesTab() {
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
-  // Smooth expand/collapse drawer
+  // grid-template-rows drawer — no JS measurement, no flash
   const Drawer = ({ open, children }) => {
-    const ref = useRef(null);
-    const [height, setHeight] = useState(0);
+    const [overflow, setOverflow] = useState("hidden");
     useEffect(() => {
-      if (open && ref.current) {
-        setHeight(ref.current.scrollHeight);
-      } else {
-        setHeight(0);
+      if (open) {
+        const t = setTimeout(() => setOverflow("visible"), 300);
+        return () => clearTimeout(t);
       }
-    }, [open, children]);
+      setOverflow("hidden");
+    }, [open]);
     return (
-      <div style={{ maxHeight: height, overflow: "hidden", transition: "max-height 200ms ease" }}>
-        <div ref={ref}>
-          {children}
-        </div>
+      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
+        <div style={{ overflow, minHeight: 0 }}>{children}</div>
       </div>
     );
   };
 
-  // Shared expandable card header
-  const cardHeader = (logo, name, subtitle, isExpanded, onToggle) => (
-    <button
-      onClick={onToggle}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-3)",
-        width: "100%",
-        padding: "var(--space-3) var(--space-4)",
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-        fontFamily: "var(--font-primary)",
-        textAlign: "left",
-      }}
-    >
-      <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {logo}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{name}</div>
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{subtitle}</div>
-      </div>
-      <ChevronRight
-        size={14}
-        strokeWidth={2}
-        style={{
-          color: "var(--color-text-dim)",
-          transition: "transform var(--duration-fast) var(--ease-default)",
-          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-          flexShrink: 0,
-        }}
-      />
-    </button>
+  // Staggered fade-in for drawer content rows
+  const DrawerItem = ({ index = 0, visible, children }) => (
+    <div style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(4px)",
+      transition: visible
+        ? `opacity 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms, transform 200ms cubic-bezier(0.22, 1, 0.36, 1) ${100 + Math.min(index, 7) * 40}ms`
+        : "opacity 150ms cubic-bezier(0.4, 0, 1, 1), transform 150ms cubic-bezier(0.4, 0, 1, 1)",
+    }}>
+      {children}
+    </div>
   );
 
   // Shared checkbox row
@@ -709,71 +724,76 @@ function SourcesTab() {
             {/* GitHub */}
             {githubConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
-                {cardHeader(
-                  SOURCE_LOGOS.github,
-                  "GitHub",
-                  githubActiveRepos.length > 0
+                <CardHeader
+                  logo={SOURCE_LOGOS.github}
+                  name="GitHub"
+                  subtitle={githubActiveRepos.length > 0
                     ? `${githubActiveRepos.length} active source${githubActiveRepos.length !== 1 ? "s" : ""} of ${githubRepos.length}`
-                    : `${githubRepos.length} repos accessible`,
-                  githubExpanded,
-                  () => setGithubExpanded(!githubExpanded)
-                )}
+                    : `${githubRepos.length} repos accessible`}
+                  isExpanded={githubExpanded}
+                  onToggle={() => setGithubExpanded(!githubExpanded)}
+                />
                 <Drawer open={githubExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     {githubRepos.length === 0 && (
-                      <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                        Loading repos...
-                      </div>
+                      <DrawerItem index={0} visible={githubExpanded}>
+                        <div style={{ padding: "var(--space-4)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                          Loading repos...
+                        </div>
+                      </DrawerItem>
                     )}
-                    {githubRepos.map((repo) => {
+                    {githubRepos.map((repo, i) => {
                       const isActive = githubActiveRepos.includes(repo.full_name);
                       return (
-                        <button
-                          key={repo.full_name}
-                          onClick={() => toggleGithubRepo(repo.full_name)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "var(--space-3)",
-                            width: "100%",
-                            padding: "var(--space-2-5) var(--space-4)",
-                            background: isActive ? "var(--color-bg-alt)" : "transparent",
-                            border: "none",
-                            borderTop: "1px solid var(--color-border-light)",
-                            cursor: "pointer",
-                            fontFamily: "var(--font-primary)",
-                            textAlign: "left",
-                            transition: "background var(--duration-fast) var(--ease-default)",
-                          }}
-                        >
-                          <div
+                        <DrawerItem key={repo.full_name} index={i} visible={githubExpanded}>
+                          <button
+                            onClick={() => toggleGithubRepo(repo.full_name)}
                             style={{
-                              width: 16,
-                              height: 16,
-                              borderRadius: "var(--radius-xs)",
-                              border: isActive ? "none" : "1px solid var(--color-border)",
-                              background: isActive ? "var(--color-accent)" : "transparent",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                              transition: "all var(--duration-fast) var(--ease-default)",
+                              gap: "var(--space-3)",
+                              width: "100%",
+                              padding: "var(--space-2-5) var(--space-4)",
+                              background: isActive ? "var(--color-bg-alt)" : "transparent",
+                              border: "none",
+                              borderTop: "1px solid var(--color-border-light)",
+                              cursor: "pointer",
+                              fontFamily: "var(--font-primary)",
+                              textAlign: "left",
+                              transition: "background var(--duration-fast) var(--ease-default)",
                             }}
                           >
-                            {isActive && <Check size={10} strokeWidth={3} style={{ color: "var(--color-text-inverse)" }} />}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: isActive ? "var(--color-text)" : "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {repo.name}
+                            <div
+                              style={{
+                                width: 16,
+                                height: 16,
+                                borderRadius: "var(--radius-xs)",
+                                border: isActive ? "none" : "1px solid var(--color-border)",
+                                background: isActive ? "var(--color-accent)" : "transparent",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                transition: "all var(--duration-fast) var(--ease-default)",
+                              }}
+                            >
+                              {isActive && <Check size={10} strokeWidth={3} style={{ color: "var(--color-text-inverse)" }} />}
                             </div>
-                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                              {repo.full_name}{repo.private ? " · private" : ""}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: isActive ? "var(--color-text)" : "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {repo.name}
+                              </div>
+                              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                                {repo.full_name}{repo.private ? " · private" : ""}
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
+                        </DrawerItem>
                       );
                     })}
-                    {disconnectFooter(disconnectGitHub, githubDisconnecting)}
+                    <DrawerItem index={githubRepos.length} visible={githubExpanded}>
+                      {disconnectFooter(disconnectGitHub, githubDisconnecting)}
+                    </DrawerItem>
                   </div>
                 </Drawer>
               </Card>
@@ -782,17 +802,21 @@ function SourcesTab() {
             {/* Spotify */}
             {spotifyConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
-                {cardHeader(
-                  SOURCE_LOGOS.spotify,
-                  "Spotify",
-                  spotifyPlayerEnabled ? "Player active" : "Player off",
-                  spotifyExpanded,
-                  () => setSpotifyExpanded(!spotifyExpanded)
-                )}
+                <CardHeader
+                  logo={SOURCE_LOGOS.spotify}
+                  name="Spotify"
+                  subtitle={spotifyPlayerEnabled ? "Player active" : "Player off"}
+                  isExpanded={spotifyExpanded}
+                  onToggle={() => setSpotifyExpanded(!spotifyExpanded)}
+                />
                 <Drawer open={spotifyExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                    {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
-                    {disconnectFooter(() => disconnect("spotify"), false)}
+                    <DrawerItem index={0} visible={spotifyExpanded}>
+                      {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={spotifyExpanded}>
+                      {disconnectFooter(() => disconnect("spotify"), false)}
+                    </DrawerItem>
                   </div>
                 </Drawer>
               </Card>
@@ -803,16 +827,18 @@ function SourcesTab() {
               const isExpanded = expanded[src.id];
               return (
                 <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
-                  {cardHeader(
-                    SOURCE_LOGOS[src.id],
-                    src.name,
-                    src.cat,
-                    isExpanded,
-                    () => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }))
-                  )}
+                  <CardHeader
+                    logo={SOURCE_LOGOS[src.id]}
+                    name={src.name}
+                    subtitle={src.cat}
+                    isExpanded={isExpanded}
+                    onToggle={() => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }))}
+                  />
                   <Drawer open={isExpanded}>
                     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                      {disconnectFooter(() => disconnect(src.id), false)}
+                      <DrawerItem index={0} visible={isExpanded}>
+                        {disconnectFooter(() => disconnect(src.id), false)}
+                      </DrawerItem>
                     </div>
                   </Drawer>
                 </Card>
