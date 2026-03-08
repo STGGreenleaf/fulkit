@@ -532,18 +532,6 @@ function SourcesTab() {
   // Refresh GitHub/Spotify status if we just came back from OAuth
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // Print debug from previous Spotify connect attempt
-    const spDebug = localStorage.getItem("sp_debug");
-    const spNav = localStorage.getItem("sp_debug_nav");
-    const spFallback = localStorage.getItem("sp_debug_fallback");
-    const spErr = localStorage.getItem("sp_debug_error");
-    if (spDebug || spNav || spFallback || spErr) {
-      console.log("[spotify debug]", { spDebug, spNav, spFallback, spErr, url: window.location.href });
-      localStorage.removeItem("sp_debug");
-      localStorage.removeItem("sp_debug_nav");
-      localStorage.removeItem("sp_debug_fallback");
-      localStorage.removeItem("sp_debug_error");
-    }
     const params = new URLSearchParams(window.location.search);
     if (params.get("gh") === "connected" && accessToken) {
       checkGitHub(accessToken);
@@ -600,24 +588,19 @@ function SourcesTab() {
   }
 
   function connectSpotify() {
-    const debug = { isDev, hasAccessToken: !!accessToken, tokenLen: accessToken?.length };
-    localStorage.setItem("sp_debug", JSON.stringify(debug));
     if (isDev) { setSpotifyConnected(true); return; }
     if (accessToken) {
-      localStorage.setItem("sp_debug_nav", "/api/spotify/connect?token=<" + accessToken.length + " chars>");
       window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
-      localStorage.setItem("sp_debug_fallback", JSON.stringify({ hasSession: !!data?.session, hasToken: !!token }));
       if (token) {
         window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(token);
       } else {
         alert("No active session. Please sign out and sign back in, then try again.");
       }
-    }).catch((err) => {
-      localStorage.setItem("sp_debug_error", err.message);
+    }).catch(() => {
       alert("Session error. Please sign out and sign back in.");
     });
   }
@@ -648,7 +631,6 @@ function SourcesTab() {
   );
 
   const connect = (id) => {
-    console.log("[sources] connect called:", id);
     if (id === "github") { connectGitHub(); return; }
     if (id === "spotify") { connectSpotify(); return; }
     setConnected((prev) => [...prev, id]);
