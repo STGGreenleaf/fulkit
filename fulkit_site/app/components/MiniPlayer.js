@@ -108,8 +108,7 @@ export default function MiniPlayer({ compact }) {
             }}
             ref={(el) => {
               if (el && el.parentElement) {
-                const pad = parseFloat(getComputedStyle(el.parentElement.parentElement).getPropertyValue("--space-4") || "16");
-                el.style.setProperty("--_vol-h", (el.parentElement.offsetHeight - pad) + "px");
+                el.style.setProperty("--_vol-h", el.parentElement.offsetHeight + "px");
               }
             }}
           />
@@ -120,16 +119,16 @@ export default function MiniPlayer({ compact }) {
           .fulkit-vol-v::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
         `}</style>
 
-        {/* Controls column — all same size, even spacing */}
+        {/* Controls column — tight, pushed to bottom */}
         <div
           style={{
             flex: 1,
-            padding: "var(--space-5) 0",
+            padding: 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--space-4)",
+            justifyContent: "flex-end",
+            gap: "var(--space-2)",
           }}
         >
           {/* Flag — circled */}
