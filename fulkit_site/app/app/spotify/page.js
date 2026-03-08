@@ -20,170 +20,233 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-// Live signal meter — listens via mic, draws waveform on canvas
-function SignalMeter({ width = 400, height = 40, active = false }) {
+// Live terrain visualizer — layered frequency waveforms via mic
+// Inspired by generative waveform art: stacks dozens of captures
+// into a mountain/terrain effect with depth from opacity layering
+const TERRAIN_LAYERS = 40;
+const TERRAIN_POINTS = 80;
+
+function SignalTerrain({ height = 220 }) {
   const canvasRef = useRef(null);
-  const ctxRef = useRef(null); // AudioContext
+  const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
   const animRef = useRef(null);
   const streamRef = useRef(null);
+  const historyRef = useRef([]);
   const [listening, setListening] = useState(false);
   const [denied, setDenied] = useState(false);
+  const containerRef = useRef(null);
+  const [canvasWidth, setCanvasWidth] = useState(600);
 
-  // Start/stop mic capture
+  // Responsive width
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setCanvasWidth(Math.floor(entry.contentRect.width));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const toggleMic = useCallback(async () => {
     if (listening) {
-      // Stop
       if (animRef.current) cancelAnimationFrame(animRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-      if (ctxRef.current) ctxRef.current.close();
-      ctxRef.current = null;
+      if (audioCtxRef.current) audioCtxRef.current.close();
+      audioCtxRef.current = null;
       analyserRef.current = null;
       streamRef.current = null;
+      historyRef.current = [];
       setListening(false);
-      // Clear canvas
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Draw flat line
-        ctx.strokeStyle = getComputedStyle(canvas).getPropertyValue("--color-border").trim() || "#3a3835";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height / 2);
-        ctx.lineTo(canvas.width, canvas.height / 2);
-        ctx.stroke();
-      }
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       streamRef.current = stream;
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      ctxRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.85;
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 4096;
+      analyser.smoothingTimeConstant = 0.82;
       source.connect(analyser);
       analyserRef.current = analyser;
+      historyRef.current = [];
       setListening(true);
       setDenied(false);
-      draw();
     } catch {
       setDenied(true);
     }
   }, [listening]);
 
-  // Animation loop — draw waveform
-  function draw() {
-    const canvas = canvasRef.current;
-    const analyser = analyserRef.current;
-    if (!canvas || !analyser) return;
+  // Render loop
+  useEffect(() => {
+    if (!listening || !analyserRef.current) return;
 
-    const ctx = canvas.getContext("2d");
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+    const analyser = analyserRef.current;
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
 
     const render = () => {
       animRef.current = requestAnimationFrame(render);
-      analyser.getByteTimeDomainData(dataArray);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
 
-      // Get computed color
-      const style = getComputedStyle(canvas);
-      const lineColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
-      const dimColor = style.getPropertyValue("--color-border").trim() || "#3a3835";
+      // Capture frequency data
+      analyser.getByteFrequencyData(freqData);
 
-      // Center line (dim)
-      ctx.strokeStyle = dimColor;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height / 2);
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-
-      // Waveform
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-        x += sliceWidth;
+      // Downsample to TERRAIN_POINTS — weighted toward low/mid freqs
+      const points = [];
+      for (let i = 0; i < TERRAIN_POINTS; i++) {
+        // Logarithmic mapping — more resolution in lows
+        const t = i / TERRAIN_POINTS;
+        const freqIdx = Math.floor(Math.pow(t, 1.6) * freqData.length * 0.6);
+        const spread = Math.max(1, Math.floor(freqData.length * 0.01));
+        let sum = 0;
+        for (let j = -spread; j <= spread; j++) {
+          const idx = Math.min(freqData.length - 1, Math.max(0, freqIdx + j));
+          sum += freqData[idx];
+        }
+        points.push(sum / (spread * 2 + 1) / 255);
       }
 
-      ctx.lineTo(canvas.width, canvas.height / 2);
+      // Push to history
+      historyRef.current.push(points);
+      if (historyRef.current.length > TERRAIN_LAYERS) historyRef.current.shift();
+
+      // Get colors from CSS
+      const style = getComputedStyle(canvas);
+      const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
+
+      // Parse color for alpha manipulation
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [232, 230, 227];
+
+      ctx.clearRect(0, 0, w, h);
+
+      const layers = historyRef.current;
+      const centerY = h * 0.45;
+
+      // Draw each layer — oldest first, newest on top
+      for (let l = 0; l < layers.length; l++) {
+        const age = l / Math.max(1, layers.length - 1); // 0=oldest, 1=newest
+        const data = layers[l];
+
+        // Opacity: older layers very faint, newest more solid
+        const alpha = 0.015 + age * age * 0.12;
+        // Line width: newer = slightly thicker
+        const lw = 0.4 + age * 0.8;
+        // Vertical offset: older layers shifted up for depth
+        const yShift = (layers.length - 1 - l) * 1.2;
+
+        // === Upper waveform (mountains) ===
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const amp = data[i] * centerY * 0.9;
+          const y = centerY - amp - yShift;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            // Smooth curve between points
+            const prevX = ((i - 1) / (data.length - 1)) * w;
+            const cpX = (prevX + x) / 2;
+            const prevAmp = data[i - 1] * centerY * 0.9;
+            const prevY = centerY - prevAmp - yShift;
+            ctx.quadraticCurveTo(prevX + (x - prevX) * 0.5, prevY, cpX + (x - cpX) * 0.5, (prevY + y) / 2);
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+
+        // === Reflection (mirrored below, dimmer, compressed) ===
+        const refAlpha = alpha * 0.3;
+        const refShift = (layers.length - 1 - l) * 0.6;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${refAlpha})`;
+        ctx.lineWidth = lw * 0.6;
+        ctx.beginPath();
+
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const amp = data[i] * centerY * 0.45;
+          const y = centerY + amp + refShift;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Center line — thin, subtle
+      ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.06)`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(w, centerY);
       ctx.stroke();
     };
 
     render();
-  }
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [listening, canvasWidth]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-      if (ctxRef.current) ctxRef.current.close();
+      if (audioCtxRef.current) audioCtxRef.current.close();
     };
   }, []);
 
-  // Draw flat line on initial render
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || listening) return;
-    const ctx = canvas.getContext("2d");
-    const style = getComputedStyle(canvas);
-    const dimColor = style.getPropertyValue("--color-border").trim() || "#3a3835";
-    ctx.strokeStyle = dimColor;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height / 2);
-    ctx.lineTo(canvas.width, canvas.height / 2);
-    ctx.stroke();
-  }, [listening]);
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-        <Label style={{ margin: 0 }}>Signal</Label>
-        <button
-          onClick={toggleMic}
-          style={{
-            fontSize: 8,
-            fontFamily: "var(--font-mono)",
-            textTransform: "uppercase",
-            letterSpacing: "var(--letter-spacing-wider)",
-            color: listening ? "var(--color-text)" : "var(--color-text-dim)",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          {denied ? "denied" : listening ? "● live" : "off"}
-        </button>
-      </div>
+    <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
       <canvas
         ref={canvasRef}
-        width={width}
+        width={canvasWidth}
         height={height}
-        onClick={!listening ? toggleMic : undefined}
+        onClick={toggleMic}
         style={{
-          width,
+          width: "100%",
           height,
-          cursor: listening ? "default" : "pointer",
-          borderRadius: 2,
+          cursor: "pointer",
+          display: "block",
         }}
       />
+      {/* Label overlay */}
+      <button
+        onClick={toggleMic}
+        style={{
+          position: "absolute",
+          bottom: 6,
+          right: 8,
+          fontSize: 8,
+          fontFamily: "var(--font-mono)",
+          textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-wider)",
+          color: listening ? "var(--color-text)" : "var(--color-text-dim)",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          opacity: 0.6,
+        }}
+      >
+        {denied ? "mic denied" : listening ? "● live" : "tap to listen"}
+      </button>
     </div>
   );
 }
@@ -424,9 +487,6 @@ export default function SpotifyPage() {
                 </div>
               </div>
 
-              {/* Signal meter — live audio waveform via mic */}
-              <SignalMeter width={400} height={32} active={isPlaying} />
-
               {/* Progress */}
               <div style={{ maxWidth: 400 }}>
                 <div
@@ -538,6 +598,11 @@ export default function SpotifyPage() {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
+          <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+            <SignalTerrain height={200} />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
