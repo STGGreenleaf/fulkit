@@ -63,6 +63,121 @@ function compressConversation(messages, maxTokens = 80000) {
   ];
 }
 
+// Numbrly tool schemas — Claude can call these mid-conversation
+const NUMBRLY_TOOLS = [
+  {
+    name: "numbrly_summary",
+    description: "High-level business overview: build count, vendor count, margin stats, top vendors by spend, recent activity, alerts.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "numbrly_get_build",
+    description: "Get a specific build/product with full recipe, cost breakdown, margin, and pricing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Build name (e.g. 'Green Machine')" },
+        id: { type: "string", description: "Build ID. Use name OR id, not both." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "numbrly_get_component",
+    description: "Get a component/ingredient with current cost, vendor, and which builds use it.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Component name (e.g. 'Banana')" },
+        id: { type: "string", description: "Component ID. Use name OR id." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "numbrly_get_vendor",
+    description: "Get a vendor with all their components and pricing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Vendor name (e.g. 'Sysco')" },
+        id: { type: "string", description: "Vendor ID. Use name OR id." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "numbrly_search",
+    description: "Fuzzy search across all builds, components, vendors, and composites.",
+    input_schema: {
+      type: "object",
+      properties: {
+        q: { type: "string", description: "Search query" },
+      },
+      required: ["q"],
+    },
+  },
+  {
+    name: "numbrly_simulate_price",
+    description: "What-if: simulate changing a build's sale price. Returns new margin.",
+    input_schema: {
+      type: "object",
+      properties: {
+        build: { type: "string", description: "Build name or ID" },
+        price: { type: "number", description: "Hypothetical new price" },
+      },
+      required: ["build", "price"],
+    },
+  },
+  {
+    name: "numbrly_simulate_cost",
+    description: "What-if: simulate a component cost change. Returns affected builds and new margins.",
+    input_schema: {
+      type: "object",
+      properties: {
+        component: { type: "string", description: "Component name or ID" },
+        cost: { type: "number", description: "Hypothetical new cost per unit" },
+      },
+      required: ["component", "cost"],
+    },
+  },
+  {
+    name: "numbrly_target_margin",
+    description: "Calculate what price a build needs to hit a target margin percentage.",
+    input_schema: {
+      type: "object",
+      properties: {
+        build: { type: "string", description: "Build name or ID" },
+        margin: { type: "number", description: "Target margin percentage (e.g. 70)" },
+      },
+      required: ["build", "margin"],
+    },
+  },
+  {
+    name: "numbrly_list_builds",
+    description: "List all builds/products with names, prices, and margins.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "numbrly_list_alerts",
+    description: "Get active alerts: low stock, price changes, margin risks.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+];
+
+const TOOL_ACTION_MAP = {
+  numbrly_summary: "summary",
+  numbrly_get_build: "get_build",
+  numbrly_get_component: "get_component",
+  numbrly_get_vendor: "get_vendor",
+  numbrly_search: "search",
+  numbrly_simulate_price: "simulate_price",
+  numbrly_simulate_cost: "simulate_cost",
+  numbrly_target_margin: "target_margin",
+  numbrly_list_builds: "list_builds",
+  numbrly_list_alerts: "list_alerts",
+};
+
 export async function POST(request) {
   try {
     // Authenticate user via Supabase
@@ -187,17 +302,10 @@ export async function POST(request) {
       }
     }
 
-    // Inject Numbrly business context if connected
+    // Fetch Numbrly API key (needed for tool execution)
+    let nblKey = null;
     if (userId) {
-      try {
-        const nblKey = await getNumbrlyToken(userId);
-        if (nblKey) {
-          const nblData = await numbrlyFetch(nblKey, "fulkit_context");
-          if (nblData?.message) {
-            context.push({ title: "Numbrly (Business Data)", content: nblData.message });
-          }
-        }
-      } catch {}
+      nblKey = await getNumbrlyToken(userId);
     }
 
     // Build system prompt
@@ -219,17 +327,6 @@ export async function POST(request) {
       system += `\n\n## User's Notes & Context\nThe following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.\n\n${contextBlock}`;
     }
 
-    const streamOpts = {
-      model: config.model,
-      max_tokens: config.maxTokens,
-      system: system,
-      messages: compressed.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    };
-    const stream = anthropic.messages.stream(streamOpts);
-
     // Increment message count (Fül cap)
     if (userId) {
       getSupabaseAdmin()
@@ -248,20 +345,85 @@ export async function POST(request) {
         });
     }
 
+    const MAX_TOOL_ROUNDS = 5;
+    const baseOpts = {
+      model: config.model,
+      max_tokens: config.maxTokens,
+      system,
+      ...(nblKey ? { tools: NUMBRLY_TOOLS } : {}),
+    };
+
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-              );
+          let loopMessages = compressed.map((m) => ({
+            role: m.role,
+            content: m.content,
+          }));
+
+          for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            const stream = anthropic.messages.stream({
+              ...baseOpts,
+              messages: loopMessages,
+            });
+
+            // Stream text deltas to client
+            for await (const event of stream) {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta.type === "text_delta"
+              ) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                );
+              }
             }
+
+            const finalMessage = await stream.finalMessage();
+
+            // If Claude didn't request tools, we're done
+            if (finalMessage.stop_reason !== "tool_use") break;
+
+            // Execute each tool call via numbrlyFetch
+            const toolResults = [];
+            for (const block of finalMessage.content) {
+              if (block.type !== "tool_use") continue;
+              const action = TOOL_ACTION_MAP[block.name];
+              if (!action || !nblKey) {
+                toolResults.push({
+                  type: "tool_result",
+                  tool_use_id: block.id,
+                  content: JSON.stringify({ error: "Unknown tool" }),
+                  is_error: true,
+                });
+                continue;
+              }
+              try {
+                const result = await numbrlyFetch(nblKey, action, block.input || {});
+                toolResults.push({
+                  type: "tool_result",
+                  tool_use_id: block.id,
+                  content: JSON.stringify(result),
+                });
+              } catch (err) {
+                toolResults.push({
+                  type: "tool_result",
+                  tool_use_id: block.id,
+                  content: JSON.stringify({ error: err.message }),
+                  is_error: true,
+                });
+              }
+            }
+
+            // Feed results back for next round
+            loopMessages = [
+              ...loopMessages,
+              { role: "assistant", content: finalMessage.content },
+              { role: "user", content: toolResults },
+            ];
           }
+
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (err) {

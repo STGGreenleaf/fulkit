@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -40,6 +40,11 @@ export default function Chat() {
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [ghContext, setGhContext] = useState([]);
+  const [nblContext, setNblContext] = useState(null);
+  const [nblError, setNblError] = useState(false);
+  const [hoveredMsg, setHoveredMsg] = useState(null);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [showPins, setShowPins] = useState(false);
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -63,6 +68,22 @@ export default function Chat() {
     loadGhContext();
   }, [accessToken, githubConnected, isDev]);
 
+  // Load Numbrly business context once per session
+  useEffect(() => {
+    if (!accessToken || isDev) return;
+    fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.connected) return;
+        return fetch("/api/numbrly/context", { headers: { Authorization: `Bearer ${accessToken}` } });
+      })
+      .then((r) => (r?.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.message) setNblContext(data.message);
+      })
+      .catch(() => setNblError(true));
+  }, [accessToken, isDev]);
+
   // Load conversation list
   useEffect(() => {
     if (!user || isDev) return;
@@ -84,10 +105,10 @@ export default function Chat() {
     async function loadMessages() {
       const { data } = await supabase
         .from("messages")
-        .select("role, content, created_at")
+        .select("id, role, content, created_at, is_pinned")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
-      if (data) setMessages(data.map((m) => ({ role: m.role, content: m.content })));
+      if (data) setMessages(data.map((m) => ({ id: m.id, role: m.role, content: m.content, is_pinned: m.is_pinned })));
     }
     loadMessages();
   }, [conversationId, isDev]);
@@ -155,6 +176,47 @@ export default function Chat() {
     if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
   }
 
+  // Load pinned messages across all conversations
+  useEffect(() => {
+    if (!user || isDev) return;
+    loadPinnedMessages();
+  }, [user, isDev]);
+
+  async function loadPinnedMessages() {
+    const { data } = await supabase
+      .from("messages")
+      .select("id, content, created_at, pinned_at, conversation_id, conversations(title)")
+      .eq("is_pinned", true)
+      .order("pinned_at", { ascending: false })
+      .limit(50);
+    if (data) setPinnedMessages(data);
+  }
+
+  async function togglePin(msg) {
+    const newPinned = !msg.is_pinned;
+    await supabase
+      .from("messages")
+      .update({
+        is_pinned: newPinned,
+        pinned_at: newPinned ? new Date().toISOString() : null,
+      })
+      .eq("id", msg.id);
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, is_pinned: newPinned } : m))
+    );
+    loadPinnedMessages();
+  }
+
+  function exportMessage(msg) {
+    const blob = new Blob([msg.content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fulkit-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
@@ -209,6 +271,10 @@ export default function Chat() {
         .map((f) => f.path)
         .join("\n");
       context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
+    }
+    // Append Numbrly business context (fetched once on mount)
+    if (nblContext) {
+      context.push({ title: "Numbrly (Business Data)", content: nblContext });
     }
 
     // Use auth token from context (set during login)
@@ -319,7 +385,7 @@ export default function Chat() {
 
     setStreaming(false);
     abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles]);
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, nblContext]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -440,6 +506,29 @@ export default function Chat() {
                   <Search size={10} strokeWidth={2} />
                   {recalledNotes.length} recalled
                 </span>
+              )}
+
+              {/* Pins toggle */}
+              {!isDev && (
+                <button
+                  onClick={() => setShowPins(!showPins)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    fontSize: "var(--font-size-xs)",
+                    color: showPins ? "var(--color-text)" : "var(--color-text-muted)",
+                    background: showPins ? "var(--color-bg-alt)" : "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-primary)",
+                    padding: "var(--space-1) var(--space-2)",
+                    borderRadius: "var(--radius-sm)",
+                  }}
+                >
+                  <Pin size={12} strokeWidth={2} />
+                  Pins
+                </button>
               )}
 
               {/* History toggle */}
@@ -564,7 +653,9 @@ export default function Chat() {
 
                 {messages.map((msg, i) => (
                   <div
-                    key={i}
+                    key={msg.id || i}
+                    onMouseEnter={() => setHoveredMsg(i)}
+                    onMouseLeave={() => setHoveredMsg(null)}
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -610,6 +701,49 @@ export default function Chat() {
                         />
                       )}
                     </div>
+                    {/* Pin + Export actions — assistant messages, on hover or if pinned */}
+                    {msg.role === "assistant" && (hoveredMsg === i || msg.is_pinned) && !streaming && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "var(--space-1)",
+                          alignSelf: "flex-end",
+                          marginTop: 2,
+                        }}
+                      >
+                        <button
+                          onClick={() => togglePin(msg)}
+                          title={msg.is_pinned ? "Unpin" : "Pin"}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 4,
+                            color: msg.is_pinned ? "var(--color-text)" : "var(--color-text-dim)",
+                            display: "flex",
+                            opacity: hoveredMsg === i ? 1 : 0.5,
+                          }}
+                        >
+                          <Pin size={13} strokeWidth={2} />
+                        </button>
+                        {hoveredMsg === i && (
+                          <button
+                            onClick={() => exportMessage(msg)}
+                            title="Export"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 4,
+                              color: "var(--color-text-dim)",
+                              display: "flex",
+                            }}
+                          >
+                            <Download size={13} strokeWidth={2} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -782,6 +916,27 @@ export default function Chat() {
                 </div>
               )}
 
+              {/* Numbrly error */}
+              {nblError && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-dim)",
+                    }}
+                  >
+                    Numbrly context unavailable
+                  </span>
+                </div>
+              )}
+
               {/* Input */}
               <div
                 style={{
@@ -891,6 +1046,80 @@ export default function Chat() {
                 </div>
               </div>
             </div>
+
+            {/* Pins panel */}
+            {showPins && (
+              <>
+                <div style={{ width: 1, background: "var(--color-border-light)", flexShrink: 0 }} />
+                <div
+                  style={{
+                    width: 260,
+                    overflowY: "auto",
+                    padding: "var(--space-3)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--space-2)",
+                  }}
+                >
+                  {pinnedMessages.length === 0 && (
+                    <p
+                      style={{
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text-dim)",
+                        textAlign: "center",
+                        padding: "var(--space-4) 0",
+                      }}
+                    >
+                      No pinned responses yet
+                    </p>
+                  )}
+                  {pinnedMessages.map((pin) => (
+                    <button
+                      key={pin.id}
+                      onClick={() => {
+                        openConversation({ id: pin.conversation_id });
+                        setShowPins(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        padding: "var(--space-2) var(--space-2-5)",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--color-border-light)",
+                        background: "transparent",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        width: "100%",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-xs)",
+                          color: "var(--color-text)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {pin.content}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-2xs)",
+                          color: "var(--color-text-dim)",
+                        }}
+                      >
+                        {pin.conversations?.title || "Chat"} &middot; {timeAgo(pin.pinned_at)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* History panel — right side, resizable */}
             {showHistory && (
