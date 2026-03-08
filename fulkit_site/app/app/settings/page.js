@@ -588,20 +588,24 @@ function SourcesTab() {
   }
 
   function connectSpotify() {
-    if (isDev) { setSpotifyConnected(true); return; }
+    console.log("[spotify] connectSpotify fired", { isDev, hasAccessToken: !!accessToken, accessTokenLength: accessToken?.length });
+    if (isDev) { console.log("[spotify] dev mode — faking"); setSpotifyConnected(true); return; }
     if (accessToken) {
+      console.log("[spotify] navigating with accessToken");
       window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
       return;
     }
-    // No token in context — try to grab one synchronously from supabase cache
+    console.log("[spotify] no accessToken, trying getSession");
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
+      console.log("[spotify] getSession result:", { hasSession: !!data?.session, hasToken: !!token });
       if (token) {
         window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(token);
       } else {
         alert("No active session. Please sign out and sign back in, then try again.");
       }
-    }).catch(() => {
+    }).catch((err) => {
+      console.error("[spotify] getSession error:", err);
       alert("Session error. Please sign out and sign back in.");
     });
   }
@@ -632,6 +636,7 @@ function SourcesTab() {
   );
 
   const connect = (id) => {
+    console.log("[sources] connect called:", id);
     if (id === "github") { connectGitHub(); return; }
     if (id === "spotify") { connectSpotify(); return; }
     setConnected((prev) => [...prev, id]);
