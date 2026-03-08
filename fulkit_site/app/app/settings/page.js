@@ -143,7 +143,7 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly"];
 
-const REAL_INTEGRATIONS = ["github", "spotify", "google", "numbrly"];
+const REAL_INTEGRATIONS = ["github", "spotify", "numbrly"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -623,7 +623,7 @@ function SourcesTab() {
     ...(githubConnected ? ["github"] : []),
     ...(spotifyConnected ? ["spotify"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify");
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify" && s.id !== "github");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
