@@ -141,9 +141,9 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["obsidian", "google", "notion"];
+const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly", "notion"];
 
-const REAL_INTEGRATIONS = ["github", "spotify", "google"];
+const REAL_INTEGRATIONS = ["github", "spotify", "google", "numbrly"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -160,7 +160,7 @@ const ALL_SOURCES = [
   { id: "spotify", name: "Spotify", cat: "Media" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
-  { id: "numbrly", name: "Numbrly", cat: "Finance" },
+  { id: "numbrly", name: "Numbrly", cat: "Small Business" },
   { id: "truegauge", name: "TrueGauge", cat: "Analytics" },
 ];
 
@@ -516,6 +516,7 @@ function SourcesTab() {
   const [expanded, setExpanded] = useState({});
   const [googleExpanded, setGoogleExpanded] = useState(false);
   const [googleServices, setGoogleServices] = useState({ drive: false, gmail: false, calendar: false });
+  const [numbrlyExpanded, setNumbrlyExpanded] = useState(false);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -709,7 +710,7 @@ function SourcesTab() {
           borderRadius: "var(--radius-md)",
           cursor: isReal ? "pointer" : "default",
           fontFamily: "var(--font-primary)",
-          opacity: isReal ? 1 : 0.5,
+          opacity: 1,
           transition: `all var(--duration-fast) var(--ease-default)`,
         }}
       >
@@ -717,8 +718,8 @@ function SourcesTab() {
           {SOURCE_LOGOS[src.id]}
         </div>
         <div style={{ textAlign: "left" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: isReal ? "var(--color-text)" : "var(--color-text-muted)" }}>{src.name}</div>
-          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{isReal ? src.cat : "Coming soon"}</div>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", textDecoration: isReal ? "none" : "line-through" }}>{src.name}</div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: isReal ? "none" : "line-through" }}>{isReal ? src.cat : "Coming soon"}</div>
         </div>
       </button>
     );
@@ -863,8 +864,33 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* Numbrly */}
+            {allConnected.includes("numbrly") && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.numbrly}
+                  name="Numbrly"
+                  subtitle="Business data source"
+                  isExpanded={numbrlyExpanded}
+                  onToggle={() => setNumbrlyExpanded(!numbrlyExpanded)}
+                />
+                <Drawer open={numbrlyExpanded}>
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <DrawerItem index={0} visible={numbrlyExpanded}>
+                      <div style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                        Pulls org summary, margin alerts, and recent activity into chat context automatically.
+                      </div>
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={numbrlyExpanded}>
+                      {disconnectFooter(() => disconnect("numbrly"), false)}
+                    </DrawerItem>
+                  </div>
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
-            {connectedSources.filter((s) => s.id !== "google").map((src) => {
+            {connectedSources.filter((s) => s.id !== "google" && s.id !== "numbrly").map((src) => {
               const isExpanded = expanded[src.id];
               return (
                 <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
