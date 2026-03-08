@@ -26,8 +26,6 @@ export default function MiniPlayer({ compact }) {
   const [enabled, setEnabled] = useState(true);
   const [dragging, setDragging] = useState(false);
   const localVolume = useRef(volume);
-  const volContainerRef = useRef(null);
-  const volInputRef = useRef(null);
 
   useEffect(() => {
     setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
@@ -39,15 +37,6 @@ export default function MiniPlayer({ compact }) {
   useEffect(() => {
     if (!dragging) localVolume.current = volume;
   }, [volume, dragging]);
-
-  // Size vertical slider to match container height
-  useEffect(() => {
-    const el = volContainerRef.current;
-    const input = volInputRef.current;
-    if (!el || !input) return;
-    const h = el.offsetHeight;
-    input.style.width = h + "px";
-  });
 
   if (!enabled || !connected || !currentTrack) return null;
 
@@ -64,70 +53,58 @@ export default function MiniPlayer({ compact }) {
 
   if (compact) {
     return (
-      <div
-        style={{
-          borderTop: "1px solid var(--color-border-light)",
-          display: "flex",
-          alignItems: "stretch",
-        }}
-      >
-        {/* Vertical volume slider — left edge */}
-        <div ref={volContainerRef} style={{ position: "relative", width: 14, flexShrink: 0 }}>
-          <input
-            ref={volInputRef}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={displayVolume}
-            className="fulkit-vol-v"
-            onMouseDown={() => setDragging(true)}
-            onMouseUp={() => setDragging(false)}
-            onTouchStart={() => setDragging(true)}
-            onTouchEnd={() => setDragging(false)}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              localVolume.current = v;
-              setVolume(v);
-            }}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 7,
-              height: 3,
-              WebkitAppearance: "none",
-              appearance: "none",
-              background: "var(--color-border)",
-              borderRadius: 0,
-              outline: "none",
-              cursor: "pointer",
-              margin: 0,
-              padding: 0,
-              transformOrigin: "bottom left",
-              transform: "rotate(-90deg)",
-            }}
-          />
-        </div>
+      <div>
+        {/* Volume slider — horizontal, full width, IS the top border */}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={displayVolume}
+          className="fulkit-vol-v"
+          onMouseDown={() => setDragging(true)}
+          onMouseUp={() => setDragging(false)}
+          onTouchStart={() => setDragging(true)}
+          onTouchEnd={() => setDragging(false)}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            localVolume.current = v;
+            setVolume(v);
+          }}
+          style={{
+            display: "block",
+            width: "100%",
+            height: 3,
+            WebkitAppearance: "none",
+            appearance: "none",
+            background: "var(--color-border)",
+            borderRadius: 0,
+            outline: "none",
+            cursor: "pointer",
+            margin: 0,
+            padding: 0,
+          }}
+        />
         <style>{`
           .fulkit-vol-v::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 12px;
-            height: 2px;
+            width: 2px;
+            height: 12px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
           }
           .fulkit-vol-v::-moz-range-thumb {
-            width: 12px;
-            height: 2px;
+            width: 2px;
+            height: 12px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
           }
           .fulkit-vol-v::-moz-range-track {
-            width: 3px;
+            height: 3px;
             background: var(--color-border);
             border-radius: 0;
           }
@@ -136,12 +113,11 @@ export default function MiniPlayer({ compact }) {
         {/* Controls column */}
         <div
           style={{
-            flex: 1,
-            padding: "var(--space-2) 0",
+            padding: "var(--space-3) 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 2,
+            gap: "var(--space-2)",
           }}
         >
           <button
