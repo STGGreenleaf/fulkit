@@ -20,23 +20,27 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-// Audio relay terrain — captures system/tab audio digitally via
-// getDisplayMedia (no mic, no room noise). Stacks 40 layers of
-// real frequency data into a mountain terrain with reflection.
+// BPM-synced terrain — driven by Spotify audio features.
+// Mountains pulse at the track's real tempo, amplitude scales with
+// energy, shape character shifts with danceability and mood.
+// No permissions, no mic, no share dialog. Just works.
 
 const T_LAYERS = 40;
 const T_POINTS = 80;
 
-function SignalTerrain({ height = 220 }) {
+function SignalTerrain({ height = 220, bpm = 100, energy = 50, danceability = 50, valence = 50, active = false }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const containerRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const analyserRef = useRef(null);
-  const streamRef = useRef(null);
   const historyRef = useRef([]);
+  const phaseRef = useRef(0);
+  const seedRef = useRef(() => {
+    // Generate a stable random seed array for terrain shape variety
+    const s = [];
+    for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
+    return s;
+  });
   const [canvasWidth, setCanvasWidth] = useState(600);
-  const [connected, setConnected] = useState(false);
 
   // Responsive width
   useEffect(() => {
@@ -49,100 +53,69 @@ function SignalTerrain({ height = 220 }) {
     return () => ro.disconnect();
   }, []);
 
-  // Connect: capture system audio via getDisplayMedia
-  const connect = useCallback(async () => {
-    if (connected) {
-      // Disconnect
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-      if (audioCtxRef.current) audioCtxRef.current.close();
-      audioCtxRef.current = null;
-      analyserRef.current = null;
-      streamRef.current = null;
-      historyRef.current = [];
-      setConnected(false);
-      return;
-    }
-
-    try {
-      // Request system/tab audio — browser shows share dialog
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: 1, height: 1, frameRate: 1 }, // minimal video (required by spec)
-        audio: true,
-      });
-
-      // Kill video track immediately — we only want audio
-      stream.getVideoTracks().forEach((t) => t.stop());
-
-      const audioTracks = stream.getAudioTracks();
-      if (audioTracks.length === 0) {
-        // User didn't check "Share audio"
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-
-      // When the user stops sharing, clean up
-      audioTracks[0].onended = () => {
-        if (animRef.current) cancelAnimationFrame(animRef.current);
-        if (audioCtxRef.current) audioCtxRef.current.close();
-        audioCtxRef.current = null;
-        analyserRef.current = null;
-        streamRef.current = null;
-        historyRef.current = [];
-        setConnected(false);
-      };
-
-      const audioStream = new MediaStream(audioTracks);
-      streamRef.current = stream;
-
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(audioStream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 4096;
-      analyser.smoothingTimeConstant = 0.8;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-      historyRef.current = [];
-      setConnected(true);
-    } catch {
-      // User cancelled the share dialog
-    }
-  }, [connected]);
-
-  // Render loop — runs when connected
+  // Generate new seed when track changes (energy shift = new track likely)
   useEffect(() => {
-    if (!connected || !analyserRef.current) return;
+    const s = [];
+    for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
+    seedRef.current = s;
+    historyRef.current = [];
+  }, [bpm, energy]);
+
+  // Render loop
+  useEffect(() => {
     let running = true;
+    let lastFrame = 0;
+    const frameInterval = 1000 / 20; // ~20fps for smooth layer stacking
 
-    const analyser = analyserRef.current;
-    const freqData = new Uint8Array(analyser.frequencyBinCount);
-
-    const render = () => {
+    const render = (timestamp) => {
       if (!running) return;
       animRef.current = requestAnimationFrame(render);
+
+      // Throttle to ~20fps for layer accumulation
+      if (timestamp - lastFrame < frameInterval) return;
+      lastFrame = timestamp;
+
       const canvas = canvasRef.current;
       if (!canvas) return;
 
       const ctx = canvas.getContext("2d");
       const w = canvas.width;
       const h = canvas.height;
+      const seed = seedRef.current;
 
-      // Capture real frequency data
-      analyser.getByteFrequencyData(freqData);
+      // BPM → phase advance per frame
+      const beatsPerSec = bpm / 60;
+      const phaseStep = (beatsPerSec / 20) * Math.PI * 2; // full cycle per beat
+      phaseRef.current += active ? phaseStep : phaseStep * 0.08; // idle: slow drift
 
-      // Downsample — log mapping, more bass resolution
+      const phase = phaseRef.current;
+      const nrgScale = energy / 100; // 0–1
+      const dncScale = danceability / 100;
+      const moodScale = valence / 100;
+
+      // Generate terrain points from BPM-synced oscillators + seed
       const points = [];
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
-        const freqIdx = Math.floor(Math.pow(t, 1.5) * freqData.length * 0.65);
-        const spread = Math.max(1, Math.floor(freqData.length * 0.008));
-        let sum = 0;
-        for (let j = -spread; j <= spread; j++) {
-          const idx = Math.min(freqData.length - 1, Math.max(0, freqIdx + j));
-          sum += freqData[idx];
-        }
-        points.push(sum / (spread * 2 + 1) / 255);
+        const s = seed[i] || 0.5;
+
+        // Base shape: multiple sine waves at BPM-related frequencies
+        const beat = Math.sin(phase + t * Math.PI * 2 * (2 + dncScale * 3)) * 0.5 + 0.5;
+        const sub = Math.sin(phase * 0.5 + t * Math.PI * 4 + s * 6) * 0.3;
+        const hi = Math.sin(phase * 2 + t * Math.PI * 8 + s * 12) * 0.12 * dncScale;
+
+        // Envelope: louder in center, tapers at edges
+        const envelope = Math.sin(t * Math.PI);
+
+        // Mood shifts the terrain character: high valence = rounder peaks, low = jagged
+        const jag = moodScale < 0.4 ? Math.abs(Math.sin(phase * 3 + t * 20 + s * 8)) * 0.15 * (1 - moodScale) : 0;
+
+        // Combine
+        const amplitude = active
+          ? (beat * 0.5 + sub + hi + jag + s * 0.2) * envelope * (0.15 + nrgScale * 0.65)
+          : (s * 0.15 + Math.sin(phase * 0.3 + t * 3) * 0.05) * envelope * 0.3; // idle: gentle hills
+
+        points.push(Math.max(0, Math.min(1, amplitude)));
       }
 
       historyRef.current.push(points);
@@ -164,8 +137,8 @@ function SignalTerrain({ height = 220 }) {
         const age = l / Math.max(1, layers.length - 1);
         const data = layers[l];
 
-        const alpha = 0.012 + age * age * 0.14;
-        const lw = 0.3 + age * 0.9;
+        const alpha = 0.012 + age * age * 0.16;
+        const lw = 0.3 + age * 1.0;
         const yShift = (layers.length - 1 - l) * 1.1;
 
         // === Mountains ===
@@ -218,21 +191,12 @@ function SignalTerrain({ height = 220 }) {
       ctx.stroke();
     };
 
-    render();
+    animRef.current = requestAnimationFrame(render);
     return () => {
       running = false;
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [connected, canvasWidth]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-      if (audioCtxRef.current) audioCtxRef.current.close();
-    };
-  }, []);
+  }, [canvasWidth, bpm, energy, danceability, valence, active]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
@@ -240,29 +204,8 @@ function SignalTerrain({ height = 220 }) {
         ref={canvasRef}
         width={canvasWidth}
         height={height}
-        onClick={connect}
-        style={{ width: "100%", height, display: "block", cursor: "pointer" }}
+        style={{ width: "100%", height, display: "block" }}
       />
-      <button
-        onClick={connect}
-        style={{
-          position: "absolute",
-          bottom: 8,
-          right: 10,
-          fontSize: 8,
-          fontFamily: "var(--font-mono)",
-          textTransform: "uppercase",
-          letterSpacing: "var(--letter-spacing-wider)",
-          color: connected ? "var(--color-text)" : "var(--color-text-dim)",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          opacity: 0.6,
-        }}
-      >
-        {connected ? "● relay" : "tap to relay"}
-      </button>
     </div>
   );
 }
@@ -618,7 +561,14 @@ export default function SpotifyPage() {
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
-            <SignalTerrain height={200} active={isPlaying} />
+            <SignalTerrain
+              height={200}
+              bpm={features?.bpm || 100}
+              energy={features?.energy || 50}
+              danceability={features?.danceability || 50}
+              valence={features?.valence || 50}
+              active={isPlaying}
+            />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
