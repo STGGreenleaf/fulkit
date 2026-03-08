@@ -111,7 +111,7 @@ export default function MiniPlayer({ compact }) {
             background: var(--color-text);
             border: none;
             cursor: pointer;
-            transform: rotate(45deg);
+            transform: rotate(90deg);
           }
           .fulkit-vol-v::-moz-range-thumb {
             width: 12px;
@@ -120,7 +120,7 @@ export default function MiniPlayer({ compact }) {
             background: var(--color-text);
             border: none;
             cursor: pointer;
-            transform: rotate(45deg);
+            transform: rotate(90deg);
           }
           .fulkit-vol-v::-moz-range-track {
             height: 3px;
