@@ -508,6 +508,7 @@ function SourcesTab() {
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false);
   const [spotifyExpanded, setSpotifyExpanded] = useState(false);
   const [spotifyPlayerEnabled, setSpotifyPlayerEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -632,6 +633,18 @@ function SourcesTab() {
     localStorage.setItem("fulkit-spotify-player", String(next));
   }
 
+  async function disconnectSpotify() {
+    setSpotifyDisconnecting(true);
+    try {
+      await fetch("/api/spotify/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setSpotifyConnected(false);
+    } catch {}
+    setSpotifyDisconnecting(false);
+  }
+
   async function connectNumbrly() {
     if (!numbrlyKeyInput.trim()) return;
     setNumbrlyConnecting(true);
@@ -687,7 +700,7 @@ function SourcesTab() {
   };
   const disconnect = (id) => {
     if (id === "github") { disconnectGitHub(); return; }
-    if (id === "spotify") { setSpotifyConnected(false); return; }
+    if (id === "spotify") { disconnectSpotify(); return; }
     if (id === "numbrly") { disconnectNumbrly(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
@@ -880,7 +893,7 @@ function SourcesTab() {
                       {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
                     </DrawerItem>
                     <DrawerItem index={1} visible={spotifyExpanded}>
-                      {disconnectFooter(() => disconnect("spotify"), false)}
+                      {disconnectFooter(disconnectSpotify, spotifyDisconnecting)}
                     </DrawerItem>
                   </div>
                 </Drawer>
