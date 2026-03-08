@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -17,6 +17,174 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
       <line x1={x1} y1={py} x2={x1} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
       <line x1={x2} y1={py} x2={x2} y2={h - py} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
     </svg>
+  );
+}
+
+// Live signal meter — listens via mic, draws waveform on canvas
+function SignalMeter({ width = 400, height = 40, active = false }) {
+  const canvasRef = useRef(null);
+  const ctxRef = useRef(null); // AudioContext
+  const analyserRef = useRef(null);
+  const animRef = useRef(null);
+  const streamRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [denied, setDenied] = useState(false);
+
+  // Start/stop mic capture
+  const toggleMic = useCallback(async () => {
+    if (listening) {
+      // Stop
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (ctxRef.current) ctxRef.current.close();
+      ctxRef.current = null;
+      analyserRef.current = null;
+      streamRef.current = null;
+      setListening(false);
+      // Clear canvas
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw flat line
+        ctx.strokeStyle = getComputedStyle(canvas).getPropertyValue("--color-border").trim() || "#3a3835";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+      }
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      streamRef.current = stream;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      ctxRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.85;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      setListening(true);
+      setDenied(false);
+      draw();
+    } catch {
+      setDenied(true);
+    }
+  }, [listening]);
+
+  // Animation loop — draw waveform
+  function draw() {
+    const canvas = canvasRef.current;
+    const analyser = analyserRef.current;
+    if (!canvas || !analyser) return;
+
+    const ctx = canvas.getContext("2d");
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const render = () => {
+      animRef.current = requestAnimationFrame(render);
+      analyser.getByteTimeDomainData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Get computed color
+      const style = getComputedStyle(canvas);
+      const lineColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
+      const dimColor = style.getPropertyValue("--color-border").trim() || "#3a3835";
+
+      // Center line (dim)
+      ctx.strokeStyle = dimColor;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+
+      // Waveform
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+
+      const sliceWidth = canvas.width / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    };
+
+    render();
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (ctxRef.current) ctxRef.current.close();
+    };
+  }, []);
+
+  // Draw flat line on initial render
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || listening) return;
+    const ctx = canvas.getContext("2d");
+    const style = getComputedStyle(canvas);
+    const dimColor = style.getPropertyValue("--color-border").trim() || "#3a3835";
+    ctx.strokeStyle = dimColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height / 2);
+    ctx.lineTo(canvas.width, canvas.height / 2);
+    ctx.stroke();
+  }, [listening]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <Label style={{ margin: 0 }}>Signal</Label>
+        <button
+          onClick={toggleMic}
+          style={{
+            fontSize: 8,
+            fontFamily: "var(--font-mono)",
+            textTransform: "uppercase",
+            letterSpacing: "var(--letter-spacing-wider)",
+            color: listening ? "var(--color-text)" : "var(--color-text-dim)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          {denied ? "denied" : listening ? "● live" : "off"}
+        </button>
+      </div>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        onClick={!listening ? toggleMic : undefined}
+        style={{
+          width,
+          height,
+          cursor: listening ? "default" : "pointer",
+          borderRadius: 2,
+        }}
+      />
+    </div>
   );
 }
 
@@ -255,6 +423,9 @@ export default function SpotifyPage() {
                   <MeterBar value={features?.valence || 0} width={80} />
                 </div>
               </div>
+
+              {/* Signal meter — live audio waveform via mic */}
+              <SignalMeter width={400} height={32} active={isPlaying} />
 
               {/* Progress */}
               <div style={{ maxWidth: 400 }}>
