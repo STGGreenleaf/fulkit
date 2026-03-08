@@ -45,7 +45,7 @@ export default function MiniPlayer({ compact }) {
         }}
       >
         {/* Vertical volume slider — left edge */}
-        <div style={{ position: "relative", width: 14, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", width: 14, flexShrink: 0 }}>
           <input
             type="range"
             min={0}
@@ -63,48 +63,41 @@ export default function MiniPlayer({ compact }) {
               setVolume(v);
             }}
             style={{
-              position: "absolute",
-              left: 0,
-              top: "50%",
-              width: "100%",
-              height: 3,
+              writingMode: "vertical-lr",
+              direction: "rtl",
+              width: 3,
+              height: "100%",
               WebkitAppearance: "none",
               appearance: "none",
               background: "var(--color-border)",
               borderRadius: 0,
               outline: "none",
               cursor: "pointer",
-              margin: 0,
+              margin: "0 auto",
               padding: 0,
-              transformOrigin: "left center",
-              transform: "rotate(-90deg) translateX(-100%)",
-              /* The width becomes the height after rotation — match parent height */
             }}
           />
         </div>
         <style>{`
-          .fulkit-vol-v {
-            width: 100% !important;
-          }
           .fulkit-vol-v::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 12px;
-            height: 2px;
+            width: 2px;
+            height: 12px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
           }
           .fulkit-vol-v::-moz-range-thumb {
-            width: 12px;
-            height: 2px;
+            width: 2px;
+            height: 12px;
             border-radius: 0;
             background: var(--color-text);
             border: none;
             cursor: pointer;
           }
           .fulkit-vol-v::-moz-range-track {
-            height: 3px;
+            width: 3px;
             background: var(--color-border);
             border-radius: 0;
           }
