@@ -20,7 +20,7 @@ export async function authenticateUser(request) {
 export async function getSpotifyToken(userId) {
   const { data } = await getSupabaseAdmin()
     .from("integrations")
-    .select("access_token, refresh_token, metadata")
+    .select("access_token, metadata")
     .eq("user_id", userId)
     .eq("provider", "spotify")
     .single();
@@ -54,8 +54,7 @@ async function refreshToken(userId, refreshTokenStr) {
     .from("integrations")
     .update({
       access_token: data.access_token,
-      refresh_token: data.refresh_token || refreshTokenStr,
-      metadata: { expires_at: Date.now() + data.expires_in * 1000 },
+      metadata: { refresh_token: data.refresh_token || refreshTokenStr, expires_at: Date.now() + data.expires_in * 1000 },
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", userId)
@@ -74,7 +73,7 @@ export async function spotifyFetch(userId, endpoint, options = {}) {
   // Check if token is expired (with 60s buffer)
   const expiresAt = integration.metadata?.expires_at || 0;
   if (Date.now() > expiresAt - 60000) {
-    token = await refreshToken(userId, integration.refresh_token);
+    token = await refreshToken(userId, integration.metadata?.refresh_token);
     if (!token) return { error: "Token refresh failed", status: 401 };
   }
 
@@ -89,7 +88,7 @@ export async function spotifyFetch(userId, endpoint, options = {}) {
 
   // If 401, try one more refresh
   if (res.status === 401) {
-    token = await refreshToken(userId, integration.refresh_token);
+    token = await refreshToken(userId, integration.metadata?.refresh_token);
     if (!token) return { error: "Token expired", status: 401 };
     const retry = await fetch(`${SPOTIFY_API}${endpoint}`, {
       ...options,

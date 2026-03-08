@@ -60,9 +60,9 @@ export async function GET(request) {
           user_id: userId,
           provider: "spotify",
           access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
           scope: tokenData.scope || "",
           metadata: {
+            refresh_token: tokenData.refresh_token,
             expires_at: Date.now() + tokenData.expires_in * 1000,
           },
           updated_at: new Date().toISOString(),
