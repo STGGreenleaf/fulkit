@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
@@ -18,7 +18,6 @@ export default function MiniPlayer({ compact }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Sync from provider when not dragging
   useEffect(() => {
     if (!dragging) localVolume.current = volume;
   }, [volume, dragging]);
@@ -26,97 +25,137 @@ export default function MiniPlayer({ compact }) {
   if (!enabled || !connected || !currentTrack) return null;
 
   const flaggedNow = isFlagged(currentTrack.id);
+  const displayVolume = dragging ? localVolume.current : volume;
+
+  // Shared bare button style — no circle, just the mark
+  const bareBtn = {
+    width: 28, height: 28,
+    background: "transparent", border: "none",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    cursor: "pointer", padding: 0,
+  };
 
   if (compact) {
     return (
       <div
         style={{
           borderTop: "1px solid var(--color-border-light)",
-          padding: "var(--space-2) 0",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
+          alignItems: "stretch",
         }}
       >
-        <button
-          onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
+        {/* Vertical volume slider — left edge */}
+        <div style={{ position: "relative", width: 14, flexShrink: 0 }}>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={displayVolume}
+            className="fulkit-vol-v"
+            onMouseDown={() => setDragging(true)}
+            onMouseUp={() => setDragging(false)}
+            onTouchStart={() => setDragging(true)}
+            onTouchEnd={() => setDragging(false)}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              localVolume.current = v;
+              setVolume(v);
+            }}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              width: "100%",
+              height: 3,
+              WebkitAppearance: "none",
+              appearance: "none",
+              background: "var(--color-border)",
+              borderRadius: 0,
+              outline: "none",
+              cursor: "pointer",
+              margin: 0,
+              padding: 0,
+              transformOrigin: "left center",
+              transform: "rotate(-90deg) translateX(-100%)",
+              /* The width becomes the height after rotation — match parent height */
+            }}
+          />
+        </div>
+        <style>{`
+          .fulkit-vol-v {
+            width: 100% !important;
+          }
+          .fulkit-vol-v::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 2px;
+            border-radius: 0;
+            background: var(--color-text);
+            border: none;
+            cursor: pointer;
+          }
+          .fulkit-vol-v::-moz-range-thumb {
+            width: 12px;
+            height: 2px;
+            border-radius: 0;
+            background: var(--color-text);
+            border: none;
+            cursor: pointer;
+          }
+          .fulkit-vol-v::-moz-range-track {
+            height: 3px;
+            background: var(--color-border);
+            border-radius: 0;
+          }
+        `}</style>
+
+        {/* Controls column */}
+        <div
           style={{
-            width: 24,
-            height: 24,
-            borderRadius: "var(--radius-full)",
-            background: flaggedNow ? "var(--color-text)" : "transparent",
-            border: flaggedNow ? "none" : "1px solid var(--color-border)",
+            flex: 1,
+            padding: "var(--space-2) 0",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: `all var(--duration-fast) var(--ease-default)`,
+            gap: 2,
           }}
         >
-          {flaggedNow ? (
-            <Check size={10} strokeWidth={2.5} color="var(--color-text-inverse)" />
-          ) : (
-            <Plus size={10} strokeWidth={2} color="var(--color-text-muted)" />
-          )}
-        </button>
-        <button
-          onClick={prev}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "var(--radius-full)",
-            background: "transparent",
-            border: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <ChevronLeft size={12} strokeWidth={2} color="var(--color-text-muted)" />
-        </button>
-        <button
-          onClick={toggle}
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: "var(--radius-full)",
-            background: "var(--color-bg-inverse)",
-            border: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          {isPlaying ? (
-            <Pause size={12} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" />
-          ) : (
-            <Play size={12} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 1 }} />
-          )}
-        </button>
-        <button
-          onClick={skip}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "var(--radius-full)",
-            background: "transparent",
-            border: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <ChevronRight size={12} strokeWidth={2} color="var(--color-text-muted)" />
-        </button>
+          <button
+            onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
+            style={{
+              width: 24, height: 24,
+              borderRadius: "var(--radius-full)",
+              background: flaggedNow ? "var(--color-text)" : "transparent",
+              border: flaggedNow ? "none" : "1px solid var(--color-border)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+              transition: `all var(--duration-fast) var(--ease-default)`,
+            }}
+          >
+            {flaggedNow ? (
+              <Check size={10} strokeWidth={2.5} color="var(--color-text-inverse)" />
+            ) : (
+              <Plus size={10} strokeWidth={2} color="var(--color-text-muted)" />
+            )}
+          </button>
+          <button onClick={prev} style={{ ...bareBtn, width: 24, height: 24 }}>
+            <ChevronUp size={12} strokeWidth={2} color="var(--color-text-muted)" />
+          </button>
+          <button onClick={toggle} style={{ ...bareBtn, width: 24, height: 24 }}>
+            {isPlaying ? (
+              <Pause size={14} strokeWidth={2.5} color="var(--color-text)" />
+            ) : (
+              <Play size={14} strokeWidth={2.5} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
+            )}
+          </button>
+          <button onClick={skip} style={{ ...bareBtn, width: 24, height: 24 }}>
+            <ChevronDown size={12} strokeWidth={2} color="var(--color-text-muted)" />
+          </button>
+        </div>
       </div>
     );
   }
-
-  const displayVolume = dragging ? localVolume.current : volume;
 
   return (
     <div>
@@ -204,7 +243,7 @@ export default function MiniPlayer({ compact }) {
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Controls — bare marks, no circles */}
         <div
           style={{
             display: "flex",
@@ -219,14 +258,11 @@ export default function MiniPlayer({ compact }) {
             }}
             title={flaggedNow ? "Flagged" : "Flag this track"}
             style={{
-              width: 28,
-              height: 28,
+              width: 28, height: 28,
               borderRadius: "var(--radius-full)",
               background: flaggedNow ? "var(--color-text)" : "transparent",
               border: flaggedNow ? "none" : "1px solid var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer",
               transition: `all var(--duration-fast) var(--ease-default)`,
             }}
@@ -239,41 +275,18 @@ export default function MiniPlayer({ compact }) {
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <button
-              onClick={prev}
-              style={{
-                width: 28, height: 28, borderRadius: "var(--radius-full)",
-                background: "transparent", border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-              }}
-            >
-              <ChevronLeft size={14} strokeWidth={2} color="var(--color-text-muted)" />
+            <button onClick={prev} style={bareBtn}>
+              <ChevronLeft size={16} strokeWidth={2} color="var(--color-text-muted)" />
             </button>
-            <button
-              onClick={toggle}
-              style={{
-                width: 32, height: 32, borderRadius: "var(--radius-full)",
-                background: isPlaying ? "var(--color-text)" : "var(--color-bg-inverse)",
-                border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                transition: "background var(--duration-fast) var(--ease-default)",
-              }}
-            >
+            <button onClick={toggle} style={bareBtn}>
               {isPlaying ? (
-                <Pause size={14} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" />
+                <Pause size={16} strokeWidth={2.5} color="var(--color-text)" />
               ) : (
-                <Play size={14} strokeWidth={2} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 1 }} />
+                <Play size={16} strokeWidth={2.5} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
               )}
             </button>
-            <button
-              onClick={skip}
-              style={{
-                width: 28, height: 28, borderRadius: "var(--radius-full)",
-                background: "transparent", border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-              }}
-            >
-              <ChevronRight size={14} strokeWidth={2} color="var(--color-text-muted)" />
+            <button onClick={skip} style={bareBtn}>
+              <ChevronRight size={16} strokeWidth={2} color="var(--color-text-muted)" />
             </button>
           </div>
         </div>
