@@ -80,14 +80,17 @@ function SignalTerrain({
     prevTrackId: null,
   });
 
-  // Layer 3: live audio
+  // Layer 3: live audio (multi-band)
   const liveRef = useRef({
     active: false,
     stream: null,
     audioCtx: null,
     analyser: null,
-    rms: 0,
-    smoothedRms: 0,
+    bands: { bass: 0, mids: 0, presence: 0, air: 0 },
+    smoothBands: { bass: 0, mids: 0, presence: 0, air: 0 },
+    flux: 0,
+    smoothFlux: 0,
+    prevFrame: null, // allocated on mic activation (Uint8Array(1024))
   });
   const [liveActive, setLiveActive] = useState(false);
 
@@ -127,8 +130,11 @@ function SignalTerrain({
       live.stream = null;
       live.audioCtx = null;
       live.analyser = null;
-      live.rms = 0;
-      live.smoothedRms = 0;
+      live.bands = { bass: 0, mids: 0, presence: 0, air: 0 };
+      live.smoothBands = { bass: 0, mids: 0, presence: 0, air: 0 };
+      live.flux = 0;
+      live.smoothFlux = 0;
+      live.prevFrame = null;
       setLiveActive(false);
       return;
     }
@@ -137,12 +143,13 @@ function SignalTerrain({
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.3;
       source.connect(analyser);
       live.stream = stream;
       live.audioCtx = ctx;
       live.analyser = analyser;
+      live.prevFrame = new Uint8Array(1024);
       live.active = true;
       setLiveActive(true);
       try { localStorage.setItem("fulkit-live-audio-opted-in", "true"); } catch {}
@@ -165,7 +172,7 @@ function SignalTerrain({
     let running = true;
     let lastFrame = 0;
     const frameInterval = 1000 / 30;
-    const freqData = new Uint8Array(512);
+    const freqData = new Uint8Array(1024);
 
     const render = (timestamp) => {
       if (!running) return;
@@ -260,15 +267,54 @@ function SignalTerrain({
       phaseRef.current += phaseStep;
       const phase = phaseRef.current;
 
-      // ── Layer 3: Live audio RMS ──
-      let liveAmplitude = 0;
+      // ── Layer 3: Multi-band live audio analysis ──
+      let liveBass = 0, liveMids = 0, livePresence = 0, liveAir = 0, liveFlux = 0;
       if (live.active && live.analyser) {
         live.analyser.getByteFrequencyData(freqData);
-        let sum = 0;
-        for (let i = 0; i < freqData.length; i++) sum += freqData[i];
-        live.rms = sum / freqData.length / 255;
-        live.smoothedRms = live.smoothedRms * 0.7 + live.rms * 0.3;
-        liveAmplitude = live.smoothedRms;
+        const N = freqData.length; // 1024 bins
+
+        // Band energy (sum bins, normalize to 0-1)
+        const bandSum = (lo, hi) => {
+          let s = 0;
+          for (let i = lo; i <= hi; i++) s += freqData[i];
+          return s / ((hi - lo + 1) * 255);
+        };
+        live.bands.bass = bandSum(0, 11);
+        live.bands.mids = bandSum(12, 93);
+        live.bands.presence = bandSum(94, 279);
+        live.bands.air = bandSum(280, N - 1);
+
+        // Silence gates — clamp room noise to zero
+        if (live.bands.bass < 0.05) live.bands.bass = 0;
+        if (live.bands.mids < 0.06) live.bands.mids = 0;
+        if (live.bands.presence < 0.07) live.bands.presence = 0;
+        if (live.bands.air < 0.08) live.bands.air = 0;
+
+        // Asymmetric per-band smoothing
+        const aSmooth = (raw, prev, attack, decay) =>
+          raw > prev ? prev * attack + raw * (1 - attack) : prev * decay + raw * (1 - decay);
+        live.smoothBands.bass = aSmooth(live.bands.bass, live.smoothBands.bass, 0.4, 0.85);
+        live.smoothBands.mids = live.smoothBands.mids * 0.7 + live.bands.mids * 0.3;
+        live.smoothBands.presence = aSmooth(live.bands.presence, live.smoothBands.presence, 0.3, 0.8);
+        live.smoothBands.air = aSmooth(live.bands.air, live.smoothBands.air, 0.3, 0.8);
+
+        // Spectral flux (half-wave rectified frame diff)
+        let fluxSum = 0;
+        if (live.prevFrame) {
+          for (let i = 0; i < N; i++) {
+            const diff = freqData[i] - live.prevFrame[i];
+            if (diff > 0) fluxSum += diff;
+          }
+          live.flux = fluxSum / (N * 255);
+          live.smoothFlux = aSmooth(live.flux, live.smoothFlux, 0.5, 0.92);
+          live.prevFrame.set(freqData);
+        }
+
+        liveBass = live.smoothBands.bass;
+        liveMids = live.smoothBands.mids;
+        livePresence = live.smoothBands.presence;
+        liveAir = live.smoothBands.air;
+        liveFlux = live.smoothFlux;
       }
 
       // ── Generate terrain points ──
@@ -293,12 +339,14 @@ function SignalTerrain({
 
         // Combine layers
         let amp;
-        if (live.active && liveAmplitude > 0.01) {
-          // Layer 3: live audio drives amplitude
-          const liveBlend = Math.min(1, liveAmplitude * 3);
+        if (live.active && (liveBass + liveMids) > 0.01) {
+          // Layer 3: multi-band terrain modulation
+          const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
           const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
-          const liveDisp = Math.abs(raw) * envelope * liveAmplitude * 2.5;
-          amp = puppeted * (1 - liveBlend * 0.7) + liveDisp * liveBlend * 0.7;
+          const liveRaw = raw * (1 + livePresence * 0.5); // sharper peaks with presence
+          const liveDisp = Math.abs(liveRaw) * envelope * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
+          const jitter = (Math.random() - 0.5) * liveAir * 0.15;
+          amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
         } else {
           // Layers 0-2
           amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
