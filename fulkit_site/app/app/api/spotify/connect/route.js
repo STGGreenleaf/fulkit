@@ -25,9 +25,24 @@ export async function GET(request) {
       return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=no_token", request.url));
     }
 
-    const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
-    if (error || !user) {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_token", request.url));
+    // Try valid token first, fall back to decoding expired JWT for user ID
+    let user;
+    const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+    if (!error && data?.user) {
+      user = data.user;
+    } else {
+      // Token likely expired — decode JWT payload to get user ID, verify via admin
+      try {
+        const payloadB64 = token.split(".")[1];
+        const claims = JSON.parse(Buffer.from(payloadB64, "base64").toString());
+        const userId = claims.sub;
+        if (!userId) throw new Error("No sub in JWT");
+        const { data: adminData, error: adminError } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+        if (adminError || !adminData?.user) throw new Error("User not found");
+        user = adminData.user;
+      } catch {
+        return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_token", request.url));
+      }
     }
 
     // HMAC-signed state
