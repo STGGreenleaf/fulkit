@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear } from "lucide-react";
+import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useSpotify } from "../../lib/spotify";
@@ -20,27 +21,75 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-// BPM-synced terrain — driven by Spotify audio features.
-// Mountains pulse at the track's real tempo, amplitude scales with
-// energy, shape character shifts with danceability and mood.
-// No permissions, no mic, no share dialog. Just works.
+// Energy/danceability bar — thin segmented readout
+function MeterBar({ value = 0, width = 80 }) {
+  const segments = 10;
+  const filled = Math.round((value / 100) * segments);
+  return (
+    <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+      {Array.from({ length: segments }, (_, i) => (
+        <div
+          key={i}
+          style={{
+            width: (width - (segments - 1) * 2) / segments,
+            height: 4,
+            background: i < filled ? "var(--color-text)" : "var(--color-border)",
+            transition: "background 0.3s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// SIGNAL TERRAIN — 4-layer audio visualization system
+//
+// Layer 0: Generative ambient (simplex noise, always on)
+// Layer 1: Playback state (kinetic signatures)
+// Layer 2: Audio features (BPM, energy, valence, danceability)
+// Layer 3: Live audio (mic via getUserMedia)
+// ═══════════════════════════════════════════════════════
 
 const T_LAYERS = 40;
 const T_POINTS = 80;
 
-function SignalTerrain({ height = 220, active = false, trackId = null }) {
+function SignalTerrain({
+  height = 220,
+  isPlaying = false,
+  trackId = null,
+  progress = 0,
+  duration = 0,
+  features = null,
+}) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const containerRef = useRef(null);
   const historyRef = useRef([]);
   const phaseRef = useRef(0);
-  const seedRef = useRef(() => {
-    // Generate a stable random seed array for terrain shape variety
-    const s = [];
-    for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
-    return s;
-  });
+  const noiseRef = useRef(createNoise2D());
   const [canvasWidth, setCanvasWidth] = useState(600);
+
+  // Layer 1: kinetic state machine
+  const kineticRef = useRef({
+    amplitude: 0.08, // current smoothed amplitude (0–1)
+    target: 0.08,    // target amplitude
+    state: "idle",   // idle | spool-up | active | wind-down | skip-cut | skip-silence | skip-spool
+    stateStart: 0,
+    prevPlaying: false,
+    prevTrackId: null,
+  });
+
+  // Layer 3: live audio
+  const liveRef = useRef({
+    active: false,
+    stream: null,
+    audioCtx: null,
+    analyser: null,
+    rms: 0,
+    smoothedRms: 0,
+  });
+  const [liveActive, setLiveActive] = useState(false);
 
   // Responsive width
   useEffect(() => {
@@ -53,67 +102,222 @@ function SignalTerrain({ height = 220, active = false, trackId = null }) {
     return () => ro.disconnect();
   }, []);
 
-  // Reset terrain + new seed shape on track change
+  // New noise seed on track change
   useEffect(() => {
-    const s = [];
-    for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
-    seedRef.current = s;
+    noiseRef.current = createNoise2D();
     historyRef.current = [];
+    const k = kineticRef.current;
+    // If track changed while playing → skip signature
+    if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
+      k.state = "skip-cut";
+      k.stateStart = performance.now();
+      k.target = 0;
+    }
+    k.prevTrackId = trackId;
   }, [trackId]);
+
+  // Layer 3: mic activation
+  const activateMic = useCallback(async () => {
+    const live = liveRef.current;
+    if (live.active) {
+      // Disconnect
+      if (live.stream) live.stream.getTracks().forEach((t) => t.stop());
+      if (live.audioCtx) live.audioCtx.close();
+      live.active = false;
+      live.stream = null;
+      live.audioCtx = null;
+      live.analyser = null;
+      live.rms = 0;
+      live.smoothedRms = 0;
+      setLiveActive(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      live.stream = stream;
+      live.audioCtx = ctx;
+      live.analyser = analyser;
+      live.active = true;
+      setLiveActive(true);
+      try { localStorage.setItem("fulkit-live-audio-opted-in", "true"); } catch {}
+    } catch {
+      // Permission denied or no mic
+    }
+  }, []);
+
+  // Cleanup mic on unmount
+  useEffect(() => {
+    return () => {
+      const live = liveRef.current;
+      if (live.stream) live.stream.getTracks().forEach((t) => t.stop());
+      if (live.audioCtx) live.audioCtx.close();
+    };
+  }, []);
 
   // Render loop
   useEffect(() => {
     let running = true;
     let lastFrame = 0;
-    const frameInterval = 1000 / 20; // ~20fps for smooth layer stacking
+    const frameInterval = 1000 / 30;
+    const freqData = new Uint8Array(512);
 
     const render = (timestamp) => {
       if (!running) return;
       animRef.current = requestAnimationFrame(render);
-
-      // Throttle to ~20fps for layer accumulation
       if (timestamp - lastFrame < frameInterval) return;
       lastFrame = timestamp;
 
       const canvas = canvasRef.current;
       if (!canvas) return;
-
       const ctx = canvas.getContext("2d");
       const w = canvas.width;
       const h = canvas.height;
-      const seed = seedRef.current;
+      const noise2D = noiseRef.current;
+      const k = kineticRef.current;
+      const live = liveRef.current;
 
-      // Phase advance — gentle drift when idle, livelier when playing
-      const phaseStep = active ? 0.045 : 0.008;
+      // ── Layer 1: Kinetic state machine ──
+      const now = timestamp;
+      const elapsed = now - k.stateStart;
+
+      // Detect play/pause transitions
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") {
+        k.state = "spool-up";
+        k.stateStart = now;
+        k.target = 0.55;
+      } else if (!isPlaying && k.prevPlaying) {
+        k.state = "wind-down";
+        k.stateStart = now;
+        k.target = 0.08;
+      }
+      k.prevPlaying = isPlaying;
+
+      // State transitions
+      if (k.state === "spool-up" && elapsed > 600) {
+        k.state = "active";
+      } else if (k.state === "wind-down" && elapsed > 800) {
+        k.state = "idle";
+      } else if (k.state === "skip-cut" && elapsed > 200) {
+        k.state = "skip-silence";
+        k.stateStart = now;
+        k.target = 0.02;
+      } else if (k.state === "skip-silence" && elapsed > 200) {
+        k.state = "skip-spool";
+        k.stateStart = now;
+        k.target = 0.55;
+      } else if (k.state === "skip-spool" && elapsed > 400) {
+        k.state = isPlaying ? "active" : "idle";
+        k.target = isPlaying ? 0.55 : 0.08;
+      }
+
+      // Smooth amplitude toward target
+      const smoothRate = k.state === "skip-cut" ? 0.2 : 0.06;
+      k.amplitude += (k.target - k.amplitude) * smoothRate;
+
+      // Track end exhale (Layer 1)
+      let exhaleMultiplier = 1;
+      if (isPlaying && duration > 0 && progress > 0) {
+        const remaining = duration * (1 - progress);
+        const EXHALE_WINDOW = 6;
+        if (remaining < EXHALE_WINDOW && remaining > 0) {
+          const exhaustion = 1 - (remaining / EXHALE_WINDOW);
+          exhaleMultiplier = 1 - (exhaustion * 0.7);
+        }
+      }
+
+      // ── Layer 2: Audio features ──
+      const bpm = features?.bpm || 100;
+      const energy = (features?.energy || 50) / 100;
+      const valence = (features?.valence || 50) / 100;
+      const danceability = (features?.danceability || 50) / 100;
+      const loudness = features?.loudness || -15;
+      const acousticness = (features?.acousticness || 30) / 100;
+      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
+
+      // BPM beat grid
+      const progressMs = progress * duration * 1000;
+      const msPerBeat = 60000 / bpm;
+      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
+      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
+
+      // Energy → amplitude ceiling
+      const amplitudeCeiling = 0.2 + energy * 0.6;
+      const normalizedLoudness = Math.max(0, (loudness + 35) / 35);
+      const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
+
+      // Valence → shape sharpness
+      const sharpness = 1 - valence;
+
+      // Phase advance — BPM-synced when playing
+      const beatsPerSec = bpm / 60;
+      const phaseStep = isPlaying ? (beatsPerSec / 30) * 0.15 : 0.004;
       phaseRef.current += phaseStep;
       const phase = phaseRef.current;
 
-      // Generate terrain points from layered oscillators + seed
+      // ── Layer 3: Live audio RMS ──
+      let liveAmplitude = 0;
+      if (live.active && live.analyser) {
+        live.analyser.getByteFrequencyData(freqData);
+        let sum = 0;
+        for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+        live.rms = sum / freqData.length / 255;
+        live.smoothedRms = live.smoothedRms * 0.7 + live.rms * 0.3;
+        liveAmplitude = live.smoothedRms;
+      }
+
+      // ── Generate terrain points ──
       const points = [];
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
-        const s = seed[i] || 0.5;
 
-        // Layered sine waves at different speeds
-        const wave1 = Math.sin(phase + t * Math.PI * 4 + s * 6) * 0.35;
-        const wave2 = Math.sin(phase * 0.6 + t * Math.PI * 7 + s * 10) * 0.2;
-        const wave3 = Math.sin(phase * 1.8 + t * Math.PI * 12 + s * 4) * 0.1;
+        // Layer 0: Multi-octave simplex noise
+        const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
+        const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
+        const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
+        let raw = n1 + n2 + n3;
+
+        // Valence shaping (Layer 2)
+        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
 
         // Envelope: taper at edges
         const envelope = Math.sin(t * Math.PI);
 
-        // Combine
-        const amplitude = active
-          ? (wave1 + wave2 + wave3 + s * 0.2) * envelope * 0.55
-          : (s * 0.15 + Math.sin(phase * 0.3 + t * 3) * 0.05) * envelope * 0.3;
+        // Layer 2: Beat pulse modulation
+        const beatBoost = 1 + beatPulse * danceability * 0.4;
 
-        points.push(Math.max(0, Math.min(1, amplitude)));
+        // Combine layers
+        let amp;
+        if (live.active && liveAmplitude > 0.01) {
+          // Layer 3: live audio drives amplitude
+          const liveBlend = Math.min(1, liveAmplitude * 3);
+          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
+          const liveDisp = Math.abs(raw) * envelope * liveAmplitude * 2.5;
+          amp = puppeted * (1 - liveBlend * 0.7) + liveDisp * liveBlend * 0.7;
+        } else {
+          // Layers 0-2
+          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
+        }
+
+        // Clamp to energy ceiling
+        amp = Math.min(amp, amplitudeCeiling);
+        amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
+
+        // 5% jitter
+        amp *= 1 + (Math.random() - 0.5) * 0.1;
+
+        points.push(Math.max(0, Math.min(1, amp)));
       }
 
       historyRef.current.push(points);
       if (historyRef.current.length > T_LAYERS) historyRef.current.shift();
 
-      // Colors from CSS
+      // ── Render ──
       const style = getComputedStyle(canvas);
       const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
       const tc = textColor.startsWith("#")
@@ -121,7 +325,6 @@ function SignalTerrain({ height = 220, active = false, trackId = null }) {
         : [232, 230, 227];
 
       ctx.clearRect(0, 0, w, h);
-
       const layers = historyRef.current;
       const centerY = h * 0.42;
 
@@ -130,44 +333,40 @@ function SignalTerrain({ height = 220, active = false, trackId = null }) {
         const data = layers[l];
 
         const alpha = 0.012 + age * age * 0.16;
-        const lw = 0.3 + age * 1.0;
+        const baseLw = 0.3 + age * 1.0;
+        const lw = baseLw * (0.7 + acousticness * 0.6); // acousticness → line thickness
         const yShift = (layers.length - 1 - l) * 1.1;
 
-        // === Mountains ===
+        // Mountains
         ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
         ctx.lineWidth = lw;
         ctx.beginPath();
 
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const amp = data[i] * centerY * 1.1;
-          const y = centerY - amp - yShift;
+          const a = data[i] * centerY * 1.1;
+          const y = centerY - a - yShift;
 
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
-            const prevI = i - 1;
-            const prevX = (prevI / (data.length - 1)) * w;
-            const prevAmp = data[prevI] * centerY * 1.1;
-            const prevY = centerY - prevAmp - yShift;
-            const midX = (prevX + x) / 2;
-            const midY = (prevY + y) / 2;
-            ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+            const prevX = ((i - 1) / (data.length - 1)) * w;
+            const prevA = data[i - 1] * centerY * 1.1;
+            const prevY = centerY - prevA - yShift;
+            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
           }
         }
         ctx.lineTo(w, centerY - data[data.length - 1] * centerY * 1.1 - yShift);
         ctx.stroke();
 
-        // === Reflection ===
-        const refAlpha = alpha * 0.25;
-        const refShift = (layers.length - 1 - l) * 0.5;
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${refAlpha})`;
+        // Reflection
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
         ctx.lineWidth = lw * 0.5;
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const amp = data[i] * centerY * 0.4;
-          const y = centerY + amp + refShift + 4;
+          const a = data[i] * centerY * 0.4;
+          const y = centerY + a + (layers.length - 1 - l) * 0.5 + 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -188,7 +387,7 @@ function SignalTerrain({ height = 220, active = false, trackId = null }) {
       running = false;
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [canvasWidth, active]);
+  }, [canvasWidth, isPlaying, progress, duration, features, liveActive]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
@@ -198,6 +397,33 @@ function SignalTerrain({ height = 220, active = false, trackId = null }) {
         height={height}
         style={{ width: "100%", height, display: "block" }}
       />
+      {/* Layer 3: "ears" affordance */}
+      <button
+        onClick={activateMic}
+        style={{
+          position: "absolute",
+          bottom: 8,
+          right: 10,
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 4,
+          opacity: liveActive ? 0.6 : 0.15,
+          transition: "opacity 300ms",
+          color: "var(--color-text-muted)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+        title={liveActive ? "Live audio active — click to disable" : "Enable live audio (microphone)"}
+      >
+        <Ear size={12} strokeWidth={1.5} />
+        {liveActive && (
+          <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>
+            live
+          </span>
+        )}
+      </button>
     </div>
   );
 }
@@ -229,6 +455,7 @@ export default function SpotifyPage() {
     flagged,
     playlists,
     progress,
+    audioFeatures,
     toggle,
     skip,
     prev,
@@ -244,6 +471,8 @@ export default function SpotifyPage() {
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const dragNode = useRef(null);
 
+  const features = currentTrack ? audioFeatures[currentTrack.id] : null;
+
   // Pad grid — 16 slots, fill with flagged tracks
   const PADS = 16;
   const pads = Array.from({ length: PADS }, (_, i) => flagged[i] || null);
@@ -253,7 +482,6 @@ export default function SpotifyPage() {
     setDragIdx(idx);
     dragNode.current = e.target;
     e.dataTransfer.effectAllowed = "move";
-    // Slight delay to let the drag image render
     setTimeout(() => { if (dragNode.current) dragNode.current.style.opacity = "0.4"; }, 0);
   }, []);
 
@@ -337,32 +565,89 @@ export default function SpotifyPage() {
 
             {/* Readout panel */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {/* Track info */}
-              <div>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-lg)",
-                    fontWeight: "var(--font-weight-bold)",
-                    letterSpacing: "var(--letter-spacing-tight)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {currentTrack?.title || "No track"}
+              {/* Track info + BPM/Key */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-6)" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "var(--font-size-lg)",
+                      fontWeight: "var(--font-weight-bold)",
+                      letterSpacing: "var(--letter-spacing-tight)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {currentTrack?.title || "No track"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "var(--font-size-sm)",
+                      color: "var(--color-text-muted)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-sm)",
-                    color: "var(--color-text-muted)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}
-                </div>
+
+                {/* BPM + Key readout */}
+                {features && (
+                  <div style={{ flexShrink: 0, textAlign: "right", opacity: 1, transition: "opacity 0.5s" }}>
+                    <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "baseline" }}>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 32,
+                            fontFamily: "var(--font-mono)",
+                            fontWeight: "var(--font-weight-bold)",
+                            lineHeight: 1,
+                            letterSpacing: "-1px",
+                            color: "var(--color-text)",
+                          }}
+                        >
+                          {features.bpm}
+                        </div>
+                        <Label>BPM</Label>
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 22,
+                            fontFamily: "var(--font-mono)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            lineHeight: 1,
+                            color: "var(--color-text)",
+                          }}
+                        >
+                          {features.key}
+                        </div>
+                        <Label>Key</Label>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Meters — only when features available */}
+              {features && (
+                <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+                  <div>
+                    <Label style={{ marginBottom: 3 }}>Energy</Label>
+                    <MeterBar value={features.energy} width={80} />
+                  </div>
+                  <div>
+                    <Label style={{ marginBottom: 3 }}>Dance</Label>
+                    <MeterBar value={features.danceability} width={80} />
+                  </div>
+                  <div>
+                    <Label style={{ marginBottom: 3 }}>Mood</Label>
+                    <MeterBar value={features.valence} width={80} />
+                  </div>
+                </div>
+              )}
 
               {/* Progress */}
               <div style={{ maxWidth: 400 }}>
@@ -479,7 +764,14 @@ export default function SpotifyPage() {
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
-            <SignalTerrain height={200} active={isPlaying} trackId={currentTrack?.id} />
+            <SignalTerrain
+              height={200}
+              isPlaying={isPlaying}
+              trackId={currentTrack?.id}
+              progress={progress}
+              duration={currentTrack?.duration || 0}
+              features={features}
+            />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
@@ -507,6 +799,7 @@ export default function SpotifyPage() {
               >
                 {pads.map((track, i) => {
                   const isActive = track && currentTrack?.id === track.id;
+                  const padFeat = track ? audioFeatures[track.id] : null;
                   return (
                     <button
                       key={i}
@@ -539,7 +832,6 @@ export default function SpotifyPage() {
                     >
                       {track ? (
                         <>
-                          {/* Pad number */}
                           <div
                             style={{
                               fontSize: 8,
@@ -550,7 +842,6 @@ export default function SpotifyPage() {
                           >
                             {String(i + 1).padStart(2, "0")}
                           </div>
-                          {/* Track name */}
                           <div
                             style={{
                               fontSize: 10,
@@ -568,6 +859,18 @@ export default function SpotifyPage() {
                           >
                             {track.title}
                           </div>
+                          {padFeat && (
+                            <div
+                              style={{
+                                fontSize: 8,
+                                fontFamily: "var(--font-mono)",
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                                opacity: 0.7,
+                              }}
+                            >
+                              {padFeat.bpm}
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div
@@ -661,6 +964,7 @@ export default function SpotifyPage() {
                 {flagged.map((track, i) => {
                   const isActive = currentTrack?.id === track.id;
                   const isDragTarget = dragOverIdx === i && dragIdx !== i;
+                  const setFeat = audioFeatures[track.id];
                   return (
                     <div
                       key={track.id}
@@ -738,6 +1042,18 @@ export default function SpotifyPage() {
                           {track.artist}
                         </div>
                       </div>
+
+                      {/* BPM + Key */}
+                      {setFeat && (
+                        <div style={{ flexShrink: 0, textAlign: "right" }}>
+                          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>
+                            {setFeat.bpm}
+                          </div>
+                          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                            {setFeat.key}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Remove from set */}
                       <button

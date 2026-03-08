@@ -24,14 +24,14 @@ const MOCK_PLAYLISTS = [
 ];
 
 const MOCK_FEATURES = {
-  "1": { bpm: 105, key: "Am", energy: 78, danceability: 62, valence: 45 },
-  "2": { bpm: 98, key: "Fm", energy: 65, danceability: 71, valence: 58 },
-  "3": { bpm: 112, key: "C", energy: 42, danceability: 55, valence: 38 },
-  "4": { bpm: 120, key: "Dm", energy: 35, danceability: 48, valence: 30 },
-  "5": { bpm: 130, key: "Eb", energy: 55, danceability: 60, valence: 25 },
-  "6": { bpm: 138, key: "Em", energy: 88, danceability: 45, valence: 35 },
-  "7": { bpm: 100, key: "G", energy: 50, danceability: 65, valence: 70 },
-  "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72 },
+  "1": { bpm: 105, key: "Am", energy: 78, danceability: 62, valence: 45, loudness: -8, acousticness: 15 },
+  "2": { bpm: 98, key: "Fm", energy: 65, danceability: 71, valence: 58, loudness: -10, acousticness: 25 },
+  "3": { bpm: 112, key: "C", energy: 42, danceability: 55, valence: 38, loudness: -14, acousticness: 60 },
+  "4": { bpm: 120, key: "Dm", energy: 35, danceability: 48, valence: 30, loudness: -16, acousticness: 70 },
+  "5": { bpm: 130, key: "Eb", energy: 55, danceability: 60, valence: 25, loudness: -12, acousticness: 10 },
+  "6": { bpm: 138, key: "Em", energy: 88, danceability: 45, valence: 35, loudness: -5, acousticness: 5 },
+  "7": { bpm: 100, key: "G", energy: 50, danceability: 65, valence: 70, loudness: -11, acousticness: 40 },
+  "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72, loudness: -13, acousticness: 55 },
 };
 
 export function SpotifyProvider({ children }) {
@@ -189,12 +189,9 @@ export function SpotifyProvider({ children }) {
     }, 200);
   }, [isDev, apiFetch]);
 
-  // Fetch audio features for tracks we haven't fetched yet
-  // Note: Spotify deprecated /audio-features for Dev Mode apps (Nov 2024).
-  // This will gracefully return empty until the app is in Extended Quota Mode.
-  const featuresFailed = useRef(false);
+  // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
   useEffect(() => {
-    if (isDev || !connected || !accessToken || featuresFailed.current) return;
+    if (isDev || !connected || !accessToken) return;
     const ids = [];
     if (currentTrack?.id && !audioFeatures[currentTrack.id] && !featuresRequested.current.has(currentTrack.id)) {
       ids.push(currentTrack.id);
@@ -207,9 +204,6 @@ export function SpotifyProvider({ children }) {
     apiFetch(`/api/spotify/audio-features?ids=${ids.join(",")}`).then((data) => {
       if (data?.features && Object.keys(data.features).length > 0) {
         setAudioFeatures((prev) => ({ ...prev, ...data.features }));
-      } else {
-        // Endpoint likely deprecated — stop retrying
-        featuresFailed.current = true;
       }
     });
   }, [currentTrack?.id, flagged, connected, accessToken, isDev, apiFetch, audioFeatures]);
