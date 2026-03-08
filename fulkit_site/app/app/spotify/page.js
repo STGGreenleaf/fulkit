@@ -20,23 +20,23 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-// Live terrain visualizer — layered frequency waveforms via mic
-// Inspired by generative waveform art: stacks dozens of captures
-// into a mountain/terrain effect with depth from opacity layering
-const TERRAIN_LAYERS = 40;
-const TERRAIN_POINTS = 80;
+// Audio relay terrain — captures system/tab audio digitally via
+// getDisplayMedia (no mic, no room noise). Stacks 40 layers of
+// real frequency data into a mountain terrain with reflection.
+
+const T_LAYERS = 40;
+const T_POINTS = 80;
 
 function SignalTerrain({ height = 220 }) {
   const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const containerRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
-  const animRef = useRef(null);
   const streamRef = useRef(null);
   const historyRef = useRef([]);
-  const [listening, setListening] = useState(false);
-  const [denied, setDenied] = useState(false);
-  const containerRef = useRef(null);
   const [canvasWidth, setCanvasWidth] = useState(600);
+  const [connected, setConnected] = useState(false);
 
   // Responsive width
   useEffect(() => {
@@ -49,8 +49,10 @@ function SignalTerrain({ height = 220 }) {
     return () => ro.disconnect();
   }, []);
 
-  const toggleMic = useCallback(async () => {
-    if (listening) {
+  // Connect: capture system audio via getDisplayMedia
+  const connect = useCallback(async () => {
+    if (connected) {
+      // Disconnect
       if (animRef.current) cancelAnimationFrame(animRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (audioCtxRef.current) audioCtxRef.current.close();
@@ -58,37 +60,66 @@ function SignalTerrain({ height = 220 }) {
       analyserRef.current = null;
       streamRef.current = null;
       historyRef.current = [];
-      setListening(false);
+      setConnected(false);
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Request system/tab audio — browser shows share dialog
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: 1, height: 1, frameRate: 1 }, // minimal video (required by spec)
+        audio: true,
+      });
+
+      // Kill video track immediately — we only want audio
+      stream.getVideoTracks().forEach((t) => t.stop());
+
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        // User didn't check "Share audio"
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      // When the user stops sharing, clean up
+      audioTracks[0].onended = () => {
+        if (animRef.current) cancelAnimationFrame(animRef.current);
+        if (audioCtxRef.current) audioCtxRef.current.close();
+        audioCtxRef.current = null;
+        analyserRef.current = null;
+        streamRef.current = null;
+        historyRef.current = [];
+        setConnected(false);
+      };
+
+      const audioStream = new MediaStream(audioTracks);
       streamRef.current = stream;
+
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
+      const source = ctx.createMediaStreamSource(audioStream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 4096;
-      analyser.smoothingTimeConstant = 0.82;
+      analyser.smoothingTimeConstant = 0.8;
       source.connect(analyser);
       analyserRef.current = analyser;
       historyRef.current = [];
-      setListening(true);
-      setDenied(false);
+      setConnected(true);
     } catch {
-      setDenied(true);
+      // User cancelled the share dialog
     }
-  }, [listening]);
+  }, [connected]);
 
-  // Render loop
+  // Render loop — runs when connected
   useEffect(() => {
-    if (!listening || !analyserRef.current) return;
+    if (!connected || !analyserRef.current) return;
+    let running = true;
 
     const analyser = analyserRef.current;
     const freqData = new Uint8Array(analyser.frequencyBinCount);
 
     const render = () => {
+      if (!running) return;
       animRef.current = requestAnimationFrame(render);
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -97,16 +128,15 @@ function SignalTerrain({ height = 220 }) {
       const w = canvas.width;
       const h = canvas.height;
 
-      // Capture frequency data
+      // Capture real frequency data
       analyser.getByteFrequencyData(freqData);
 
-      // Downsample to TERRAIN_POINTS — weighted toward low/mid freqs
+      // Downsample — log mapping, more bass resolution
       const points = [];
-      for (let i = 0; i < TERRAIN_POINTS; i++) {
-        // Logarithmic mapping — more resolution in lows
-        const t = i / TERRAIN_POINTS;
-        const freqIdx = Math.floor(Math.pow(t, 1.6) * freqData.length * 0.6);
-        const spread = Math.max(1, Math.floor(freqData.length * 0.01));
+      for (let i = 0; i < T_POINTS; i++) {
+        const t = i / T_POINTS;
+        const freqIdx = Math.floor(Math.pow(t, 1.5) * freqData.length * 0.65);
+        const spread = Math.max(1, Math.floor(freqData.length * 0.008));
         let sum = 0;
         for (let j = -spread; j <= spread; j++) {
           const idx = Math.min(freqData.length - 1, Math.max(0, freqIdx + j));
@@ -115,15 +145,12 @@ function SignalTerrain({ height = 220 }) {
         points.push(sum / (spread * 2 + 1) / 255);
       }
 
-      // Push to history
       historyRef.current.push(points);
-      if (historyRef.current.length > TERRAIN_LAYERS) historyRef.current.shift();
+      if (historyRef.current.length > T_LAYERS) historyRef.current.shift();
 
-      // Get colors from CSS
+      // Colors from CSS
       const style = getComputedStyle(canvas);
       const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
-
-      // Parse color for alpha manipulation
       const tc = textColor.startsWith("#")
         ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
         : [232, 230, 227];
@@ -131,67 +158,59 @@ function SignalTerrain({ height = 220 }) {
       ctx.clearRect(0, 0, w, h);
 
       const layers = historyRef.current;
-      const centerY = h * 0.45;
+      const centerY = h * 0.42;
 
-      // Draw each layer — oldest first, newest on top
       for (let l = 0; l < layers.length; l++) {
-        const age = l / Math.max(1, layers.length - 1); // 0=oldest, 1=newest
+        const age = l / Math.max(1, layers.length - 1);
         const data = layers[l];
 
-        // Opacity: older layers very faint, newest more solid
-        const alpha = 0.015 + age * age * 0.12;
-        // Line width: newer = slightly thicker
-        const lw = 0.4 + age * 0.8;
-        // Vertical offset: older layers shifted up for depth
-        const yShift = (layers.length - 1 - l) * 1.2;
+        const alpha = 0.012 + age * age * 0.14;
+        const lw = 0.3 + age * 0.9;
+        const yShift = (layers.length - 1 - l) * 1.1;
 
-        // === Upper waveform (mountains) ===
+        // === Mountains ===
         ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
         ctx.lineWidth = lw;
         ctx.beginPath();
 
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const amp = data[i] * centerY * 0.9;
+          const amp = data[i] * centerY * 1.1;
           const y = centerY - amp - yShift;
 
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
-            // Smooth curve between points
-            const prevX = ((i - 1) / (data.length - 1)) * w;
-            const cpX = (prevX + x) / 2;
-            const prevAmp = data[i - 1] * centerY * 0.9;
+            const prevI = i - 1;
+            const prevX = (prevI / (data.length - 1)) * w;
+            const prevAmp = data[prevI] * centerY * 1.1;
             const prevY = centerY - prevAmp - yShift;
-            ctx.quadraticCurveTo(prevX + (x - prevX) * 0.5, prevY, cpX + (x - cpX) * 0.5, (prevY + y) / 2);
-            ctx.lineTo(x, y);
+            const midX = (prevX + x) / 2;
+            const midY = (prevY + y) / 2;
+            ctx.quadraticCurveTo(prevX, prevY, midX, midY);
           }
         }
+        ctx.lineTo(w, centerY - data[data.length - 1] * centerY * 1.1 - yShift);
         ctx.stroke();
 
-        // === Reflection (mirrored below, dimmer, compressed) ===
-        const refAlpha = alpha * 0.3;
-        const refShift = (layers.length - 1 - l) * 0.6;
+        // === Reflection ===
+        const refAlpha = alpha * 0.25;
+        const refShift = (layers.length - 1 - l) * 0.5;
         ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${refAlpha})`;
-        ctx.lineWidth = lw * 0.6;
+        ctx.lineWidth = lw * 0.5;
         ctx.beginPath();
-
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const amp = data[i] * centerY * 0.45;
-          const y = centerY + amp + refShift;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
+          const amp = data[i] * centerY * 0.4;
+          const y = centerY + amp + refShift + 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         ctx.stroke();
       }
 
-      // Center line — thin, subtle
-      ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.06)`;
+      // Center horizon
+      ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.04)`;
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(0, centerY);
@@ -200,8 +219,11 @@ function SignalTerrain({ height = 220 }) {
     };
 
     render();
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, [listening, canvasWidth]);
+    return () => {
+      running = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [connected, canvasWidth]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -218,26 +240,20 @@ function SignalTerrain({ height = 220 }) {
         ref={canvasRef}
         width={canvasWidth}
         height={height}
-        onClick={toggleMic}
-        style={{
-          width: "100%",
-          height,
-          cursor: "pointer",
-          display: "block",
-        }}
+        onClick={connect}
+        style={{ width: "100%", height, display: "block", cursor: "pointer" }}
       />
-      {/* Label overlay */}
       <button
-        onClick={toggleMic}
+        onClick={connect}
         style={{
           position: "absolute",
-          bottom: 6,
-          right: 8,
+          bottom: 8,
+          right: 10,
           fontSize: 8,
           fontFamily: "var(--font-mono)",
           textTransform: "uppercase",
           letterSpacing: "var(--letter-spacing-wider)",
-          color: listening ? "var(--color-text)" : "var(--color-text-dim)",
+          color: connected ? "var(--color-text)" : "var(--color-text-dim)",
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -245,7 +261,7 @@ function SignalTerrain({ height = 220 }) {
           opacity: 0.6,
         }}
       >
-        {denied ? "mic denied" : listening ? "● live" : "tap to listen"}
+        {connected ? "● relay" : "tap to relay"}
       </button>
     </div>
   );
@@ -602,7 +618,7 @@ export default function SpotifyPage() {
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
-            <SignalTerrain height={200} />
+            <SignalTerrain height={200} active={isPlaying} />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
