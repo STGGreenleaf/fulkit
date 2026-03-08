@@ -50,9 +50,12 @@ const SOURCE_LOGOS = {
       <path d="M23.7 3.3c5.6-6 15.5-2.2 15.8 5.8.2 4.8-1.5 9.8-1.5 14.6 0 8.5 6.2 16 14.6 17.4 4 .7 8.2-.2 11.5-2.7 5-3.8 12.3-1 12.3 5.3 0 4-2.5 7.6-5.2 10.5-5.6 6-12 11.4-15.4 18.8-2.7 5.8-3 12.3-4.3 18.5-.8 3.7-2 7.5-5 10-3.5 2.8-8.5 2.7-12.6 1.2C26 99 19.7 92 16.8 84.3c-2-5.2-2.4-10.9-4.5-16.1C9 60.5 2.6 53.8.6 45.5c-1.6-6.5 1-13.8 6.3-17.8 3.4-2.6 8-3.4 11.4-6 3-2.2 4.7-5.8 5.4-9.4.5-3 .5-6.2 0-9z"/>
     </svg>
   ),
-  gdrive: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 19.5h20L12 2z"/><path d="M2 19.5h20"/><path d="M12 2l10 17.5"/><path d="M7.5 12h9"/>
+  google: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" opacity=".6"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" opacity=".7"/>
+      <path d="M5.84 14.09A6.97 6.97 0 015.46 12c0-.72.12-1.43.35-2.09V7.07H2.18A11 11 0 001 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z" opacity=".5"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" opacity=".8"/>
     </svg>
   ),
   dropbox: (
@@ -83,16 +86,6 @@ const SOURCE_LOGOS = {
   apple_notes: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/>
-    </svg>
-  ),
-  gmail: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/>
-    </svg>
-  ),
-  gcal: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h2v2H8z"/>
     </svg>
   ),
   slack: (
@@ -148,19 +141,19 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["obsidian", "dropbox", "notion"];
+const SUGGESTED_SOURCES = ["obsidian", "google", "notion"];
+
+const REAL_INTEGRATIONS = ["github", "spotify"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
-  { id: "gdrive", name: "Google Drive", cat: "Docs" },
+  { id: "google", name: "Google", cat: "Account" },
   { id: "notion", name: "Notion", cat: "Notes" },
   { id: "apple_notes", name: "Apple Notes", cat: "Notes" },
   { id: "dropbox", name: "Dropbox", cat: "Files" },
   { id: "icloud", name: "iCloud Drive", cat: "Files" },
   { id: "onenote", name: "OneNote", cat: "Notes" },
   { id: "markdown", name: "Markdown files", cat: "Notes" },
-  { id: "gmail", name: "Gmail", cat: "Email" },
-  { id: "gcal", name: "Google Calendar", cat: "Calendar" },
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "github", name: "GitHub", cat: "Dev" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
@@ -622,7 +615,11 @@ function SourcesTab() {
     localStorage.setItem("fulkit-spotify-player", String(next));
   }
 
-  const allConnected = spotifyConnected ? [...connected, "spotify"] : connected;
+  const allConnected = [
+    ...connected,
+    ...(githubConnected ? ["github"] : []),
+    ...(spotifyConnected ? ["spotify"] : []),
+  ];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -694,32 +691,36 @@ function SourcesTab() {
     </div>
   );
 
-  const sourceButton = (src) => (
-    <button
-      key={src.id}
-      onClick={() => connect(src.id)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        padding: "var(--space-3)",
-        background: "var(--color-bg-elevated)",
-        border: "1px solid var(--color-border-light)",
-        borderRadius: "var(--radius-md)",
-        cursor: "pointer",
-        fontFamily: "var(--font-primary)",
-        transition: `all var(--duration-fast) var(--ease-default)`,
-      }}
-    >
-      <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {SOURCE_LOGOS[src.id]}
-      </div>
-      <div style={{ textAlign: "left" }}>
-        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
-        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{src.cat}</div>
-      </div>
-    </button>
-  );
+  const sourceButton = (src) => {
+    const isReal = REAL_INTEGRATIONS.includes(src.id);
+    return (
+      <button
+        key={src.id}
+        onClick={isReal ? () => connect(src.id) : undefined}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          padding: "var(--space-3)",
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-md)",
+          cursor: isReal ? "pointer" : "default",
+          fontFamily: "var(--font-primary)",
+          opacity: isReal ? 1 : 0.5,
+          transition: `all var(--duration-fast) var(--ease-default)`,
+        }}
+      >
+        <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {SOURCE_LOGOS[src.id]}
+        </div>
+        <div style={{ textAlign: "left" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: isReal ? "var(--color-text)" : "var(--color-text-muted)" }}>{src.name}</div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{isReal ? src.cat : "Coming soon"}</div>
+        </div>
+      </button>
+    );
+  };
 
   const hasConnected = githubConnected || spotifyConnected || connectedSources.length > 0;
 
