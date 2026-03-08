@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipForward, SkipBack, Plus, Check } from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight, Plus, Check } from "lucide-react";
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
@@ -74,7 +74,7 @@ export default function MiniPlayer({ compact }) {
             cursor: "pointer",
           }}
         >
-          <SkipBack size={12} strokeWidth={2} color="var(--color-text-muted)" />
+          <ChevronLeft size={12} strokeWidth={2} color="var(--color-text-muted)" />
         </button>
         <button
           onClick={toggle}
@@ -110,7 +110,7 @@ export default function MiniPlayer({ compact }) {
             cursor: "pointer",
           }}
         >
-          <SkipForward size={12} strokeWidth={2} color="var(--color-text-muted)" />
+          <ChevronRight size={12} strokeWidth={2} color="var(--color-text-muted)" />
         </button>
       </div>
     );
@@ -247,14 +247,16 @@ export default function MiniPlayer({ compact }) {
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
               }}
             >
-              <SkipBack size={14} strokeWidth={2} color="var(--color-text-muted)" />
+              <ChevronLeft size={14} strokeWidth={2} color="var(--color-text-muted)" />
             </button>
             <button
               onClick={toggle}
               style={{
                 width: 32, height: 32, borderRadius: "var(--radius-full)",
-                background: "var(--color-bg-inverse)", border: "none",
+                background: isPlaying ? "var(--color-text)" : "var(--color-bg-inverse)",
+                border: "none",
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                transition: "background var(--duration-fast) var(--ease-default)",
               }}
             >
               {isPlaying ? (
@@ -271,7 +273,7 @@ export default function MiniPlayer({ compact }) {
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
               }}
             >
-              <SkipForward size={14} strokeWidth={2} color="var(--color-text-muted)" />
+              <ChevronRight size={14} strokeWidth={2} color="var(--color-text-muted)" />
             </button>
           </div>
         </div>
