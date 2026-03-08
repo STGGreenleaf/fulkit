@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import crypto from "crypto";
 
@@ -13,14 +12,16 @@ const SCOPES = [
 
 export async function GET(request) {
   try {
-    const authCookie = request.cookies.get("sp_auth_token")?.value;
-    if (!authCookie) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // Accept Bearer token (like all other routes)
+    const auth = request.headers.get("Authorization");
+    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (!token) {
+      return Response.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(authCookie);
+    const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
     if (error || !user) {
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+      return Response.json({ error: "Invalid session" }, { status: 401 });
     }
 
     // HMAC-signed state (same pattern as GitHub)
@@ -30,17 +31,19 @@ export async function GET(request) {
     const signature = hmac.digest("hex");
     const state = Buffer.from(JSON.stringify({ payload, signature })).toString("base64url");
 
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`;
+
     const params = new URLSearchParams({
       client_id: process.env.SPOTIFY_CLIENT_ID,
       response_type: "code",
-      redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`,
+      redirect_uri: redirectUri,
       scope: SCOPES,
       state,
     });
 
-    return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
+    return Response.json({ url: `https://accounts.spotify.com/authorize?${params.toString()}` });
   } catch (err) {
     console.error("[spotify/connect]", err.message);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
 }

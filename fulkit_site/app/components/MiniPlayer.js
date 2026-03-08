@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Play, Pause, SkipForward, SkipBack, Plus, Check } from "lucide-react";
 import Link from "next/link";
 import { useSpotify } from "../lib/spotify";
@@ -7,8 +8,16 @@ import { useSpotify } from "../lib/spotify";
 export default function MiniPlayer({ compact }) {
   const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged } =
     useSpotify();
+  const [enabled, setEnabled] = useState(true);
 
-  if (!connected || !currentTrack) return null;
+  useEffect(() => {
+    setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
+    const onStorage = () => setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  if (!enabled || !connected || !currentTrack) return null;
 
   const flaggedNow = isFlagged(currentTrack.id);
 

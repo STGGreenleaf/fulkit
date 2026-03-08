@@ -446,6 +446,12 @@ function SourcesTab() {
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [spotifyExpanded, setSpotifyExpanded] = useState(false);
+  const [spotifyPlayerEnabled, setSpotifyPlayerEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("fulkit-spotify-player") !== "false";
+  });
+  const [expanded, setExpanded] = useState({});
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -453,7 +459,7 @@ function SourcesTab() {
     fetchGithubRepos();
   }, [githubConnected, accessToken, isDev]);
 
-  // Refresh GitHub status if we just came back from OAuth
+  // Refresh GitHub/Spotify status if we just came back from OAuth
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -511,12 +517,20 @@ function SourcesTab() {
     window.location.href = "/api/github/connect";
   }
 
-  function connectSpotify() {
+  async function connectSpotify() {
     if (isDev) { setSpotifyConnected(true); return; }
-    console.log("[spotify] connect clicked, token?", !!accessToken);
     if (!accessToken) return;
-    document.cookie = `sp_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
-    window.location.href = "/api/spotify/connect";
+    try {
+      const res = await fetch("/api/spotify/connect", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("[spotify] connect failed:", err);
+    }
   }
 
   async function disconnectGitHub() {
@@ -527,14 +541,18 @@ function SourcesTab() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setGithubConnected(false);
-      setGithubRepoCount(null);
     } catch {}
     setGithubDisconnecting(false);
   }
 
-  const mockNotes = { obsidian: 847, gdrive: 234, dropbox: 166 };
+  function toggleSpotifyPlayer() {
+    const next = !spotifyPlayerEnabled;
+    setSpotifyPlayerEnabled(next);
+    localStorage.setItem("fulkit-spotify-player", String(next));
+  }
+
   const allConnected = spotifyConnected ? [...connected, "spotify"] : connected;
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id));
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
@@ -547,8 +565,100 @@ function SourcesTab() {
   };
   const disconnect = (id) => {
     if (id === "github") { disconnectGitHub(); return; }
+    if (id === "spotify") { setSpotifyConnected(false); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
+
+  // Shared expandable card header
+  const cardHeader = (logo, name, subtitle, isExpanded, onToggle) => (
+    <button
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        width: "100%",
+        padding: "var(--space-3) var(--space-4)",
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        fontFamily: "var(--font-primary)",
+        textAlign: "left",
+      }}
+    >
+      <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {logo}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{name}</div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{subtitle}</div>
+      </div>
+      <ChevronRight
+        size={14}
+        strokeWidth={2}
+        style={{
+          color: "var(--color-text-dim)",
+          transition: "transform var(--duration-fast) var(--ease-default)",
+          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+          flexShrink: 0,
+        }}
+      />
+    </button>
+  );
+
+  // Shared checkbox row
+  const checkboxRow = (label, checked, onChange) => (
+    <button
+      onClick={onChange}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        width: "100%",
+        padding: "var(--space-2-5) var(--space-4)",
+        background: checked ? "var(--color-bg-alt)" : "transparent",
+        border: "none",
+        borderTop: "1px solid var(--color-border-light)",
+        cursor: "pointer",
+        fontFamily: "var(--font-primary)",
+        textAlign: "left",
+        transition: "background var(--duration-fast) var(--ease-default)",
+      }}
+    >
+      <div
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: "var(--radius-xs)",
+          border: checked ? "none" : "1px solid var(--color-border)",
+          background: checked ? "var(--color-accent)" : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          transition: "all var(--duration-fast) var(--ease-default)",
+        }}
+      >
+        {checked && <Check size={10} strokeWidth={3} style={{ color: "var(--color-text-inverse)" }} />}
+      </div>
+      <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: checked ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+        {label}
+      </div>
+    </button>
+  );
+
+  // Shared disconnect footer
+  const disconnectFooter = (onClick, loading) => (
+    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end" }}>
+      <button
+        onClick={onClick}
+        disabled={loading}
+        style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
+      >
+        {loading ? "..." : "Disconnect"}
+      </button>
+    </div>
+  );
 
   const sourceButton = (src) => (
     <button
@@ -577,54 +687,27 @@ function SourcesTab() {
     </button>
   );
 
+  const hasConnected = githubConnected || spotifyConnected || connectedSources.length > 0;
+
   return (
     <div style={{ maxWidth: 640 }}>
       {/* Connected */}
-      {(connectedSources.length > 0 || githubConnected) && (
+      {hasConnected && (
         <>
           <SectionTitle>Connected</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
-            {/* GitHub — real integration */}
+            {/* GitHub */}
             {githubConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
-                <button
-                  onClick={() => setGithubExpanded(!githubExpanded)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    width: "100%",
-                    padding: "var(--space-4)",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-primary)",
-                    textAlign: "left",
-                  }}
-                >
-                  <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {SOURCE_LOGOS.github}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>GitHub</div>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                      {githubActiveRepos.length > 0
-                        ? `${githubActiveRepos.length} active source${githubActiveRepos.length !== 1 ? "s" : ""} of ${githubRepos.length}`
-                        : `${githubRepos.length} repos accessible`}
-                    </div>
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    strokeWidth={2}
-                    style={{
-                      color: "var(--color-text-dim)",
-                      transition: "transform var(--duration-fast) var(--ease-default)",
-                      transform: githubExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                      flexShrink: 0,
-                    }}
-                  />
-                </button>
-
+                {cardHeader(
+                  SOURCE_LOGOS.github,
+                  "GitHub",
+                  githubActiveRepos.length > 0
+                    ? `${githubActiveRepos.length} active source${githubActiveRepos.length !== 1 ? "s" : ""} of ${githubRepos.length}`
+                    : `${githubRepos.length} repos accessible`,
+                  githubExpanded,
+                  () => setGithubExpanded(!githubExpanded)
+                )}
                 {githubExpanded && (
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     {githubRepos.length === 0 && (
@@ -680,47 +763,51 @@ function SourcesTab() {
                         </button>
                       );
                     })}
-
-                    {/* Disconnect at bottom */}
-                    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        onClick={disconnectGitHub}
-                        disabled={githubDisconnecting}
-                        style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: githubDisconnecting ? 0.5 : 1 }}
-                      >
-                        {githubDisconnecting ? "..." : "Disconnect"}
-                      </button>
-                    </div>
+                    {disconnectFooter(disconnectGitHub, githubDisconnecting)}
                   </div>
                 )}
               </Card>
             )}
-            {/* Other connected sources */}
-            {connectedSources.map((src) => (
-              <Card key={src.id}>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                  <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {SOURCE_LOGOS[src.id]}
+
+            {/* Spotify */}
+            {spotifyConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {cardHeader(
+                  SOURCE_LOGOS.spotify,
+                  "Spotify",
+                  spotifyPlayerEnabled ? "Player active" : "Player off",
+                  spotifyExpanded,
+                  () => setSpotifyExpanded(!spotifyExpanded)
+                )}
+                {spotifyExpanded && (
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
+                    {disconnectFooter(() => disconnect("spotify"), false)}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{src.name}</div>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                      {src.id === "spotify" ? "Connected" : `${mockNotes[src.id] || 0} notes synced`}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                    {src.id !== "spotify" && (
-                      <button style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", padding: "var(--space-1) var(--space-2)", background: "transparent", border: "none", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
-                        <RefreshCw size={12} strokeWidth={2} /> Sync
-                      </button>
-                    )}
-                    <button onClick={() => disconnect(src.id)} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
+                )}
               </Card>
-            ))}
+            )}
+
+            {/* Other connected sources */}
+            {connectedSources.map((src) => {
+              const isExpanded = expanded[src.id];
+              return (
+                <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
+                  {cardHeader(
+                    SOURCE_LOGOS[src.id],
+                    src.name,
+                    src.cat,
+                    isExpanded,
+                    () => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }))
+                  )}
+                  {isExpanded && (
+                    <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                      {disconnectFooter(() => disconnect(src.id), false)}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </>
       )}
