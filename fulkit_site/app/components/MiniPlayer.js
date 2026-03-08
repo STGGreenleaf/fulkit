@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc } from "lucide-react";
+import Link from "next/link";
+import { useSpotify } from "../lib/spotify";
+import VolumeSlider from "./VolumeSlider";
 
 // Minimal pause mark — two vertical lines, no circle
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
@@ -17,9 +20,6 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-import Link from "next/link";
-import { useSpotify } from "../lib/spotify";
-
 // Normalized icon size for all controls
 const IC = 14;
 const IC_SM = 12;
@@ -30,8 +30,6 @@ export default function MiniPlayer({ compact }) {
   const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, volume, setVolume } =
     useSpotify();
   const [enabled, setEnabled] = useState(true);
-  const [dragging, setDragging] = useState(false);
-  const localVolume = useRef(volume);
 
   useEffect(() => {
     setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
@@ -40,23 +38,9 @@ export default function MiniPlayer({ compact }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Release drag even if pointer leaves the slider
-  useEffect(() => {
-    if (!dragging) return;
-    const up = () => setDragging(false);
-    window.addEventListener("mouseup", up);
-    window.addEventListener("touchend", up);
-    return () => { window.removeEventListener("mouseup", up); window.removeEventListener("touchend", up); };
-  }, [dragging]);
-
-  useEffect(() => {
-    if (!dragging) localVolume.current = volume;
-  }, [volume, dragging]);
-
   if (!enabled || !connected || !currentTrack) return null;
 
   const flaggedNow = isFlagged(currentTrack.id);
-  const displayVolume = dragging ? localVolume.current : volume;
 
   // All buttons share the same circular footprint
   const SZ = 28;
@@ -96,37 +80,7 @@ export default function MiniPlayer({ compact }) {
         }}
       >
         {/* Vertical volume slider — left edge */}
-        <div style={{ position: "relative", width: 14, flexShrink: 0 }}>
-          <input
-            type="range"
-            min={0} max={100} step={1}
-            value={displayVolume}
-            className="fulkit-vol-v"
-            onMouseDown={() => setDragging(true)}
-            onMouseUp={() => setDragging(false)}
-            onTouchStart={() => setDragging(true)}
-            onTouchEnd={() => setDragging(false)}
-            onChange={(e) => { const v = Number(e.target.value); localVolume.current = v; setVolume(v); }}
-            style={{
-              position: "absolute", bottom: 0, left: 7,
-              width: "var(--_vol-h, 100px)", height: 3,
-              WebkitAppearance: "none", appearance: "none",
-              background: "var(--color-border)", borderRadius: 0,
-              outline: "none", cursor: "pointer", margin: 0, padding: 0,
-              transformOrigin: "bottom left", transform: "rotate(-90deg)",
-            }}
-            ref={(el) => {
-              if (el && el.parentElement) {
-                el.style.setProperty("--_vol-h", el.parentElement.offsetHeight + "px");
-              }
-            }}
-          />
-        </div>
-        <style>{`
-          .fulkit-vol-v::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:2px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; transform:rotate(90deg); }
-          .fulkit-vol-v::-moz-range-thumb { width:12px; height:2px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; transform:rotate(90deg); }
-          .fulkit-vol-v::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
-        `}</style>
+        <VolumeSlider value={volume} onChange={setVolume} vertical />
 
         {/* Controls column — tight, pushed to bottom */}
         <div
@@ -189,28 +143,7 @@ export default function MiniPlayer({ compact }) {
   return (
     <div>
       {/* Volume slider — IS the divider rule */}
-      <input
-        type="range"
-        min={0} max={100} step={1}
-        value={displayVolume}
-        className="fulkit-vol"
-        onMouseDown={() => setDragging(true)}
-        onMouseUp={() => setDragging(false)}
-        onTouchStart={() => setDragging(true)}
-        onTouchEnd={() => setDragging(false)}
-        onChange={(e) => { const v = Number(e.target.value); localVolume.current = v; setVolume(v); }}
-        style={{
-          display: "block", width: "100%", height: 3,
-          WebkitAppearance: "none", appearance: "none",
-          background: "var(--color-border)", borderRadius: 0,
-          outline: "none", cursor: "pointer", margin: 0, padding: 0,
-        }}
-      />
-      <style>{`
-        .fulkit-vol::-webkit-slider-thumb { -webkit-appearance:none; width:2px; height:12px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; }
-        .fulkit-vol::-moz-range-thumb { width:2px; height:12px; border-radius:0; background:var(--color-text); border:none; cursor:pointer; }
-        .fulkit-vol::-moz-range-track { height:3px; background:var(--color-border); border-radius:0; }
-      `}</style>
+      <VolumeSlider value={volume} onChange={setVolume} />
 
       <div style={{ padding: "var(--space-2) 0 var(--space-2)" }}>
         {/* Track info — links to /spotify */}
