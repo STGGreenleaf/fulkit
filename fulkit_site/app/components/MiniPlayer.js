@@ -133,11 +133,11 @@ export default function MiniPlayer({ compact }) {
         <div
           style={{
             flex: 1,
-            padding: "var(--space-3) 0",
+            padding: "var(--space-4) 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "var(--space-2)",
+            gap: "var(--space-3)",
           }}
         >
           <button
@@ -150,6 +150,7 @@ export default function MiniPlayer({ compact }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer",
               transition: `all var(--duration-fast) var(--ease-default)`,
+              marginBottom: "var(--space-2)",
             }}
           >
             {flaggedNow ? (
