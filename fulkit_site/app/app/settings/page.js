@@ -143,7 +143,7 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = ["obsidian", "google", "notion"];
 
-const REAL_INTEGRATIONS = ["github", "spotify"];
+const REAL_INTEGRATIONS = ["github", "spotify", "google"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -514,6 +514,8 @@ function SourcesTab() {
     return localStorage.getItem("fulkit-spotify-player") !== "false";
   });
   const [expanded, setExpanded] = useState({});
+  const [googleExpanded, setGoogleExpanded] = useState(false);
+  const [googleServices, setGoogleServices] = useState({ drive: false, gmail: false, calendar: false });
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -832,8 +834,37 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* Google — sub-service picker */}
+            {allConnected.includes("google") && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.google}
+                  name="Google"
+                  subtitle={[googleServices.drive && "Drive", googleServices.gmail && "Gmail", googleServices.calendar && "Calendar"].filter(Boolean).join(", ") || "No services selected"}
+                  isExpanded={googleExpanded}
+                  onToggle={() => setGoogleExpanded(!googleExpanded)}
+                />
+                <Drawer open={googleExpanded}>
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <DrawerItem index={0} visible={googleExpanded}>
+                      {checkboxRow("Google Drive", googleServices.drive, () => setGoogleServices((p) => ({ ...p, drive: !p.drive })))}
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={googleExpanded}>
+                      {checkboxRow("Gmail", googleServices.gmail, () => setGoogleServices((p) => ({ ...p, gmail: !p.gmail })))}
+                    </DrawerItem>
+                    <DrawerItem index={2} visible={googleExpanded}>
+                      {checkboxRow("Google Calendar", googleServices.calendar, () => setGoogleServices((p) => ({ ...p, calendar: !p.calendar })))}
+                    </DrawerItem>
+                    <DrawerItem index={3} visible={googleExpanded}>
+                      {disconnectFooter(() => disconnect("google"), false)}
+                    </DrawerItem>
+                  </div>
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
-            {connectedSources.map((src) => {
+            {connectedSources.filter((s) => s.id !== "google").map((src) => {
               const isExpanded = expanded[src.id];
               return (
                 <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
