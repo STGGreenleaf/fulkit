@@ -69,7 +69,9 @@ export function SpotifyProvider({ children }) {
       },
     });
     if (!res.ok) return null;
-    return res.json();
+    const text = await res.text();
+    if (!text) return { ok: true };
+    try { return JSON.parse(text); } catch { return { ok: true }; }
   }, [accessToken]);
 
   // Check connection status

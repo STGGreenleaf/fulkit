@@ -28,7 +28,7 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
 const T_LAYERS = 40;
 const T_POINTS = 80;
 
-function SignalTerrain({ height = 220, active = false }) {
+function SignalTerrain({ height = 220, active = false, trackId = null }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const containerRef = useRef(null);
@@ -53,13 +53,13 @@ function SignalTerrain({ height = 220, active = false }) {
     return () => ro.disconnect();
   }, []);
 
-  // Generate new seed on mount
+  // Reset terrain + new seed shape on track change
   useEffect(() => {
     const s = [];
     for (let i = 0; i < T_POINTS; i++) s.push(Math.random());
     seedRef.current = s;
     historyRef.current = [];
-  }, []);
+  }, [trackId]);
 
   // Render loop
   useEffect(() => {
@@ -479,7 +479,7 @@ export default function SpotifyPage() {
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
-            <SignalTerrain height={200} active={isPlaying} />
+            <SignalTerrain height={200} active={isPlaying} trackId={currentTrack?.id} />
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
