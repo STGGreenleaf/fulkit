@@ -45,6 +45,8 @@ export default function Chat() {
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPins, setShowPins] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [alertsDismissed, setAlertsDismissed] = useState(false);
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -82,6 +84,34 @@ export default function Chat() {
         if (data?.message) setNblContext(data.message);
       })
       .catch(() => setNblError(true));
+  }, [accessToken, isDev]);
+
+  // Fetch Numbrly alerts on mount + poll every 5 minutes
+  useEffect(() => {
+    if (!accessToken || isDev) return;
+    async function fetchAlerts() {
+      try {
+        const res = await fetch("/api/numbrly/alerts", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.alerts?.length) {
+            setAlerts((prev) => {
+              const newIds = data.alerts.map((a) => a.message).join("|");
+              const oldIds = prev.map((a) => a.message).join("|");
+              if (newIds !== oldIds) setAlertsDismissed(false);
+              return data.alerts;
+            });
+          } else {
+            setAlerts([]);
+          }
+        }
+      } catch {}
+    }
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [accessToken, isDev]);
 
   // Load conversation list
@@ -642,6 +672,54 @@ export default function Chat() {
                     }}
                   >
                     <VaultGate />
+
+                    {/* Proactive alerts — Chappie's inbox */}
+                    {alerts.length > 0 && !alertsDismissed && (
+                      <div
+                        style={{
+                          maxWidth: 640,
+                          width: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: "100%",
+                            padding: "var(--space-2-5) var(--space-3-5)",
+                            fontSize: "var(--font-size-base)",
+                            lineHeight: "var(--line-height-relaxed)",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            background: "var(--color-bg-alt)",
+                            color: "var(--color-text)",
+                            border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
+                            position: "relative",
+                          }}
+                        >
+                          {`Hey — ${alerts.length} thing${alerts.length > 1 ? "s" : ""} flagged:\n\n${alerts.map((a) => `• ${a.message}`).join("\n")}`}
+                          <button
+                            onClick={() => setAlertsDismissed(true)}
+                            style={{
+                              position: "absolute",
+                              top: 6,
+                              right: 6,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 2,
+                              color: "var(--color-text-dim)",
+                              display: "flex",
+                            }}
+                          >
+                            <X size={12} strokeWidth={2} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <MessageCircle
                       size={28}
                       strokeWidth={1.5}
