@@ -78,32 +78,73 @@ export default function VolumeSlider({ value, onChange, vertical = false, style 
   // Thumb position as percentage
   const pct = `${displayPos * 100}%`;
 
-  const trackStyle = {
-    position: "relative",
-    background: "var(--color-border)",
-    cursor: "pointer",
-    touchAction: "none",
-    userSelect: "none",
-    ...(vertical
-      ? { width: 14, height: "100%", flexShrink: 0 }
-      : { width: "100%", height: 3, display: "block" }
-    ),
-    ...style,
-  };
+  if (vertical) {
+    // Vertical: 14px wide hit area, 3px visible track centered inside, thumb overhangs
+    return (
+      <div
+        ref={trackRef}
+        onPointerDown={handleDown}
+        onPointerMove={handleMove}
+        onPointerUp={handleUp}
+        onPointerCancel={handleUp}
+        style={{
+          position: "relative",
+          width: 14,
+          height: "100%",
+          flexShrink: 0,
+          cursor: "pointer",
+          touchAction: "none",
+          userSelect: "none",
+          ...style,
+        }}
+      >
+        {/* Thin visible track — 3px, centered */}
+        <div style={{
+          position: "absolute",
+          left: "50%",
+          top: 0,
+          width: 3,
+          height: "100%",
+          background: "var(--color-border)",
+          transform: "translateX(-50%)",
+        }} />
+        {/* Thumb — overhangs the thin track */}
+        <div style={{
+          position: "absolute",
+          left: "50%",
+          bottom: pct,
+          width: 12,
+          height: 2,
+          background: "var(--color-text)",
+          transform: "translate(-50%, 50%)",
+          transition: "bottom 100ms cubic-bezier(0.22, 1, 0.36, 1)",
+          pointerEvents: "none",
+        }} />
+      </div>
+    );
+  }
 
-  const thumbStyle = vertical
-    ? {
-        position: "absolute",
-        left: "50%",
-        bottom: pct,
-        width: 12,
-        height: 2,
-        background: "var(--color-text)",
-        transform: "translate(-50%, 50%)",
-        transition: "bottom 100ms cubic-bezier(0.22, 1, 0.36, 1)",
-        pointerEvents: "none",
-      }
-    : {
+  // Horizontal: full-width 3px track, thumb overhangs vertically
+  return (
+    <div
+      ref={trackRef}
+      onPointerDown={handleDown}
+      onPointerMove={handleMove}
+      onPointerUp={handleUp}
+      onPointerCancel={handleUp}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: 3,
+        display: "block",
+        background: "var(--color-border)",
+        cursor: "pointer",
+        touchAction: "none",
+        userSelect: "none",
+        ...style,
+      }}
+    >
+      <div style={{
         position: "absolute",
         top: "50%",
         left: pct,
@@ -113,18 +154,7 @@ export default function VolumeSlider({ value, onChange, vertical = false, style 
         transform: "translate(-50%, -50%)",
         transition: "left 100ms cubic-bezier(0.22, 1, 0.36, 1)",
         pointerEvents: "none",
-      };
-
-  return (
-    <div
-      ref={trackRef}
-      onPointerDown={handleDown}
-      onPointerMove={handleMove}
-      onPointerUp={handleUp}
-      onPointerCancel={handleUp}
-      style={trackStyle}
-    >
-      <div style={thumbStyle} />
+      }} />
     </div>
   );
 }
