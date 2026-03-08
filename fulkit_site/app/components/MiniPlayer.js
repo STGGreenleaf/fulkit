@@ -49,17 +49,29 @@ export default function MiniPlayer({ compact }) {
   const flaggedNow = isFlagged(currentTrack.id);
   const displayVolume = dragging ? localVolume.current : volume;
 
-  // Universal control button — same hit area for everything
-  const ctrlBtn = {
-    width: 28, height: 28,
-    background: "transparent",
-    border: "none",
-    outline: "none",
+  // All buttons share the same circular footprint
+  const SZ = 28;
+  const baseBtn = {
+    width: SZ, height: SZ,
+    borderRadius: "var(--radius-full)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     padding: 0,
+    outline: "none",
+  };
+  // Circled buttons (flag + disc)
+  const circleBtn = {
+    ...baseBtn,
+    background: "transparent",
+    border: "1px solid var(--color-border)",
+  };
+  // Bare buttons (prev, play/pause, next) — same footprint, no visible circle
+  const bareBtn = {
+    ...baseBtn,
+    background: "transparent",
+    border: "1px solid transparent",
   };
 
   /* ═══════════════════════════════════════════
@@ -120,14 +132,13 @@ export default function MiniPlayer({ compact }) {
             gap: "var(--space-4)",
           }}
         >
-          {/* Flag */}
+          {/* Flag — circled */}
           <button
             onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
             style={{
-              ...ctrlBtn,
-              borderRadius: "var(--radius-full)",
+              ...circleBtn,
               background: flaggedNow ? "var(--color-text)" : "transparent",
-              border: flaggedNow ? "none" : "1px solid var(--color-border)",
+              border: flaggedNow ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
               transition: "all 150ms",
             }}
           >
@@ -137,27 +148,27 @@ export default function MiniPlayer({ compact }) {
             }
           </button>
 
-          {/* Prev */}
-          <button onClick={prev} style={ctrlBtn}>
+          {/* Prev — bare */}
+          <button onClick={prev} style={bareBtn}>
             <ChevronUp size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
 
-          {/* Play/Pause — thicker */}
-          <button onClick={toggle} style={ctrlBtn}>
+          {/* Play/Pause — bare, thicker */}
+          <button onClick={toggle} style={bareBtn}>
             {isPlaying
               ? <PauseLines size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" />
               : <Play size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
             }
           </button>
 
-          {/* Next */}
-          <button onClick={skip} style={ctrlBtn}>
+          {/* Next — bare */}
+          <button onClick={skip} style={bareBtn}>
             <ChevronDown size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
 
-          {/* Deck link */}
-          <Link href="/spotify" style={{ ...ctrlBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
-            <Disc size={IC} strokeWidth={1.8} />
+          {/* Deck link — circled */}
+          <Link href="/spotify" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+            <Disc size={IC_SM} strokeWidth={1.8} />
           </Link>
         </div>
       </div>
@@ -230,15 +241,14 @@ export default function MiniPlayer({ compact }) {
             justifyContent: "space-between",
           }}
         >
-          {/* Flag */}
+          {/* Flag — circled */}
           <button
             onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
             title={flaggedNow ? "Flagged" : "Flag this track"}
             style={{
-              ...ctrlBtn,
-              borderRadius: "var(--radius-full)",
+              ...circleBtn,
               background: flaggedNow ? "var(--color-text)" : "transparent",
-              border: flaggedNow ? "none" : "1px solid var(--color-border)",
+              border: flaggedNow ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
               transition: "all 150ms",
             }}
           >
@@ -248,27 +258,27 @@ export default function MiniPlayer({ compact }) {
             }
           </button>
 
-          {/* Prev */}
-          <button onClick={prev} style={ctrlBtn}>
+          {/* Prev — bare */}
+          <button onClick={prev} style={bareBtn}>
             <ChevronLeft size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
 
-          {/* Play/Pause — thicker */}
-          <button onClick={toggle} style={ctrlBtn}>
+          {/* Play/Pause — bare, thicker */}
+          <button onClick={toggle} style={bareBtn}>
             {isPlaying
               ? <PauseLines size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" />
               : <Play size={IC} strokeWidth={STROKE_BOLD} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
             }
           </button>
 
-          {/* Next */}
-          <button onClick={skip} style={ctrlBtn}>
+          {/* Next — bare */}
+          <button onClick={skip} style={bareBtn}>
             <ChevronRight size={IC} strokeWidth={STROKE} color="var(--color-text-muted)" />
           </button>
 
-          {/* Deck link */}
-          <Link href="/spotify" style={{ ...ctrlBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
-            <Disc size={IC} strokeWidth={1.8} />
+          {/* Deck link — circled */}
+          <Link href="/spotify" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+            <Disc size={IC_SM} strokeWidth={1.8} />
           </Link>
         </div>
       </div>
