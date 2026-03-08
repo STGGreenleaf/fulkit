@@ -236,7 +236,12 @@ export default function Settings() {
             return (
               <Tooltip key={t.id} label={compactMode ? t.label : null}>
                 <button
-                  onClick={() => setTab(t.id)}
+                  onClick={() => {
+                    setTab(t.id);
+                    const url = new URL(window.location);
+                    url.searchParams.set("tab", t.id);
+                    window.history.replaceState({}, "", url);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
