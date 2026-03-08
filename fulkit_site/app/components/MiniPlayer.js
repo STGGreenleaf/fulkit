@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
+import { Play, CirclePause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check } from "lucide-react";
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
@@ -30,7 +30,7 @@ export default function MiniPlayer({ compact }) {
   // Shared bare button style — no circle, just the mark
   const bareBtn = {
     width: 28, height: 28,
-    background: "transparent", border: "none",
+    background: "transparent", border: "none", outline: "none",
     display: "flex", alignItems: "center", justifyContent: "center",
     cursor: "pointer", padding: 0,
   };
@@ -144,9 +144,9 @@ export default function MiniPlayer({ compact }) {
           </button>
           <button onClick={toggle} style={{ ...bareBtn, width: 24, height: 24 }}>
             {isPlaying ? (
-              <Pause size={14} strokeWidth={2.5} color="var(--color-text)" />
+              <CirclePause size={14} strokeWidth={2} color="var(--color-text)" />
             ) : (
-              <Play size={14} strokeWidth={2.5} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
+              <Play size={14} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
             )}
           </button>
           <button onClick={skip} style={{ ...bareBtn, width: 24, height: 24 }}>
@@ -280,9 +280,9 @@ export default function MiniPlayer({ compact }) {
             </button>
             <button onClick={toggle} style={bareBtn}>
               {isPlaying ? (
-                <Pause size={16} strokeWidth={2.5} color="var(--color-text)" />
+                <CirclePause size={16} strokeWidth={2} color="var(--color-text)" />
               ) : (
-                <Play size={16} strokeWidth={2.5} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
+                <Play size={16} strokeWidth={2.5} color="var(--color-text)" style={{ marginLeft: 1 }} />
               )}
             </button>
             <button onClick={skip} style={bareBtn}>
