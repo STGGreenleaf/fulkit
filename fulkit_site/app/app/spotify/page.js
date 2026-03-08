@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Play, SkipForward, SkipBack, Plus, Check, X } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useSpotify } from "../../lib/spotify";
 
 // Minimal pause mark — two vertical lines
-function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2 }) {
+function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   const w = size, h = size;
-  const gap = w * 0.28;
+  const gap = w * 0.3;
   const x1 = w / 2 - gap, x2 = w / 2 + gap;
   const py = h * 0.22;
   return (
@@ -119,17 +119,6 @@ export default function SpotifyPage() {
     setDragOverIdx(null);
     if (dragNode.current) dragNode.current.style.opacity = "1";
   }, []);
-
-  // Bare button base
-  const bareBtn = {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    padding: 4,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   return (
     <AuthGuard>
@@ -307,8 +296,9 @@ export default function SpotifyPage() {
                 </div>
               </div>
 
-              {/* Transport */}
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              {/* Transport — same pattern as MiniPlayer, scaled up */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 260 }}>
+                {/* Flag — circled */}
                 <button
                   onClick={() => currentTrack && flag(currentTrack)}
                   style={{
@@ -316,46 +306,64 @@ export default function SpotifyPage() {
                     height: 32,
                     borderRadius: "var(--radius-full)",
                     background: currentTrack && isFlagged(currentTrack?.id) ? "var(--color-text)" : "transparent",
-                    border: currentTrack && isFlagged(currentTrack?.id) ? "none" : "1px solid var(--color-border)",
+                    border: currentTrack && isFlagged(currentTrack?.id) ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
+                    padding: 0,
+                    outline: "none",
                     transition: "all 150ms",
                   }}
                 >
                   {currentTrack && isFlagged(currentTrack?.id) ? (
-                    <Check size={12} strokeWidth={2.5} color="var(--color-text-inverse)" />
+                    <Check size={14} strokeWidth={2.8} color="var(--color-text-inverse)" />
                   ) : (
-                    <Plus size={12} strokeWidth={2} color="var(--color-text-muted)" />
+                    <Plus size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                   )}
                 </button>
 
-                <button onClick={prev} style={bareBtn}>
-                  <SkipBack size={18} strokeWidth={1.8} color="var(--color-text-secondary)" />
+                {/* Prev — bare */}
+                <button
+                  onClick={prev}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-full)",
+                    background: "transparent", border: "1px solid transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0, outline: "none",
+                  }}
+                >
+                  <ChevronLeft size={16} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
+
+                {/* Play/Pause — bare, thicker */}
                 <button
                   onClick={toggle}
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: "var(--radius-full)",
-                    background: "var(--color-bg-inverse)",
-                    border: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
+                    width: 32, height: 32, borderRadius: "var(--radius-full)",
+                    background: "transparent", border: "1px solid transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0, outline: "none",
                   }}
                 >
                   {isPlaying ? (
-                    <PauseLines size={18} strokeWidth={2.5} color="var(--color-text-inverse)" />
+                    <PauseLines size={16} strokeWidth={2.8} color="var(--color-text)" />
                   ) : (
-                    <Play size={18} strokeWidth={2.5} color="var(--color-text-inverse)" fill="var(--color-text-inverse)" style={{ marginLeft: 2 }} />
+                    <Play size={16} strokeWidth={2.8} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />
                   )}
                 </button>
-                <button onClick={skip} style={bareBtn}>
-                  <SkipForward size={18} strokeWidth={1.8} color="var(--color-text-secondary)" />
+
+                {/* Next — bare */}
+                <button
+                  onClick={skip}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-full)",
+                    background: "transparent", border: "1px solid transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0, outline: "none",
+                  }}
+                >
+                  <ChevronRight size={16} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
               </div>
             </div>
