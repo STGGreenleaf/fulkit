@@ -34,7 +34,9 @@ export function SpotifyProvider({ children }) {
   const [flagged, setFlagged] = useState([]);
   const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
   const [progress, setProgress] = useState(0);
+  const [volume, setVolumeState] = useState(50);
   const pollRef = useRef(null);
+  const volumeTimer = useRef(null);
 
   // Helper for authenticated API calls
   const apiFetch = useCallback(async (endpoint, options = {}) => {
@@ -75,6 +77,7 @@ export function SpotifyProvider({ children }) {
       const data = await apiFetch("/api/spotify/now-playing");
       if (!data) return;
       setIsPlaying(data.isPlaying);
+      if (data.volume != null) setVolumeState(data.volume);
       if (data.track) {
         setCurrentTrack((prev) => {
           // Only update if track changed or progress jumped
@@ -140,6 +143,19 @@ export function SpotifyProvider({ children }) {
     sendControl("previous");
   }, [isDev, sendControl]);
 
+  const setVolume = useCallback((val) => {
+    const v = Math.max(0, Math.min(100, Math.round(val)));
+    setVolumeState(v);
+    if (isDev) return;
+    clearTimeout(volumeTimer.current);
+    volumeTimer.current = setTimeout(() => {
+      apiFetch("/api/spotify/controls", {
+        method: "POST",
+        body: JSON.stringify({ action: "volume", value: v }),
+      });
+    }, 200);
+  }, [isDev, apiFetch]);
+
   const flag = useCallback((track) => {
     setFlagged((prev) => {
       if (prev.some((t) => t.id === track.id)) {
@@ -186,6 +202,8 @@ export function SpotifyProvider({ children }) {
         isFlagged,
         playTrack,
         setProgress,
+        volume,
+        setVolume,
         formatTime,
       }}
     >

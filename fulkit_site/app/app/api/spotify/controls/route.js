@@ -11,7 +11,16 @@ export async function POST(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { action } = await request.json();
+  const { action, value } = await request.json();
+
+  // Volume is special — uses query param
+  if (action === "volume" && typeof value === "number") {
+    const percent = Math.max(0, Math.min(100, Math.round(value)));
+    const res = await spotifyFetch(userId, `/me/player/volume?volume_percent=${percent}`, { method: "PUT" });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Volume error" }, { status: res.status });
+  }
 
   const config = ACTIONS[action];
   if (!config) {

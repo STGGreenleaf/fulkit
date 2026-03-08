@@ -4,7 +4,7 @@ export async function GET(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const res = await spotifyFetch(userId, "/me/player/currently-playing");
+  const res = await spotifyFetch(userId, "/me/player");
 
   // No active device or nothing playing
   if (res.status === 204 || res.status === 202) {
@@ -36,5 +36,5 @@ export async function GET(request) {
     progressMs: data.progress_ms || 0,
   };
 
-  return Response.json({ isPlaying: data.is_playing, track });
+  return Response.json({ isPlaying: data.is_playing, track, volume: data.device?.volume_percent ?? null });
 }

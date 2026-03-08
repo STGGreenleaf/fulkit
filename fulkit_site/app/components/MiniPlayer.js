@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Play, Pause, SkipForward, SkipBack, Plus, Check } from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect, useRef } from "react";
+import { Play, Pause, SkipForward, SkipBack, Plus, Check, Volume2, VolumeX } from "lucide-react";
 import { useSpotify } from "../lib/spotify";
 
 export default function MiniPlayer({ compact }) {
-  const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged } =
+  const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, volume, setVolume } =
     useSpotify();
   const [enabled, setEnabled] = useState(true);
+  const [dragging, setDragging] = useState(false);
+  const localVolume = useRef(volume);
 
   useEffect(() => {
     setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
@@ -16,6 +17,11 @@ export default function MiniPlayer({ compact }) {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  // Sync from provider when not dragging
+  useEffect(() => {
+    if (!dragging) localVolume.current = volume;
+  }, [volume, dragging]);
 
   if (!enabled || !connected || !currentTrack) return null;
 
@@ -110,6 +116,9 @@ export default function MiniPlayer({ compact }) {
     );
   }
 
+  const displayVolume = dragging ? localVolume.current : volume;
+  const muted = displayVolume === 0;
+
   return (
     <div
       style={{
@@ -117,70 +126,32 @@ export default function MiniPlayer({ compact }) {
         padding: "var(--space-3) var(--space-2-5)",
       }}
     >
-      {/* Track info — click to open /spotify */}
-      <Link
-        href="/spotify"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2-5)",
-          textDecoration: "none",
-          marginBottom: "var(--space-2-5)",
-        }}
-      >
-        {/* Album art placeholder — monochrome */}
+      {/* Track info — left-aligned, no art */}
+      <div style={{ marginBottom: "var(--space-2-5)" }}>
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: "var(--radius-xs)",
-            background: "var(--color-bg-inverse)",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            filter: "grayscale(1)",
+            fontSize: "var(--font-size-xs)",
+            fontWeight: "var(--font-weight-medium)",
+            color: "var(--color-text)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-text-inverse)"
-            strokeWidth="1.8"
-          >
-            <path d="M9 18V5l12-2v13" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
+          {currentTrack.title}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-medium)",
-              color: "var(--color-text)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {currentTrack.title}
-          </div>
-          <div
-            style={{
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {currentTrack.artist}
-          </div>
+        <div
+          style={{
+            fontSize: "var(--font-size-2xs)",
+            color: "var(--color-text-dim)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {currentTrack.artist}
         </div>
-      </Link>
+      </div>
 
       {/* Controls */}
       <div
@@ -299,6 +270,86 @@ export default function MiniPlayer({ compact }) {
             />
           </button>
         </div>
+      </div>
+
+      {/* Volume slider */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          marginTop: "var(--space-2-5)",
+        }}
+      >
+        <button
+          onClick={() => setVolume(muted ? 50 : 0)}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          {muted ? (
+            <VolumeX size={12} strokeWidth={2} color="var(--color-text-dim)" />
+          ) : (
+            <Volume2 size={12} strokeWidth={2} color="var(--color-text-dim)" />
+          )}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={displayVolume}
+          className="fulkit-vol"
+          onMouseDown={() => setDragging(true)}
+          onMouseUp={() => setDragging(false)}
+          onTouchStart={() => setDragging(true)}
+          onTouchEnd={() => setDragging(false)}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            localVolume.current = v;
+            setVolume(v);
+          }}
+          style={{
+            flex: 1,
+            height: 2,
+            WebkitAppearance: "none",
+            appearance: "none",
+            background: "var(--color-border)",
+            borderRadius: 1,
+            outline: "none",
+            cursor: "pointer",
+          }}
+        />
+        <style>{`
+          .fulkit-vol::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--color-text-muted);
+            border: none;
+            cursor: pointer;
+          }
+          .fulkit-vol::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--color-text-muted);
+            border: none;
+            cursor: pointer;
+          }
+          .fulkit-vol::-moz-range-track {
+            height: 2px;
+            background: var(--color-border);
+            border-radius: 1px;
+          }
+        `}</style>
       </div>
     </div>
   );
