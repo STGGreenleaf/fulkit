@@ -44,11 +44,11 @@
 
 ## Phase 2.5: Onboarding Context Gate
 
-- [ ] Make onboarding dismissible — accessible from dashboard, not a hard gate
-- [ ] Context check before first chat — need questionnaire OR uploaded files/notes
-- [ ] Dashboard nudge if no context ("Take the quiz or drop in some files")
-- [ ] File/note uploads as alternative context source
-- [ ] Track context status on profile (`has_context` or similar)
+- [x] Make onboarding dismissible — "I'll do this later" skip link
+- [x] Context check before first chat — soft nudge in chat empty state
+- [x] Dashboard nudge if no context ("Take the quiz or drop in some files")
+- [x] File/note uploads as alternative context source (Settings → Vault tab already built)
+- [x] Track context status — `hasContext` derived from onboarded + notes count in auth
 
 ## Phase 2.55: Privacy Transparency Dashboard
 
@@ -123,4 +123,4 @@
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → **Context gate** → Actions → Dogfood → Context engine → MCP integrations → Self-building.
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → **Actions** → Dogfood → Context engine → MCP integrations → Self-building.
