@@ -38,7 +38,7 @@ const TABS = [
 const VALID_TAB_IDS = TABS.map((t) => t.id);
 
 export default function Owner() {
-  const { isOwner, compactMode } = useAuth();
+  const { isOwner, loading, compactMode } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const pathTab = pathname.split("/")[2];
@@ -47,11 +47,10 @@ export default function Owner() {
 
   useEffect(() => { setTab(resolvedTab); }, [resolvedTab]);
 
-  // Non-owners get bounced
-  if (!isOwner) {
-    if (typeof window !== "undefined") router.replace("/");
-    return null;
-  }
+  // Non-owners get bounced (wait for auth to load first)
+  useEffect(() => {
+    if (!loading && !isOwner) router.replace("/");
+  }, [loading, isOwner, router]);
 
   return (
     <AuthGuard>
