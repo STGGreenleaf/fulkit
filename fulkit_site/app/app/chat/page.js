@@ -796,7 +796,7 @@ export default function Chat() {
                             }),
                       }}
                     >
-                      {msg.content}
+                      {typeof msg.content === "string" ? msg.content.trim() : msg.content}
                       {streaming && i === messages.length - 1 && msg.role === "assistant" && (
                         <span
                           style={{
