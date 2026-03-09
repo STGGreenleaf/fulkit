@@ -20,8 +20,11 @@ import {
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
+
+const TAB_ICON_SIZE = 14;
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -32,10 +35,10 @@ const TABS = [
   { id: "og", label: "OG Creator", icon: Image },
 ];
 
-export default function Owner() {
-  const { isOwner } = useAuth();
+export default function Owner({ initialTab = "dashboard" }) {
+  const { isOwner, compactMode } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(initialTab);
 
   // Non-owners get bounced
   if (!isOwner) {
@@ -60,9 +63,11 @@ export default function Owner() {
             }}
           >
             <Crown size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-              Owner Portal
-            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                Owner Portal
+              </span>
+            )}
           </div>
 
           {/* Tab bar */}
@@ -77,30 +82,32 @@ export default function Owner() {
             {TABS.map((t) => {
               const active = tab === t.id;
               return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1-5)",
-                    padding: "var(--space-2-5) var(--space-3)",
-                    border: "none",
-                    borderBottom: active ? "1px solid var(--color-text)" : "1px solid transparent",
-                    background: "transparent",
-                    borderRadius: 0,
-                    color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                    fontWeight: "var(--font-weight-medium)",
-                    marginBottom: -1,
-                    fontSize: "var(--font-size-xs)",
-                    fontFamily: "var(--font-primary)",
-                    cursor: "pointer",
-                    transition: `all var(--duration-fast) var(--ease-default)`,
-                  }}
-                >
-                  <t.icon size={14} strokeWidth={1.8} />
-                  {t.label}
-                </button>
+                <Tooltip key={t.id} label={compactMode ? t.label : null}>
+                  <button
+                    onClick={() => {
+                      setTab(t.id);
+                      window.history.replaceState({}, "", `/owner/${t.id}`);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1-5)",
+                      padding: "var(--space-2-5) var(--space-3)",
+                      border: "none",
+                      background: active ? "var(--color-bg-alt)" : "transparent",
+                      borderRadius: "var(--radius-md)",
+                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                      fontSize: "var(--font-size-xs)",
+                      fontFamily: "var(--font-primary)",
+                      cursor: "pointer",
+                      transition: `all var(--duration-fast) var(--ease-default)`,
+                    }}
+                  >
+                    <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                    {!compactMode && t.label}
+                  </button>
+                </Tooltip>
               );
             })}
           </div>
@@ -248,25 +255,66 @@ function DesignTab() {
     <div style={{ maxWidth: 780, margin: "0 auto", padding: "var(--space-8) 0" }}>
 
       {/* ═══ MASTHEAD ═══ */}
-      <div style={{ marginBottom: "var(--space-12)", textAlign: "center" }}>
-        <div style={{
-          fontSize: 64, fontWeight: "var(--font-weight-black)",
-          fontFamily: "var(--font-primary)", letterSpacing: "var(--letter-spacing-tighter)",
-          lineHeight: 1, color: "var(--color-text)", marginBottom: "var(--space-3)",
-        }}>
-          Fülkit
+      <div style={{ marginBottom: "var(--space-12)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{
+            fontSize: 64, fontWeight: "var(--font-weight-black)",
+            fontFamily: "var(--font-primary)", letterSpacing: "var(--letter-spacing-tighter)",
+            lineHeight: 1, color: "var(--color-text)", marginBottom: "var(--space-3)",
+          }}>
+            Fülkit
+          </div>
+          <div style={{
+            fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)",
+            textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)",
+            color: "var(--color-text-dim)",
+          }}>
+            Brand &amp; Design System
+          </div>
         </div>
-        <div style={{
-          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)",
-          textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)",
-          color: "var(--color-text-dim)",
-        }}>
-          Brand &amp; Design System
+        <DesignExportButton />
+      </div>
+
+      {/* ═══ BRAND IDENTITY ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Brand Identity</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", lineHeight: 1, marginBottom: "var(--space-3)" }}>
+              Fülkit
+            </div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>
+              The <span style={{ fontWeight: "var(--font-weight-semibold)" }}>ü</span> (diaeresis/umlaut) is the brand mark.
+              Pronunciation: "Fühl-kit" — German: <em>fühl</em> = to feel. Fülkit = feel-kit.
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              The two dots work as a standalone visual mark. Intentional, European, designed.
+              The logotype IS the logo — the F with diaeresis. No separate icon needed.
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Taglines
+            </div>
+            {[
+              { label: "Primary", text: "I'll be your bestie." },
+              { label: "Secondary", text: "Let's chat and get shit done." },
+              { label: "Formal", text: "Your second brain, fully loaded." },
+              { label: "Action", text: "Get Fülkit." },
+            ].map((t) => (
+              <div key={t.label} style={{ marginBottom: "var(--space-2)" }}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>{t.text}</div>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{t.label}</div>
+              </div>
+            ))}
+            <div style={{ marginTop: "var(--space-4)", fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+              Logo Variants
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              Full wordmark ("Fülkit") · Icon mark ("F" with dots) · Monochrome
+            </div>
+          </div>
         </div>
-        <div style={{
-          width: 32, height: 1, background: "var(--color-text-dim)", margin: "var(--space-5) auto 0",
-          opacity: 0.4,
-        }} />
       </div>
 
       {/* ═══ PHILOSOPHY ═══ */}
@@ -306,6 +354,29 @@ function DesignTab() {
             letterSpacing: "var(--letter-spacing-wider)",
           }}>
             Dieter Rams
+          </div>
+        </div>
+
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+            Design Heritage
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-3)" }}>
+            {[
+              { era: "1931", label: "DIN Standard", note: "German Institute for Standardization. Road signs, technical docs. Our typeface DNA." },
+              { era: "1919", label: "Bauhaus", note: "Form follows function. Grid systems. The ü itself says 'this has German DNA.'" },
+              { era: "1950s", label: "Swiss Style", note: "International Typographic Style. Grids, hierarchy through weight, clarity." },
+              { era: "1960s", label: "Braun / Rams", note: "Less but better. Industrial design as restraint. Our visual north star." },
+            ].map((h) => (
+              <div key={h.label} style={{
+                padding: "var(--space-3)", background: "var(--color-bg-elevated)",
+                borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-light)",
+              }}>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>{h.era}</div>
+                <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>{h.label}</div>
+                <div style={{ fontSize: 9, color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>{h.note}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -378,18 +449,91 @@ function DesignTab() {
           </div>
         </div>
 
-        {/* Functional — the only color */}
-        <div style={{ marginTop: "var(--space-6)" }}>
+        {/* Functional color — the only exceptions */}
+        <div style={{ marginTop: "var(--space-8)" }}>
           <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
-            Functional Color — the only exception
+            Functional Color — the only exceptions
           </div>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
-            Reserved for status signals. Never decorative.
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", lineHeight: "var(--line-height-normal)" }}>
+            Color is never decorative. It appears in exactly three contexts. Everywhere else is grey.
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>
-            <SwatchRow label="Success" token="--color-success" hex="#2F8F4E" />
-            <SwatchRow label="Warning" token="--color-warning" hex="#C4890A" />
-            <SwatchRow label="Error" token="--color-error" hex="#C43B2E" />
+
+          {/* 1. Semantic states */}
+          <div style={{ marginBottom: "var(--space-5)" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              1. Semantic States
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
+              Status signals only. Each has a soft variant (6-8% opacity) for tint backgrounds.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
+              {[
+                { label: "Success", hex: "#2F8F4E", soft: "#2F8F4E12", uses: "Connected, synced, profitable, confirmed" },
+                { label: "Warning", hex: "#C4890A", soft: "#C4890A12", uses: "Syncing, nearing limit, caution" },
+                { label: "Error", hex: "#C43B2E", soft: "#C43B2E12", uses: "Failed, over budget, disconnected" },
+              ].map((s) => (
+                <div key={s.label} style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border-light)" }}>
+                  <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", marginBottom: "var(--space-2)" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: "var(--radius-sm)", background: s.hex }} />
+                    <div style={{ width: 24, height: 24, borderRadius: "var(--radius-sm)", background: s.soft, border: "1px solid var(--color-border-light)" }} />
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", marginBottom: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{s.hex}</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-muted)", marginTop: "var(--space-1)", lineHeight: "var(--line-height-relaxed)" }}>{s.uses}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Source indicators */}
+          <div style={{ marginBottom: "var(--space-5)" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              2. Source Indicator Dots
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
+              6-8px colored dots identifying content origin. Used in note lists, file browsers, sync status. Dots only — never as fill, border, or accent.
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap" }}>
+              {[
+                { label: "Obsidian", hex: "#7C3AED" },
+                { label: "Google Drive", hex: "#16A34A" },
+                { label: "Dropbox", hex: "#2563EB" },
+                { label: "iCloud", hex: "#3B82F6" },
+                { label: "Fülkit", hex: "#2A2826" },
+              ].map((s) => (
+                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "var(--radius-full)", background: s.hex }} />
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{s.label}</div>
+                  <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{s.hex}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Third-party hover */}
+          <div style={{ marginBottom: "var(--space-5)" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              3. Third-Party Icon Hover
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              Third-party brand icons (Dropbox, Drive, Obsidian, iCloud, Anthropic) render in monochrome
+              (<span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>--color-text</span> or <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>--color-text-muted</span>).
+              On hover, their brand color appears at 30-40% opacity for recognition.
+              Only in: source selector, connected sources list, import flow, BYOK connect screen.
+            </div>
+          </div>
+
+          {/* Never colored */}
+          <div style={{
+            padding: "var(--space-3) var(--space-4)", background: "var(--color-bg-inverse)",
+            borderRadius: "var(--radius-md)",
+          }}>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-inverse)", opacity: 0.5, marginBottom: "var(--space-2)" }}>
+              Never colored
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-inverse)", opacity: 0.7, lineHeight: "var(--line-height-relaxed)" }}>
+              Nav items, buttons, headers, borders, backgrounds, badges, tags, charts, progress bars, focus rings, icons (at rest), text. All warm monochrome. No exceptions.
+            </div>
           </div>
         </div>
       </div>
@@ -462,6 +606,48 @@ function DesignTab() {
             <div style={{ fontSize: "var(--font-size-lg)", fontWeight: r.w, width: 180 }}>{r.sample}</div>
             <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
               {r.w} · {r.label}
+            </div>
+          </div>
+        ))}
+
+        {/* Font exploration */}
+        <div style={{ marginTop: "var(--space-8)", fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+          Font Exploration
+        </div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>
+          All options share the same German/Swiss industrial lineage. DIN Pro is the default. D-DIN is the free prototype fallback.
+        </div>
+        {[
+          { name: "DIN Pro", origin: "Germany, 1931", vibe: "Industrial, engineered, functional", weights: "Thin→Black (9)", license: "Commercial", note: "German road signs, railway timetables, government docs", default: true },
+          { name: "Futura", origin: "Germany, 1927", vibe: "Geometric, modernist, Bauhaus", weights: "Light→ExtraBold (7)", license: "Commercial", note: "2001: A Space Odyssey, Supreme logo, Wes Anderson" },
+          { name: "Neue Haas Grotesk", origin: "Switzerland, 1957", vibe: "The original Helvetica", weights: "Thin→Black (9)", license: "Commercial", note: "Renamed to Helvetica — lost its Swiss-German identity" },
+          { name: "FF Meta", origin: "Germany, 1991", vibe: "Humanist, warm, anti-Helvetica", weights: "Thin→Black (9)", license: "Commercial", note: "Spiekermann designed it for the German Post Office" },
+          { name: "GT Walsheim", origin: "Switzerland, 2010", vibe: "Geometric, quirky, modern", weights: "Thin→Black (7)", license: "Commercial", note: "Named after Swiss typographer Otto Walsheim" },
+          { name: "FF DIN", origin: "Germany, 2010", vibe: "Definitive digital DIN revival", weights: "Light→Black (8)", license: "Commercial", note: "Pool studied original DIN metal type specimens" },
+          { name: "D-DIN", origin: "Open source", vibe: "Close to DIN, slightly less refined", weights: "Regular→Bold (3)", license: "Free", note: "Prototype fallback — swap for real DIN later", active: true },
+          { name: "Barlow", origin: "Open source", vibe: "Industrial, wide, confident", weights: "Thin→Black (9)", license: "Free", note: "Inspired by California highway signs — DIN's cousin" },
+          { name: "IBM Plex Sans", origin: "International, 2017", vibe: "Industrial, neutral, engineered", weights: "Thin→Bold (7)", license: "Free", note: "IBM's engineering identity — shares DIN's ethos" },
+          { name: "Outfit", origin: "Open source", vibe: "Clean, modern, geometric", weights: "Thin→Black (9)", license: "Free", note: "Full weight range, solid DIN alternative" },
+        ].map((f) => (
+          <div key={f.name} style={{
+            display: "grid", gridTemplateColumns: "140px 1fr", gap: "var(--space-3)",
+            padding: "var(--space-2) 0",
+            borderBottom: "1px solid var(--color-border-light)",
+            opacity: f.default || f.active ? 1 : 0.7,
+          }}>
+            <div>
+              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                {f.name}
+                {f.default && <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginLeft: "var(--space-1-5)" }}>DEFAULT</span>}
+                {f.active && <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginLeft: "var(--space-1-5)" }}>ACTIVE</span>}
+              </div>
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{f.origin}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>{f.vibe}</div>
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                {f.weights} · {f.license} · {f.note}
+              </div>
             </div>
           </div>
         ))}
@@ -645,6 +831,7 @@ function DesignTab() {
             "No arbitrary spacing — scale only",
             "Hover states auto-derived (darken 10%)",
             "All icons from Lucide React, 18px default",
+            "Heroes/titles left-aligned, never centered",
             "Brand mark always links to /",
           ].map((rule, i) => (
             <div key={i} style={{
@@ -661,8 +848,62 @@ function DesignTab() {
         </div>
       </div>
 
-      {/* ═══ EXPORT ═══ */}
-      <DesignExport />
+      {/* ═══ ICONS ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Icon System</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>Lucide React</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+              Every icon comes from one library. 18px default, 1.8px stroke. Color inherits from parent via text tokens. Interactive icons use ghost button wrappers.
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>Third-Party Marks</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+              Their mark, our vibe. Render third-party logos in monochrome (--color-text or --color-text-muted). Match Lucide at 18px/1.8px. Brand color only as 30-40% opacity hover tint.
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+          Curated Pool
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
+          {[
+            { cat: "Navigation", icons: "Home, MessageCircle, Mic, Search, Settings, Menu, ChevronRight, X, ArrowLeft" },
+            { cat: "Notes & Knowledge", icons: "FileText, FolderOpen, BookOpen, PenTool, Bookmark, Hash, Link, Layers" },
+            { cat: "Actions & Status", icons: "Check, Plus, ArrowRight, RefreshCw, Upload, Download, Trash2, Clock, Bell" },
+            { cat: "AI & Intelligence", icons: "Sparkles, Zap, Brain, Lightbulb, Eye, Wand2" },
+            { cat: "People & Social", icons: "User, Users, UserPlus, Heart, Gift" },
+            { cat: "Data & Business", icons: "BarChart3, TrendingUp, TrendingDown, CreditCard, Shield, Key" },
+          ].map((g) => (
+            <div key={g.cat} style={{
+              padding: "var(--space-2-5) var(--space-3)",
+              background: "var(--color-bg-elevated)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--color-border-light)",
+            }}>
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1-5)" }}>
+                {g.cat}
+              </div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+                {g.icons}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          marginTop: "var(--space-4)", padding: "var(--space-3)",
+          background: "var(--color-bg-inverse)", borderRadius: "var(--radius-md)",
+        }}>
+          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-inverse)", opacity: 0.5, marginBottom: "var(--space-1-5)" }}>
+            Easter Eggs
+          </div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-inverse)", opacity: 0.7, lineHeight: "var(--line-height-relaxed)" }}>
+            Compass (Bauhaus purity) · Hexagon (DIN standards) · Target (German engineering) · Ruler (standardization) · Grid3x3 (Swiss grid)
+          </div>
+        </div>
+      </div>
 
       {/* ═══ FOOTER ═══ */}
       <div style={{
@@ -680,20 +921,37 @@ function DesignTab() {
   );
 }
 
-function DesignExport() {
+function DesignExportButton() {
   const [copied, setCopied] = useState(false);
 
   const designJSON = JSON.stringify({
     brand: {
       name: "Fülkit",
       url: "fulkit.app",
-      tagline: "I'll be your bestie.",
+      pronunciation: "Fühl-kit (German: fühl = to feel)",
+      mark: "The ü — diaeresis as design element. German DNA without being literal.",
+      taglines: {
+        primary: "I'll be your bestie.",
+        secondary: "Your second brain, fully loaded.",
+        formal: "The AI-powered knowledge companion.",
+        cta: "Get Fülkit",
+      },
+      logo: {
+        style: "Typographic — the logotype IS the logo",
+        variants: ["Full wordmark (Fülkit)", "Icon mark (F with diaeresis)", "Monochrome"],
+      },
       voice: "Warm but not chatty. Direct. Anticipates. Permission-based personality.",
     },
     philosophy: {
       approach: "Warm monochrome",
       description: "One color family — warm grey (#2A2826 → #EFEDE8). The only color permitted is functional: semantic states and source indicators. If it's not a status signal, it's grey.",
       lineage: "Dieter Rams — as little design as possible.",
+      heritage: [
+        "DIN 1931 — German Institute for Standardization. Design should be reliable, trustworthy.",
+        "Bauhaus (1919-1933) — Form follows function. No decoration. Geometric purity.",
+        "Swiss/International Style (1950s) — Grid systems, clean hierarchy, objective presentation.",
+        "Braun/Dieter Rams — Less but better. 10 principles of good design.",
+      ],
     },
     palette: {
       surfaces: {
@@ -720,10 +978,26 @@ function DesignExport() {
         active: { token: "--color-accent-active", hex: "#111010" },
       },
       functional: {
-        success: { token: "--color-success", hex: "#2F8F4E" },
-        warning: { token: "--color-warning", hex: "#C4890A" },
-        error: { token: "--color-error", hex: "#C43B2E" },
+        success: { token: "--color-success", hex: "#2F8F4E", use: "Connected, synced, profitable, confirmed" },
+        warning: { token: "--color-warning", hex: "#C4890A", use: "Syncing, nearing limit, action needed" },
+        error: { token: "--color-error", hex: "#C43B2E", use: "Failed, over budget, disconnected, blocked" },
+        rule: "Only appears next to a status. Never standalone decoration. Soft variants at 6-8% opacity for backgrounds.",
       },
+      sourceIndicators: {
+        rule: "6-8px colored dots only. Used in note lists, file browsers, sync status. Never as fill, border, or accent.",
+        obsidian: { token: "--color-source-obsidian", hex: "#7C3AED", label: "Vault notes" },
+        googleDrive: { token: "--color-source-gdrive", hex: "#16A34A", label: "Synced docs" },
+        dropbox: { token: "--color-source-dropbox", hex: "#2563EB", label: "Synced files" },
+        icloud: { token: "--color-source-icloud", hex: "#3B82F6", label: "Synced files" },
+        fulkit: { token: "--color-source-fulkit", hex: "#2A2826", label: "Native notes" },
+      },
+      thirdPartyHover: {
+        rule: "Icons always monochrome. Brand color only as 30-40% hover tint. Only in: source selector, connected sources list, import flow, BYOK connect screen.",
+      },
+      neverColored: [
+        "Nav items", "Buttons", "Headers", "Borders", "Backgrounds", "Badges",
+        "Tags", "Charts", "Progress bars", "Focus rings", "Decorative elements",
+      ],
     },
     typography: {
       primary: { family: "D-DIN", fallback: "-apple-system, sans-serif", note: "Upgrade to DIN Pro when licensed" },
@@ -735,6 +1009,34 @@ function DesignExport() {
       weights: { normal: 400, medium: 500, semibold: 600, bold: 700, black: 900 },
       lineHeights: { none: 1, tight: 1.25, snug: 1.35, normal: 1.5, relaxed: 1.65, loose: 1.8 },
       letterSpacing: { tighter: "-0.5px", tight: "-0.3px", normal: "0", wide: "0.5px", wider: "0.8px", widest: "1.2px" },
+      fontExploration: [
+        { name: "DIN Pro", origin: "Germany, 1931", license: "Commercial", note: "Default. German road signs, railway timetables." },
+        { name: "Futura", origin: "Germany, 1927", license: "Commercial", note: "Bauhaus geometric. 2001, Supreme, Wes Anderson." },
+        { name: "Neue Haas Grotesk", origin: "Switzerland, 1957", license: "Commercial", note: "Original Helvetica before rename." },
+        { name: "FF Meta", origin: "Germany, 1991", license: "Commercial", note: "Spiekermann's anti-Helvetica. German Post Office." },
+        { name: "GT Walsheim", origin: "Switzerland, 2010", license: "Commercial", note: "Modern geometric by Grilli Type." },
+        { name: "FF DIN", origin: "Germany, 2010", license: "Commercial", note: "Definitive digital DIN revival." },
+        { name: "D-DIN", origin: "Open source", license: "Free", note: "Active prototype fallback." },
+        { name: "Barlow", origin: "Open source", license: "Free", note: "California highway signs — DIN's cousin." },
+        { name: "IBM Plex Sans", origin: "International, 2017", license: "Free", note: "IBM industrial identity." },
+        { name: "Outfit", origin: "Open source", license: "Free", note: "Full weight range, solid DIN alternative." },
+      ],
+    },
+    icons: {
+      library: "Lucide React",
+      size: "18px",
+      strokeWidth: "1.8px",
+      color: "Inherits from parent via text tokens",
+      thirdParty: "Monochrome line versions. Brand color only as 30-40% hover tint.",
+      pool: {
+        navigation: "Home, MessageCircle, Mic, Search, Settings, Menu, ChevronRight, X, ArrowLeft",
+        notes: "FileText, FolderOpen, BookOpen, PenTool, Bookmark, Hash, Link, Layers",
+        actions: "Check, Plus, ArrowRight, RefreshCw, Upload, Download, Trash2, Clock, Bell",
+        ai: "Sparkles, Zap, Brain, Lightbulb, Eye, Wand2",
+        people: "User, Users, UserPlus, Heart, Gift",
+        data: "BarChart3, TrendingUp, TrendingDown, CreditCard, Shield, Key",
+        easterEggs: "Compass, Hexagon, Target, Ruler, Grid3x3",
+      },
     },
     spacing: { "0.5": 2, "1": 4, "1.5": 6, "2": 8, "2.5": 10, "3": 12, "3.5": 14, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "16": 64, "20": 80, "24": 96 },
     radii: { xs: "4px", sm: "6px", md: "8px", lg: "10px", xl: "14px", "2xl": "20px", full: "9999px" },
@@ -761,8 +1063,10 @@ function DesignExport() {
       "No arbitrary font sizes, spacing, or radii — scale only",
       "Hover states auto-derived (darken 10%)",
       "All icons from Lucide React, 18px default, 1.8px stroke",
+      "Heroes and titles left-aligned — never centered",
       "Brand mark always links to /",
       "The only color permitted is functional: semantic states and source indicators",
+      "Never colored: nav items, buttons, headers, borders, backgrounds, badges, tags, charts, progress bars, focus rings",
     ],
   }, null, 2);
 
@@ -773,34 +1077,18 @@ function DesignExport() {
   };
 
   return (
-    <div style={SECTION_RULE}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
-        <div style={SECTION_LABEL}>Export — JSON</div>
-        <button onClick={copyJSON} style={{
-          display: "inline-flex", alignItems: "center", gap: "var(--space-1-5)",
-          padding: "var(--space-1-5) var(--space-3)", border: "1px solid var(--color-border-light)",
-          borderRadius: "var(--radius-md)", background: copied ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
-          color: copied ? "var(--color-text-inverse)" : "var(--color-text-muted)",
-          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
-          fontWeight: "var(--font-weight-medium)", cursor: "pointer",
-          transition: "all var(--duration-normal) var(--ease-default)",
-        }}>
-          {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy JSON</>}
-        </button>
-      </div>
-      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
-        Full design system as structured JSON. Paste into any LLM, Figma plugin, or handoff doc.
-      </div>
-      <pre style={{
-        padding: "var(--space-4)", background: "var(--color-bg-inverse)",
-        borderRadius: "var(--radius-lg)", fontSize: 10, fontFamily: "var(--font-mono)",
-        color: "var(--color-text-inverse)", overflow: "auto", maxHeight: 320,
-        whiteSpace: "pre-wrap", margin: 0, lineHeight: "var(--line-height-relaxed)",
-        opacity: 0.85,
-      }}>
-        {designJSON}
-      </pre>
-    </div>
+    <button onClick={copyJSON} style={{
+      display: "inline-flex", alignItems: "center", gap: "var(--space-1-5)",
+      padding: "var(--space-1-5) var(--space-3)", border: "1px solid var(--color-border-light)",
+      borderRadius: "var(--radius-md)", background: copied ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
+      color: copied ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+      fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+      fontWeight: "var(--font-weight-medium)", cursor: "pointer",
+      transition: "all var(--duration-normal) var(--ease-default)",
+      marginTop: "var(--space-2)",
+    }}>
+      {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy JSON</>}
+    </button>
   );
 }
 
