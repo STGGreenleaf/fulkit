@@ -392,19 +392,19 @@ function SignalTerrain({
 
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 1.3;
+          const a = data[i] * centerY * 1.6;
           const y = centerY - a - yShift;
 
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
             const prevX = ((i - 1) / (data.length - 1)) * w;
-            const prevA = data[i - 1] * centerY * 1.1;
+            const prevA = data[i - 1] * centerY * 1.4;
             const prevY = centerY - prevA - yShift;
             ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
           }
         }
-        ctx.lineTo(w, centerY - data[data.length - 1] * centerY * 1.1 - yShift);
+        ctx.lineTo(w, centerY - data[data.length - 1] * centerY * 1.4 - yShift);
         ctx.stroke();
 
         // Reflection
