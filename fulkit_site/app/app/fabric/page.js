@@ -659,7 +659,7 @@ function SignalTerrain({
 // ═══════════════════════════════════════════════════════
 
 const ORB_POINTS = 200;
-const ORB_LAYERS = 30;
+const ORB_LAYERS = 48;
 
 function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
@@ -716,7 +716,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const baseRadius = Math.min(w, h) * 0.32;
+      const baseRadius = Math.min(w, h) * 0.24;
       const noise2D = noiseRef.current;
       const k = kineticRef.current;
 
@@ -777,25 +777,25 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         : [138, 135, 132];
 
       // ── Compute current frame displacements ──
-      const noiseScale = 6;
+      const noiseScale = 4;
       const displacements = [];
       for (let i = 0; i <= ORB_POINTS; i++) {
         const t = i / ORB_POINTS;
         const angle = t * Math.PI * 2;
 
         const n1 = noise2D(Math.cos(angle) * noiseScale + keyOffset, Math.sin(angle) * noiseScale + phase * 0.7) * 0.5;
-        const n2 = noise2D(Math.cos(angle) * noiseScale * 2 + 100, Math.sin(angle) * noiseScale * 2 + phase) * 0.25;
-        const n3 = noise2D(Math.cos(angle) * noiseScale * 4 + 200, Math.sin(angle) * noiseScale * 4 + phase * 1.3) * 0.125;
+        const n2 = noise2D(Math.cos(angle) * noiseScale * 2 + 100, Math.sin(angle) * noiseScale * 2 + phase) * 0.2;
+        const n3 = noise2D(Math.cos(angle) * noiseScale * 4 + 200, Math.sin(angle) * noiseScale * 4 + phase * 1.3) * 0.08;
         let raw = n1 + n2 + n3;
 
         raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
 
-        const beatBoost = 1 + beatPulse * danceability * 0.4;
+        const beatBoost = 1 + beatPulse * danceability * 0.3;
         let amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
         amp = Math.min(amp, amplitudeCeiling);
-        amp *= 1 + (Math.random() - 0.5) * 0.08;
+        amp *= 1 + (Math.random() - 0.5) * 0.03;
 
-        displacements.push(amp * baseRadius * 2.2);
+        displacements.push(amp * baseRadius * 1.5);
       }
 
       historyRef.current.push(displacements);
@@ -807,10 +807,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const age = l / Math.max(1, layers.length - 1);
         const data = layers[l];
 
-        const alpha = 0.012 + age * age * 0.16;
-        const baseLw = 0.3 + age * 1.0;
+        const alpha = 0.015 + age * age * 0.14;
+        const baseLw = 0.3 + age * 0.8;
         const lw = baseLw * (0.7 + acousticness * 0.6);
-        const radiusShift = (layers.length - 1 - l) * 1.1;
+        const radiusShift = (layers.length - 1 - l) * 0.6;
 
         // Mountains (outward, smooth curves)
         ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
@@ -836,17 +836,24 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.closePath();
         ctx.stroke();
 
-        // Reflection (inward, subtler)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.35})`;
-        ctx.lineWidth = lw * 0.6;
+        // Reflection (inward, smooth curves)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.55})`;
+        ctx.lineWidth = lw * 0.7;
         ctx.beginPath();
         for (let i = 0; i <= ORB_POINTS; i++) {
           const angle = (i / ORB_POINTS) * Math.PI * 2;
-          const r = baseRadius - data[i] * 0.38 + (layers.length - 1 - l) * 0.4;
+          const r = baseRadius - data[i] * 0.5 + (layers.length - 1 - l) * 0.3;
           const x = cx + Math.cos(angle) * r;
           const y = cy + Math.sin(angle) * r;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            const prevAngle = ((i - 1) / ORB_POINTS) * Math.PI * 2;
+            const prevR = baseRadius - data[i - 1] * 0.5 + (layers.length - 1 - l) * 0.3;
+            const prevX = cx + Math.cos(prevAngle) * prevR;
+            const prevY = cy + Math.sin(prevAngle) * prevR;
+            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
+          }
         }
         ctx.closePath();
         ctx.stroke();
