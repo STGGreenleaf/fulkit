@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, Maximize2 } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -627,6 +627,264 @@ function SignalTerrain({
   );
 }
 
+// ═══════════════════════════════════════════════════════
+// ORB VISUALIZER — fullscreen circular waveform
+// Same data as Signal Terrain, wrapped radially.
+// ═══════════════════════════════════════════════════════
+
+const ORB_POINTS = 200;
+const ORB_RINGS = 5;
+
+function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const phaseRef = useRef(0);
+  const noiseRef = useRef(createNoise2D());
+  const envelopeRef = useRef({ trackId: null, envelope: null });
+  const kineticRef = useRef({ amplitude: 0.08, target: 0.08, prevPlaying: false });
+
+  // Generate envelope for this track
+  useEffect(() => {
+    if (!trackId) return;
+    if (envelopeRef.current.trackId === trackId) return;
+    const bpm = features?.bpm || 100;
+    const energy = features?.energy || 50;
+    const dance = features?.danceability || 50;
+    const dur = duration > 0 ? duration * 1000 : 210000;
+    envelopeRef.current = {
+      trackId,
+      envelope: generateSongEnvelope(trackId, dur, bpm, energy, dance),
+    };
+  }, [trackId, features, duration]);
+
+  // New noise on track change
+  useEffect(() => {
+    noiseRef.current = createNoise2D();
+  }, [trackId]);
+
+  // Keyboard: ESC to close, Space play/pause, arrows skip
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === " ") { e.preventDefault(); toggle(); }
+      else if (e.key === "ArrowRight") skip();
+      else if (e.key === "ArrowLeft") prev();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, toggle, skip, prev]);
+
+  // Render loop
+  useEffect(() => {
+    let running = true;
+    const render = (timestamp) => {
+      if (!running) return;
+      animRef.current = requestAnimationFrame(render);
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const baseRadius = Math.min(w, h) * 0.25;
+      const noise2D = noiseRef.current;
+      const k = kineticRef.current;
+
+      // Kinetic smoothing
+      k.target = isPlaying ? 0.55 : 0.08;
+      k.amplitude += (k.target - k.amplitude) * 0.06;
+      k.prevPlaying = isPlaying;
+
+      // Audio features
+      const bpm = features?.bpm || 100;
+      const energy = (features?.energy || 50) / 100;
+      const valence = (features?.valence || 50) / 100;
+      const danceability = (features?.danceability || 50) / 100;
+      const acousticness = (features?.acousticness || 30) / 100;
+      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
+
+      // Envelope
+      const env = envelopeRef.current.envelope;
+      let envelopeValue = 1;
+      if (env && env.length > 0 && isPlaying && progress > 0) {
+        const barIndex = Math.min(env.length - 1, Math.floor(progress * env.length));
+        envelopeValue = env[barIndex];
+      }
+      const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
+      const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+
+      // Beat pulse
+      const progressMs = progress * duration * 1000;
+      const msPerBeat = 60000 / bpm;
+      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
+      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
+
+      // Phase advance
+      const beatsPerSec = bpm / 60;
+      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 : 0.002;
+      phaseRef.current += phaseStep;
+      const phase = phaseRef.current;
+
+      // Exhale
+      let exhaleMultiplier = 1;
+      if (isPlaying && duration > 0 && progress > 0) {
+        const remaining = duration * (1 - progress);
+        if (remaining < 6 && remaining > 0) {
+          exhaleMultiplier = 1 - ((1 - remaining / 6) * 0.7);
+        }
+      }
+
+      // Sharpness
+      const sharpness = 1 - valence;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Get text color from CSS
+      const style = getComputedStyle(canvas);
+      const textColor = style.getPropertyValue("--color-text-muted").trim() || "#8A8784";
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [138, 135, 132];
+
+      // Draw concentric rings
+      for (let ring = 0; ring < ORB_RINGS; ring++) {
+        const ringT = ring / (ORB_RINGS - 1); // 0 = innermost, 1 = outermost
+        const ringRadius = baseRadius * (0.6 + ringT * 0.5);
+        const ringAlpha = 0.08 + ringT * ringT * 0.22;
+        const ringLw = (0.4 + ringT * 1.2) * (0.7 + acousticness * 0.6);
+        const ringSpeed = 0.3 + ringT * 0.7;
+        const ringNoiseScale = 3 + ringT * 5;
+
+        // Outward displacement
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${ringAlpha})`;
+        ctx.lineWidth = ringLw;
+        ctx.beginPath();
+
+        for (let i = 0; i <= ORB_POINTS; i++) {
+          const t = i / ORB_POINTS;
+          const angle = t * Math.PI * 2;
+
+          // Multi-octave noise
+          const n1 = noise2D(Math.cos(angle) * ringNoiseScale + keyOffset, Math.sin(angle) * ringNoiseScale + phase * ringSpeed) * 0.5;
+          const n2 = noise2D(Math.cos(angle) * ringNoiseScale * 2 + 100, Math.sin(angle) * ringNoiseScale * 2 + phase * ringSpeed * 1.5) * 0.25;
+          const n3 = noise2D(Math.cos(angle) * ringNoiseScale * 4 + 200, Math.sin(angle) * ringNoiseScale * 4 + phase * ringSpeed * 2) * 0.125;
+          let raw = n1 + n2 + n3;
+
+          // Valence shaping
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+
+          const beatBoost = 1 + beatPulse * danceability * 0.4;
+          let amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
+          amp = Math.min(amp, amplitudeCeiling);
+          amp *= 1 + (Math.random() - 0.5) * 0.08;
+
+          const displacement = amp * baseRadius * 1.2;
+          const r = ringRadius + displacement;
+          const x = cx + Math.cos(angle) * r;
+          const y = cy + Math.sin(angle) * r;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Inward mirror (subtler)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${ringAlpha * 0.4})`;
+        ctx.lineWidth = ringLw * 0.5;
+        ctx.beginPath();
+
+        for (let i = 0; i <= ORB_POINTS; i++) {
+          const t = i / ORB_POINTS;
+          const angle = t * Math.PI * 2;
+
+          const n1 = noise2D(Math.cos(angle) * ringNoiseScale + keyOffset, Math.sin(angle) * ringNoiseScale + phase * ringSpeed) * 0.5;
+          let amp = Math.abs(n1) * k.amplitude * exhaleMultiplier * 0.5;
+          amp = Math.min(amp, amplitudeCeiling * 0.5);
+
+          const displacement = amp * baseRadius * 0.8;
+          const r = ringRadius - displacement;
+          const x = cx + Math.cos(angle) * r;
+          const y = cy + Math.sin(angle) * r;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    };
+
+    animRef.current = requestAnimationFrame(render);
+    return () => {
+      running = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [isPlaying, progress, duration, features]);
+
+  // Resize canvas to viewport
+  useEffect(() => {
+    const resize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "var(--color-bg)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <canvas
+        ref={canvasRef}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
+
+      {/* Close button — top right */}
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute", top: 20, right: 20,
+          background: "transparent", border: "none",
+          cursor: "pointer", padding: 8, zIndex: 1,
+          color: "var(--color-text-dim)",
+          transition: "color 200ms",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
+      >
+        <X size={20} strokeWidth={1.8} />
+      </button>
+
+      {/* Track info — bottom left */}
+      <div style={{
+        position: "absolute", bottom: 24, left: 28, zIndex: 1,
+      }}>
+        <div style={{
+          fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)",
+          fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+        }}>
+          {trackTitle || ""}
+        </div>
+        <div style={{
+          fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)",
+          fontFamily: "var(--font-primary)", opacity: 0.6,
+        }}>
+          {trackArtist || ""}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Hardware section label — silk-screened look
 function Label({ children, style }) {
   return (
@@ -674,6 +932,7 @@ export default function SpotifyPage() {
   const [expandedMix, setExpandedMix] = useState(null);
   const [mixTracks, setMixTracks] = useState([]);
   const [mixLoading, setMixLoading] = useState(false);
+  const [visualizing, setVisualizing] = useState(false);
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
@@ -713,6 +972,21 @@ export default function SpotifyPage() {
 
   return (
     <AuthGuard>
+      {visualizing && (
+        <OrbVisualizer
+          isPlaying={isPlaying}
+          trackId={currentTrack?.id}
+          trackTitle={currentTrack?.title}
+          trackArtist={currentTrack?.artist}
+          progress={progress}
+          duration={currentTrack?.duration || 0}
+          features={features}
+          onClose={() => setVisualizing(false)}
+          toggle={toggle}
+          skip={skip}
+          prev={prev}
+        />
+      )}
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
 
@@ -961,6 +1235,21 @@ export default function SpotifyPage() {
                   }}
                 >
                   <ChevronRight size={16} strokeWidth={2.2} color="var(--color-text-muted)" />
+                </button>
+
+                {/* Visualize — enter fullscreen orb */}
+                <button
+                  onClick={() => setVisualizing(true)}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-full)",
+                    background: "transparent", border: "1px solid transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0, outline: "none",
+                    marginLeft: "var(--space-2)",
+                  }}
+                  title="Visualize"
+                >
+                  <Maximize2 size={13} strokeWidth={1.8} color="var(--color-text-dim)" />
                 </button>
               </div>
             </div>
