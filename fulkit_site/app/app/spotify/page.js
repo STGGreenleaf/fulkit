@@ -54,6 +54,132 @@ function MeterBar({ value = 0, width = 80 }) {
 const T_LAYERS = 40;
 const T_POINTS = 80;
 
+// ═══════════════════════════════════════════════════════
+// PROCEDURAL SONG ARCHITECTURE — deterministic per-bar
+// energy envelope from track ID + audio features.
+// Same song always produces the same shape.
+// ═══════════════════════════════════════════════════════
+
+// Seeded PRNG (mulberry32) — deterministic from track ID hash
+function hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Gaussian blur (1D) for smooth transitions
+function gaussianBlur(arr, radius) {
+  const out = new Float32Array(arr.length);
+  const kernel = [];
+  let sum = 0;
+  for (let i = -radius; i <= radius; i++) {
+    const v = Math.exp(-0.5 * (i / (radius * 0.4)) ** 2);
+    kernel.push(v);
+    sum += v;
+  }
+  for (let k = 0; k < kernel.length; k++) kernel[k] /= sum;
+
+  for (let i = 0; i < arr.length; i++) {
+    let val = 0;
+    for (let k = 0; k < kernel.length; k++) {
+      const j = Math.min(arr.length - 1, Math.max(0, i + k - radius));
+      val += arr[j] * kernel[k];
+    }
+    out[i] = val;
+  }
+  return out;
+}
+
+// Section templates — energy multipliers for each section type
+const SECTION_DEFS = {
+  intro:     { base: 0.30, variance: 0.08 },
+  verse:     { base: 0.55, variance: 0.10 },
+  prechorus: { base: 0.70, variance: 0.08 },
+  chorus:    { base: 1.00, variance: 0.06 },
+  bridge:    { base: 0.40, variance: 0.12 },
+  breakdown: { base: 0.15, variance: 0.05 },
+  outro:     { base: 0.30, variance: 0.10 },
+};
+
+// Section patterns by song length
+const PATTERNS = {
+  short: ["intro", "verse", "chorus", "verse", "chorus", "outro"],
+  standard: ["intro", "verse", "prechorus", "chorus", "verse", "prechorus", "chorus", "bridge", "chorus", "outro"],
+  extended: ["intro", "verse", "prechorus", "chorus", "verse", "prechorus", "chorus", "breakdown", "bridge", "chorus", "chorus", "outro"],
+};
+
+function generateSongEnvelope(trackId, durationMs, bpm, energy, danceability) {
+  const rng = mulberry32(hashStr(trackId || "default"));
+  const totalBars = Math.max(4, Math.round((durationMs / 60000) * bpm / 4));
+
+  // Pick pattern based on duration
+  const durationSec = durationMs / 1000;
+  const patternKey = durationSec < 150 ? "short" : durationSec > 300 ? "extended" : "standard";
+  const pattern = PATTERNS[patternKey];
+
+  // Distribute bars across sections
+  const sectionCount = pattern.length;
+  const baseBarsPerSection = Math.floor(totalBars / sectionCount);
+  const remainder = totalBars - baseBarsPerSection * sectionCount;
+
+  const sections = pattern.map((type, i) => ({
+    type,
+    bars: baseBarsPerSection + (i < remainder ? 1 : 0),
+  }));
+
+  // Energy and danceability shape the curve
+  const energyScale = 0.6 + (energy / 100) * 0.4;       // 0.6–1.0
+  const bounceScale = 0.8 + (danceability / 100) * 0.2;  // 0.8–1.0
+
+  // Generate per-bar values
+  const raw = new Float32Array(totalBars);
+  let barIndex = 0;
+
+  for (const section of sections) {
+    const def = SECTION_DEFS[section.type];
+    for (let b = 0; b < section.bars; b++) {
+      // Position within section (0–1)
+      const t = section.bars > 1 ? b / (section.bars - 1) : 0.5;
+      // Gradual build within section (slight ramp up then ease)
+      const intraShape = 0.85 + 0.15 * Math.sin(t * Math.PI);
+      // Per-bar variation from PRNG
+      const variation = (rng() - 0.5) * 2 * def.variance;
+
+      raw[barIndex] = (def.base + variation) * intraShape * energyScale * bounceScale;
+      barIndex++;
+    }
+  }
+
+  // Gaussian blur with 2-bar kernel for smooth transitions
+  const smoothed = gaussianBlur(raw, 2);
+
+  // Normalize to 0.15–1.0 range (never fully silent)
+  let min = Infinity, max = -Infinity;
+  for (let i = 0; i < smoothed.length; i++) {
+    if (smoothed[i] < min) min = smoothed[i];
+    if (smoothed[i] > max) max = smoothed[i];
+  }
+  const range = max - min || 1;
+  const envelope = new Float32Array(smoothed.length);
+  for (let i = 0; i < smoothed.length; i++) {
+    envelope[i] = 0.15 + ((smoothed[i] - min) / range) * 0.85;
+  }
+
+  return envelope;
+}
+
 function SignalTerrain({
   height = 220,
   isPlaying = false,
@@ -79,6 +205,22 @@ function SignalTerrain({
     prevPlaying: false,
     prevTrackId: null,
   });
+
+  // Procedural song envelope — cached per track
+  const envelopeRef = useRef({ trackId: null, envelope: null });
+
+  useEffect(() => {
+    if (!trackId) return;
+    if (envelopeRef.current.trackId === trackId) return;
+    const bpm = features?.bpm || 100;
+    const energy = features?.energy || 50;
+    const dance = features?.danceability || 50;
+    const dur = duration > 0 ? duration * 1000 : 210000;
+    envelopeRef.current = {
+      trackId,
+      envelope: generateSongEnvelope(trackId, dur, bpm, energy, dance),
+    };
+  }, [trackId, features, duration]);
 
   // Layer 3: live audio (multi-band)
   const liveRef = useRef({
@@ -238,6 +380,14 @@ function SignalTerrain({
         }
       }
 
+      // ── Procedural architecture: envelope lookup ──
+      const env = envelopeRef.current.envelope;
+      let envelopeValue = 1;
+      if (env && env.length > 0 && isPlaying && progress > 0) {
+        const barIndex = Math.min(env.length - 1, Math.floor(progress * env.length));
+        envelopeValue = env[barIndex];
+      }
+
       // ── Layer 2: Audio features ──
       const bpm = features?.bpm || 100;
       const energy = (features?.energy || 50) / 100;
@@ -342,14 +492,14 @@ function SignalTerrain({
         if (live.active && (liveBass + liveMids) > 0.01) {
           // Layer 3: multi-band terrain modulation
           const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
-          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
+          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost * envelopeValue;
           const liveRaw = raw * (1 + livePresence * 0.5); // sharper peaks with presence
           const liveDisp = Math.abs(liveRaw) * envelope * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
           const jitter = (Math.random() - 0.5) * liveAir * 0.15;
           amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
         } else {
-          // Layers 0-2
-          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
+          // Layers 0-2 + procedural envelope
+          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost * envelopeValue;
         }
 
         // Clamp to energy ceiling
