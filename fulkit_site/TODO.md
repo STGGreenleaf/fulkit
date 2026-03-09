@@ -82,9 +82,10 @@
 - [x] Add action manually (inline input)
 - [x] Filter tabs (active, done, deferred, dismissed) with counts
 - [x] Actions in sidebar nav
-- [ ] Import prelaunch.md tasks as action items
-- [ ] Claude chat → create actions
-- [ ] Claude chat → query actions
+- [x] Claude chat → create actions (actions_create tool)
+- [x] Claude chat → query actions (actions_list tool)
+- [x] Claude chat → update actions (actions_update tool)
+- [ ] Import prelaunch.md tasks as action items (can now do via chat)
 
 ## Phase 4: Dogfood
 
@@ -123,4 +124,4 @@
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → **Actions** → Dogfood → Context engine → MCP integrations → Self-building.
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → ~~Actions~~ → **Dogfood** → Context engine → MCP integrations → Self-building.
