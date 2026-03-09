@@ -90,7 +90,7 @@
 ## Phase 4: Dogfood
 
 - [x] Bulk import API (POST /api/notes/import) — owner-only
-- [ ] Import buildnotes.md, design.md, features.md as notes (use import API or chat)
+- [x] Import project docs — owner portal button fetches from GitHub + imports as notes
 - [ ] Flood personal todos into Actions (use chat → actions_create)
 - [ ] Use Fulkit daily for 1 week
 - [ ] Build Fulkit features by chatting with Fulkit (dogfood the dev loop)
@@ -101,6 +101,8 @@
 - [x] Persistent memory — memory_save/list/forget tools, injected into system prompt
 - [x] Note search — notes_search tool (keyword match on title + content)
 - [x] Claude reads uploaded files as conversation context (vault context injection)
+- [x] Cross-session context — recent conversation titles injected into system prompt
+- [x] Smart memory behavior — Claude auto-saves facts, uses memories naturally
 - [ ] File/note uploads with embedding (vector search via pgvector)
 - [ ] Codebase ingestion — feed repo files so Claude knows the project
 - [ ] RAG pipeline — semantic similarity search (requires embeddings)
