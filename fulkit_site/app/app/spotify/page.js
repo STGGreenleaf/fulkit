@@ -505,6 +505,8 @@ export default function SpotifyPage() {
     isFlagged,
     reorderFlagged,
     playTrack,
+    playPlaylist,
+    fetchPlaylistTracks,
     formatTime,
     setProgress,
   } = useSpotify();
@@ -512,6 +514,9 @@ export default function SpotifyPage() {
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const dragNode = useRef(null);
+  const [expandedMix, setExpandedMix] = useState(null);
+  const [mixTracks, setMixTracks] = useState([]);
+  const [mixLoading, setMixLoading] = useState(false);
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
@@ -832,6 +837,14 @@ export default function SpotifyPage() {
             >
               <Label>Crate</Label>
               <div
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  try {
+                    const trackData = JSON.parse(e.dataTransfer.getData("application/fulkit-track"));
+                    if (trackData && !isFlagged(trackData.id)) flag(trackData);
+                  } catch {}
+                }}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, 1fr)",
@@ -939,28 +952,155 @@ export default function SpotifyPage() {
                 <>
                   <Label style={{ marginTop: "var(--space-4)" }}>Mixes</Label>
                   <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                    {playlists.map((pl) => (
+                    {playlists.filter((pl) => pl.tracks > 0).map((pl) => (
                       <button
                         key={pl.id}
+                        onClick={async () => {
+                          if (expandedMix === pl.id) {
+                            setExpandedMix(null);
+                            setMixTracks([]);
+                            return;
+                          }
+                          setExpandedMix(pl.id);
+                          setMixLoading(true);
+                          const tracks = await fetchPlaylistTracks(pl.id);
+                          setMixTracks(tracks);
+                          setMixLoading(false);
+                        }}
                         style={{
                           padding: "var(--space-2) var(--space-3)",
-                          background: "var(--color-bg-elevated)",
+                          background: expandedMix === pl.id ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
                           border: "1px solid var(--color-border-light)",
                           borderRadius: "var(--radius-sm)",
                           cursor: "pointer",
                           fontFamily: "var(--font-primary)",
                           textAlign: "left",
+                          transition: "all 120ms",
                         }}
                       >
-                        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>
+                        <div style={{
+                          fontSize: "var(--font-size-xs)",
+                          fontWeight: "var(--font-weight-semibold)",
+                          color: expandedMix === pl.id ? "var(--color-text-inverse)" : "var(--color-text)",
+                        }}>
                           {pl.name}
                         </div>
-                        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                        <div style={{
+                          fontSize: 9,
+                          fontFamily: "var(--font-mono)",
+                          color: expandedMix === pl.id ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                          marginTop: 1,
+                          opacity: expandedMix === pl.id ? 0.7 : 1,
+                        }}>
                           {pl.tracks} trk
                         </div>
                       </button>
                     ))}
                   </div>
+
+                  {/* Expanded mix track list */}
+                  {expandedMix && (
+                    <div style={{
+                      marginTop: "var(--space-3)",
+                      borderTop: "1px solid var(--color-border-light)",
+                      paddingTop: "var(--space-3)",
+                      maxHeight: 200,
+                      overflowY: "auto",
+                    }}>
+                      {mixLoading ? (
+                        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>
+                          loading...
+                        </div>
+                      ) : (
+                        mixTracks.map((track, i) => {
+                          const isActive = currentTrack?.id === track.id;
+                          const trackFlagged = isFlagged(track.id);
+                          return (
+                            <div
+                              key={track.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("application/fulkit-track", JSON.stringify(track));
+                                e.currentTarget.style.opacity = "0.4";
+                              }}
+                              onDragEnd={(e) => { e.currentTarget.style.opacity = "1"; }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "var(--space-3)",
+                                padding: "var(--space-1) var(--space-2)",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: "grab",
+                                background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                                transition: "background 120ms",
+                              }}
+                            >
+                              <div style={{
+                                fontSize: 8,
+                                fontFamily: "var(--font-mono)",
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                                width: 16,
+                                flexShrink: 0,
+                                opacity: 0.5,
+                              }}>
+                                {String(i + 1).padStart(2, "0")}
+                              </div>
+                              <button
+                                onClick={() => playTrack(track)}
+                                style={{
+                                  flex: 1,
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  padding: 0,
+                                  fontFamily: "var(--font-primary)",
+                                  minWidth: 0,
+                                }}
+                              >
+                                <div style={{
+                                  fontSize: 10,
+                                  fontWeight: "var(--font-weight-semibold)",
+                                  color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}>
+                                  {track.title}
+                                </div>
+                                <div style={{
+                                  fontSize: 9,
+                                  color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  opacity: 0.7,
+                                }}>
+                                  {track.artist}
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => flag(track)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 2,
+                                  flexShrink: 0,
+                                  color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
+                                  opacity: trackFlagged ? 1 : 0.3,
+                                  transition: "opacity 120ms",
+                                }}
+                                title={trackFlagged ? "Remove from crate" : "Add to crate"}
+                              >
+                                <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

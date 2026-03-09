@@ -240,7 +240,39 @@ export function SpotifyProvider({ children }) {
     setCurrentTrack(track);
     setProgress(0);
     setIsPlaying(true);
-  }, []);
+    if (isDev) return;
+    apiFetch("/api/spotify/controls", {
+      method: "POST",
+      body: JSON.stringify({ action: "play_track", value: { uri: track.uri || `spotify:track:${track.id}` } }),
+    });
+  }, [isDev, apiFetch]);
+
+  const playPlaylist = useCallback(async (playlistId, startTrackUri) => {
+    if (isDev) return;
+    await apiFetch("/api/spotify/controls", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "play_context",
+        value: {
+          context_uri: `spotify:playlist:${playlistId}`,
+          ...(startTrackUri ? { offset: { uri: startTrackUri } } : {}),
+        },
+      }),
+    });
+    setIsPlaying(true);
+  }, [isDev, apiFetch]);
+
+  // Cache for fetched playlist tracks
+  const mixTracksCacheRef = useRef({});
+
+  const fetchPlaylistTracks = useCallback(async (playlistId) => {
+    if (mixTracksCacheRef.current[playlistId]) return mixTracksCacheRef.current[playlistId];
+    if (isDev) return MOCK_TRACKS;
+    const data = await apiFetch(`/api/spotify/playlists/${playlistId}/tracks`);
+    const tracks = data?.tracks || [];
+    mixTracksCacheRef.current[playlistId] = tracks;
+    return tracks;
+  }, [isDev, apiFetch]);
 
   const formatTime = useCallback((seconds) => {
     const m = Math.floor(seconds / 60);
@@ -269,6 +301,8 @@ export function SpotifyProvider({ children }) {
         isFlagged,
         reorderFlagged,
         playTrack,
+        playPlaylist,
+        fetchPlaylistTracks,
         setProgress,
         volume,
         setVolume,

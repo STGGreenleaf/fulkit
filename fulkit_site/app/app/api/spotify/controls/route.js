@@ -22,6 +22,32 @@ export async function POST(request) {
     return Response.json({ error: "Volume error" }, { status: res.status });
   }
 
+  // Play a specific track by URI
+  if (action === "play_track" && value?.uri) {
+    const res = await spotifyFetch(userId, "/me/player/play", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uris: [value.uri] }),
+    });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Play track error" }, { status: res.status });
+  }
+
+  // Play a playlist context (optionally starting from a specific track)
+  if (action === "play_context" && value?.context_uri) {
+    const body = { context_uri: value.context_uri };
+    if (value.offset) body.offset = value.offset;
+    const res = await spotifyFetch(userId, "/me/player/play", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Play context error" }, { status: res.status });
+  }
+
   const config = ACTIONS[action];
   if (!config) {
     return Response.json({ error: "Invalid action" }, { status: 400 });
