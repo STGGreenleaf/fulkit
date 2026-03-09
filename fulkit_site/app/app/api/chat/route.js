@@ -23,7 +23,9 @@ Guidelines:
 - You can be funny, but never forced. Never use emojis unless the user does first.
 - If the user shares something personal, acknowledge it genuinely before moving on.
 - When you don't know something, say so directly.
-- Suggest action items when they naturally arise from conversation. Frame them as "Want me to add that to your action list?" rather than creating them silently.`;
+- Suggest action items when they naturally arise from conversation. Frame them as "Want me to add that to your action list?" rather than creating them silently.
+- You can create, list, and update action items using your tools. When listing actions, format them cleanly. When creating, confirm what you added.
+- Don't over-create actions. Only suggest when it naturally fits — a clear task, a deadline, a follow-up.`;
 
 // Estimate tokens for conversation compression
 function estimateTokens(text) {
@@ -177,6 +179,99 @@ const TOOL_ACTION_MAP = {
   numbrly_list_builds: "list_builds",
   numbrly_list_alerts: "list_alerts",
 };
+
+// Action list tools — Claude can create, query, and update user actions
+const ACTIONS_TOOLS = [
+  {
+    name: "actions_create",
+    description: "Create a new action item on the user's action list. Use this when the user agrees to add a task, or when they explicitly ask you to track something. Always confirm before creating.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short, clear action title (e.g. 'Review Q1 budget draft')" },
+        description: { type: "string", description: "Optional longer description or notes" },
+        priority: { type: "integer", enum: [1, 2, 3], description: "1=High, 2=Normal, 3=Low. Default 2." },
+        bucket: { type: "string", enum: ["build", "life"], description: "Category: 'build' for work/code, 'life' for personal. Optional." },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "actions_list",
+    description: "List the user's action items. Use this to check what's on their plate, find specific tasks, or report status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["active", "done", "deferred", "dismissed"], description: "Filter by status. Default: active." },
+        bucket: { type: "string", enum: ["build", "life"], description: "Filter by category. Optional — omit for all." },
+        limit: { type: "integer", description: "Max items to return. Default 20." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "actions_update",
+    description: "Update an existing action item — change its status, priority, bucket, or title. Use the action ID from actions_list.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Action UUID (from actions_list)" },
+        status: { type: "string", enum: ["active", "done", "deferred", "dismissed"], description: "New status" },
+        priority: { type: "integer", enum: [1, 2, 3], description: "New priority" },
+        title: { type: "string", description: "Updated title" },
+        bucket: { type: "string", enum: ["build", "life"], description: "Updated category" },
+      },
+      required: ["id"],
+    },
+  },
+];
+
+// Execute an actions tool call against Supabase
+async function executeActionTool(name, input, userId) {
+  const admin = getSupabaseAdmin();
+
+  if (name === "actions_create") {
+    const row = {
+      user_id: userId,
+      title: input.title,
+      status: "active",
+      source: "Chat",
+      priority: input.priority || 2,
+    };
+    if (input.description) row.description = input.description;
+    if (input.bucket) row.bucket = input.bucket;
+    const { data, error } = await admin.from("actions").insert(row).select().single();
+    if (error) throw new Error(error.message);
+    return { created: true, action: { id: data.id, title: data.title, priority: data.priority, bucket: data.bucket } };
+  }
+
+  if (name === "actions_list") {
+    let query = admin.from("actions").select("id, title, status, priority, bucket, source, created_at, completed_at").eq("user_id", userId);
+    if (input.status) query = query.eq("status", input.status);
+    else query = query.eq("status", "active");
+    if (input.bucket) query = query.eq("bucket", input.bucket);
+    query = query.order("priority", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(input.limit || 20);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return { count: data.length, actions: data };
+  }
+
+  if (name === "actions_update") {
+    const updates = {};
+    if (input.status) {
+      updates.status = input.status;
+      if (input.status === "done") updates.completed_at = new Date().toISOString();
+    }
+    if (input.priority) updates.priority = input.priority;
+    if (input.title) updates.title = input.title;
+    if (input.bucket) updates.bucket = input.bucket;
+    const { data, error } = await admin.from("actions").update(updates).eq("id", input.id).eq("user_id", userId).select("id, title, status, priority, bucket").single();
+    if (error) throw new Error(error.message);
+    return { updated: true, action: data };
+  }
+
+  throw new Error(`Unknown action tool: ${name}`);
+}
 
 export async function POST(request) {
   try {
@@ -346,11 +441,15 @@ export async function POST(request) {
     }
 
     const MAX_TOOL_ROUNDS = 5;
+    const allTools = [
+      ...(userId ? ACTIONS_TOOLS : []),
+      ...(nblKey ? NUMBRLY_TOOLS : []),
+    ];
     const baseOpts = {
       model: config.model,
       max_tokens: config.maxTokens,
       system,
-      ...(nblKey ? { tools: NUMBRLY_TOOLS } : {}),
+      ...(allTools.length > 0 ? { tools: allTools } : {}),
     };
 
     const encoder = new TextEncoder();
@@ -386,34 +485,33 @@ export async function POST(request) {
             // If Claude didn't request tools, we're done
             if (finalMessage.stop_reason !== "tool_use") break;
 
-            // Execute each tool call via numbrlyFetch
+            // Execute each tool call
             const toolResults = [];
             for (const block of finalMessage.content) {
               if (block.type !== "tool_use") continue;
+
+              // Actions tools (actions_create, actions_list, actions_update)
+              if (block.name.startsWith("actions_") && userId) {
+                try {
+                  const result = await executeActionTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Numbrly tools
               const action = TOOL_ACTION_MAP[block.name];
               if (!action || !nblKey) {
-                toolResults.push({
-                  type: "tool_result",
-                  tool_use_id: block.id,
-                  content: JSON.stringify({ error: "Unknown tool" }),
-                  is_error: true,
-                });
+                toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: "Unknown tool" }), is_error: true });
                 continue;
               }
               try {
                 const result = await numbrlyFetch(nblKey, action, block.input || {});
-                toolResults.push({
-                  type: "tool_result",
-                  tool_use_id: block.id,
-                  content: JSON.stringify(result),
-                });
+                toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
               } catch (err) {
-                toolResults.push({
-                  type: "tool_result",
-                  tool_use_id: block.id,
-                  content: JSON.stringify({ error: err.message }),
-                  is_error: true,
-                });
+                toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
               }
             }
 
