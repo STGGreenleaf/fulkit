@@ -374,7 +374,7 @@ function SignalTerrain({
 
       ctx.clearRect(0, 0, w, h);
       const layers = historyRef.current;
-      const centerY = h * 0.72;
+      const centerY = h * 0.88;
 
       for (let l = 0; l < layers.length; l++) {
         const age = l / Math.max(1, layers.length - 1);
@@ -408,26 +408,20 @@ function SignalTerrain({
         ctx.stroke();
 
         // Reflection
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
-        ctx.lineWidth = lw * 0.5;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.15})`;
+        ctx.lineWidth = lw * 0.4;
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 0.25;
-          const y = centerY + a + (layers.length - 1 - l) * 0.3 + 2;
+          const a = data[i] * centerY * 0.08;
+          const y = centerY + a + (layers.length - 1 - l) * 0.15 + 1;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
       }
 
-      // Center horizon
-      ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.04)`;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(w, centerY);
-      ctx.stroke();
+      // Horizon line removed — baseline sits near bottom edge
     };
 
     animRef.current = requestAnimationFrame(render);
@@ -811,9 +805,9 @@ export default function SpotifyPage() {
           </div>
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
-          <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+          <div>
             <SignalTerrain
-              height={160}
+              height={120}
               isPlaying={isPlaying}
               trackId={currentTrack?.id}
               progress={progress}
