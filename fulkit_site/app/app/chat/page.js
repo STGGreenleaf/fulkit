@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -240,11 +240,28 @@ export default function Chat() {
   }
 
   function exportMessage(msg) {
-    const blob = new Blob([msg.content], { type: "text/markdown" });
+    const idx = messages.indexOf(msg);
+    // Walk backward to find the user message that prompted this response
+    let prompt = null;
+    for (let j = idx - 1; j >= 0; j--) {
+      if (messages[j].role === "user") {
+        prompt = messages[j].content;
+        break;
+      }
+    }
+    const convTitle = conversations.find((c) => c.id === conversationId)?.title || "Chat";
+    const exported = {
+      source: "fulkit",
+      conversation: convTitle,
+      exported_at: new Date().toISOString(),
+      prompt: prompt || null,
+      response: msg.content,
+    };
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `fulkit-${new Date().toISOString().slice(0, 10)}.md`;
+    a.download = `fulkit-${convTitle.slice(0, 30).replace(/[^a-zA-Z0-9]/g, "-")}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -705,19 +722,24 @@ export default function Chat() {
                           {`Hey — ${alerts.length} thing${alerts.length > 1 ? "s" : ""} flagged:\n\n${alerts.map((a) => `• ${a.message}`).join("\n")}`}
                           <button
                             onClick={() => setAlertsDismissed(true)}
+                            title="Got it"
                             style={{
                               position: "absolute",
-                              top: 6,
+                              bottom: 6,
                               right: 6,
                               background: "none",
                               border: "none",
                               cursor: "pointer",
-                              padding: 2,
+                              padding: 4,
                               color: "var(--color-text-dim)",
                               display: "flex",
+                              opacity: 0.6,
+                              transition: "opacity 150ms",
                             }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
                           >
-                            <X size={12} strokeWidth={2} />
+                            <ThumbsUp size={14} strokeWidth={2} />
                           </button>
                         </div>
                       </div>
