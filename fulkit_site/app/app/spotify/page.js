@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, Maximize2 } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -188,6 +188,7 @@ function SignalTerrain({
   isPlaying = false,
   trackId = null,
   progress = 0,
+  onVisualize,
   duration = 0,
   features = null,
 }) {
@@ -596,6 +597,31 @@ function SignalTerrain({
         height={height}
         style={{ width: "100%", height, display: "block" }}
       />
+      {/* Visualize — enter fullscreen orb */}
+      {onVisualize && (
+        <button
+          onClick={onVisualize}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 10,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            opacity: 0.15,
+            transition: "opacity 300ms",
+            color: "var(--color-text-muted)",
+            display: "flex",
+            alignItems: "center",
+          }}
+          title="Visualize"
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.5)}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.15)}
+        >
+          <ExternalLink size={12} strokeWidth={1.5} />
+        </button>
+      )}
       {/* Layer 3: "ears" affordance */}
       <button
         onClick={activateMic}
@@ -633,13 +659,14 @@ function SignalTerrain({
 // ═══════════════════════════════════════════════════════
 
 const ORB_POINTS = 200;
-const ORB_RINGS = 5;
+const ORB_LAYERS = 30;
 
 function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
+  const historyRef = useRef([]);
   const envelopeRef = useRef({ trackId: null, envelope: null });
   const kineticRef = useRef({ amplitude: 0.08, target: 0.08, prevPlaying: false });
 
@@ -660,6 +687,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   // New noise on track change
   useEffect(() => {
     noiseRef.current = createNoise2D();
+    historyRef.current = [];
   }, [trackId]);
 
   // Keyboard: ESC to close, Space play/pause, arrows skip
@@ -688,7 +716,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const baseRadius = Math.min(w, h) * 0.25;
+      const baseRadius = Math.min(w, h) * 0.32;
       const noise2D = noiseRef.current;
       const k = kineticRef.current;
 
@@ -748,67 +776,75 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
         : [138, 135, 132];
 
-      // Draw concentric rings
-      for (let ring = 0; ring < ORB_RINGS; ring++) {
-        const ringT = ring / (ORB_RINGS - 1); // 0 = innermost, 1 = outermost
-        const ringRadius = baseRadius * (0.6 + ringT * 0.5);
-        const ringAlpha = 0.08 + ringT * ringT * 0.22;
-        const ringLw = (0.4 + ringT * 1.2) * (0.7 + acousticness * 0.6);
-        const ringSpeed = 0.3 + ringT * 0.7;
-        const ringNoiseScale = 3 + ringT * 5;
+      // ── Compute current frame displacements ──
+      const noiseScale = 6;
+      const displacements = [];
+      for (let i = 0; i <= ORB_POINTS; i++) {
+        const t = i / ORB_POINTS;
+        const angle = t * Math.PI * 2;
 
-        // Outward displacement
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${ringAlpha})`;
-        ctx.lineWidth = ringLw;
+        const n1 = noise2D(Math.cos(angle) * noiseScale + keyOffset, Math.sin(angle) * noiseScale + phase * 0.7) * 0.5;
+        const n2 = noise2D(Math.cos(angle) * noiseScale * 2 + 100, Math.sin(angle) * noiseScale * 2 + phase) * 0.25;
+        const n3 = noise2D(Math.cos(angle) * noiseScale * 4 + 200, Math.sin(angle) * noiseScale * 4 + phase * 1.3) * 0.125;
+        let raw = n1 + n2 + n3;
+
+        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+
+        const beatBoost = 1 + beatPulse * danceability * 0.4;
+        let amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
+        amp = Math.min(amp, amplitudeCeiling);
+        amp *= 1 + (Math.random() - 0.5) * 0.08;
+
+        displacements.push(amp * baseRadius * 2.2);
+      }
+
+      historyRef.current.push(displacements);
+      if (historyRef.current.length > ORB_LAYERS) historyRef.current.shift();
+
+      // ── Render tracer layers (oldest → newest) ──
+      const layers = historyRef.current;
+      for (let l = 0; l < layers.length; l++) {
+        const age = l / Math.max(1, layers.length - 1);
+        const data = layers[l];
+
+        const alpha = 0.012 + age * age * 0.16;
+        const baseLw = 0.3 + age * 1.0;
+        const lw = baseLw * (0.7 + acousticness * 0.6);
+        const radiusShift = (layers.length - 1 - l) * 1.1;
+
+        // Mountains (outward, smooth curves)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = lw;
         ctx.beginPath();
 
         for (let i = 0; i <= ORB_POINTS; i++) {
-          const t = i / ORB_POINTS;
-          const angle = t * Math.PI * 2;
-
-          // Multi-octave noise
-          const n1 = noise2D(Math.cos(angle) * ringNoiseScale + keyOffset, Math.sin(angle) * ringNoiseScale + phase * ringSpeed) * 0.5;
-          const n2 = noise2D(Math.cos(angle) * ringNoiseScale * 2 + 100, Math.sin(angle) * ringNoiseScale * 2 + phase * ringSpeed * 1.5) * 0.25;
-          const n3 = noise2D(Math.cos(angle) * ringNoiseScale * 4 + 200, Math.sin(angle) * ringNoiseScale * 4 + phase * ringSpeed * 2) * 0.125;
-          let raw = n1 + n2 + n3;
-
-          // Valence shaping
-          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-
-          const beatBoost = 1 + beatPulse * danceability * 0.4;
-          let amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
-          amp = Math.min(amp, amplitudeCeiling);
-          amp *= 1 + (Math.random() - 0.5) * 0.08;
-
-          const displacement = amp * baseRadius * 1.2;
-          const r = ringRadius + displacement;
+          const angle = (i / ORB_POINTS) * Math.PI * 2;
+          const r = baseRadius + data[i] - radiusShift;
           const x = cx + Math.cos(angle) * r;
           const y = cy + Math.sin(angle) * r;
 
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            const prevAngle = ((i - 1) / ORB_POINTS) * Math.PI * 2;
+            const prevR = baseRadius + data[i - 1] - radiusShift;
+            const prevX = cx + Math.cos(prevAngle) * prevR;
+            const prevY = cy + Math.sin(prevAngle) * prevR;
+            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
+          }
         }
         ctx.closePath();
         ctx.stroke();
 
-        // Inward mirror (subtler)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${ringAlpha * 0.4})`;
-        ctx.lineWidth = ringLw * 0.5;
+        // Reflection (inward, subtler)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.35})`;
+        ctx.lineWidth = lw * 0.6;
         ctx.beginPath();
-
         for (let i = 0; i <= ORB_POINTS; i++) {
-          const t = i / ORB_POINTS;
-          const angle = t * Math.PI * 2;
-
-          const n1 = noise2D(Math.cos(angle) * ringNoiseScale + keyOffset, Math.sin(angle) * ringNoiseScale + phase * ringSpeed) * 0.5;
-          let amp = Math.abs(n1) * k.amplitude * exhaleMultiplier * 0.5;
-          amp = Math.min(amp, amplitudeCeiling * 0.5);
-
-          const displacement = amp * baseRadius * 0.8;
-          const r = ringRadius - displacement;
+          const angle = (i / ORB_POINTS) * Math.PI * 2;
+          const r = baseRadius - data[i] * 0.38 + (layers.length - 1 - l) * 0.4;
           const x = cx + Math.cos(angle) * r;
           const y = cy + Math.sin(angle) * r;
-
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -1237,20 +1273,6 @@ export default function SpotifyPage() {
                   <ChevronRight size={16} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
 
-                {/* Visualize — enter fullscreen orb */}
-                <button
-                  onClick={() => setVisualizing(true)}
-                  style={{
-                    width: 32, height: 32, borderRadius: "var(--radius-full)",
-                    background: "transparent", border: "1px solid transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", padding: 0, outline: "none",
-                    marginLeft: "var(--space-2)",
-                  }}
-                  title="Visualize"
-                >
-                  <Maximize2 size={13} strokeWidth={1.8} color="var(--color-text-dim)" />
-                </button>
               </div>
             </div>
           </div>
@@ -1264,6 +1286,7 @@ export default function SpotifyPage() {
               progress={progress}
               duration={currentTrack?.duration || 0}
               features={features}
+              onVisualize={() => setVisualizing(true)}
             />
           </div>
 
