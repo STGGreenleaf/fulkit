@@ -1094,3 +1094,12 @@ Each MCP server exposes a specific tool surface. We control safety by:
 ### The mental model
 
 > Think of Claude in Fulkit as a **junior developer on your team.** Smart, fast, helpful — but every PR gets reviewed. Every destructive action gets a "are you sure?" No deploy access. No admin credentials. A contributor with guardrails.
+
+---
+
+## Audio & Music System
+
+All music/audio specs live in `md/Audio_Crate/`:
+- **`audio-spec.md`** — Signal Terrain, Fabric audio engine, ReccoBeats integration, waveform rendering
+- **`audio-todo.md`** — Audio system roadmap and TODO
+- **`crate-spec.md`** — Crate & Mix system: DJ metaphor, drag-to-crate, set building, Spotify playback

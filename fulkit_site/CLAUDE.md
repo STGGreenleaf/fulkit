@@ -34,6 +34,7 @@ fulkit/                   # Monorepo root (git root)
       lib/                # Utilities (auth.js, supabase.js)
       public/             # Static assets
     md/                   # Docs (design.md, devlog.md, buildnotes.md, etc.)
+      Audio_Crate/        # Music/audio specs (audio-spec.md, audio-todo.md, crate-spec.md)
     assets/               # Source logos, brand assets, fonts, styles
     jsx/archive/          # Archived JSX prototypes
   ChappieBrain/           # Obsidian vault (gitignored, not deployed)

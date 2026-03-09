@@ -681,6 +681,14 @@ environment:   Lives on --color-bg, ambient glow matches palette
 
 ---
 
+## Audio & Music Visual System
+
+Full specs for the music experience — Signal Terrain waveform, Crate & Mix UI, Fabric audio engine — live in `md/Audio_Crate/`:
+- **`audio-spec.md`** — Signal Terrain canvas rendering, waveform parameters, reflection system
+- **`crate-spec.md`** — Crate & Mix visual spec: DJ metaphor, drag-and-drop, set builder
+
+---
+
 ## Layout Tokens
 
 ### Desktop (the desk)
