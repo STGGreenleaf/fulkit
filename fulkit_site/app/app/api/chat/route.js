@@ -25,7 +25,10 @@ Guidelines:
 - When you don't know something, say so directly.
 - Suggest action items when they naturally arise from conversation. Frame them as "Want me to add that to your action list?" rather than creating them silently.
 - You can create, list, and update action items using your tools. When listing actions, format them cleanly. When creating, confirm what you added.
-- Don't over-create actions. Only suggest when it naturally fits — a clear task, a deadline, a follow-up.`;
+- Don't over-create actions. Only suggest when it naturally fits — a clear task, a deadline, a follow-up.
+- When the user tells you something personal or important — a name, a project, a preference, a deadline, a relationship — quietly save it with memory_save. Don't announce it every time. Just remember.
+- If your "What I Know About You" section has relevant info, use it naturally. Don't say "I remember that..." — just weave it in like a friend would.
+- You can search the user's notes with notes_search when they ask about something that might be documented. Use it to ground your answers in their own knowledge.`;
 
 // Estimate tokens for conversation compression
 function estimateTokens(text) {
@@ -537,6 +540,24 @@ export async function POST(request) {
         .map((m) => `- ${m.key.replace("memory:", "")}: ${m.value}`)
         .join("\n");
       system += `\n\n## What I Know About You\nThese are things you've told me across our conversations. Use them naturally — don't announce that you remembered something unless it's relevant.\n${memBlock}`;
+    }
+
+    // Inject recent conversation summaries (cross-session context)
+    if (userId) {
+      try {
+        const { data: recentConvos } = await getSupabaseAdmin()
+          .from("conversations")
+          .select("title, created_at")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(10);
+        if (recentConvos && recentConvos.length > 0) {
+          const convoBlock = recentConvos
+            .map((c) => `- ${c.title} (${new Date(c.created_at).toLocaleDateString()})`)
+            .join("\n");
+          system += `\n\n## Recent Conversations\nTopics you've discussed recently:\n${convoBlock}`;
+        }
+      } catch { /* table may not exist yet */ }
     }
 
     // Inject vault context

@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Copy,
   Check as CheckIcon,
+  Upload,
+  FileText,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -134,6 +136,60 @@ export default function Owner() {
 }
 
 function DashboardTab() {
+  const { accessToken } = useAuth();
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+
+  const PROJECT_DOCS = [
+    { path: "md/buildnotes.md", title: "Build Notes", folder: "01-PROJECT" },
+    { path: "md/design.md", title: "Design System", folder: "01-PROJECT" },
+    { path: "md/prelaunch.md", title: "Pre-Launch Checklist", folder: "01-PROJECT" },
+    { path: "md/trust-model.md", title: "Trust Model", folder: "01-PROJECT" },
+    { path: "md/Audio_Crate/audio-spec.md", title: "Audio Spec", folder: "02-FEATURES" },
+    { path: "md/Audio_Crate/audio-todo.md", title: "Audio TODO", folder: "02-FEATURES" },
+    { path: "md/Audio_Crate/crate-spec.md", title: "Crate Spec", folder: "02-FEATURES" },
+  ];
+
+  const importDocs = async () => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      // Fetch files from GitHub
+      const notes = [];
+      for (const doc of PROJECT_DOCS) {
+        try {
+          const res = await fetch(`/api/github/file?repo=STGGreenleaf/fulkit&path=fulkit_site/${doc.path}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (!res.ok) continue;
+          const { content } = await res.json();
+          if (content) notes.push({ title: doc.title, content, source: "import", folder: doc.folder });
+        } catch { /* skip failed files */ }
+      }
+
+      if (notes.length === 0) {
+        setImportResult({ error: "No files fetched. Is GitHub connected?" });
+        return;
+      }
+
+      const res = await fetch("/api/notes/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ notes }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImportResult({ success: `${data.imported} docs imported as notes` });
+      } else {
+        setImportResult({ error: data.error });
+      }
+    } catch (err) {
+      setImportResult({ error: err.message });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const metrics = [
     { label: "Total Users", value: "1", change: "You" },
     { label: "Active This Week", value: "1", change: "100%" },
@@ -165,6 +221,49 @@ function DashboardTab() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Dogfood Tools */}
+      <div
+        style={{
+          padding: "var(--space-4)",
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          marginBottom: "var(--space-4)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          <FileText size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+            Dogfood Tools
+          </span>
+        </div>
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
+          Import project docs (buildnotes, design, specs) as notes so Claude can reference them in chat.
+        </p>
+        <button
+          onClick={importDocs}
+          disabled={importing}
+          style={{
+            display: "flex", alignItems: "center", gap: "var(--space-2)",
+            padding: "var(--space-2) var(--space-4)",
+            background: importing ? "var(--color-bg-elevated)" : "var(--color-accent)",
+            color: importing ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+            border: "none", borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
+            cursor: importing ? "wait" : "pointer",
+          }}
+        >
+          <Upload size={14} strokeWidth={2} />
+          {importing ? "Importing..." : "Import project docs"}
+        </button>
+        {importResult?.success && (
+          <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-success)" }}>{importResult.success}</div>
+        )}
+        {importResult?.error && (
+          <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-error)" }}>{importResult.error}</div>
+        )}
       </div>
 
       <div
