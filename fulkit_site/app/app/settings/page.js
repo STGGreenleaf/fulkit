@@ -183,6 +183,8 @@ export default function Settings({ initialTab = "account" }) {
   const { compactMode } = useAuth();
   const [tab, setTab] = useState(initialTab);
 
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
+
   return (
     <AuthGuard>
       <div

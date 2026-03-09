@@ -40,6 +40,8 @@ export default function Owner({ initialTab = "dashboard" }) {
   const router = useRouter();
   const [tab, setTab] = useState(initialTab);
 
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
+
   // Non-owners get bounced
   if (!isOwner) {
     if (typeof window !== "undefined") router.replace("/");
