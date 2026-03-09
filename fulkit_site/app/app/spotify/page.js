@@ -408,13 +408,13 @@ function SignalTerrain({
         ctx.stroke();
 
         // Reflection
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.2})`;
-        ctx.lineWidth = lw * 0.4;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
+        ctx.lineWidth = lw * 0.5;
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 0.18;
-          const y = centerY + a + (layers.length - 1 - l) * 0.25 + 1;
+          const a = data[i] * centerY * 0.25;
+          const y = centerY + a + (layers.length - 1 - l) * 0.3 + 1;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
