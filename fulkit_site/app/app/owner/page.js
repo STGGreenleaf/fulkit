@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   BarChart3,
   Palette,
@@ -35,12 +35,17 @@ const TABS = [
   { id: "og", label: "OG Creator", icon: Image },
 ];
 
-export default function Owner({ initialTab = "dashboard" }) {
+const VALID_TAB_IDS = TABS.map((t) => t.id);
+
+export default function Owner() {
   const { isOwner, compactMode } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState(initialTab);
+  const pathname = usePathname();
+  const pathTab = pathname.split("/")[2];
+  const resolvedTab = VALID_TAB_IDS.includes(pathTab) ? pathTab : "dashboard";
+  const [tab, setTab] = useState(resolvedTab);
 
-  useEffect(() => { setTab(initialTab); }, [initialTab]);
+  useEffect(() => { setTab(resolvedTab); }, [resolvedTab]);
 
   // Non-owners get bounced
   if (!isOwner) {
