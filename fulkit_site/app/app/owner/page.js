@@ -109,7 +109,7 @@ export default function Owner() {
           <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
             {tab === "dashboard" && <DashboardTab />}
             {tab === "questions" && <QuestionsTab />}
-            {tab === "design" && <PlaceholderTab title="Design System" description="Color editor, type preview, component preview. Coming soon." />}
+            {tab === "design" && <DesignTab />}
             {tab === "users" && <PlaceholderTab title="Users" description="Invite tree, usage stats, revenue per user. Coming soon." />}
             {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
             {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
@@ -167,6 +167,639 @@ function DashboardTab() {
       >
         This is your command center. Metrics, user management, design tools, and content creation — all here. Tabs will fill in as we build them out.
       </div>
+    </div>
+  );
+}
+
+/* ─── Design System / Brand Guide ─── */
+
+const SECTION_LABEL = {
+  fontSize: 9,
+  fontFamily: "var(--font-mono)",
+  fontWeight: "var(--font-weight-medium)",
+  textTransform: "uppercase",
+  letterSpacing: "var(--letter-spacing-widest)",
+  color: "var(--color-text-dim)",
+  marginBottom: "var(--space-5)",
+};
+
+const SECTION_RULE = {
+  borderTop: "1px solid var(--color-border-light)",
+  paddingTop: "var(--space-8)",
+  marginTop: "var(--space-8)",
+};
+
+function SwatchRow({ label, token, hex }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: "var(--radius-sm)",
+        background: hex, border: "1px solid var(--color-border-light)",
+        flexShrink: 0,
+      }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>{label}</div>
+        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+          {token}
+        </div>
+      </div>
+      <div style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+        {hex}
+      </div>
+    </div>
+  );
+}
+
+function TypeSample({ label, size, weight, family, sample }) {
+  return (
+    <div style={{ marginBottom: "var(--space-5)" }}>
+      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)", letterSpacing: "var(--letter-spacing-wider)", textTransform: "uppercase" }}>
+        {label} — {size} / {weight}
+      </div>
+      <div style={{
+        fontSize: size, fontWeight: weight, fontFamily: family || "var(--font-primary)",
+        lineHeight: "var(--line-height-tight)", color: "var(--color-text)",
+      }}>
+        {sample || "The wave does not decorate. It responds."}
+      </div>
+    </div>
+  );
+}
+
+function SpacingBlock({ label, size, px }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-1-5)" }}>
+      <div style={{
+        width: px, height: 12, background: "var(--color-text)", borderRadius: 1,
+        minWidth: 2, opacity: 0.25,
+      }} />
+      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", minWidth: 60 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+        {px}px
+      </div>
+    </div>
+  );
+}
+
+function DesignTab() {
+  return (
+    <div style={{ maxWidth: 780, margin: "0 auto", padding: "var(--space-8) 0" }}>
+
+      {/* ═══ MASTHEAD ═══ */}
+      <div style={{ marginBottom: "var(--space-12)", textAlign: "center" }}>
+        <div style={{
+          fontSize: 64, fontWeight: "var(--font-weight-black)",
+          fontFamily: "var(--font-primary)", letterSpacing: "var(--letter-spacing-tighter)",
+          lineHeight: 1, color: "var(--color-text)", marginBottom: "var(--space-3)",
+        }}>
+          Fülkit
+        </div>
+        <div style={{
+          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)",
+          textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)",
+          color: "var(--color-text-dim)",
+        }}>
+          Brand &amp; Design System
+        </div>
+        <div style={{
+          width: 32, height: 1, background: "var(--color-text-dim)", margin: "var(--space-5) auto 0",
+          opacity: 0.4,
+        }} />
+      </div>
+
+      {/* ═══ PHILOSOPHY ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Philosophy</div>
+        <div style={{
+          fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-semibold)",
+          lineHeight: "var(--line-height-snug)", color: "var(--color-text)",
+          marginBottom: "var(--space-4)", maxWidth: 560,
+        }}>
+          Warm monochrome. One color family at varying lightness. Ink on warm paper.
+        </div>
+        <div style={{
+          fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)",
+          lineHeight: "var(--line-height-relaxed)", maxWidth: 560,
+        }}>
+          The palette is a single warm-grey family — #2A2826 through #EFEDE8. Every surface, text value,
+          border, and accent lives on this axis. The only color permitted is functional: semantic states
+          (success, warning, error) and source indicators. If it's not a status signal, it's grey.
+          No decorative color. No accent hues. No brand colors on UI elements.
+        </div>
+
+        <div style={{
+          marginTop: "var(--space-6)", padding: "var(--space-4)",
+          background: "var(--color-bg-inverse)", borderRadius: "var(--radius-lg)",
+        }}>
+          <div style={{
+            fontSize: "var(--font-size-sm)", color: "var(--color-text-inverse)",
+            fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", opacity: 0.8,
+          }}>
+            "As little design as possible. Less, but better — because it concentrates on the essential
+            aspects, and the products are not burdened with non-essentials."
+          </div>
+          <div style={{
+            fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-inverse)",
+            opacity: 0.4, marginTop: "var(--space-2)", textTransform: "uppercase",
+            letterSpacing: "var(--letter-spacing-wider)",
+          }}>
+            Dieter Rams
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ COLOR PALETTE ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Color Palette</div>
+
+        {/* Full gradient bar */}
+        <div style={{
+          display: "flex", height: 48, borderRadius: "var(--radius-md)",
+          overflow: "hidden", marginBottom: "var(--space-6)",
+          border: "1px solid var(--color-border-light)",
+        }}>
+          {[
+            { hex: "#2A2826", flex: 1 },
+            { hex: "#5C5955", flex: 1 },
+            { hex: "#8A8784", flex: 1 },
+            { hex: "#B0ADA8", flex: 1 },
+            { hex: "#D4D1CC", flex: 1 },
+            { hex: "#E5E2DD", flex: 1 },
+            { hex: "#E7E4DF", flex: 1 },
+            { hex: "#EFEDE8", flex: 1 },
+            { hex: "#F5F3F0", flex: 1 },
+          ].map((c, i) => (
+            <div key={i} style={{ flex: c.flex, background: c.hex }} />
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)" }}>
+          {/* Backgrounds */}
+          <div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Surfaces
+            </div>
+            <SwatchRow label="Background" token="--color-bg" hex="#EFEDE8" />
+            <SwatchRow label="Alt Surface" token="--color-bg-alt" hex="#E7E4DF" />
+            <SwatchRow label="Elevated" token="--color-bg-elevated" hex="#F5F3F0" />
+            <SwatchRow label="Inverse" token="--color-bg-inverse" hex="#2A2826" />
+          </div>
+
+          {/* Text */}
+          <div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Text
+            </div>
+            <SwatchRow label="Primary" token="--color-text" hex="#2A2826" />
+            <SwatchRow label="Secondary" token="--color-text-secondary" hex="#5C5955" />
+            <SwatchRow label="Muted" token="--color-text-muted" hex="#8A8784" />
+            <SwatchRow label="Dim" token="--color-text-dim" hex="#B0ADA8" />
+          </div>
+        </div>
+
+        {/* Borders */}
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+            Borders &amp; Accents
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)" }}>
+            <div>
+              <SwatchRow label="Border" token="--color-border" hex="#D4D1CC" />
+              <SwatchRow label="Border Light" token="--color-border-light" hex="#E5E2DD" />
+              <SwatchRow label="Focus Ring" token="--color-border-focus" hex="#2A2826" />
+            </div>
+            <div>
+              <SwatchRow label="Accent" token="--color-accent" hex="#2A2826" />
+              <SwatchRow label="Accent Hover" token="--color-accent-hover" hex="#1A1816" />
+              <SwatchRow label="Accent Active" token="--color-accent-active" hex="#111010" />
+            </div>
+          </div>
+        </div>
+
+        {/* Functional — the only color */}
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+            Functional Color — the only exception
+          </div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
+            Reserved for status signals. Never decorative.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>
+            <SwatchRow label="Success" token="--color-success" hex="#2F8F4E" />
+            <SwatchRow label="Warning" token="--color-warning" hex="#C4890A" />
+            <SwatchRow label="Error" token="--color-error" hex="#C43B2E" />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ TYPOGRAPHY ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Typography</div>
+
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)", marginBottom: "var(--space-8)",
+        }}>
+          <div>
+            <div style={{
+              fontSize: 40, fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-primary)",
+              lineHeight: 1, marginBottom: "var(--space-2)",
+            }}>
+              Aa
+            </div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
+              D-DIN
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              Primary typeface. German industrial heritage, 1931. Designed for clarity at any size.
+              Upgrade path to DIN Pro when licensed.
+            </div>
+          </div>
+          <div>
+            <div style={{
+              fontSize: 40, fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)",
+              lineHeight: 1, marginBottom: "var(--space-2)",
+            }}>
+              01
+            </div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
+              JetBrains Mono
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              Data, code, timestamps, labels. Monospaced for alignment.
+              Used in all technical readouts.
+            </div>
+          </div>
+        </div>
+
+        {/* Type scale */}
+        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+          Type Scale
+        </div>
+
+        <TypeSample label="Hero" size="48px" weight="900" sample="Fülkit" />
+        <TypeSample label="Marketing" size="36px" weight="700" sample="Your second brain, fully loaded." />
+        <TypeSample label="Page Title" size="22px" weight="700" sample="Settings" />
+        <TypeSample label="Section Header" size="16px" weight="600" sample="Connected Sources" />
+        <TypeSample label="Body" size="14px" weight="400" sample="The wave does not decorate. It responds. No chrome, no gradients, no glow unless earned by real signal." />
+        <TypeSample label="Small" size="12px" weight="500" sample="Last synced 4 minutes ago" />
+        <TypeSample label="Caption" size="11px" weight="500" sample="ENERGY · DANCE · MOOD" family="var(--font-mono)" />
+        <TypeSample label="Fine Print" size="10px" weight="400" sample="v1.0 · fulkit.app" family="var(--font-mono)" />
+
+        {/* Weight scale */}
+        <div style={{ marginTop: "var(--space-6)", fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+          Weight Scale
+        </div>
+        {[
+          { w: 400, label: "Normal", sample: "Body text, descriptions" },
+          { w: 500, label: "Medium", sample: "Labels, emphasized body" },
+          { w: 600, label: "Semibold", sample: "Sub-headers, active states" },
+          { w: 700, label: "Bold", sample: "Headers, strong emphasis" },
+          { w: 900, label: "Black", sample: "Hero numbers, KPIs" },
+        ].map((r) => (
+          <div key={r.w} style={{ display: "flex", alignItems: "baseline", gap: "var(--space-4)", marginBottom: "var(--space-2)" }}>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: r.w, width: 180 }}>{r.sample}</div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+              {r.w} · {r.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ SPACING ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Spacing Scale</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)" }}>
+          <div>
+            {[
+              { label: "--space-0-5", px: 2 },
+              { label: "--space-1", px: 4 },
+              { label: "--space-1-5", px: 6 },
+              { label: "--space-2", px: 8 },
+              { label: "--space-2-5", px: 10 },
+              { label: "--space-3", px: 12 },
+              { label: "--space-3-5", px: 14 },
+              { label: "--space-4", px: 16 },
+            ].map((s) => <SpacingBlock key={s.label} {...s} />)}
+          </div>
+          <div>
+            {[
+              { label: "--space-5", px: 20 },
+              { label: "--space-6", px: 24 },
+              { label: "--space-8", px: 32 },
+              { label: "--space-10", px: 40 },
+              { label: "--space-12", px: 48 },
+              { label: "--space-16", px: 64 },
+              { label: "--space-20", px: 80 },
+              { label: "--space-24", px: 96 },
+            ].map((s) => <SpacingBlock key={s.label} {...s} />)}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ RADII ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Border Radius</div>
+        <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "flex-end", flexWrap: "wrap" }}>
+          {[
+            { label: "xs", px: 4, size: 32 },
+            { label: "sm", px: 6, size: 36 },
+            { label: "md", px: 8, size: 40 },
+            { label: "lg", px: 10, size: 48 },
+            { label: "xl", px: 14, size: 56 },
+            { label: "2xl", px: 20, size: 64 },
+            { label: "full", px: 9999, size: 48 },
+          ].map((r) => (
+            <div key={r.label} style={{ textAlign: "center" }}>
+              <div style={{
+                width: r.size, height: r.size,
+                border: "2px solid var(--color-text)",
+                borderRadius: r.px, opacity: 0.2,
+                marginBottom: "var(--space-2)",
+              }} />
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
+                {r.label}
+              </div>
+              <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                {r.px === 9999 ? "pill" : `${r.px}px`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ SHADOWS ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Elevation</div>
+        <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap" }}>
+          {[
+            { label: "xs", shadow: "0 1px 2px rgba(42,40,38,0.04)" },
+            { label: "sm", shadow: "0 1px 3px rgba(42,40,38,0.06), 0 1px 2px rgba(42,40,38,0.04)" },
+            { label: "md", shadow: "0 4px 6px rgba(42,40,38,0.06), 0 2px 4px rgba(42,40,38,0.04)" },
+            { label: "lg", shadow: "0 10px 15px rgba(42,40,38,0.08), 0 4px 6px rgba(42,40,38,0.04)" },
+            { label: "xl", shadow: "0 20px 25px rgba(42,40,38,0.10), 0 10px 10px rgba(42,40,38,0.04)" },
+          ].map((s) => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{
+                width: 72, height: 72, background: "var(--color-bg-elevated)",
+                borderRadius: "var(--radius-lg)", boxShadow: s.shadow,
+                marginBottom: "var(--space-2)",
+              }} />
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ MOTION ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Motion</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)" }}>
+          <div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Duration
+            </div>
+            {[
+              { label: "Fast", token: "--duration-fast", value: "100ms", use: "Hover, toggles" },
+              { label: "Normal", token: "--duration-normal", value: "200ms", use: "Most transitions" },
+              { label: "Slow", token: "--duration-slow", value: "300ms", use: "Panel slides" },
+              { label: "Slower", token: "--duration-slower", value: "500ms", use: "Page transitions" },
+              { label: "Slowest", token: "--duration-slowest", value: "800ms", use: "Whisper fade" },
+            ].map((d) => (
+              <div key={d.label} style={{ display: "flex", gap: "var(--space-3)", alignItems: "baseline", marginBottom: "var(--space-1-5)" }}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", width: 60 }}>{d.label}</div>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 48 }}>{d.value}</div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{d.use}</div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Easing
+            </div>
+            {[
+              { label: "Default", value: "cubic-bezier(0.22, 1, 0.36, 1)", use: "Smooth deceleration" },
+              { label: "Bounce", value: "cubic-bezier(0.34, 1.56, 0.64, 1)", use: "Playful overshoot" },
+              { label: "In", value: "cubic-bezier(0.4, 0, 1, 1)", use: "Accelerating exit" },
+              { label: "Out", value: "cubic-bezier(0, 0, 0.2, 1)", use: "Decelerating entry" },
+            ].map((e) => (
+              <div key={e.label} style={{ marginBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "baseline" }}>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{e.label}</div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{e.use}</div>
+                </div>
+                <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{e.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ VOICE ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Voice &amp; Tone</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-8)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-2)" }}>
+              I'll be your bestie.
+            </div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+              Warm but not chatty. Has initiative. Permission-based personality.
+              The kind of friend who remembers what you said three weeks ago and brings it up
+              at exactly the right moment.
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+              <div style={{ marginBottom: "var(--space-3)" }}>
+                <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>Do: </span>
+                Be direct. Be useful. Anticipate.
+              </div>
+              <div style={{ marginBottom: "var(--space-3)" }}>
+                <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>Don't: </span>
+                Over-explain. Apologize. Use filler.
+              </div>
+              <div>
+                <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>Never: </span>
+                Feel like software talking.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ GUARDRAILS ═══ */}
+      <div style={SECTION_RULE}>
+        <div style={SECTION_LABEL}>Guardrails</div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)",
+        }}>
+          {[
+            "No raw color values — everything uses var(--token)",
+            "No decorative color — grey or functional only",
+            "No CSS modules, Tailwind, or styled-components",
+            "No arbitrary font sizes — scale only",
+            "No arbitrary spacing — scale only",
+            "Hover states auto-derived (darken 10%)",
+            "All icons from Lucide React, 18px default",
+            "Brand mark always links to /",
+          ].map((rule, i) => (
+            <div key={i} style={{
+              fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)",
+              padding: "var(--space-2-5) var(--space-3)",
+              background: "var(--color-bg-elevated)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--color-border-light)",
+              lineHeight: "var(--line-height-normal)",
+            }}>
+              {rule}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ EXPORT ═══ */}
+      <DesignExport />
+
+      {/* ═══ FOOTER ═══ */}
+      <div style={{
+        marginTop: "var(--space-12)", paddingTop: "var(--space-8)",
+        borderTop: "1px solid var(--color-border-light)", textAlign: "center",
+      }}>
+        <div style={{
+          fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-dim)",
+        }}>
+          Fülkit Design System · v1.0 · fulkit.app
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesignExport() {
+  const [copied, setCopied] = useState(false);
+
+  const designJSON = JSON.stringify({
+    brand: {
+      name: "Fülkit",
+      url: "fulkit.app",
+      tagline: "I'll be your bestie.",
+      voice: "Warm but not chatty. Direct. Anticipates. Permission-based personality.",
+    },
+    philosophy: {
+      approach: "Warm monochrome",
+      description: "One color family — warm grey (#2A2826 → #EFEDE8). The only color permitted is functional: semantic states and source indicators. If it's not a status signal, it's grey.",
+      lineage: "Dieter Rams — as little design as possible.",
+    },
+    palette: {
+      surfaces: {
+        background: { token: "--color-bg", hex: "#EFEDE8" },
+        alt: { token: "--color-bg-alt", hex: "#E7E4DF" },
+        elevated: { token: "--color-bg-elevated", hex: "#F5F3F0" },
+        inverse: { token: "--color-bg-inverse", hex: "#2A2826" },
+      },
+      text: {
+        primary: { token: "--color-text", hex: "#2A2826" },
+        secondary: { token: "--color-text-secondary", hex: "#5C5955" },
+        muted: { token: "--color-text-muted", hex: "#8A8784" },
+        dim: { token: "--color-text-dim", hex: "#B0ADA8" },
+        inverse: { token: "--color-text-inverse", hex: "#F0EEEB" },
+      },
+      borders: {
+        default: { token: "--color-border", hex: "#D4D1CC" },
+        light: { token: "--color-border-light", hex: "#E5E2DD" },
+        focus: { token: "--color-border-focus", hex: "#2A2826" },
+      },
+      accent: {
+        base: { token: "--color-accent", hex: "#2A2826" },
+        hover: { token: "--color-accent-hover", hex: "#1A1816" },
+        active: { token: "--color-accent-active", hex: "#111010" },
+      },
+      functional: {
+        success: { token: "--color-success", hex: "#2F8F4E" },
+        warning: { token: "--color-warning", hex: "#C4890A" },
+        error: { token: "--color-error", hex: "#C43B2E" },
+      },
+    },
+    typography: {
+      primary: { family: "D-DIN", fallback: "-apple-system, sans-serif", note: "Upgrade to DIN Pro when licensed" },
+      mono: { family: "JetBrains Mono", fallback: "monospace" },
+      scale: {
+        "2xs": "10px", xs: "11px", sm: "12px", base: "14px", md: "15px",
+        lg: "16px", xl: "18px", "2xl": "22px", "3xl": "28px", "4xl": "36px", "5xl": "48px",
+      },
+      weights: { normal: 400, medium: 500, semibold: 600, bold: 700, black: 900 },
+      lineHeights: { none: 1, tight: 1.25, snug: 1.35, normal: 1.5, relaxed: 1.65, loose: 1.8 },
+      letterSpacing: { tighter: "-0.5px", tight: "-0.3px", normal: "0", wide: "0.5px", wider: "0.8px", widest: "1.2px" },
+    },
+    spacing: { "0.5": 2, "1": 4, "1.5": 6, "2": 8, "2.5": 10, "3": 12, "3.5": 14, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "16": 64, "20": 80, "24": 96 },
+    radii: { xs: "4px", sm: "6px", md: "8px", lg: "10px", xl: "14px", "2xl": "20px", full: "9999px" },
+    shadows: {
+      xs: "0 1px 2px rgba(42,40,38,0.04)",
+      sm: "0 1px 3px rgba(42,40,38,0.06), 0 1px 2px rgba(42,40,38,0.04)",
+      md: "0 4px 6px rgba(42,40,38,0.06), 0 2px 4px rgba(42,40,38,0.04)",
+      lg: "0 10px 15px rgba(42,40,38,0.08), 0 4px 6px rgba(42,40,38,0.04)",
+      xl: "0 20px 25px rgba(42,40,38,0.10), 0 10px 10px rgba(42,40,38,0.04)",
+    },
+    motion: {
+      durations: { fast: "100ms", normal: "200ms", slow: "300ms", slower: "500ms", slowest: "800ms" },
+      easing: {
+        default: "cubic-bezier(0.22, 1, 0.36, 1)",
+        bounce: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        in: "cubic-bezier(0.4, 0, 1, 1)",
+        out: "cubic-bezier(0, 0, 0.2, 1)",
+      },
+    },
+    guardrails: [
+      "No raw color values — everything uses var(--token)",
+      "No decorative color — warm monochrome or functional only",
+      "No CSS modules, Tailwind, or styled-components — inline styles only",
+      "No arbitrary font sizes, spacing, or radii — scale only",
+      "Hover states auto-derived (darken 10%)",
+      "All icons from Lucide React, 18px default, 1.8px stroke",
+      "Brand mark always links to /",
+      "The only color permitted is functional: semantic states and source indicators",
+    ],
+  }, null, 2);
+
+  const copyJSON = () => {
+    navigator.clipboard.writeText(designJSON);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={SECTION_RULE}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+        <div style={SECTION_LABEL}>Export — JSON</div>
+        <button onClick={copyJSON} style={{
+          display: "inline-flex", alignItems: "center", gap: "var(--space-1-5)",
+          padding: "var(--space-1-5) var(--space-3)", border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-md)", background: copied ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
+          color: copied ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+          fontWeight: "var(--font-weight-medium)", cursor: "pointer",
+          transition: "all var(--duration-normal) var(--ease-default)",
+        }}>
+          {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy JSON</>}
+        </button>
+      </div>
+      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-normal)" }}>
+        Full design system as structured JSON. Paste into any LLM, Figma plugin, or handoff doc.
+      </div>
+      <pre style={{
+        padding: "var(--space-4)", background: "var(--color-bg-inverse)",
+        borderRadius: "var(--radius-lg)", fontSize: 10, fontFamily: "var(--font-mono)",
+        color: "var(--color-text-inverse)", overflow: "auto", maxHeight: 320,
+        whiteSpace: "pre-wrap", margin: 0, lineHeight: "var(--line-height-relaxed)",
+        opacity: 0.85,
+      }}>
+        {designJSON}
+      </pre>
     </div>
   );
 }

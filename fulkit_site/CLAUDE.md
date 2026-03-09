@@ -7,6 +7,7 @@
 
 ## Rules
 - Every color, font, spacing value uses design tokens from `app/app/tokens.css`. No hardcoded values.
+- **Warm monochrome only.** The palette is one warm-grey family (#2A2826 → #EFEDE8). The only color allowed is functional: semantic states (success/warning/error) and source indicators. No decorative color. No accent hues. No brand colors on UI elements. If it's not a status signal, it's grey.
 - Brand name is **Fulkit** (with umlaut). Code identifiers and URLs use fulkit (no umlaut).
 - Never write "FulKit", "FULKIT", "FullKit", or "Ful-kit".
 - Sub-features use their proper names: **The Hum**, **Whispers**, **Ful Gauge**.

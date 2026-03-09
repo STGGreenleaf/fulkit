@@ -38,8 +38,7 @@
 ## Color Tokens
 
 ### Philosophy
-Achromatic base. Warm, analog, like a well-worn notebook on a wooden desk.
-Only color = functional indicators (sources, states). Never decorative.
+**Warm monochrome.** One color family — warm grey (#2A2826 → #EFEDE8) — at varying lightness and opacity. Not achromatic (no tint), not colorful. Every surface, text, border, and accent lives on this single warm-grey axis. The only color permitted is **functional**: semantic states (success/warning/error) and source indicators. If it's not a status signal, it's grey. No decorative color. No accent hues. No brand colors on UI elements. The palette should feel like ink on warm paper — analog, considered, quiet.
 
 ### Base Palette
 
