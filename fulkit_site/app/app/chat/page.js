@@ -740,7 +740,7 @@ export default function Chat() {
                         >
                           {`Hey — ${alerts.length} thing${alerts.length > 1 ? "s" : ""} flagged:\n\n${alerts.map((a) => `• ${a.message}`).join("\n")}`}
                         </div>
-                        <div style={{ display: "flex", gap: "var(--space-1)", alignSelf: "flex-start", marginTop: 2 }}>
+                        <div style={{ display: "flex", gap: "var(--space-1)", alignSelf: "flex-end", marginTop: 2 }}>
                           <button
                             onClick={() => setAlertsDismissed(true)}
                             title="Got it"
