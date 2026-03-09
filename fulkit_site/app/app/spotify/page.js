@@ -103,14 +103,17 @@ function gaussianBlur(arr, radius) {
 }
 
 // Section templates — energy multipliers for each section type
+// Values are HIGH — chorus is full power, verse is ~80%.
+// The envelope creates shape via valleys, not by lowering peaks.
 const SECTION_DEFS = {
-  intro:     { base: 0.30, variance: 0.08 },
-  verse:     { base: 0.55, variance: 0.10 },
-  prechorus: { base: 0.70, variance: 0.08 },
-  chorus:    { base: 1.00, variance: 0.06 },
-  bridge:    { base: 0.40, variance: 0.12 },
-  breakdown: { base: 0.15, variance: 0.05 },
-  outro:     { base: 0.30, variance: 0.10 },
+  intro:     { base: 0.55, variance: 0.06 },
+  verse:     { base: 0.80, variance: 0.06 },
+  prechorus: { base: 0.90, variance: 0.05 },
+  chorus:    { base: 1.00, variance: 0.04 },
+  drop:      { base: 1.00, variance: 0.04 },
+  bridge:    { base: 0.60, variance: 0.08 },
+  breakdown: { base: 0.25, variance: 0.05 },
+  outro:     { base: 0.45, variance: 0.06 },
 };
 
 // Section patterns by song length
@@ -165,7 +168,7 @@ function generateSongEnvelope(trackId, durationMs, bpm, energy, danceability) {
   // Gaussian blur with 2-bar kernel for smooth transitions
   const smoothed = gaussianBlur(raw, 2);
 
-  // Normalize to 0.15–1.0 range (never fully silent)
+  // Normalize to 0.25–1.0 range (breakdowns dip, nothing goes silent)
   let min = Infinity, max = -Infinity;
   for (let i = 0; i < smoothed.length; i++) {
     if (smoothed[i] < min) min = smoothed[i];
@@ -174,7 +177,7 @@ function generateSongEnvelope(trackId, durationMs, bpm, energy, danceability) {
   const range = max - min || 1;
   const envelope = new Float32Array(smoothed.length);
   for (let i = 0; i < smoothed.length; i++) {
-    envelope[i] = 0.15 + ((smoothed[i] - min) / range) * 0.85;
+    envelope[i] = 0.25 + ((smoothed[i] - min) / range) * 0.75;
   }
 
   return envelope;
@@ -404,7 +407,11 @@ function SignalTerrain({
       const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
 
       // Energy → amplitude ceiling
-      const amplitudeCeiling = 0.2 + energy * 0.6;
+      // When envelope is active, it drives the ceiling directly (avoids double-attenuation)
+      const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
+      const amplitudeCeiling = hasEnvelope
+        ? 0.2 + envelopeValue * 0.6   // envelope replaces static energy ceiling
+        : 0.2 + energy * 0.6;          // fallback: static energy from ReccoBeats
       const normalizedLoudness = Math.max(0, (loudness + 35) / 35);
       const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
 
@@ -492,14 +499,14 @@ function SignalTerrain({
         if (live.active && (liveBass + liveMids) > 0.01) {
           // Layer 3: multi-band terrain modulation
           const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
-          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost * envelopeValue;
+          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
           const liveRaw = raw * (1 + livePresence * 0.5); // sharper peaks with presence
           const liveDisp = Math.abs(liveRaw) * envelope * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
           const jitter = (Math.random() - 0.5) * liveAir * 0.15;
           amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
         } else {
-          // Layers 0-2 + procedural envelope
-          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost * envelopeValue;
+          // Layers 0-2 (envelope shapes via ceiling, not multiplier)
+          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
         }
 
         // Clamp to energy ceiling
