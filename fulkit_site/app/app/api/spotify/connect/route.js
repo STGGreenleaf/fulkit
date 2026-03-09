@@ -22,7 +22,7 @@ export async function GET(request) {
     const token = tokenFromParam || tokenFromHeader || tokenFromCookie;
 
     if (!token) {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=no_token", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=no_token", request.url));
     }
 
     // Try valid token first, fall back to decoding expired JWT for user ID
@@ -41,7 +41,7 @@ export async function GET(request) {
         if (adminError || !adminData?.user) throw new Error("User not found");
         user = adminData.user;
       } catch {
-        return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_token", request.url));
+        return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=bad_token", request.url));
       }
     }
 
@@ -65,6 +65,6 @@ export async function GET(request) {
     return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
   } catch (err) {
     console.error("[spotify/connect]", err.message);
-    return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=server", request.url));
+    return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=server", request.url));
   }
 }

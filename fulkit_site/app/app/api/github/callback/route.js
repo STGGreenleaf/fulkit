@@ -9,7 +9,7 @@ export async function GET(request) {
     const stateParam = searchParams.get("state");
 
     if (!code || !stateParam) {
-      return NextResponse.redirect(new URL("/settings?tab=sources&gh=error", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
     }
 
     // Decode and verify HMAC-signed state
@@ -23,7 +23,7 @@ export async function GET(request) {
       const { userId: uid } = JSON.parse(decoded.payload);
       userId = uid;
     } catch {
-      return NextResponse.redirect(new URL("/settings?tab=sources&gh=error", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
     }
 
     // Exchange code for access token
@@ -43,7 +43,7 @@ export async function GET(request) {
     const tokenData = await tokenRes.json();
     if (tokenData.error || !tokenData.access_token) {
       console.error("[github/callback] Token exchange failed:", tokenData.error);
-      return NextResponse.redirect(new URL("/settings?tab=sources&gh=error", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
     }
 
     // Upsert into integrations table
@@ -63,15 +63,15 @@ export async function GET(request) {
 
     if (dbError) {
       console.error("[github/callback] DB error:", dbError.message);
-      return NextResponse.redirect(new URL("/settings?tab=sources&gh=error", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
     }
 
     // Clear the temporary auth cookie and redirect to settings
-    const response = NextResponse.redirect(new URL("/settings?tab=sources&gh=connected", request.url));
+    const response = NextResponse.redirect(new URL("/settings/sources?gh=connected", request.url));
     response.cookies.delete("gh_auth_token");
     return response;
   } catch (err) {
     console.error("[github/callback]", err.message);
-    return NextResponse.redirect(new URL("/settings?tab=sources&gh=error", request.url));
+    return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
   }
 }

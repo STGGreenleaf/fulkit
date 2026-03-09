@@ -10,10 +10,10 @@ export async function GET(request) {
     const error = searchParams.get("error");
 
     if (error) {
-      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=spotify_${error}`, request.url));
+      return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=spotify_${error}`, request.url));
     }
     if (!code || !stateParam) {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=missing_params", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=missing_params", request.url));
     }
 
     // Verify HMAC-signed state
@@ -26,7 +26,7 @@ export async function GET(request) {
       if (expected !== decoded.signature) throw new Error("Invalid signature");
       userId = JSON.parse(decoded.payload).userId;
     } catch {
-      return NextResponse.redirect(new URL("/settings?tab=sources&sp=error&reason=bad_state", request.url));
+      return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=bad_state", request.url));
     }
 
     // Exchange code for tokens
@@ -49,7 +49,7 @@ export async function GET(request) {
     const tokenData = await tokenRes.json();
     if (tokenData.error || !tokenData.access_token) {
       console.error("[spotify/callback] Token exchange failed:", tokenData.error, tokenData.error_description);
-      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=token_${tokenData.error}`, request.url));
+      return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=token_${tokenData.error}`, request.url));
     }
 
     // Upsert into integrations table
@@ -72,14 +72,14 @@ export async function GET(request) {
 
     if (dbError) {
       console.error("[spotify/callback] DB error:", dbError.message);
-      return NextResponse.redirect(new URL(`/settings?tab=sources&sp=error&reason=db_${dbError.code}`, request.url));
+      return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=db_${dbError.code}`, request.url));
     }
 
-    const response = NextResponse.redirect(new URL("/settings?tab=sources&sp=connected", request.url));
+    const response = NextResponse.redirect(new URL("/settings/sources?sp=connected", request.url));
     response.cookies.delete("sp_auth_token");
     return response;
   } catch (err) {
     console.error("[spotify/callback]", err.message);
-    return NextResponse.redirect(new URL("/settings?tab=sources&sp=error", request.url));
+    return NextResponse.redirect(new URL("/settings/sources?sp=error", request.url));
   }
 }

@@ -179,16 +179,9 @@ const REFERRALS = [
   { name: "Pending invite", status: "pending", since: "—" },
 ];
 
-export default function Settings() {
+export default function Settings({ initialTab = "account" }) {
   const { compactMode } = useAuth();
-  // Read ?tab= from URL on mount
-  const [tab, setTab] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("tab") || "account";
-    }
-    return "account";
-  });
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <AuthGuard>
@@ -238,9 +231,7 @@ export default function Settings() {
                 <button
                   onClick={() => {
                     setTab(t.id);
-                    const url = new URL(window.location);
-                    url.searchParams.set("tab", t.id);
-                    window.history.replaceState({}, "", url);
+                    window.history.replaceState({}, "", `/settings/${t.id}`);
                   }}
                   style={{
                     display: "flex",
