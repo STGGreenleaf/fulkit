@@ -273,6 +273,121 @@ async function executeActionTool(name, input, userId) {
   throw new Error(`Unknown action tool: ${name}`);
 }
 
+// Memory tools — Claude can save/list/forget facts about the user
+const MEMORY_TOOLS = [
+  {
+    name: "memory_save",
+    description: "Save a fact or preference you've learned about the user. This persists across conversations. Use for things like: their partner's name, their work schedule, preferences, recurring projects, important dates. Don't save trivial or obvious things.",
+    input_schema: {
+      type: "object",
+      properties: {
+        key: { type: "string", description: "Short identifier (e.g. 'partner_name', 'work_hours', 'favorite_tool', 'current_project')" },
+        value: { type: "string", description: "The fact or preference to remember" },
+      },
+      required: ["key", "value"],
+    },
+  },
+  {
+    name: "memory_list",
+    description: "List everything you've remembered about this user across conversations.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "memory_forget",
+    description: "Forget a specific memory. Use when the user corrects you or asks you to stop remembering something.",
+    input_schema: {
+      type: "object",
+      properties: {
+        key: { type: "string", description: "The memory key to forget" },
+      },
+      required: ["key"],
+    },
+  },
+];
+
+// Note search tool — Claude can search the user's vault
+const NOTES_TOOLS = [
+  {
+    name: "notes_search",
+    description: "Search the user's notes and documents by keyword. Returns matching note titles and excerpts. Use when the user asks about something that might be in their notes, or when you need to reference their stored knowledge.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search keywords" },
+        limit: { type: "integer", description: "Max results. Default 5." },
+      },
+      required: ["query"],
+    },
+  },
+];
+
+// Execute memory tool calls
+async function executeMemoryTool(name, input, userId) {
+  const admin = getSupabaseAdmin();
+
+  if (name === "memory_save") {
+    const memKey = `memory:${input.key}`;
+    const { error } = await admin.from("preferences").upsert(
+      { user_id: userId, key: memKey, value: input.value, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,key" }
+    );
+    if (error) throw new Error(error.message);
+    return { saved: true, key: input.key, value: input.value };
+  }
+
+  if (name === "memory_list") {
+    const { data, error } = await admin.from("preferences")
+      .select("key, value, updated_at")
+      .eq("user_id", userId)
+      .like("key", "memory:%")
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const memories = (data || []).map(m => ({
+      key: m.key.replace("memory:", ""),
+      value: m.value,
+      since: m.updated_at,
+    }));
+    return { count: memories.length, memories };
+  }
+
+  if (name === "memory_forget") {
+    const memKey = `memory:${input.key}`;
+    const { error } = await admin.from("preferences").delete().eq("user_id", userId).eq("key", memKey);
+    if (error) throw new Error(error.message);
+    return { forgotten: true, key: input.key };
+  }
+
+  throw new Error(`Unknown memory tool: ${name}`);
+}
+
+// Execute notes search
+async function executeNoteSearch(input, userId) {
+  const admin = getSupabaseAdmin();
+  const q = `%${input.query}%`;
+  const limit = input.limit || 5;
+
+  const { data, error } = await admin.from("notes")
+    .select("id, title, content, source, folder, created_at")
+    .eq("user_id", userId)
+    .eq("encrypted", false)
+    .or(`title.ilike.${q},content.ilike.${q}`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+
+  const results = (data || []).map(n => ({
+    id: n.id,
+    title: n.title,
+    source: n.source,
+    folder: n.folder,
+    excerpt: n.content?.slice(0, 500) + (n.content?.length > 500 ? "..." : ""),
+    created_at: n.created_at,
+  }));
+
+  return { count: results.length, query: input.query, results };
+}
+
 export async function POST(request) {
   try {
     // Authenticate user via Supabase
@@ -316,15 +431,17 @@ export async function POST(request) {
     // Compress conversation if it's getting long
     const compressed = compressConversation(messages, config.compressAt);
 
-    // Load user preferences for personality tuning
+    // Load user preferences + learned memories
     let prefs = null;
+    let memories = null;
     if (userId) {
       const { data } = await getSupabaseAdmin()
         .from("preferences")
         .select("key, value")
-        .eq("user_id", userId)
-        .in("key", ["tone", "frequency", "chronotype"]);
-      prefs = data;
+        .eq("user_id", userId);
+      // Separate settings from learned memories
+      prefs = (data || []).filter(p => !p.key.startsWith("memory:") && ["tone", "frequency", "chronotype"].includes(p.key));
+      memories = (data || []).filter(p => p.key.startsWith("memory:"));
     }
 
     // Enrich GitHub tree context with actual file contents
@@ -414,6 +531,14 @@ export async function POST(request) {
       system += `\n\n## User Preferences\n${prefBlock}`;
     }
 
+    // Inject persistent memories
+    if (memories && memories.length > 0) {
+      const memBlock = memories
+        .map((m) => `- ${m.key.replace("memory:", "")}: ${m.value}`)
+        .join("\n");
+      system += `\n\n## What I Know About You\nThese are things you've told me across our conversations. Use them naturally — don't announce that you remembered something unless it's relevant.\n${memBlock}`;
+    }
+
     // Inject vault context
     if (Array.isArray(context) && context.length > 0) {
       const contextBlock = context
@@ -443,6 +568,8 @@ export async function POST(request) {
     const MAX_TOOL_ROUNDS = 5;
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
+      ...(userId ? MEMORY_TOOLS : []),
+      ...(userId ? NOTES_TOOLS : []),
       ...(nblKey ? NUMBRLY_TOOLS : []),
     ];
     const baseOpts = {
@@ -494,6 +621,28 @@ export async function POST(request) {
               if (block.name.startsWith("actions_") && userId) {
                 try {
                   const result = await executeActionTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Memory tools (memory_save, memory_list, memory_forget)
+              if (block.name.startsWith("memory_") && userId) {
+                try {
+                  const result = await executeMemoryTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Notes search
+              if (block.name === "notes_search" && userId) {
+                try {
+                  const result = await executeNoteSearch(block.input || {}, userId);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
