@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2 } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1271,6 +1271,20 @@ export default function FabricPage() {
                   }}
                 >
                   <ChevronRight size={16} strokeWidth={2.2} color="var(--color-text-muted)" />
+                </button>
+
+                {/* Visualize — circled */}
+                <button
+                  onClick={() => setVisualizing(true)}
+                  title="Fullscreen visualizer"
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-full)",
+                    background: "transparent", border: "1px solid var(--color-border)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", padding: 0, outline: "none",
+                  }}
+                >
+                  <Maximize2 size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
 
               </div>
