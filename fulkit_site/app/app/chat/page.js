@@ -693,7 +693,27 @@ export default function Chat() {
                   >
                     <VaultGate />
 
-                    {/* Proactive alerts — Chappie's inbox */}
+                    <MessageCircle
+                      size={28}
+                      strokeWidth={1.5}
+                      style={{ color: "var(--color-text-dim)" }}
+                    />
+                    <p
+                      style={{
+                        fontSize: "var(--font-size-sm)",
+                        color: "var(--color-text-muted)",
+                        textAlign: "center",
+                        lineHeight: "var(--line-height-relaxed)",
+                      }}
+                    >
+                      Add anything. Think out loud. Get stuff done.
+                      <br />
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                        Drop files, paste code, or just start typing.
+                      </span>
+                    </p>
+
+                    {/* Proactive alerts — below welcome, above input */}
                     {alerts.length > 0 && !alertsDismissed && (
                       <div
                         style={{
@@ -738,26 +758,6 @@ export default function Chat() {
                         </div>
                       </div>
                     )}
-
-                    <MessageCircle
-                      size={28}
-                      strokeWidth={1.5}
-                      style={{ color: "var(--color-text-dim)" }}
-                    />
-                    <p
-                      style={{
-                        fontSize: "var(--font-size-sm)",
-                        color: "var(--color-text-muted)",
-                        textAlign: "center",
-                        lineHeight: "var(--line-height-relaxed)",
-                      }}
-                    >
-                      Add anything. Think out loud. Get stuff done.
-                      <br />
-                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                        Drop files, paste code, or just start typing.
-                      </span>
-                    </p>
                   </div>
                 )}
 
