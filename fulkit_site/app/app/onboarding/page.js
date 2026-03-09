@@ -273,6 +273,24 @@ export default function Onboarding() {
         </span>
       </div>
 
+      {/* Skip onboarding */}
+      <a
+        href="/home"
+        style={{
+          position: "fixed",
+          top: "var(--space-5)",
+          right: "var(--space-6)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-dim)",
+          textDecoration: "none",
+          transition: "color 200ms",
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
+      >
+        I'll do this later
+      </a>
+
       <div style={{ maxWidth: 480, width: "100%" }}>
         {showPhaseDone ? (
           /* Phase complete message */

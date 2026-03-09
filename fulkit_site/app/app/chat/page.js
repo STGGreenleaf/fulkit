@@ -23,7 +23,7 @@ function timeAgo(dateStr) {
 }
 
 export default function Chat() {
-  const { user, accessToken, githubConnected, compactMode } = useAuth();
+  const { user, accessToken, githubConnected, compactMode, hasContext } = useAuth();
   const isDev = user?.isDev;
   const { getContext, getContextWithMeta, recallNotes, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
 
@@ -712,6 +712,26 @@ export default function Chat() {
                         Drop files, paste code, or just start typing.
                       </span>
                     </p>
+
+                    {/* Context nudge — when user has no onboarding or notes */}
+                    {!isDev && !hasContext && (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-3)",
+                        padding: "var(--space-3) var(--space-4)",
+                        background: "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-md)",
+                        maxWidth: 420,
+                      }}>
+                        <Sparkles size={14} strokeWidth={2} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                          I'll work better once I know you.{" "}
+                          <Link href="/onboarding" style={{ color: "var(--color-text)", textDecoration: "underline" }}>Take the quiz</Link>
+                          {" "}or{" "}
+                          <Link href="/settings" style={{ color: "var(--color-text)", textDecoration: "underline" }}>upload files</Link>.
+                        </span>
+                      </div>
+                    )}
 
                     {/* Proactive alerts — below welcome, above input */}
                     {alerts.length > 0 && !alertsDismissed && (

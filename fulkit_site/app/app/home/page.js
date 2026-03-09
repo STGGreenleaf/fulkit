@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckSquare, FileText, Zap, MessageCircle } from "lucide-react";
+import { Bell, CheckSquare, FileText, Zap, MessageCircle, Sparkles, X, Upload } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -44,11 +44,12 @@ function timeAgo(dateStr) {
 const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
 
 export default function Dashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, hasContext } = useAuth();
   const isDev = user?.isDev;
 
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   useEffect(() => {
     if (!user || isDev) return;
@@ -113,6 +114,87 @@ export default function Dashboard() {
               >
                 Here's what's on your desk.
               </p>
+
+              {/* Context nudge — show when user has no context and hasn't dismissed */}
+              {!isDev && !hasContext && !nudgeDismissed && (
+                <div
+                  style={{
+                    padding: "var(--space-4) var(--space-5)",
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-lg)",
+                    marginBottom: "var(--space-6)",
+                    position: "relative",
+                  }}
+                >
+                  <button
+                    onClick={() => setNudgeDismissed(true)}
+                    style={{
+                      position: "absolute", top: 10, right: 10,
+                      background: "transparent", border: "none",
+                      cursor: "pointer", padding: 4,
+                      color: "var(--color-text-dim)",
+                    }}
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+                    <Sparkles size={14} strokeWidth={2} color="var(--color-text-muted)" />
+                    <span style={{
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: "var(--font-weight-semibold)",
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                      color: "var(--color-text-muted)",
+                    }}>
+                      Get started
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--color-text-secondary)",
+                    lineHeight: "var(--line-height-relaxed)",
+                    marginBottom: "var(--space-4)",
+                  }}>
+                    I work better when I know you. Take the quiz or drop in some files so I have something to work with.
+                  </p>
+                  <div style={{ display: "flex", gap: "var(--space-3)" }}>
+                    <Link
+                      href="/onboarding"
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-2)",
+                        padding: "var(--space-2) var(--space-4)",
+                        background: "var(--color-accent)",
+                        color: "var(--color-text-inverse)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <MessageCircle size={14} strokeWidth={2} />
+                      Take the quiz
+                    </Link>
+                    <Link
+                      href="/settings"
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-2)",
+                        padding: "var(--space-2) var(--space-4)",
+                        background: "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-medium)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <Upload size={14} strokeWidth={2} />
+                      Upload files
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Fül Gauge */}
               <div

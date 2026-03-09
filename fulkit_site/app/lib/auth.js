@@ -27,15 +27,17 @@ export function AuthProvider({ children }) {
     localStorage.setItem("fulkit-compact-mode", String(val));
   }, []);
 
-  // Fetch profile from DB
+  const [hasContext, setHasContext] = useState(false);
+
+  // Fetch profile from DB + check for context (onboarded OR has notes)
   const fetchProfile = useCallback(async (userId) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    const [{ data }, { count }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    ]);
     if (data) {
       setProfile(data);
+      setHasContext(data.onboarded === true || (count || 0) > 0);
     }
     return data;
   }, []);
@@ -57,6 +59,7 @@ export function AuthProvider({ children }) {
     if (mode === "dev" || localStorage.getItem("fulkit-dev-mode") === "true") {
       setUser(DEV_TEMPLATE_USER);
       setProfile({ role: "owner", onboarded: true, seat_type: "standard", messages_this_month: 138 });
+      setHasContext(true);
       setLoading(false);
       return;
     }
@@ -166,6 +169,7 @@ export function AuthProvider({ children }) {
         signOut,
         isOwner,
         isOnboarded,
+        hasContext,
         fetchProfile,
         githubConnected,
         setGithubConnected,
