@@ -374,7 +374,7 @@ function SignalTerrain({
 
       ctx.clearRect(0, 0, w, h);
       const layers = historyRef.current;
-      const centerY = h * 0.42;
+      const centerY = h * 0.72;
 
       for (let l = 0; l < layers.length; l++) {
         const age = l / Math.max(1, layers.length - 1);
@@ -392,7 +392,7 @@ function SignalTerrain({
 
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 1.1;
+          const a = data[i] * centerY * 1.3;
           const y = centerY - a - yShift;
 
           if (i === 0) {
@@ -413,8 +413,8 @@ function SignalTerrain({
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 0.4;
-          const y = centerY + a + (layers.length - 1 - l) * 0.5 + 4;
+          const a = data[i] * centerY * 0.25;
+          const y = centerY + a + (layers.length - 1 - l) * 0.3 + 2;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -813,13 +813,42 @@ export default function SpotifyPage() {
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
           <div style={{ borderBottom: "1px solid var(--color-border-light)" }}>
             <SignalTerrain
-              height={200}
+              height={160}
               isPlaying={isPlaying}
               trackId={currentTrack?.id}
               progress={progress}
               duration={currentTrack?.duration || 0}
               features={features}
             />
+            {/* ReccoBeats debug readout */}
+            {currentTrack && (
+              <div
+                style={{
+                  padding: "var(--space-2) var(--space-8)",
+                  fontSize: 9,
+                  fontFamily: "var(--font-mono)",
+                  color: features ? "var(--color-text-dim)" : "var(--color-text-muted)",
+                  display: "flex",
+                  gap: "var(--space-4)",
+                  opacity: 0.6,
+                }}
+              >
+                {features ? (
+                  <>
+                    <span>BPM {features.bpm}</span>
+                    <span>Key {features.key}</span>
+                    <span>Energy {features.energy}</span>
+                    <span>Dance {features.danceability}</span>
+                    <span>Mood {features.valence}</span>
+                    <span>Loud {features.loudness}dB</span>
+                    <span>Acoustic {features.acousticness}</span>
+                    <span style={{ opacity: 0.4 }}>✓ reccobeats</span>
+                  </>
+                ) : (
+                  <span>⏳ no features — reccobeats miss or loading</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ═══ CRATE + SET ═══ */}

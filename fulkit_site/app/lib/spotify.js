@@ -51,7 +51,7 @@ export function SpotifyProvider({ children }) {
   });
   const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
   const [progress, setProgress] = useState(0);
-  const [volume, setVolumeState] = useState(50);
+  const [volume, setVolumeState] = useState(null);
   const [audioFeatures, setAudioFeatures] = useState(isDev ? MOCK_FEATURES : {});
   const pollRef = useRef(null);
   const volumeTimer = useRef(null);

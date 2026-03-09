@@ -80,7 +80,7 @@ export default function MiniPlayer({ compact }) {
         }}
       >
         {/* Vertical volume slider — left edge */}
-        <VolumeSlider value={volume} onChange={setVolume} vertical />
+        <VolumeSlider value={volume ?? 0} onChange={setVolume} vertical />
 
         {/* Controls column — tight, pushed to bottom */}
         <div
@@ -143,7 +143,7 @@ export default function MiniPlayer({ compact }) {
   return (
     <div>
       {/* Volume slider — IS the divider rule */}
-      <VolumeSlider value={volume} onChange={setVolume} />
+      <VolumeSlider value={volume ?? 0} onChange={setVolume} />
 
       <div style={{ padding: "var(--space-2) 0 var(--space-2)" }}>
         {/* Track info — links to /spotify */}

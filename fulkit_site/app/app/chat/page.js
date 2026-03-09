@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -43,6 +43,7 @@ export default function Chat() {
   const [nblContext, setNblContext] = useState(null);
   const [nblError, setNblError] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
+  const [copiedMsg, setCopiedMsg] = useState(null);
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPins, setShowPins] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -348,7 +349,8 @@ export default function Chat() {
       const decoder = new TextDecoder();
       let buffer = "";
 
-      while (true) {
+      let streamDone = false;
+      while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -359,7 +361,7 @@ export default function Chat() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6);
-          if (payload === "[DONE]") break;
+          if (payload === "[DONE]") { streamDone = true; break; }
 
           try {
             const { text: chunk, error } = JSON.parse(payload);
@@ -370,6 +372,7 @@ export default function Chat() {
                 return copy;
               });
               fullResponse = error;
+              streamDone = true;
               break;
             }
             if (chunk) {
@@ -792,7 +795,7 @@ export default function Chat() {
                         />
                       )}
                     </div>
-                    {/* Pin + Export actions — assistant messages, on hover or if pinned */}
+                    {/* Pin + Copy + Export actions — assistant messages, on hover or if pinned */}
                     {msg.role === "assistant" && (hoveredMsg === i || msg.is_pinned) && !streaming && (
                       <div
                         style={{
@@ -818,20 +821,40 @@ export default function Chat() {
                           <Pin size={13} strokeWidth={2} />
                         </button>
                         {hoveredMsg === i && (
-                          <button
-                            onClick={() => exportMessage(msg)}
-                            title="Export"
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: 4,
-                              color: "var(--color-text-dim)",
-                              display: "flex",
-                            }}
-                          >
-                            <Download size={13} strokeWidth={2} />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(msg.content);
+                                setCopiedMsg(i);
+                                setTimeout(() => setCopiedMsg(null), 1500);
+                              }}
+                              title="Copy"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 4,
+                                color: copiedMsg === i ? "var(--color-text)" : "var(--color-text-dim)",
+                                display: "flex",
+                              }}
+                            >
+                              {copiedMsg === i ? <Check size={13} strokeWidth={2} /> : <Copy size={13} strokeWidth={2} />}
+                            </button>
+                            <button
+                              onClick={() => exportMessage(msg)}
+                              title="Export"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 4,
+                                color: "var(--color-text-dim)",
+                                display: "flex",
+                              }}
+                            >
+                              <Download size={13} strokeWidth={2} />
+                            </button>
+                          </>
                         )}
                       </div>
                     )}

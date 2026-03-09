@@ -362,6 +362,7 @@ export async function POST(request) {
             content: m.content,
           }));
 
+          let needsFinalResponse = false;
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
             const stream = anthropic.messages.stream({
               ...baseOpts,
@@ -422,6 +423,29 @@ export async function POST(request) {
               { role: "assistant", content: finalMessage.content },
               { role: "user", content: toolResults },
             ];
+
+            // If this was the last allowed round, flag so we send a final response
+            if (round === MAX_TOOL_ROUNDS - 1) needsFinalResponse = true;
+          }
+
+          // If tool loop exhausted, make one final call without tools so Claude responds
+          if (needsFinalResponse) {
+            const finalStream = anthropic.messages.stream({
+              model: config.model,
+              max_tokens: config.maxTokens,
+              system,
+              messages: loopMessages,
+            });
+            for await (const event of finalStream) {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta.type === "text_delta"
+              ) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                );
+              }
+            }
           }
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
