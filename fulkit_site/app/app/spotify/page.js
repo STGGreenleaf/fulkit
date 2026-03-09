@@ -374,7 +374,7 @@ function SignalTerrain({
 
       ctx.clearRect(0, 0, w, h);
       const layers = historyRef.current;
-      const centerY = h * 0.88;
+      const centerY = h * 0.78;
 
       for (let l = 0; l < layers.length; l++) {
         const age = l / Math.max(1, layers.length - 1);
@@ -408,13 +408,13 @@ function SignalTerrain({
         ctx.stroke();
 
         // Reflection
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.15})`;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.2})`;
         ctx.lineWidth = lw * 0.4;
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 0.08;
-          const y = centerY + a + (layers.length - 1 - l) * 0.15 + 1;
+          const a = data[i] * centerY * 0.18;
+          const y = centerY + a + (layers.length - 1 - l) * 0.25 + 1;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
