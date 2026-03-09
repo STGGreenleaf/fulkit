@@ -716,30 +716,24 @@ export default function Chat() {
                             color: "var(--color-text)",
                             border: "1px solid var(--color-border-light)",
                             borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
-                            position: "relative",
                           }}
                         >
                           {`Hey — ${alerts.length} thing${alerts.length > 1 ? "s" : ""} flagged:\n\n${alerts.map((a) => `• ${a.message}`).join("\n")}`}
+                        </div>
+                        <div style={{ display: "flex", gap: "var(--space-1)", alignSelf: "flex-start", marginTop: 2 }}>
                           <button
                             onClick={() => setAlertsDismissed(true)}
                             title="Got it"
                             style={{
-                              position: "absolute",
-                              bottom: 6,
-                              right: 6,
                               background: "none",
                               border: "none",
                               cursor: "pointer",
                               padding: 4,
                               color: "var(--color-text-dim)",
                               display: "flex",
-                              opacity: 0.6,
-                              transition: "opacity 150ms",
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
                           >
-                            <ThumbsUp size={14} strokeWidth={2} />
+                            <ThumbsUp size={13} strokeWidth={2} />
                           </button>
                         </div>
                       </div>
