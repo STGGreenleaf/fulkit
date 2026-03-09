@@ -53,7 +53,7 @@ export default function Sidebar() {
           textDecoration: "none",
         }}
       >
-        <LogoMark size={compactMode ? 22 : 26} />
+        <LogoMark size={22} />
         {!compactMode && (
           <span
             style={{
