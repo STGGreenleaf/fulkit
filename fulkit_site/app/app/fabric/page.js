@@ -5,6 +5,7 @@ import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLin
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import LogoMark from "../../components/LogoMark";
 import { useFabric } from "../../lib/fabric";
 
 // Minimal pause mark — two vertical lines
@@ -891,6 +892,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       />
 
+      {/* Brand — top left */}
+      <div style={{
+        position: "absolute", top: 20, left: 28, zIndex: 1,
+        display: "flex", alignItems: "center", gap: "var(--space-2)",
+      }}>
+        <LogoMark size={22} />
+        <span style={{
+          fontSize: "var(--font-size-base)",
+          fontWeight: "var(--font-weight-black)",
+          letterSpacing: "var(--letter-spacing-tight)",
+          color: "var(--color-text-muted)",
+        }}>
+          Fülkit
+        </span>
+      </div>
+
       {/* Close button — top right */}
       <button
         onClick={onClose}
@@ -909,17 +926,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
       {/* Track info — bottom left */}
       <div style={{
-        position: "absolute", bottom: 24, left: 28, zIndex: 1,
+        position: "absolute", bottom: 28, left: 28, zIndex: 1,
       }}>
         <div style={{
-          fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)",
-          fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+          fontSize: "var(--font-size-xl)", color: "var(--color-text-muted)",
+          fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-bold)",
+          letterSpacing: "var(--letter-spacing-tight)",
         }}>
           {trackTitle || ""}
         </div>
         <div style={{
-          fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)",
-          fontFamily: "var(--font-primary)", opacity: 0.6,
+          fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)",
+          fontFamily: "var(--font-primary)", opacity: 0.7,
         }}>
           {trackArtist || ""}
         </div>
