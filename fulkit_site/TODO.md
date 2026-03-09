@@ -28,7 +28,7 @@
 - [x] Streaming chat (Claude Sonnet 4.6, SSE)
 - [x] Smart root route (`/` → dashboard or landing)
 - [x] Google Search Console verification
-- [x] Brand mark locked (umlaut.png)
+- [x] Brand mark locked (umlaut2.png)
 - [x] D-DIN + JetBrains Mono fonts (WOFF2, no 404s)
 - [x] Sign out → landing redirect
 - [x] Privacy + Terms pages

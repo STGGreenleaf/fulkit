@@ -8,6 +8,15 @@ export const metadata = {
   title: "Fülkit — I'll be your bestie",
   description:
     "Your second brain that talks back. AI-powered notes, voice capture, and a bestie that knows everything you've saved.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Fülkit — I'll be your bestie",
     description: "The app that thinks with you.",
