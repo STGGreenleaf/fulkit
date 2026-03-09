@@ -154,6 +154,38 @@ Skip:       200ms cut → 200ms silence → 400ms spool
 Track end:  6s exhale → 500-1000ms breath → 800ms inhale
 ```
 
+### Orb Visualizer — Fullscreen Circular Mode (BUILT)
+
+A fullscreen immersive view that wraps the same waveform data radially around a center point. Same noise, same envelope, same beat pulse — circular expression. Toggled via Maximize2 button in player controls.
+
+**Renderer:**
+- 5 concentric rings (inner → outer)
+- Inner rings: thin, faint, slow movement
+- Outer rings: thick, opaque, faster shimmer
+- Each ring: 200 points drawn radially, displacement = amplitude × baseRadius
+- Outward displacement from base radius + inward mirror at 40% opacity / 50% weight
+- Base radius: 25% of smaller viewport dimension
+- Same simplex noise (multi-octave), same beat pulse, same envelope multiplier, same energy ceiling
+
+**Overlay:**
+- Track title + artist, bottom-left, `var(--font-size-sm)`, `var(--color-text-dim)`
+- X close button, top-right, `var(--color-text-dim)` → `var(--color-text-muted)` on hover
+- Nothing else. No progress bar. No controls. No meters.
+- Background: `var(--color-bg)` full viewport
+
+**Interaction:**
+- ESC / X button → exit
+- Spacebar → play/pause
+- Left/right arrows → prev/next
+- Click anywhere else → nothing (no accidental exits)
+
+**Performance:**
+- Only one renderer active at a time (orb replaces linear terrain)
+- Canvas resizes to viewport on window resize
+- Achromatic only. Motion is the design.
+
+**File:** `app/spotify/page.js` — `OrbVisualizer` component
+
 ---
 
 ## The Poster (Static Export)
@@ -844,3 +876,45 @@ Fabric Engine:
 - [ ] **Cross-platform sources.** Apple Music, SoundCloud connectors. ISRC keying makes this seamless.
 - [ ] **Resolution auto-upgrade.** Re-analyze popular tracks at 250ms. Cost/benefit TBD.
 - [ ] **Naming the product.** "Fülkit Fabric" is the working name. Does it graduate to its own brand?
+
+---
+
+## Ideas & Exploration
+
+> Living scratchpad. Concepts discussed but not yet specced or scheduled.
+> Append new ideas here. Never delete — this is the memory of what
+> we've talked about. When an idea graduates to a real feature,
+> move it to the relevant spec section and mark it here as "→ specced."
+
+### Poster as moment capture
+The fullscreen orb at a specific timestamp IS a unique poster. Two exports of the same song at different moments = different art. Near-term path to printable art without needing full Fabric pipeline.
+
+### Song as visual fingerprint
+A song's Fabric data rendered as a static form that IS the song. Recognizable on second viewing. Familiar. Like recognizing a face. The visualization creates a reason to revisit — "I know what Satisfaction looks like."
+
+### Iceberg framing
+Surface (melody, rhythm, what you hum) vs depth (sub-bass, harmonic tension, micro-dynamics). A poster split above/below a center line. The audible vs the felt. → referenced in Poster Export section (aesthetic direction).
+
+### Relational structure in posters
+Sections that share harmonic content (same chroma profile) connect visually. Like an Obsidian graph view for musical structure. Repeating patterns create visual rhythm. The bridge is isolated. → referenced in Poster Export section.
+
+### Compound engine as product
+The spider that crawls related artists weighted by genre tiers could run independently of Fülkit. Pre-populate Fabric before users arrive. Seed with editorial playlists + genre-weighted artist graphs. → specced in Phase 3c (Compound Engine).
+
+### Record Store Guy persona
+Music-only AI persona. Not Chappie. Acidic knowledge, deep cuts, strong opinions. Ticker tape mode for passive music facts while listening. Independent memory of music taste only. → referenced in crate-spec.md Open Questions.
+
+### Actionable meters
+Energy/Dance/Mood meters become one-tap discovery filters. Tap mood 2/10 → discovery fills with dark moody songs. Passive data when untapped, navigation when tapped. → specced in crate-spec.md Discovery section.
+
+### Seasonal crate staging
+Quick-add to hidden crates year-round. Hear a Christmas song in July → add to hidden Christmas crate → pull back in November. Year over year refinement.
+
+### Multiple renderers from same Fabric data
+The wave is renderer #1. The orb is renderer #2. Future: particles, 3D terrain, circular spectrogram, data-art posters. All read the same raw snapshot data. Change the viz without re-analyzing. → core philosophy (see Architecture section: "One analysis, infinite expressions").
+
+### Fabric API for third-party developers
+The shared analysis database as its own product. What Spotify deprecated. Developers would pay for per-second audio analysis keyed by track ID. Table until pipeline proves itself internally. → parked in Open Questions.
+
+### Discovery beyond Spotify
+Last.fm (similar tracks, taste profiling, tags). MusicBrainz (recording relationships, artist graphs, ISRC cross-ref). Bandcamp, SoundCloud, Discogs, Rate Your Music for expansion. → confirmed in crate-spec.md Discovery Sources (Phase 2: Last.fm + MusicBrainz, Phase 3: Bandcamp + SoundCloud + Discogs + RYM).
