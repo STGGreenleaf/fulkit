@@ -814,35 +814,6 @@ export default function SpotifyPage() {
               duration={currentTrack?.duration || 0}
               features={features}
             />
-            {/* ReccoBeats debug readout */}
-            {currentTrack && (
-              <div
-                style={{
-                  padding: "var(--space-2) var(--space-8)",
-                  fontSize: 9,
-                  fontFamily: "var(--font-mono)",
-                  color: features ? "var(--color-text-dim)" : "var(--color-text-muted)",
-                  display: "flex",
-                  gap: "var(--space-4)",
-                  opacity: 0.6,
-                }}
-              >
-                {features ? (
-                  <>
-                    <span>BPM {features.bpm}</span>
-                    <span>Key {features.key}</span>
-                    <span>Energy {features.energy}</span>
-                    <span>Dance {features.danceability}</span>
-                    <span>Mood {features.valence}</span>
-                    <span>Loud {features.loudness}dB</span>
-                    <span>Acoustic {features.acousticness}</span>
-                    <span style={{ opacity: 0.4 }}>✓ reccobeats</span>
-                  </>
-                ) : (
-                  <span>⏳ no features — reccobeats miss or loading</span>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ═══ CRATE + SET ═══ */}
