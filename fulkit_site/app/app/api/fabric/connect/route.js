@@ -52,7 +52,7 @@ export async function GET(request) {
     const signature = hmac.digest("hex");
     const state = Buffer.from(JSON.stringify({ payload, signature })).toString("base64url");
 
-    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`;
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/fabric/callback`;
 
     const params = new URLSearchParams({
       client_id: process.env.SPOTIFY_CLIENT_ID,
@@ -64,7 +64,7 @@ export async function GET(request) {
 
     return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
   } catch (err) {
-    console.error("[spotify/connect]", err.message);
+    console.error("[fabric/connect]", err.message);
     return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=server", request.url));
   }
 }

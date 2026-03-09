@@ -1,10 +1,10 @@
-import { authenticateUser, spotifyFetch } from "../../../../lib/spotify-server";
+import { authenticateUser, fabricFetch } from "../../../../lib/fabric-server";
 
 export async function GET(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const res = await spotifyFetch(userId, "/me/playlists?limit=20");
+  const res = await fabricFetch(userId, "/me/playlists?limit=20");
 
   if (res.error) {
     return Response.json({ error: res.error }, { status: res.status });

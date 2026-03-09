@@ -1,4 +1,4 @@
-import { authenticateUser, spotifyFetch } from "../../../../lib/spotify-server";
+import { authenticateUser, fabricFetch } from "../../../../lib/fabric-server";
 
 const ACTIONS = {
   play: { endpoint: "/me/player/play", method: "PUT" },
@@ -16,7 +16,7 @@ export async function POST(request) {
   // Volume is special — uses query param
   if (action === "volume" && typeof value === "number") {
     const percent = Math.max(0, Math.min(100, Math.round(value)));
-    const res = await spotifyFetch(userId, `/me/player/volume?volume_percent=${percent}`, { method: "PUT" });
+    const res = await fabricFetch(userId, `/me/player/volume?volume_percent=${percent}`, { method: "PUT" });
     if (res.error) return Response.json({ error: res.error }, { status: res.status });
     if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
     return Response.json({ error: "Volume error" }, { status: res.status });
@@ -24,7 +24,7 @@ export async function POST(request) {
 
   // Play a specific track by URI
   if (action === "play_track" && value?.uri) {
-    const res = await spotifyFetch(userId, "/me/player/play", {
+    const res = await fabricFetch(userId, "/me/player/play", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uris: [value.uri] }),
@@ -38,7 +38,7 @@ export async function POST(request) {
   if (action === "play_context" && value?.context_uri) {
     const body = { context_uri: value.context_uri };
     if (value.offset) body.offset = value.offset;
-    const res = await spotifyFetch(userId, "/me/player/play", {
+    const res = await fabricFetch(userId, "/me/player/play", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -53,7 +53,7 @@ export async function POST(request) {
     return Response.json({ error: "Invalid action" }, { status: 400 });
   }
 
-  const res = await spotifyFetch(userId, config.endpoint, { method: config.method });
+  const res = await fabricFetch(userId, config.endpoint, { method: config.method });
 
   if (res.error) {
     return Response.json({ error: res.error }, { status: res.status });

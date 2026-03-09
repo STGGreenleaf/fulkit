@@ -1,4 +1,4 @@
-import { authenticateUser, spotifyFetch } from "../../../../../../lib/spotify-server";
+import { authenticateUser, fabricFetch } from "../../../../../../lib/fabric-server";
 
 export async function GET(request, { params }) {
   const userId = await authenticateUser(request);
@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
   if (!id) return Response.json({ error: "Playlist ID required" }, { status: 400 });
 
   try {
-    const res = await spotifyFetch(
+    const res = await fabricFetch(
       userId,
       `/playlists/${id}/tracks?limit=50&fields=items(track(id,name,artists,album(name,images),duration_ms,uri))`
     );

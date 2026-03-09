@@ -1,4 +1,4 @@
-import { authenticateUser } from "../../../../lib/spotify-server";
+import { authenticateUser } from "../../../../lib/fabric-server";
 
 const KEY_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const RECCOBEATS = "https://api.reccobeats.com/v1";

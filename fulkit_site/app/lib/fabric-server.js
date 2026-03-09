@@ -1,4 +1,4 @@
-// Server-side Spotify helpers — token management + API wrapper
+// Server-side Fabric helpers — token management + API wrapper (Spotify backend)
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
@@ -17,7 +17,7 @@ export async function authenticateUser(request) {
 }
 
 // Get Spotify tokens from integrations table
-export async function getSpotifyToken(userId) {
+export async function getFabricToken(userId) {
   const { data } = await getSupabaseAdmin()
     .from("integrations")
     .select("access_token, metadata")
@@ -64,8 +64,8 @@ async function refreshToken(userId, refreshTokenStr) {
 }
 
 // Fetch from Spotify API with auto-refresh
-export async function spotifyFetch(userId, endpoint, options = {}) {
-  const integration = await getSpotifyToken(userId);
+export async function fabricFetch(userId, endpoint, options = {}) {
+  const integration = await getFabricToken(userId);
   if (!integration) return { error: "Not connected", status: 401 };
 
   let token = integration.access_token;

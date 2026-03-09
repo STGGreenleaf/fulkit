@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./auth";
 
-const SpotifyContext = createContext(null);
+const FabricContext = createContext(null);
 
 // Mock data for dev mode
 const MOCK_TRACKS = [
@@ -34,7 +34,7 @@ const MOCK_FEATURES = {
   "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72, loudness: -13, acousticness: 55 },
 };
 
-export function SpotifyProvider({ children }) {
+export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
 
@@ -78,7 +78,7 @@ export function SpotifyProvider({ children }) {
   // Check connection status
   useEffect(() => {
     if (isDev || !accessToken) return;
-    apiFetch("/api/spotify/status").then((data) => {
+    apiFetch("/api/fabric/status").then((data) => {
       if (data) setConnected(data.connected);
     });
   }, [accessToken, isDev, apiFetch]);
@@ -86,7 +86,7 @@ export function SpotifyProvider({ children }) {
   // Fetch playlists when connected
   useEffect(() => {
     if (isDev || !connected || !accessToken) return;
-    apiFetch("/api/spotify/playlists").then((data) => {
+    apiFetch("/api/fabric/playlists").then((data) => {
       if (data?.playlists) setPlaylists(data.playlists);
     });
   }, [connected, accessToken, isDev, apiFetch]);
@@ -96,7 +96,7 @@ export function SpotifyProvider({ children }) {
     if (isDev || !connected || !accessToken) return;
 
     const fetchNowPlaying = async () => {
-      const data = await apiFetch("/api/spotify/now-playing");
+      const data = await apiFetch("/api/fabric/now-playing");
       if (!data) return;
       setIsPlaying(data.isPlaying);
       if (data.volume != null && Date.now() > volumeLockedUntil.current) setVolumeState(data.volume);
@@ -133,7 +133,7 @@ export function SpotifyProvider({ children }) {
   // Controls — send to API
   const sendControl = useCallback(async (action) => {
     if (isDev) return;
-    await apiFetch("/api/spotify/controls", {
+    await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action }),
     });
@@ -185,7 +185,7 @@ export function SpotifyProvider({ children }) {
     if (isDev) return;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
-      apiFetch("/api/spotify/controls", {
+      apiFetch("/api/fabric/controls", {
         method: "POST",
         body: JSON.stringify({ action: "volume", value: v }),
       });
@@ -204,7 +204,7 @@ export function SpotifyProvider({ children }) {
     }
     if (ids.length === 0) return;
     ids.forEach((id) => featuresRequested.current.add(id));
-    apiFetch(`/api/spotify/audio-features?ids=${ids.join(",")}`).then((data) => {
+    apiFetch(`/api/fabric/audio-features?ids=${ids.join(",")}`).then((data) => {
       if (data?.features && Object.keys(data.features).length > 0) {
         setAudioFeatures((prev) => ({ ...prev, ...data.features }));
       }
@@ -241,7 +241,7 @@ export function SpotifyProvider({ children }) {
     setProgress(0);
     setIsPlaying(true);
     if (isDev) return;
-    apiFetch("/api/spotify/controls", {
+    apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "play_track", value: { uri: track.uri || `spotify:track:${track.id}` } }),
     });
@@ -249,7 +249,7 @@ export function SpotifyProvider({ children }) {
 
   const playPlaylist = useCallback(async (playlistId, startTrackUri) => {
     if (isDev) return;
-    await apiFetch("/api/spotify/controls", {
+    await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({
         action: "play_context",
@@ -268,7 +268,7 @@ export function SpotifyProvider({ children }) {
   const fetchPlaylistTracks = useCallback(async (playlistId) => {
     if (mixTracksCacheRef.current[playlistId]) return mixTracksCacheRef.current[playlistId];
     if (isDev) return MOCK_TRACKS;
-    const data = await apiFetch(`/api/spotify/playlists/${playlistId}/tracks`);
+    const data = await apiFetch(`/api/fabric/playlists/${playlistId}/tracks`);
     const tracks = data?.tracks || [];
     mixTracksCacheRef.current[playlistId] = tracks;
     return tracks;
@@ -281,7 +281,7 @@ export function SpotifyProvider({ children }) {
   }, []);
 
   return (
-    <SpotifyContext.Provider
+    <FabricContext.Provider
       value={{
         connected,
         isPlaying,
@@ -310,12 +310,12 @@ export function SpotifyProvider({ children }) {
       }}
     >
       {children}
-    </SpotifyContext.Provider>
+    </FabricContext.Provider>
   );
 }
 
-export function useSpotify() {
-  const ctx = useContext(SpotifyContext);
-  if (!ctx) throw new Error("useSpotify must be used within SpotifyProvider");
+export function useFabric() {
+  const ctx = useContext(FabricContext);
+  if (!ctx) throw new Error("useFabric must be used within FabricProvider");
   return ctx;
 }

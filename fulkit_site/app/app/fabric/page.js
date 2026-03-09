@@ -5,7 +5,7 @@ import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLin
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
-import { useSpotify } from "../../lib/spotify";
+import { useFabric } from "../../lib/fabric";
 
 // Minimal pause mark — two vertical lines
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
@@ -941,7 +941,7 @@ function Label({ children, style }) {
 }
 
 
-export default function SpotifyPage() {
+export default function FabricPage() {
   const {
     isPlaying,
     currentTrack,
@@ -960,7 +960,7 @@ export default function SpotifyPage() {
     fetchPlaylistTracks,
     formatTime,
     setProgress,
-  } = useSpotify();
+  } = useFabric();
 
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);

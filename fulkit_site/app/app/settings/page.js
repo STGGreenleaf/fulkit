@@ -103,7 +103,7 @@ const SOURCE_LOGOS = {
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h5"/>
     </svg>
   ),
-  spotify: (
+  fabric: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.623.623 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 11-.277-1.216c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.858zm1.224-2.719a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.78.78 0 01-.452-1.492c3.632-1.102 8.147-.568 11.234 1.329a.78.78 0 01.255 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 11-.543-1.79c3.533-1.072 9.404-.865 13.115 1.338a.935.935 0 01-.954 1.611z"/>
     </svg>
@@ -143,7 +143,7 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly"];
 
-const REAL_INTEGRATIONS = ["github", "spotify", "numbrly"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -157,7 +157,7 @@ const ALL_SOURCES = [
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "github", name: "GitHub", cat: "Dev" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
-  { id: "spotify", name: "Spotify", cat: "Media" },
+  { id: "fabric", name: "Fabric", cat: "Media" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
@@ -505,12 +505,12 @@ function SourcesTab() {
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
-  const [spotifyDisconnecting, setSpotifyDisconnecting] = useState(false);
-  const [spotifyExpanded, setSpotifyExpanded] = useState(false);
-  const [spotifyPlayerEnabled, setSpotifyPlayerEnabled] = useState(() => {
+  const [fabricConnected, setFabricConnected] = useState(false);
+  const [fabricDisconnecting, setFabricDisconnecting] = useState(false);
+  const [fabricExpanded, setFabricExpanded] = useState(false);
+  const [fabricPlayerEnabled, setFabricPlayerEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
-    return localStorage.getItem("fulkit-spotify-player") !== "false";
+    return localStorage.getItem("fulkit-fabric-player") !== "false";
   });
   const [expanded, setExpanded] = useState({});
   const [googleExpanded, setGoogleExpanded] = useState(false);
@@ -528,7 +528,7 @@ function SourcesTab() {
     fetchGithubRepos();
   }, [githubConnected, accessToken, isDev]);
 
-  // Refresh GitHub/Spotify status if we just came back from OAuth
+  // Refresh GitHub/Fabric status if we just came back from OAuth
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -536,16 +536,16 @@ function SourcesTab() {
       checkGitHub(accessToken);
     }
     if (params.get("sp") === "connected") {
-      setSpotifyConnected(true);
+      setFabricConnected(true);
     }
   }, [accessToken, checkGitHub]);
 
-  // Check Spotify connection status on mount
+  // Check Fabric connection status on mount
   useEffect(() => {
     if (isDev || !accessToken) return;
-    fetch("/api/spotify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+    fetch("/api/fabric/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setSpotifyConnected(data.connected); })
+      .then((data) => { if (data) setFabricConnected(data.connected); })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -595,16 +595,16 @@ function SourcesTab() {
     window.location.href = "/api/github/connect";
   }
 
-  function connectSpotify() {
-    if (isDev) { setSpotifyConnected(true); return; }
+  function connectFabric() {
+    if (isDev) { setFabricConnected(true); return; }
     if (accessToken) {
-      window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(accessToken);
+      window.location.href = "/api/fabric/connect?token=" + encodeURIComponent(accessToken);
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = "/api/spotify/connect?token=" + encodeURIComponent(token);
+        window.location.href = "/api/fabric/connect?token=" + encodeURIComponent(token);
       } else {
         alert("No active session. Please sign out and sign back in, then try again.");
       }
@@ -625,22 +625,22 @@ function SourcesTab() {
     setGithubDisconnecting(false);
   }
 
-  function toggleSpotifyPlayer() {
-    const next = !spotifyPlayerEnabled;
-    setSpotifyPlayerEnabled(next);
-    localStorage.setItem("fulkit-spotify-player", String(next));
+  function toggleFabricPlayer() {
+    const next = !fabricPlayerEnabled;
+    setFabricPlayerEnabled(next);
+    localStorage.setItem("fulkit-fabric-player", String(next));
   }
 
-  async function disconnectSpotify() {
-    setSpotifyDisconnecting(true);
+  async function disconnectFabric() {
+    setFabricDisconnecting(true);
     try {
-      await fetch("/api/spotify/disconnect", {
+      await fetch("/api/fabric/disconnect", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      setSpotifyConnected(false);
+      setFabricConnected(false);
     } catch {}
-    setSpotifyDisconnecting(false);
+    setFabricDisconnecting(false);
   }
 
   async function connectNumbrly() {
@@ -681,10 +681,10 @@ function SourcesTab() {
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
-    ...(spotifyConnected ? ["spotify"] : []),
+    ...(fabricConnected ? ["fabric"] : []),
     ...(numbrlyConnected ? ["numbrly"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "spotify" && s.id !== "github" && s.id !== "numbrly");
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
@@ -692,13 +692,13 @@ function SourcesTab() {
 
   const connect = (id) => {
     if (id === "github") { connectGitHub(); return; }
-    if (id === "spotify") { connectSpotify(); return; }
+    if (id === "fabric") { connectFabric(); return; }
     if (id === "numbrly") { setNumbrlyExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
     if (id === "github") { disconnectGitHub(); return; }
-    if (id === "spotify") { disconnectSpotify(); return; }
+    if (id === "fabric") { disconnectFabric(); return; }
     if (id === "numbrly") { disconnectNumbrly(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
@@ -788,7 +788,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || spotifyConnected || numbrlyConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || connectedSources.length > 0;
 
   return (
     <div style={{ maxWidth: 640 }}>
@@ -875,23 +875,23 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Spotify */}
-            {spotifyConnected && (
+            {/* Fabric */}
+            {fabricConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
-                  logo={SOURCE_LOGOS.spotify}
-                  name="Spotify"
-                  subtitle={spotifyPlayerEnabled ? "Player active" : "Player off"}
-                  isExpanded={spotifyExpanded}
-                  onToggle={() => setSpotifyExpanded(!spotifyExpanded)}
+                  logo={SOURCE_LOGOS.fabric}
+                  name="Fabric"
+                  subtitle={fabricPlayerEnabled ? "Player active" : "Player off"}
+                  isExpanded={fabricExpanded}
+                  onToggle={() => setFabricExpanded(!fabricExpanded)}
                 />
-                <Drawer open={spotifyExpanded}>
+                <Drawer open={fabricExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                    <DrawerItem index={0} visible={spotifyExpanded}>
-                      {checkboxRow("Show MiniPlayer in sidebar", spotifyPlayerEnabled, toggleSpotifyPlayer)}
+                    <DrawerItem index={0} visible={fabricExpanded}>
+                      {checkboxRow("Show MiniPlayer in sidebar", fabricPlayerEnabled, toggleFabricPlayer)}
                     </DrawerItem>
-                    <DrawerItem index={1} visible={spotifyExpanded}>
-                      {disconnectFooter(disconnectSpotify, spotifyDisconnecting)}
+                    <DrawerItem index={1} visible={fabricExpanded}>
+                      {disconnectFooter(disconnectFabric, fabricDisconnecting)}
                     </DrawerItem>
                   </div>
                 </Drawer>

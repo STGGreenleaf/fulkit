@@ -30,7 +30,7 @@ export async function GET(request) {
     }
 
     // Exchange code for tokens
-    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/spotify/callback`;
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/fabric/callback`;
     const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
@@ -48,7 +48,7 @@ export async function GET(request) {
 
     const tokenData = await tokenRes.json();
     if (tokenData.error || !tokenData.access_token) {
-      console.error("[spotify/callback] Token exchange failed:", tokenData.error, tokenData.error_description);
+      console.error("[fabric/callback] Token exchange failed:", tokenData.error, tokenData.error_description);
       return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=token_${tokenData.error}`, request.url));
     }
 
@@ -71,7 +71,7 @@ export async function GET(request) {
       );
 
     if (dbError) {
-      console.error("[spotify/callback] DB error:", dbError.message);
+      console.error("[fabric/callback] DB error:", dbError.message);
       return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=db_${dbError.code}`, request.url));
     }
 
@@ -79,7 +79,7 @@ export async function GET(request) {
     response.cookies.delete("sp_auth_token");
     return response;
   } catch (err) {
-    console.error("[spotify/callback]", err.message);
+    console.error("[fabric/callback]", err.message);
     return NextResponse.redirect(new URL("/settings/sources?sp=error", request.url));
   }
 }

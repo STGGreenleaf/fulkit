@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc } from "lucide-react";
 import Link from "next/link";
-import { useSpotify } from "../lib/spotify";
+import { useFabric } from "../lib/fabric";
 import VolumeSlider from "./VolumeSlider";
 
 // Minimal pause mark — two vertical lines, no circle
@@ -28,12 +28,12 @@ const STROKE_BOLD = 2.8;
 
 export default function MiniPlayer({ compact }) {
   const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, volume, setVolume } =
-    useSpotify();
+    useFabric();
   const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
-    setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
-    const onStorage = () => setEnabled(localStorage.getItem("fulkit-spotify-player") !== "false");
+    setEnabled(localStorage.getItem("fulkit-fabric-player") !== "false");
+    const onStorage = () => setEnabled(localStorage.getItem("fulkit-fabric-player") !== "false");
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
@@ -129,7 +129,7 @@ export default function MiniPlayer({ compact }) {
           </button>
 
           {/* Deck link — circled */}
-          <Link href="/spotify" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+          <Link href="/fabric" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
             <Disc size={IC_SM} strokeWidth={1.8} />
           </Link>
         </div>
@@ -146,8 +146,8 @@ export default function MiniPlayer({ compact }) {
       <VolumeSlider value={volume ?? 0} onChange={setVolume} />
 
       <div style={{ padding: "var(--space-2) 0 var(--space-2)" }}>
-        {/* Track info — links to /spotify */}
-        <Link href="/spotify" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-2)", padding: "0 var(--space-2-5)" }}>
+        {/* Track info — links to /fabric */}
+        <Link href="/fabric" style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "var(--space-2)", padding: "0 var(--space-2-5)" }}>
           <div
             style={{
               fontSize: "var(--font-size-xs)",
@@ -218,7 +218,7 @@ export default function MiniPlayer({ compact }) {
           </button>
 
           {/* Deck link — circled */}
-          <Link href="/spotify" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+          <Link href="/fabric" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
             <Disc size={IC_SM} strokeWidth={1.8} />
           </Link>
         </div>

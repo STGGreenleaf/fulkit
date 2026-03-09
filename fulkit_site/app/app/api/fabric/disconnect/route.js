@@ -1,4 +1,4 @@
-import { authenticateUser } from "../../../../lib/spotify-server";
+import { authenticateUser } from "../../../../lib/fabric-server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
 export async function DELETE(request) {

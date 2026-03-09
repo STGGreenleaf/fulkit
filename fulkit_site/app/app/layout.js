@@ -1,7 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "../lib/auth";
 import { VaultProvider } from "../lib/vault";
-import { SpotifyProvider } from "../lib/spotify";
+import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
 
 export const metadata = {
@@ -30,10 +30,10 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <VaultProvider>
-            <SpotifyProvider>
+            <FabricProvider>
               {children}
               <DevInspector />
-            </SpotifyProvider>
+            </FabricProvider>
           </VaultProvider>
         </AuthProvider>
       </body>
