@@ -313,9 +313,39 @@ export default function Chat() {
         context.push({ title: rn.title, content: rn.content });
       }
     }
-    // Append attached files as ephemeral context
+    // Append attached files as ephemeral context + auto-save as notes
     for (const af of attachedFiles) {
       context.push({ title: af.name, content: af.content });
+    }
+    if (attachedFiles.length > 0 && user) {
+      for (const af of attachedFiles) {
+        const noteTitle = af.name.replace(/\.[^.]+$/, "");
+        // Dedup: check if a note with same title + source already exists
+        const { data: existing } = await supabase
+          .from("notes")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("title", noteTitle)
+          .eq("source", "chat-upload")
+          .maybeSingle();
+        if (existing) {
+          // Update existing note content instead of creating a duplicate
+          supabase.from("notes").update({
+            content: af.content,
+            updated_at: new Date().toISOString(),
+          }).eq("id", existing.id);
+        } else {
+          supabase.from("notes").insert({
+            user_id: user.id,
+            title: noteTitle,
+            content: af.content,
+            source: "chat-upload",
+            folder: "00-INBOX",
+            encrypted: false,
+            context_mode: "available",
+          });
+        }
+      }
     }
     setAttachedFiles([]);
     // Append active GitHub repos as context (full recursive tree)

@@ -658,18 +658,80 @@ function SignalTerrain({
 // ORB VISUALIZER — fullscreen circular waveform
 // Same data as Signal Terrain, wrapped radially.
 // ═══════════════════════════════════════════════════════
+// Deep Amoeba v3 — zoned perimeter, variable-weight contour
 
-const ORB_POINTS = 200;
-const ORB_LAYERS = 48;
+function createOrbNoise(seed) {
+  const perm = new Uint8Array(512);
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  let s = seed || Math.random() * 65536;
+  for (let i = 255; i > 0; i--) {
+    s = (s * 16807) % 2147483647;
+    const j = s % (i + 1);
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  const grad2 = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+  return function(x, y) {
+    const F2 = 0.5*(Math.sqrt(3)-1), G2 = (3-Math.sqrt(3))/6;
+    const ss = (x+y)*F2;
+    const i = Math.floor(x+ss), j = Math.floor(y+ss);
+    const t = (i+j)*G2;
+    const x0 = x-(i-t), y0 = y-(j-t);
+    const i1 = x0>y0?1:0, j1 = x0>y0?0:1;
+    const x1 = x0-i1+G2, y1 = y0-j1+G2;
+    const x2 = x0-1+2*G2, y2 = y0-1+2*G2;
+    const ii = i&255, jj = j&255;
+    let n0=0,n1=0,n2=0;
+    let t0=0.5-x0*x0-y0*y0;
+    if(t0>0){t0*=t0;const gi=perm[ii+perm[jj]]%8;n0=t0*t0*(grad2[gi][0]*x0+grad2[gi][1]*y0);}
+    let t1=0.5-x1*x1-y1*y1;
+    if(t1>0){t1*=t1;const gi=perm[ii+i1+perm[jj+j1]]%8;n1=t1*t1*(grad2[gi][0]*x1+grad2[gi][1]*y1);}
+    let t2=0.5-x2*x2-y2*y2;
+    if(t2>0){t2*=t2;const gi=perm[ii+1+perm[jj+1]]%8;n2=t2*t2*(grad2[gi][0]*x2+grad2[gi][1]*y2);}
+    return 70*(n0+n1+n2);
+  };
+}
+
+function drawOrbSmooth(ctx, pts) {
+  if (pts.length < 3) return;
+  ctx.beginPath();
+  ctx.moveTo((pts[0].x+pts[pts.length-1].x)/2, (pts[0].y+pts[pts.length-1].y)/2);
+  for (let i = 0; i < pts.length; i++) {
+    const curr = pts[i], next = pts[(i+1)%pts.length];
+    ctx.quadraticCurveTo(curr.x, curr.y, (curr.x+next.x)/2, (curr.y+next.y)/2);
+  }
+  ctx.closePath();
+}
+
+function smoothOrbArr(arr, passes) {
+  const len = arr.length;
+  for (let p = 0; p < passes; p++) {
+    const tmp = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      tmp[i] = arr[i]*0.5 + arr[(i-1+len)%len]*0.25 + arr[(i+1)%len]*0.25;
+    }
+    arr.set(tmp);
+  }
+}
+
+const KEY_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+const ORB_POINTS = 72;
+const ORB_LAYERS = 22;
+const ORB_MAX_HITS = 6;
 
 function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
-  const phaseRef = useRef(0);
-  const noiseRef = useRef(createNoise2D());
-  const historyRef = useRef([]);
   const envelopeRef = useRef({ trackId: null, envelope: null });
-  const kineticRef = useRef({ amplitude: 0.08, target: 0.08, prevPlaying: false });
+  const stateRef = useRef({
+    noise: createOrbNoise(1), noise2: createOrbNoise(2),
+    noise3: createOrbNoise(3), noise4: createOrbNoise(4),
+    noise5: createOrbNoise(5),
+    time: 0, amp: 0, ampVel: 0,
+    tracers: [], hits: [], frame: 0,
+  });
 
   // Generate envelope for this track
   useEffect(() => {
@@ -685,10 +747,16 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     };
   }, [trackId, features, duration]);
 
-  // New noise on track change
+  // Re-seed noise on track change
   useEffect(() => {
-    noiseRef.current = createNoise2D();
-    historyRef.current = [];
+    const keyStr = features?.key || "C";
+    const keyIdx = KEY_NAMES.indexOf(keyStr.replace("m","").replace("♯","#"));
+    const k = (keyIdx >= 0 ? keyIdx : 0) * 100;
+    const s = stateRef.current;
+    s.noise = createOrbNoise(k+1); s.noise2 = createOrbNoise(k+2);
+    s.noise3 = createOrbNoise(k+3); s.noise4 = createOrbNoise(k+4);
+    s.noise5 = createOrbNoise(k+5);
+    s.tracers = []; s.hits = []; s.time = 0; s.frame = 0;
   }, [trackId]);
 
   // Keyboard: ESC to close, Space play/pause, arrows skip
@@ -703,36 +771,52 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, toggle, skip, prev]);
 
-  // Render loop
+  // Resize canvas to viewport (DPR-aware)
   useEffect(() => {
-    let running = true;
-    const render = (timestamp) => {
-      if (!running) return;
-      animRef.current = requestAnimationFrame(render);
-
+    const resize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
       const ctx = canvas.getContext("2d");
-      const w = canvas.width;
-      const h = canvas.height;
-      const cx = w / 2;
-      const cy = h / 2;
-      const baseRadius = Math.min(w, h) * 0.24;
-      const noise2D = noiseRef.current;
-      const k = kineticRef.current;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
 
-      // Kinetic smoothing
-      k.target = isPlaying ? 0.55 : 0.08;
-      k.amplitude += (k.target - k.amplitude) * 0.06;
-      k.prevPlaying = isPlaying;
+  // Render loop — Deep Amoeba v3
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let running = true;
+    const N = ORB_POINTS;
 
-      // Audio features
-      const bpm = features?.bpm || 100;
+    function draw() {
+      if (!running) return;
+      const s = stateRef.current;
+      const w = window.innerWidth, h = window.innerHeight;
+      const dim = Math.min(w, h);
+      const baseR = dim * 0.22;
+
+      s.time += 0.016;
+
+      // Audio features (ReccoBeats 0-100 → 0-1)
+      const bpm = features?.bpm || 120;
       const energy = (features?.energy || 50) / 100;
+      const dance = (features?.danceability || 50) / 100;
       const valence = (features?.valence || 50) / 100;
-      const danceability = (features?.danceability || 50) / 100;
-      const acousticness = (features?.acousticness || 30) / 100;
-      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
+      const acoustic = (features?.acousticness || 30) / 100;
+      const loud = features?.loudness != null ? Math.max(0, (features.loudness + 35) / 35) : 0.65;
+      const speech = 0.04;
+      const keyStr = features?.key || "C";
+      const keyIdx = KEY_NAMES.indexOf(keyStr.replace("m","").replace("♯","#"));
+      const keyVal = keyIdx >= 0 ? keyIdx : 0;
 
       // Envelope
       const env = envelopeRef.current.envelope;
@@ -742,144 +826,223 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         envelopeValue = env[barIndex];
       }
       const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
-      const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+      const effectiveEnergy = hasEnvelope ? energy * envelopeValue : energy;
 
-      // Beat pulse
+      // Spring amplitude
+      const tgt = isPlaying ? (0.35 + effectiveEnergy * 0.45) : 0.0;
+      s.ampVel += (tgt - s.amp) * 0.055;
+      s.ampVel *= 0.83;
+      s.amp += s.ampVel;
+      s.amp = Math.max(0, Math.min(1, s.amp));
+
+      // Center drift
+      const cx = w/2 + s.noise(s.time*0.12, 50) * dim * 0.018;
+      const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.018;
+      const rot = s.time * 0.04;
+
+      // Beat
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
-      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
-      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
-
-      // Phase advance
-      const beatsPerSec = bpm / 60;
-      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 : 0.002;
-      phaseRef.current += phaseStep;
-      const phase = phaseRef.current;
+      const bPhase = isPlaying ? (progressMs % msPerBeat) / msPerBeat : 1;
+      const beat = Math.pow(1 - bPhase, 3) * dance;
 
       // Exhale
-      let exhaleMultiplier = 1;
-      if (isPlaying && duration > 0 && progress > 0) {
-        const remaining = duration * (1 - progress);
-        if (remaining < 6 && remaining > 0) {
-          exhaleMultiplier = 1 - ((1 - remaining / 6) * 0.7);
-        }
+      const remainingMs = (duration * 1000) - progressMs;
+      const exhale = remainingMs < 6000 && remainingMs > 0 ? 0.3 + 0.7*(remainingMs/6000) : 1;
+
+      const sharp = 1 - valence;
+
+      // Zone axis slowly rotates — features migrate around the form
+      const zoneRot = s.time * 0.008 + (keyVal / 12) * Math.PI * 2;
+
+      const disp = new Float32Array(N);
+      const radii = new Float32Array(N);
+      const pointWeight = new Float32Array(N);
+
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2 + rot;
+        const nx = Math.cos(a), ny = Math.sin(a);
+
+        // Zone weights — soft cosine blend, 4 zones at 90° intervals
+        const za = a - zoneRot;
+        const zBass    = Math.max(0, Math.cos(za)) ** 1.5;
+        const zRhythm  = Math.max(0, Math.cos(za - Math.PI*0.5)) ** 1.5;
+        const zVocal   = Math.max(0, Math.cos(za - Math.PI)) ** 1.5;
+        const zTexture = Math.max(0, Math.cos(za - Math.PI*1.5)) ** 1.5;
+
+        // Base warp (3 octaves)
+        const d1 = s.noise(nx*0.3, ny*0.3 + s.time*0.002);
+        const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005);
+        const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008);
+        const irregularity = 0.4 + energy * 0.6;
+        radii[i] = baseR * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.55);
+
+        // BASS: low freq, big slow, energy × loudness
+        const bassN = s.noise(nx*0.8 + s.time*0.12, ny*0.8 + s.time*0.1);
+        const bassD = bassN * energy * loud * 1.2;
+
+        // RHYTHM: mid freq, beat-pulsed, danceability
+        const rhythmN = s.noise2(nx*2.5 + s.time*0.3, ny*2.5 + s.time*0.25);
+        const rhythmD = rhythmN * (0.5 + beat * 1.5) * dance * 0.9;
+
+        // VOCAL: high freq when speech present, flatter when instrumental
+        const vocalF = 4 + speech * 8;
+        const vocalN = s.noise3(nx*vocalF + s.time*0.5, ny*vocalF + s.time*0.4);
+        const vocalD = vocalN * (speech * 3 + 0.15) * 0.6;
+
+        // TEXTURE: acoustic=smooth wide, digital=tight sharp
+        const texF = 1.5 + (1-acoustic) * 4;
+        const texN = s.noise4(nx*texF + s.time*0.2, ny*texF + s.time*0.18);
+        const texD = texN * (0.4 + acoustic * 0.4) * 0.8;
+
+        // Blend by zone weights
+        let totalD = bassD*zBass + rhythmD*zRhythm + vocalD*zVocal + texD*zTexture;
+        const zSum = zBass + zRhythm + zVocal + zTexture;
+        if (zSum > 0) totalD /= (zSum * 0.7 + 0.3);
+
+        totalD = Math.sign(totalD) * Math.pow(Math.abs(totalD), 1 + sharp * 0.5);
+
+        disp[i] = totalD * s.amp * (1 + beat*0.7) * exhale * baseR * 0.85;
+        disp[i] *= (1 + (Math.random()-0.5)*0.04);
+
+        // Per-point weight — bass/acoustic zones thicker
+        pointWeight[i] = 0.7 + zBass*acoustic*0.8 + zTexture*acoustic*0.6 - zVocal*0.2;
       }
 
-      // Sharpness
-      const sharpness = 1 - valence;
+      smoothOrbArr(disp, 2);
+      smoothOrbArr(radii, 2);
 
+      // Tracers
+      s.frame++;
+      if (s.frame % 3 === 0 && s.amp > 0.01) {
+        s.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.6, age: 0, hit: false });
+        if (s.tracers.length > ORB_LAYERS) s.tracers.shift();
+      }
+
+      // Hits
+      if (beat > 0.6 && isPlaying && s.frame % 3 === 0) {
+        const hd = new Float32Array(N);
+        for (let i = 0; i < N; i++) hd[i] = disp[i] * 2.0;
+        smoothOrbArr(hd, 1);
+        s.hits.push({ d: hd, r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.85, age: 0, hit: true });
+        if (s.hits.length > ORB_MAX_HITS) s.hits.shift();
+      }
+
+      for (const l of s.tracers) { l.age++; l.op *= 0.96; }
+      for (const l of s.hits) { l.age++; l.op *= 0.984; }
+      s.tracers = s.tracers.filter(l => l.op > 0.015);
+      s.hits = s.hits.filter(l => l.op > 0.015);
+
+      // ===== RENDER =====
       ctx.clearRect(0, 0, w, h);
 
-      // Get text color from CSS
-      const style = getComputedStyle(canvas);
-      const textColor = style.getPropertyValue("--color-text-muted").trim() || "#8A8784";
-      const tc = textColor.startsWith("#")
-        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
-        : [138, 135, 132];
+      const baseLw = 1.0 + acoustic * 1.2;
+      const col = [78, 75, 68]; // warm grey
 
-      // ── Compute current frame displacements ──
-      const noiseScale = 4;
-      const displacements = [];
-      for (let i = 0; i <= ORB_POINTS; i++) {
-        const t = i / ORB_POINTS;
-        const angle = t * Math.PI * 2;
-
-        const n1 = noise2D(Math.cos(angle) * noiseScale + keyOffset, Math.sin(angle) * noiseScale + phase * 0.7) * 0.5;
-        const n2 = noise2D(Math.cos(angle) * noiseScale * 2 + 100, Math.sin(angle) * noiseScale * 2 + phase) * 0.2;
-        const n3 = noise2D(Math.cos(angle) * noiseScale * 4 + 200, Math.sin(angle) * noiseScale * 4 + phase * 1.3) * 0.08;
-        let raw = n1 + n2 + n3;
-
-        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-
-        const beatBoost = 1 + beatPulse * danceability * 0.3;
-        let amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
-        amp = Math.min(amp, amplitudeCeiling);
-        amp *= 1 + (Math.random() - 0.5) * 0.03;
-
-        displacements.push(amp * baseRadius * 1.5);
+      // Silent: light circle
+      if (s.amp < 0.03) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.1 + s.amp*2})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        animRef.current = requestAnimationFrame(draw);
+        return;
       }
 
-      historyRef.current.push(displacements);
-      if (historyRef.current.length > ORB_LAYERS) historyRef.current.shift();
+      const layers = [
+        ...s.tracers, ...s.hits,
+        { d: disp, r: radii, w: pointWeight, op: 1.0, age: 0, hit: false },
+      ].sort((a, b) => b.age - a.age);
 
-      // ── Render tracer layers (oldest → newest) ──
-      const layers = historyRef.current;
-      for (let l = 0; l < layers.length; l++) {
-        const age = l / Math.max(1, layers.length - 1);
-        const data = layers[l];
-
-        const alpha = 0.015 + age * age * 0.14;
-        const baseLw = 0.3 + age * 0.8;
-        const lw = baseLw * (0.7 + acousticness * 0.6);
-        const radiusShift = (layers.length - 1 - l) * 0.6;
-
-        // Mountains (outward, smooth curves)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
-        ctx.lineWidth = lw;
-        ctx.beginPath();
-
-        for (let i = 0; i <= ORB_POINTS; i++) {
-          const angle = (i / ORB_POINTS) * Math.PI * 2;
-          const r = baseRadius + data[i] - radiusShift;
-          const x = cx + Math.cos(angle) * r;
-          const y = cy + Math.sin(angle) * r;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            const prevAngle = ((i - 1) / ORB_POINTS) * Math.PI * 2;
-            const prevR = baseRadius + data[i - 1] - radiusShift;
-            const prevX = cx + Math.cos(prevAngle) * prevR;
-            const prevY = cy + Math.sin(prevAngle) * prevR;
-            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
-          }
+      // Interior tendrils
+      if (s.amp > 0.02) {
+        const iA = s.amp * 0.1;
+        for (let i = 0; i < N; i += 6) {
+          const opp = (i + Math.floor(N/2)) % N;
+          const a1 = (i/N)*Math.PI*2+rot, a2 = (opp/N)*Math.PI*2+rot;
+          const r1 = radii[i]*0.6 + disp[i]*0.3;
+          const r2 = radii[opp]*0.6 + disp[opp]*0.3;
+          const x1 = cx+Math.cos(a1)*r1, y1 = cy+Math.sin(a1)*r1;
+          const x2 = cx+Math.cos(a2)*r2, y2 = cy+Math.sin(a2)*r2;
+          const rawOff = s.noise(i*0.5, s.time*0.3);
+          const minOff = 0.4 * (rawOff >= 0 ? 1 : -1);
+          const cpNoise = Math.abs(rawOff) < 0.4 ? minOff : rawOff;
+          const cpDist = cpNoise * baseR * 0.35 * s.amp;
+          const midX = (x1+x2)/2, midY = (y1+y2)/2;
+          const perpX = -(y2-y1), perpY = (x2-x1);
+          const perpLen = Math.sqrt(perpX*perpX + perpY*perpY) || 1;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo(midX + (perpX/perpLen)*cpDist, midY + (perpY/perpLen)*cpDist, x2, y2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${iA * (0.2 + Math.abs(disp[i])/baseR + pointWeight[i]*0.15)})`;
+          ctx.lineWidth = 0.4 + pointWeight[i] * 0.4;
+          ctx.stroke();
         }
-        ctx.closePath();
-        ctx.stroke();
-
-        // Reflection (inward, smooth curves)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.55})`;
-        ctx.lineWidth = lw * 0.7;
-        ctx.beginPath();
-        for (let i = 0; i <= ORB_POINTS; i++) {
-          const angle = (i / ORB_POINTS) * Math.PI * 2;
-          const r = baseRadius - data[i] * 0.5 + (layers.length - 1 - l) * 0.3;
-          const x = cx + Math.cos(angle) * r;
-          const y = cy + Math.sin(angle) * r;
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            const prevAngle = ((i - 1) / ORB_POINTS) * Math.PI * 2;
-            const prevR = baseRadius - data[i - 1] * 0.5 + (layers.length - 1 - l) * 0.3;
-            const prevX = cx + Math.cos(prevAngle) * prevR;
-            const prevY = cy + Math.sin(prevAngle) * prevR;
-            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
-          }
-        }
-        ctx.closePath();
-        ctx.stroke();
       }
-    };
 
-    animRef.current = requestAnimationFrame(render);
-    return () => {
-      running = false;
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-    };
+      // Outer rings
+      for (const layer of layers) {
+        const alpha = Math.max(0, Math.min(1, layer.op));
+        if (alpha < 0.01) continue;
+
+        const rShift = layer.age * 0.35;
+        const ageFade = Math.max(0, 1 - layer.age * 0.012);
+
+        const pts = [];
+        for (let i = 0; i < N; i++) {
+          const a = (i/N)*Math.PI*2+rot;
+          pts.push({ x: cx+Math.cos(a)*(layer.r[i]+layer.d[i]-rShift), y: cy+Math.sin(a)*(layer.r[i]+layer.d[i]-rShift) });
+        }
+
+        const edgeAlpha = alpha * 0.8 * (0.4 + s.amp*0.6);
+
+        // Inward bleed
+        drawOrbSmooth(ctx, pts);
+        ctx.save(); ctx.clip();
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
+        ctx.lineWidth = baseLw * (layer.hit ? 1.6 : 1) * ageFade * 4;
+        ctx.stroke(); ctx.restore();
+
+        // Variable-weight contour — per-segment
+        for (let i = 0; i < N; i++) {
+          const i2 = (i+1) % N;
+          const p1 = pts[i], p2 = pts[i2];
+          const segW = (layer.w[i] + layer.w[i2]) / 2;
+
+          const segAlpha = edgeAlpha * (layer.age === 0 ?
+            (0.5 + s.amp*0.45) : 0.35 + segW*0.15);
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${segAlpha})`;
+          ctx.lineWidth = Math.max(0.2, baseLw * (layer.hit?1.5:1) * ageFade *
+            (layer.age===0 ? (0.8+segW*0.7) : (0.5+segW*0.4)));
+          ctx.stroke();
+        }
+
+        // Inward reflection
+        if (alpha > 0.06) {
+          const iPts = [];
+          for (let i = 0; i < N; i++) {
+            const a = (i/N)*Math.PI*2+rot;
+            const r = Math.max(0, layer.r[i] - layer.d[i]*0.35 + rShift*0.3);
+            iPts.push({ x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r });
+          }
+          drawOrbSmooth(ctx, iPts);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha*0.04})`;
+          ctx.lineWidth = baseLw * ageFade * 2.5;
+          ctx.stroke();
+        }
+      }
+
+      animRef.current = requestAnimationFrame(draw);
+    }
+
+    animRef.current = requestAnimationFrame(draw);
+    return () => { running = false; cancelAnimationFrame(animRef.current); };
   }, [isPlaying, progress, duration, features]);
-
-  // Resize canvas to viewport
-  useEffect(() => {
-    const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
 
   return (
     <div style={{
