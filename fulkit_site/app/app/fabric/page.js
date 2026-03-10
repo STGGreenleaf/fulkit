@@ -192,6 +192,7 @@ function SignalTerrain({
   onVisualize,
   duration = 0,
   features = null,
+  getSnapshot = null,
 }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
@@ -477,38 +478,61 @@ function SignalTerrain({
       }
 
       // ── Generate terrain points ──
+      const snap = getSnapshot ? getSnapshot(progress) : null;
+      const hasFabric = !!snap;
+      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
       const points = [];
+
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
-
-        // Layer 0: Multi-octave simplex noise
-        const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
-        const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
-        const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
-        let raw = n1 + n2 + n3;
-
-        // Valence shaping (Layer 2)
-        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
 
         // Envelope: taper at edges
         const envelope = Math.sin(t * Math.PI);
 
-        // Layer 2: Beat pulse modulation
-        const beatBoost = 1 + beatPulse * danceability * 0.4;
+        let raw;
+        if (hasFabric && !live.active) {
+          // ── FABRIC MODE: real per-second audio data ──
+          const bandPos = t * bandNames.length;
+          const bandIdx = Math.floor(bandPos) % bandNames.length;
+          const bandNext = (bandIdx + 1) % bandNames.length;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
+                          snap.bands[bandNames[bandNext]] * bandFrac;
+
+          const realLoudness = snap.loudness;
+          const transient = snap.onset ? snap.onset_strength * 0.3 : 0;
+          const texture = noise2D(t * 6 + keyOffset, phase * 0.4) * 0.12;
+
+          raw = (bandVal * 0.55 + realLoudness * 0.25 + transient + texture);
+          raw *= (1 + snap.flux * 0.4);
+          raw *= envelope;
+        } else {
+          // ── PROCEDURAL / MIC MODE ──
+          const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
+          const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
+          const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
+          raw = n1 + n2 + n3;
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+          raw = Math.abs(raw) * envelope;
+        }
+
+        // Beat pulse modulation
+        const beatBoost = hasFabric
+          ? (1 + (snap.beat ? snap.beat_strength * 0.8 : beatPulse * 0.3))
+          : (1 + beatPulse * danceability * 0.4);
 
         // Combine layers
         let amp;
-        if (live.active && (liveBass + liveMids) > 0.01) {
-          // Layer 3: multi-band terrain modulation
+        if (!hasFabric && live.active && (liveBass + liveMids) > 0.01) {
+          // Layer 3: multi-band terrain modulation (mic input)
           const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
-          const puppeted = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
-          const liveRaw = raw * (1 + livePresence * 0.5); // sharper peaks with presence
-          const liveDisp = Math.abs(liveRaw) * envelope * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
+          const puppeted = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
+          const liveRaw = raw * (1 + livePresence * 0.5);
+          const liveDisp = Math.abs(liveRaw) * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
           const jitter = (Math.random() - 0.5) * liveAir * 0.15;
           amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
         } else {
-          // Layers 0-2 (envelope shapes via ceiling, not multiplier)
-          amp = Math.abs(raw) * envelope * k.amplitude * exhaleMultiplier * beatBoost;
+          amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
         }
 
         // Clamp to energy ceiling
@@ -677,7 +701,7 @@ function drawOrbSmooth(ctx, pts) {
   ctx.closePath();
 }
 
-function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
+function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, getSnapshot, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const historyRef = useRef([]);
@@ -844,23 +868,53 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const phase = phaseRef.current;
 
       // ── Generate circular terrain points ──
-      // Circular noise: (cos(θ)*freq, sin(θ)*freq) → seamless 360° wrap
+      // When Fabric timeline data is available, use REAL per-second audio data.
+      // Otherwise fall back to procedural noise.
+      const snap = getSnapshot ? getSnapshot(progress) : null;
+      const hasFabric = !!snap;
       const points = [];
+
+      // Band names mapped to angular zones (7 bands distributed around circle)
+      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
       for (let i = 0; i < N; i++) {
         const th = (i / N) * Math.PI * 2;
         const cnx = Math.cos(th), sny = Math.sin(th);
 
-        // Multi-octave simplex noise (same as terrain)
-        const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
-        const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
-        const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
-        let raw = n1 + n2 + n3;
+        let raw;
+        if (hasFabric) {
+          // ── FABRIC MODE: real audio data ──
+          // Map angular position to frequency band blend
+          const bandPos = (i / N) * bandNames.length;
+          const bandIdx = Math.floor(bandPos) % bandNames.length;
+          const bandNext = (bandIdx + 1) % bandNames.length;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
+                          snap.bands[bandNames[bandNext]] * bandFrac;
 
-        // Valence shaping
-        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+          // Real loudness drives amplitude, band distribution drives shape
+          const realLoudness = snap.loudness;
+          // Onset/flux adds transient spikes
+          const transient = snap.onset ? snap.onset_strength * 0.4 : 0;
+          // Noise adds organic texture on top of real data
+          const texture = noise2D(cnx * 4 + keyOffset, sny * 4 + phase * 0.4) * 0.15;
 
-        // Beat boost — strong, not gated by danceability
-        const beatBoost = 1 + beatPulse * 0.8;
+          raw = (bandVal * 0.6 + realLoudness * 0.25 + transient + texture);
+          // Flux adds spectral change excitement
+          raw *= (1 + snap.flux * 0.5);
+        } else {
+          // ── PROCEDURAL MODE: noise-based (fallback) ──
+          const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
+          const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
+          const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
+          raw = n1 + n2 + n3;
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+        }
+
+        // Beat boost
+        const beatBoost = hasFabric
+          ? (1 + (snap.beat ? snap.beat_strength * 1.2 : beatPulse * 0.5))
+          : (1 + beatPulse * 0.8);
 
         // Combine
         let amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
@@ -1090,6 +1144,8 @@ export default function FabricPage() {
     fetchPlaylistTracks,
     formatTime,
     setProgress,
+    timeline,
+    getSnapshot,
   } = useFabric();
 
   const [dragIdx, setDragIdx] = useState(null);
@@ -1147,6 +1203,7 @@ export default function FabricPage() {
           progress={progress}
           duration={currentTrack?.duration || 0}
           features={features}
+          getSnapshot={getSnapshot}
           onClose={() => setVisualizing(false)}
           toggle={toggle}
           skip={skip}
@@ -1430,6 +1487,7 @@ export default function FabricPage() {
               progress={progress}
               duration={currentTrack?.duration || 0}
               features={features}
+              getSnapshot={getSnapshot}
               onVisualize={() => setVisualizing(true)}
             />
           </div>

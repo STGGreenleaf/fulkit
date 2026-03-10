@@ -53,6 +53,9 @@ export function FabricProvider({ children }) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(null);
   const [audioFeatures, setAudioFeatures] = useState(isDev ? MOCK_FEATURES : {});
+  const [timeline, setTimeline] = useState(null); // Fabric per-second data
+  const [timelineResolution, setTimelineResolution] = useState(500);
+  const timelineRequested = useRef(new Set());
   const pollRef = useRef(null);
   const volumeTimer = useRef(null);
   const volumeLockedUntil = useRef(0);
@@ -192,6 +195,62 @@ export function FabricProvider({ children }) {
     }, 300);
   }, [isDev, apiFetch]);
 
+  // Fetch Fabric timeline when a new track starts playing
+  useEffect(() => {
+    if (isDev || !connected || !accessToken || !currentTrack?.id) return;
+    if (timelineRequested.current.has(currentTrack.id)) return;
+    timelineRequested.current.add(currentTrack.id);
+
+    apiFetch(`/api/fabric/timeline?id=${currentTrack.id}`).then((data) => {
+      if (data?.status === "complete" && data.timeline) {
+        setTimeline(data.timeline);
+        setTimelineResolution(data.resolution_ms || 500);
+      } else {
+        setTimeline(null); // fallback to procedural
+      }
+    }).catch(() => setTimeline(null));
+  }, [currentTrack?.id, connected, accessToken, isDev, apiFetch]);
+
+  // Re-fetch timeline on track change
+  useEffect(() => {
+    setTimeline(null);
+  }, [currentTrack?.id]);
+
+  // Snapshot interpolator: progress → current snapshot data
+  const getSnapshot = useCallback((progressFraction) => {
+    if (!timeline || timeline.length === 0) return null;
+    const totalDuration = timeline[timeline.length - 1].t;
+    const currentTime = progressFraction * totalDuration;
+    // Find surrounding snapshots
+    let lo = 0, hi = timeline.length - 1;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (timeline[mid].t <= currentTime) lo = mid; else hi = mid;
+    }
+    const a = timeline[lo], b = timeline[hi];
+    if (a.t === b.t) return a;
+    const frac = (currentTime - a.t) / (b.t - a.t);
+    // Linearly interpolate numeric fields
+    return {
+      t: currentTime,
+      loudness: a.loudness + (b.loudness - a.loudness) * frac,
+      bands: Object.fromEntries(
+        Object.keys(a.bands).map(k => [k, a.bands[k] + (b.bands[k] - a.bands[k]) * frac])
+      ),
+      flux: a.flux + (b.flux - a.flux) * frac,
+      spectral_centroid: a.spectral_centroid + (b.spectral_centroid - a.spectral_centroid) * frac,
+      spectral_spread: (a.spectral_spread || 0) + ((b.spectral_spread || 0) - (a.spectral_spread || 0)) * frac,
+      spectral_rolloff: (a.spectral_rolloff || 0) + ((b.spectral_rolloff || 0) - (a.spectral_rolloff || 0)) * frac,
+      zero_crossing_rate: (a.zero_crossing_rate || 0) + ((b.zero_crossing_rate || 0) - (a.zero_crossing_rate || 0)) * frac,
+      dynamic_range: (a.dynamic_range || 0) + ((b.dynamic_range || 0) - (a.dynamic_range || 0)) * frac,
+      beat: b.beat || false,
+      beat_strength: b.beat_strength || 0,
+      downbeat: b.downbeat || false,
+      onset: b.onset || false,
+      onset_strength: b.onset_strength || 0,
+    };
+  }, [timeline]);
+
   // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
   useEffect(() => {
     if (isDev || !connected || !accessToken) return;
@@ -307,6 +366,8 @@ export function FabricProvider({ children }) {
         volume,
         setVolume,
         formatTime,
+        timeline,
+        getSnapshot,
       }}
     >
       {children}
