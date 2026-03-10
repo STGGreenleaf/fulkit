@@ -709,6 +709,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
   const envelopeRef = useRef({ trackId: null, envelope: null });
+  const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
     try { return parseInt(localStorage.getItem("fulkit-viz-style")) || 1; } catch { return 1; }
@@ -748,6 +749,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   // New noise on track change — history fades naturally via kinetic wind-down
   useEffect(() => {
     noiseRef.current = createNoise2D();
+    // Reset style 2 tracers on track change
+    const s2 = style2Ref.current;
+    s2.noise2 = createNoise2D();
+    s2.tracers = [];
+    s2.hits = [];
+    s2.frame = 0;
     const k = kineticRef.current;
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
       k.state = "skip-cut";
@@ -885,6 +892,212 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const curProgress = progressRef.current;
       const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
+      const curVizStyle = vizStyleRef.current;
+
+      // ══════════════════════════════════════════
+      // STYLE 2: Deep Amoeba — tendrils, tracers, spring dynamics
+      // ══════════════════════════════════════════
+      if (curVizStyle === 2) {
+        const s2 = style2Ref.current;
+        const noise2B = s2.noise2;
+        const S2_N = 72; // fewer points = bigger lobes
+        const MAX_TRACE = 24;
+        const MAX_HITS = 6;
+        const CAP_INTERVAL = 3;
+
+        // Center drift
+        const cx = w / 2 + noise2D(phase * 0.12, 50) * dim * 0.018;
+        const cy = h / 2 + noise2D(80, phase * 0.1) * dim * 0.018;
+        const rot = phase * 0.04;
+
+        const col = [62, 60, 56]; // deep warm slate
+        const lw = 1.0 + acousticness * 1.3;
+
+        // Silent state — thin circle at rest
+        if (k.amplitude < 0.03) {
+          ctx.clearRect(0, 0, w, h);
+          const silentAlpha = 0.12 + k.amplitude * 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${silentAlpha})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+          animRef.current = requestAnimationFrame(draw);
+          return;
+        }
+
+        // Build displacement arrays
+        const disp = new Float32Array(S2_N);
+        const radii = new Float32Array(S2_N);
+        const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
+        for (let i = 0; i < S2_N; i++) {
+          const a = (i / S2_N) * Math.PI * 2 + rot;
+          const nx = Math.cos(a), ny = Math.sin(a);
+
+          // Amoeba base warp
+          const d1 = noise2D(nx * 0.3, ny * 0.3 + phase * 0.002);
+          const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + phase * 0.005);
+          const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + phase * 0.008);
+          const warp = k.amplitude * 0.55;
+          const irregularity = 0.5 + energy * 0.5;
+          radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * warp);
+
+          // Displacement — use Fabric bands when available
+          let nv;
+          if (hasFabric) {
+            const bandPos = (i / S2_N) * bandNames2.length;
+            const bandIdx = Math.floor(bandPos) % bandNames2.length;
+            const bandNext = (bandIdx + 1) % bandNames2.length;
+            const bandFrac = bandPos - Math.floor(bandPos);
+            const bandVal = snap.bands[bandNames2[bandIdx]] * (1 - bandFrac) +
+                            snap.bands[bandNames2[bandNext]] * bandFrac;
+            const texture = noise2D(nx * 3 + keyOffset, ny * 3 + phase * 0.3) * 0.15;
+            const onsetSpike = snap.onset ? snap.onset_strength * 0.4 : 0;
+            nv = (bandVal * 0.6 + snap.loudness * 0.3 + onsetSpike + texture) * snap.loudness;
+            nv *= (1 + snap.flux * 0.6);
+          } else {
+            const n1 = noise2D(nx * 1.2 + phase * 0.25, ny * 1.2 + phase * 0.18);
+            const n2 = noise2D(nx * 3.5 + phase * 0.45, ny * 3.5 + phase * 0.35);
+            nv = n1 * 0.9 + n2 * 0.2;
+            nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharpness * 0.6);
+          }
+
+          const beatBoost = 1 + beatPulse * 0.7;
+          disp[i] = nv * k.amplitude * beatBoost * exhale * baseR * 0.85;
+          disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
+        }
+
+        // Neighbor-smooth (2 passes — fewer so taller peaks survive)
+        for (let pass = 0; pass < 2; pass++) {
+          const tmpD = new Float32Array(S2_N);
+          const tmpR = new Float32Array(S2_N);
+          for (let i = 0; i < S2_N; i++) {
+            const p = (i - 1 + S2_N) % S2_N;
+            const n = (i + 1) % S2_N;
+            tmpD[i] = disp[i] * 0.5 + disp[p] * 0.25 + disp[n] * 0.25;
+            tmpR[i] = radii[i] * 0.5 + radii[p] * 0.25 + radii[n] * 0.25;
+          }
+          disp.set(tmpD);
+          radii.set(tmpR);
+        }
+
+        // Capture tracers
+        s2.frame++;
+        if (s2.frame % CAP_INTERVAL === 0 && k.amplitude > 0.01) {
+          s2.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), op: 0.6, age: 0, hit: false });
+          if (s2.tracers.length > MAX_TRACE) s2.tracers.shift();
+        }
+
+        // Hit layers on strong beats
+        if (beatPulse > 0.65 && isPlaying && s2.frame % CAP_INTERVAL === 0) {
+          const hd = new Float32Array(S2_N);
+          for (let i = 0; i < S2_N; i++) hd[i] = disp[i] * 2.0;
+          for (let pass = 0; pass < 2; pass++) {
+            const tmp = new Float32Array(S2_N);
+            for (let i = 0; i < S2_N; i++) {
+              tmp[i] = hd[i] * 0.5 + hd[(i - 1 + S2_N) % S2_N] * 0.25 + hd[(i + 1) % S2_N] * 0.25;
+            }
+            hd.set(tmp);
+          }
+          s2.hits.push({ d: hd, r: new Float32Array(radii), op: 0.8, age: 0, hit: true });
+          if (s2.hits.length > MAX_HITS) s2.hits.shift();
+        }
+
+        // Age tracers and hits
+        for (const l of s2.tracers) { l.age++; l.op *= 0.96; }
+        for (const l of s2.hits) { l.age++; l.op *= 0.984; }
+        s2.tracers = s2.tracers.filter(l => l.op > 0.015);
+        s2.hits = s2.hits.filter(l => l.op > 0.015);
+
+        // ── RENDER ──
+        ctx.clearRect(0, 0, w, h);
+
+        const interiorAlpha = k.amplitude * 0.12;
+
+        // Interior tendrils — lines from opposing points through center
+        if (k.amplitude > 0.02) {
+          for (let i = 0; i < S2_N; i += 7) {
+            const opp = (i + Math.floor(S2_N / 2)) % S2_N;
+            const a1 = (i / S2_N) * Math.PI * 2 + rot;
+            const a2 = (opp / S2_N) * Math.PI * 2 + rot;
+            const r1 = radii[i] * 0.6 + disp[i] * 0.3;
+            const r2 = radii[opp] * 0.6 + disp[opp] * 0.3;
+            const x1 = cx + Math.cos(a1) * r1;
+            const y1 = cy + Math.sin(a1) * r1;
+            const x2 = cx + Math.cos(a2) * r2;
+            const y2 = cy + Math.sin(a2) * r2;
+            const cpOff = noise2D(i * 0.5, phase * 0.3) * baseR * 0.3 * k.amplitude;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.7, x2, y2);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${interiorAlpha * (0.3 + Math.abs(disp[i]) / baseR)})`;
+            ctx.lineWidth = 0.5 + acousticness * 0.5;
+            ctx.stroke();
+          }
+        }
+
+        // All layers, oldest first
+        const allLayers = [
+          ...s2.tracers, ...s2.hits,
+          { d: disp, r: radii, op: 1.0, age: 0, hit: false },
+        ].sort((a, b) => b.age - a.age);
+
+        for (const layer of allLayers) {
+          const alpha = Math.max(0, Math.min(1, layer.op));
+          if (alpha < 0.01) continue;
+
+          const rShift = layer.age * 0.35;
+          const ageFade = Math.max(0, 1 - layer.age * 0.01);
+          const thisLw = lw * (layer.hit ? 1.6 : 1) * ageFade;
+
+          const pts = [];
+          for (let i = 0; i < S2_N; i++) {
+            const a = (i / S2_N) * Math.PI * 2 + rot;
+            const r = layer.r[i] + layer.d[i] - rShift;
+            pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+          }
+
+          // Dark outer edge — clip-based inner bleed
+          const edgeAlpha = alpha * 0.8 * (0.4 + k.amplitude * 0.6);
+
+          drawOrbSmooth(ctx, pts);
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
+          ctx.lineWidth = thisLw * 4;
+          ctx.stroke();
+          ctx.restore();
+
+          // Sharp contour
+          drawOrbSmooth(ctx, pts);
+          const contourPeak = 0.5 + k.amplitude * 0.45;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * (layer.age === 0 ? contourPeak : 0.45)})`;
+          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + k.amplitude * 0.5 : 0.7));
+          ctx.stroke();
+
+          // Inward reflection — soft shadow
+          if (alpha > 0.06) {
+            const iPts = [];
+            for (let i = 0; i < S2_N; i++) {
+              const a = (i / S2_N) * Math.PI * 2 + rot;
+              const r = Math.max(0, layer.r[i] - layer.d[i] * 0.35 + rShift * 0.3);
+              iPts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+            }
+            drawOrbSmooth(ctx, iPts);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.04})`;
+            ctx.lineWidth = thisLw * 2.5;
+            ctx.stroke();
+          }
+        }
+
+        animRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      // ══════════════════════════════════════════
+      // STYLE 1: Radial Terrain — stacked mountain rings
+      // ══════════════════════════════════════════
       const points = [];
 
       // Band names mapped to angular zones (7 bands distributed around circle)
@@ -1095,18 +1308,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n === 1) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} } }}
+            onClick={() => { if (n <= 2) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n === 1 ? "pointer" : "default",
+              cursor: n <= 2 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n === 1 ? (vizStyle === 1 ? 1 : 0.5) : 0.25,
+              opacity: n <= 2 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
