@@ -917,9 +917,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
           const aR = baseR * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
-          const displacement = data[i] * baseR * 0.38;
-          // Floor: never collapse past 15% of baseR → guarantees hollow center
-          const r = Math.max(baseR * 0.15, aR - displacement - (layerCount - 1 - l) * 0.3);
+          const displacement = data[i] * baseR * 0.65;
+          // Floor: never collapse past 6% of baseR → guarantees hollow center
+          const r = Math.max(baseR * 0.06, aR - displacement - (layerCount - 1 - l) * 0.5);
           inPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
 
