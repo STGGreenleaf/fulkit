@@ -712,7 +712,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0, time: 0, amp: 0, ampVel: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
-    try { return parseInt(localStorage.getItem("fulkit-viz-style")) || 1; } catch { return 1; }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlViz = params.get("viz");
+      if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); return parseInt(urlViz) || 1; }
+      return parseInt(localStorage.getItem("fulkit-viz-style")) || 1;
+    } catch { return 1; }
   });
   // Keep latest props in refs so the render loop always reads current values
   const getSnapshotRef = useRef(getSnapshot);
