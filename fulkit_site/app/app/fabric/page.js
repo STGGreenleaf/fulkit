@@ -1627,6 +1627,11 @@ export default function FabricPage() {
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
+  // Debug — remove after confirmed working
+  useEffect(() => {
+    console.log("[fabric page] playlists:", playlists.length, "filtered:", playlists.filter(pl => pl.tracks > 0).length);
+  }, [playlists]);
+
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
     setDragIdx(idx);
