@@ -7,6 +7,7 @@ import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import LogoMark from "../../components/LogoMark";
 import { useFabric } from "../../lib/fabric";
+import { useAuth } from "../../lib/auth";
 
 // Minimal pause mark — two vertical lines
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
@@ -1624,13 +1625,50 @@ export default function FabricPage() {
   const [mixTracks, setMixTracks] = useState([]);
   const [mixLoading, setMixLoading] = useState(false);
   const [visualizing, setVisualizing] = useState(false);
+  const [showSpotifyBrowser, setShowSpotifyBrowser] = useState(false);
+  const [importing, setImporting] = useState(null); // playlist id being imported
+  const [crates, setCrates] = useState([]); // imported crates from DB
+  const [cratesLoading, setCratesLoading] = useState(true);
+  const [expandedCrate, setExpandedCrate] = useState(null);
+  const [crateTracks, setCrateTracks] = useState([]);
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
-  // Debug — remove after confirmed working
-  useEffect(() => {
-    console.log("[fabric page] playlists:", playlists.length);
-  }, [playlists]);
+  // Load imported crates
+  const { accessToken } = useAuth();
+  const loadCrates = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch("/api/fabric/featured");
+      const data = await res.json();
+      setCrates(data.crates || []);
+    } catch {}
+    setCratesLoading(false);
+  }, [accessToken]);
+
+  useEffect(() => { loadCrates(); }, [loadCrates]);
+
+  // Import a Spotify playlist as a crate
+  const importPlaylist = useCallback(async (pl) => {
+    if (!accessToken || importing) return;
+    setImporting(pl.id);
+    try {
+      const res = await fetch("/api/fabric/featured/manage", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ playlistId: pl.id, name: pl.name }),
+      });
+      const data = await res.json();
+      if (!data.error) {
+        await loadCrates();
+        setShowSpotifyBrowser(false);
+      }
+    } catch {}
+    setImporting(null);
+  }, [accessToken, importing, loadCrates]);
 
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
@@ -1966,7 +2004,7 @@ export default function FabricPage() {
           {/* ═══ CRATES + SET ═══ */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-            {/* CRATE BROWSER — playlists as importable crates */}
+            {/* CRATES — imported playlists + Spotify browser */}
             <div
               style={{
                 flex: 1,
@@ -1977,10 +2015,105 @@ export default function FabricPage() {
                 gap: "var(--space-3)",
               }}
             >
-              {/* Crate shelf — horizontal scroll */}
-              <Label>Crates</Label>
+              {/* ── YOUR CRATES ── */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Label>Crates</Label>
+                {playlists.length > 0 && (
+                  <button
+                    onClick={() => setShowSpotifyBrowser(!showSpotifyBrowser)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-1) var(--space-2)",
+                      background: showSpotifyBrowser ? "var(--color-bg-alt)" : "transparent",
+                      border: "1px solid var(--color-border-light)",
+                      borderRadius: "var(--radius-sm)",
+                      cursor: "pointer",
+                      fontSize: 9,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: "var(--font-weight-medium)",
+                      color: "var(--color-text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                    }}
+                  >
+                    <Plus size={10} strokeWidth={2} />
+                    Import
+                  </button>
+                )}
+              </div>
 
-              {playlists.length === 0 && (
+              {/* Imported crate shelf */}
+              {crates.length > 0 && (
+                <div style={{
+                  display: "flex",
+                  gap: "var(--space-2)",
+                  overflowX: "auto",
+                  paddingBottom: "var(--space-2)",
+                }}>
+                  {crates.map(crate => {
+                    const isOpen = expandedCrate === crate.id;
+                    const trackCount = crate.tracks?.length || 0;
+                    const analyzed = crate.tracks?.filter(t => t.fabric_status === "complete").length || 0;
+                    return (
+                      <button
+                        key={crate.id}
+                        onClick={() => {
+                          if (isOpen) {
+                            setExpandedCrate(null);
+                            setCrateTracks([]);
+                          } else {
+                            setExpandedCrate(crate.id);
+                            setCrateTracks(crate.tracks || []);
+                          }
+                        }}
+                        style={{
+                          padding: "var(--space-3)",
+                          minWidth: 140,
+                          background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                          border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                          borderLeft: isOpen ? "2px solid var(--color-text)" : "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-lg)",
+                          cursor: "pointer",
+                          fontFamily: "var(--font-primary)",
+                          textAlign: "left",
+                          transition: "all 120ms",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
+                          {isOpen
+                            ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                            : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+                          }
+                          <div style={{
+                            fontSize: "var(--font-size-xs)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            color: "var(--color-text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 120,
+                          }}>
+                            {crate.name}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-mono)",
+                          color: "var(--color-text-muted)",
+                        }}>
+                          {trackCount} songs · {analyzed} ready
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Empty state — no crates yet */}
+              {crates.length === 0 && !cratesLoading && !showSpotifyBrowser && (
                 <div style={{
                   padding: "var(--space-6) var(--space-4)",
                   textAlign: "center",
@@ -1989,90 +2122,136 @@ export default function FabricPage() {
                 }}>
                   <Package size={20} strokeWidth={1.2} style={{ color: "var(--color-text-dim)", marginBottom: "var(--space-2)" }} />
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                    Connect Spotify to browse your playlists
+                    {playlists.length > 0
+                      ? "Import a playlist to get started"
+                      : "Connect Spotify in Settings → Sources"
+                    }
                   </div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>
-                    Settings → Sources → Spotify
-                  </div>
+                  {playlists.length > 0 && (
+                    <button
+                      onClick={() => setShowSpotifyBrowser(true)}
+                      style={{
+                        marginTop: "var(--space-3)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1-5) var(--space-3)",
+                        background: "var(--color-text)",
+                        color: "var(--color-bg)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-primary)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Download size={10} strokeWidth={2} />
+                      Browse Spotify Playlists
+                    </button>
+                  )}
                 </div>
               )}
 
-              <div style={{
-                display: "flex",
-                gap: "var(--space-2)",
-                overflowX: "auto",
-                paddingBottom: "var(--space-2)",
-              }}>
-                {playlists.map(pl => {
-                  const isOpen = expandedMix === pl.id;
-                  return (
-                    <button
-                      key={pl.id}
-                      onClick={async () => {
-                        if (isOpen) {
-                          setExpandedMix(null);
-                          setMixTracks([]);
-                          return;
-                        }
-                        setExpandedMix(pl.id);
-                        setMixLoading(true);
-                        const tracks = await fetchPlaylistTracks(pl.id);
-                        setMixTracks(tracks);
-                        setMixLoading(false);
-                      }}
-                      style={{
-                        padding: "var(--space-3)",
-                        minWidth: 140,
-                        background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                        border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                        borderLeft: isOpen ? "2px solid var(--color-text)" : "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-lg)",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-primary)",
-                        textAlign: "left",
-                        transition: "all 120ms",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
-                        {isOpen
-                          ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
-                          : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-                        }
-                        <div style={{
-                          fontSize: "var(--font-size-xs)",
-                          fontWeight: "var(--font-weight-semibold)",
-                          color: "var(--color-text)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          maxWidth: 120,
-                        }}>
-                          {pl.name}
-                        </div>
-                      </div>
-                      <div style={{
-                        fontSize: "var(--font-size-xs)",
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--color-text-muted)",
-                        letterSpacing: "var(--letter-spacing-wider)",
-                        textTransform: "uppercase",
-                      }}>
-                        {pl.trackCount} songs
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Expanded crate — track list */}
-              {expandedMix && (
+              {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
+              {showSpotifyBrowser && (
                 <div style={{
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
                 }}>
-                  {/* Crate header */}
+                  <div style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    background: "var(--color-bg-elevated)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}>
+                    <Label>Spotify Playlists</Label>
+                    <button
+                      onClick={() => setShowSpotifyBrowser(false)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-muted)" }}
+                    >
+                      <X size={14} strokeWidth={1.8} />
+                    </button>
+                  </div>
+                  <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                    {playlists.map(pl => {
+                      const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
+                      const isImporting = importing === pl.id;
+                      return (
+                        <div key={pl.id} style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "var(--space-2-5) var(--space-4)",
+                          borderBottom: "1px solid var(--color-border-light)",
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-medium)",
+                              color: "var(--color-text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}>
+                              {pl.name}
+                            </div>
+                            <div style={{ fontSize: 9, color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}>
+                              {pl.trackCount} songs
+                            </div>
+                          </div>
+                          {alreadyImported ? (
+                            <div style={{
+                              fontSize: 9,
+                              fontFamily: "var(--font-mono)",
+                              color: "var(--color-text-dim)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}>
+                              imported
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => importPlaylist(pl)}
+                              disabled={isImporting}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "var(--space-1)",
+                                padding: "var(--space-1) var(--space-2)",
+                                background: "transparent",
+                                border: "1px solid var(--color-border)",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: isImporting ? "wait" : "pointer",
+                                fontSize: 9,
+                                fontFamily: "var(--font-mono)",
+                                color: "var(--color-text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                opacity: isImporting ? 0.5 : 1,
+                              }}
+                            >
+                              <Plus size={10} strokeWidth={2} />
+                              {isImporting ? "..." : "Import"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── EXPANDED CRATE — track list ── */}
+              {expandedCrate && crateTracks.length > 0 && (
+                <div style={{
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  overflow: "hidden",
+                }}>
                   <div style={{
                     padding: "var(--space-3) var(--space-4)",
                     borderBottom: "1px solid var(--color-border-light)",
@@ -2082,144 +2261,139 @@ export default function FabricPage() {
                     background: "var(--color-bg-elevated)",
                   }}>
                     <div>
-                      <div style={{
-                        fontSize: "var(--font-size-sm)",
-                        fontWeight: "var(--font-weight-semibold)",
-                      }}>
-                        {playlists.find(p => p.id === expandedMix)?.name}
+                      <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                        {crates.find(c => c.id === expandedCrate)?.name}
                       </div>
-                      <div style={{
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
+                        {crateTracks.length} tracks
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const crate = crates.find(c => c.id === expandedCrate);
+                        if (crate?.source_spotify_id) playPlaylist(crate.source_spotify_id);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1-5) var(--space-2-5)",
+                        background: "var(--color-text)",
+                        color: "var(--color-bg)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
                         fontSize: "var(--font-size-xs)",
-                        color: "var(--color-text-muted)",
-                        marginTop: 1,
-                      }}>
-                        {mixTracks.length} tracks
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                      {/* Play all */}
-                      <button
-                        onClick={() => playPlaylist(expandedMix)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-2-5)",
-                          background: "var(--color-text)",
-                          color: "var(--color-bg)",
-                          border: "none",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "var(--font-size-xs)",
-                          fontWeight: "var(--font-weight-semibold)",
-                          fontFamily: "var(--font-primary)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Play size={10} strokeWidth={2.5} fill="var(--color-bg)" />
-                        Play
-                      </button>
-                    </div>
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-primary)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Play size={10} strokeWidth={2.5} fill="var(--color-bg)" />
+                      Play
+                    </button>
                   </div>
 
-                  {/* Track list */}
                   <div style={{ maxHeight: 320, overflowY: "auto" }}>
-                    {mixLoading ? (
-                      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", padding: "var(--space-4)", textAlign: "center" }}>
-                        loading...
-                      </div>
-                    ) : (
-                      mixTracks.map((track, i) => {
-                        const isActive = currentTrack?.id === track.id;
-                        const trackFlagged = isFlagged(track.id);
-                        return (
-                          <div
-                            key={track.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("application/fulkit-track", JSON.stringify(track));
-                              e.currentTarget.style.opacity = "0.4";
-                            }}
-                            onDragEnd={(e) => { e.currentTarget.style.opacity = "1"; }}
+                    {crateTracks.map((track, i) => {
+                      const isActive = currentTrack?.id === track.spotify_id;
+                      const hasFabric = track.fabric_status === "complete";
+                      const trackFlagged = isFlagged(track.spotify_id);
+                      return (
+                        <div
+                          key={track.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-3)",
+                            padding: "var(--space-2) var(--space-4)",
+                            borderBottom: "1px solid var(--color-border-light)",
+                            background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                            transition: "background 120ms",
+                          }}
+                        >
+                          <div style={{
+                            fontSize: 8,
+                            fontFamily: "var(--font-mono)",
+                            color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                            width: 18,
+                            flexShrink: 0,
+                            textAlign: "right",
+                          }}>
+                            {String(i + 1).padStart(2, "0")}
+                          </div>
+                          <div style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: "50%",
+                            background: hasFabric ? "var(--color-text-muted)" : "transparent",
+                            border: hasFabric ? "none" : "1px solid var(--color-text-dim)",
+                            flexShrink: 0,
+                          }} title={hasFabric ? "Fabric analyzed" : "Pending"} />
+                          <button
+                            onClick={() => playTrack({
+                              id: track.spotify_id,
+                              title: track.title,
+                              artist: track.artist,
+                              duration: Math.round((track.duration_ms || 0) / 1000),
+                            })}
                             style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "var(--space-3)",
-                              padding: "var(--space-2) var(--space-4)",
-                              borderBottom: "1px solid var(--color-border-light)",
-                              cursor: "grab",
-                              background: isActive ? "var(--color-bg-inverse)" : "transparent",
-                              transition: "background 120ms",
+                              flex: 1,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              padding: 0,
+                              fontFamily: "var(--font-primary)",
+                              minWidth: 0,
                             }}
                           >
                             <div style={{
-                              fontSize: 8,
-                              fontFamily: "var(--font-mono)",
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                              width: 18,
-                              flexShrink: 0,
-                              textAlign: "right",
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-medium)",
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}>
-                              {String(i + 1).padStart(2, "0")}
+                              {track.title}
                             </div>
-                            <button
-                              onClick={() => playTrack(track)}
-                              style={{
-                                flex: 1,
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                textAlign: "left",
-                                padding: 0,
-                                fontFamily: "var(--font-primary)",
-                                minWidth: 0,
-                              }}
-                            >
-                              <div style={{
-                                fontSize: "var(--font-size-xs)",
-                                fontWeight: "var(--font-weight-medium)",
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}>
-                                {track.title}
-                              </div>
-                              <div style={{
-                                fontSize: 9,
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}>
-                                {track.artist}
-                              </div>
-                            </button>
-                            <button
-                              onClick={() => flag(track)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: 2,
-                                flexShrink: 0,
-                                color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
-                                opacity: trackFlagged ? 1 : 0.3,
-                                transition: "opacity 120ms",
-                              }}
-                              title={trackFlagged ? "Remove from set" : "Add to set"}
-                            >
-                              <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
-                            </button>
-                          </div>
-                        );
-                      })
-                    )}
+                            <div style={{
+                              fontSize: 9,
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}>
+                              {track.artist}
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => flag({
+                              id: track.spotify_id,
+                              title: track.title,
+                              artist: track.artist,
+                              duration: Math.round((track.duration_ms || 0) / 1000),
+                            })}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 2,
+                              flexShrink: 0,
+                              color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
+                              opacity: trackFlagged ? 1 : 0.3,
+                              transition: "opacity 120ms",
+                            }}
+                            title={trackFlagged ? "Remove from set" : "Add to set"}
+                          >
+                            <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
-
-              {/* Featured playlists */}
-              <FeaturedShelf playTrack={playTrack} currentTrack={currentTrack} />
             </div>
 
             {/* THE SET — draggable setlist rail */}
