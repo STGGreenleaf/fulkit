@@ -691,6 +691,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     stateStart: 0,
     prevPlaying: false,
     prevTrackId: null,
+    beatAccumulator: 0,
+    lastTs: 0,
   });
 
   // Envelope — same as terrain
@@ -761,6 +763,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
       const noise2D = noiseRef.current;
       const k = kineticRef.current;
+      const dt = k.lastTs > 0 ? Math.min((ts - k.lastTs) / 1000, 0.05) : 0.016;
+      k.lastTs = ts;
       const w = window.innerWidth, h = window.innerHeight;
       const dim = Math.min(w, h);
       const baseR = dim * 0.18;
@@ -808,11 +812,20 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const acousticness = (features?.acousticness || 30) / 100;
       const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
 
-      // Beat
+      // Beat — local clock with soft Spotify sync (frame-accurate)
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
-      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
-      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
+      if (isPlaying) {
+        k.beatAccumulator += dt * (bpm / 60);
+        const spotifyPhase = (progressMs % msPerBeat) / msPerBeat;
+        const localPhase = k.beatAccumulator % 1;
+        const diff = spotifyPhase - localPhase;
+        k.beatAccumulator += (diff - Math.round(diff)) * 0.03;
+      }
+      const beatPhase = isPlaying ? (k.beatAccumulator % 1) : 1;
+      const beatCurve = acousticness > 0.5 ? 2.0 : 2.5;
+      const beatStrength = Math.max(danceability, 0.35 + acousticness * 0.2);
+      const beatPulse = Math.pow(1 - beatPhase, beatCurve) * beatStrength;
 
       // Amplitude ceiling (envelope-driven when available)
       const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
@@ -821,9 +834,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
       const sharpness = 1 - valence;
 
-      // Phase advance — BPM-synced (60fps)
+      // Phase advance — BPM-synced (60fps), tempo-scaled
+      const tempoScale = bpm / 120;
       const beatsPerSec = bpm / 60;
-      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 : 0.004;
+      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 * tempoScale : 0.004;
       phaseRef.current += phaseStep;
       const phase = phaseRef.current;
 
@@ -843,8 +857,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // Valence shaping
         raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
 
-        // Beat boost
-        const beatBoost = 1 + beatPulse * danceability * 0.4;
+        // Beat boost — strong, not gated by danceability
+        const beatBoost = 1 + beatPulse * 0.8;
 
         // Combine
         let amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
@@ -884,15 +898,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const outPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
-          const aR = baseR * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const aR = baseR * (1 + beatPulse * 0.06) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
           const displacement = data[i] * baseR * 1.4;
           const r = aR + displacement + outShift;
           outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
 
         drawOrbSmooth(ctx, outPts);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
-        ctx.lineWidth = lw;
+        const isNewest = l === layerCount - 1;
+        const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.5) : alpha;
+        const drawLw = isNewest ? lw * (1 + beatPulse * 0.4) : lw;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${drawAlpha})`;
+        ctx.lineWidth = drawLw;
         ctx.stroke();
 
         // ── Inward reflection ──
