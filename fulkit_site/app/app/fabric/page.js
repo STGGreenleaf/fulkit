@@ -492,13 +492,11 @@ function SignalTerrain({
 
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
-
-        // Envelope: taper at edges
         const envelope = Math.sin(t * Math.PI);
 
-        let raw;
+        let amp;
         if (hasFabric && !live.active) {
-          // ── FABRIC MODE: real per-second audio data ──
+          // ── FABRIC MODE: real audio drives everything ──
           const bandPos = t * bandNames.length;
           const bandIdx = Math.floor(bandPos) % bandNames.length;
           const bandNext = (bandIdx + 1) % bandNames.length;
@@ -506,48 +504,44 @@ function SignalTerrain({
           const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
                           snap.bands[bandNames[bandNext]] * bandFrac;
 
-          const realLoudness = snap.loudness;
-          const transient = snap.onset ? snap.onset_strength * 0.3 : 0;
-          const texture = noise2D(t * 6 + keyOffset, phase * 0.4) * 0.12;
+          const realLoud = snap.loudness;
+          const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
+          const onsetSpike = snap.onset ? snap.onset_strength * 0.4 : 0;
 
-          raw = (bandVal * 0.55 + realLoudness * 0.25 + transient + texture);
-          raw *= (1 + snap.flux * 0.4);
-          raw *= envelope;
+          // Real loudness IS the envelope — no procedural ceiling
+          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
+          amp *= (1 + snap.flux * 0.6);
+          if (snap.beat) amp *= (1 + snap.beat_strength * 0.5);
+          amp *= envelope; // taper at edges
+          amp *= k.amplitude / 0.55; // kinetic gate
+          amp *= exhaleMultiplier;
+          amp = Math.max(amp, isPlaying ? 0.005 : 0);
+          amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
           // ── PROCEDURAL / MIC MODE ──
           const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
           const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
           const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
-          raw = n1 + n2 + n3;
+          let raw = n1 + n2 + n3;
           raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
           raw = Math.abs(raw) * envelope;
+
+          const beatBoost = 1 + beatPulse * danceability * 0.4;
+
+          if (live.active && (liveBass + liveMids) > 0.01) {
+            const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
+            const puppeted = raw * k.amplitude * exhaleMultiplier * beatBoost;
+            const liveRaw = raw * (1 + livePresence * 0.5);
+            const liveDisp = Math.abs(liveRaw) * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
+            const jitter = (Math.random() - 0.5) * liveAir * 0.15;
+            amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
+          } else {
+            amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
+          }
+          amp = Math.min(amp, amplitudeCeiling);
+          amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
+          amp *= 1 + (Math.random() - 0.5) * 0.1;
         }
-
-        // Beat pulse modulation
-        const beatBoost = hasFabric
-          ? (1 + (snap.beat ? snap.beat_strength * 0.8 : beatPulse * 0.3))
-          : (1 + beatPulse * danceability * 0.4);
-
-        // Combine layers
-        let amp;
-        if (!hasFabric && live.active && (liveBass + liveMids) > 0.01) {
-          // Layer 3: multi-band terrain modulation (mic input)
-          const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
-          const puppeted = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
-          const liveRaw = raw * (1 + livePresence * 0.5);
-          const liveDisp = Math.abs(liveRaw) * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
-          const jitter = (Math.random() - 0.5) * liveAir * 0.15;
-          amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
-        } else {
-          amp = Math.abs(raw) * k.amplitude * exhaleMultiplier * beatBoost;
-        }
-
-        // Clamp to energy ceiling
-        amp = Math.min(amp, amplitudeCeiling);
-        amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
-
-        // 5% jitter
-        amp *= 1 + (Math.random() - 0.5) * 0.1;
 
         points.push(Math.max(0, Math.min(1, amp)));
       }
@@ -708,7 +702,7 @@ function drawOrbSmooth(ctx, pts) {
   ctx.closePath();
 }
 
-function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, getSnapshot, onClose, toggle, skip, prev }) {
+function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, getSnapshot, hasFabricData, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const historyRef = useRef([]);
@@ -896,9 +890,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const cnx = Math.cos(th), sny = Math.sin(th);
 
         let raw;
+        let amp;
         if (hasFabric) {
-          // ── FABRIC MODE: real audio data ──
-          // Map angular position to frequency band blend
+          // ── FABRIC MODE: real audio drives everything ──
           const bandPos = (i / N) * bandNames.length;
           const bandIdx = Math.floor(bandPos) % bandNames.length;
           const bandNext = (bandIdx + 1) % bandNames.length;
@@ -906,35 +900,46 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
                           snap.bands[bandNames[bandNext]] * bandFrac;
 
-          // Real loudness drives amplitude, band distribution drives shape
-          const realLoudness = snap.loudness;
-          // Onset/flux adds transient spikes
-          const transient = snap.onset ? snap.onset_strength * 0.4 : 0;
-          // Noise adds organic texture on top of real data
-          const texture = noise2D(cnx * 4 + keyOffset, sny * 4 + phase * 0.4) * 0.15;
+          // Real loudness IS the amplitude — no procedural ceiling
+          const realLoud = snap.loudness;
 
-          raw = (bandVal * 0.6 + realLoudness * 0.25 + transient + texture);
-          // Flux adds spectral change excitement
-          raw *= (1 + snap.flux * 0.5);
+          // Band shape: different frequencies push different parts of the form
+          // Noise adds organic texture so it doesn't look robotic
+          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.12;
+
+          // Onset spikes — piano hits, kicks, transients
+          const onsetSpike = snap.onset ? snap.onset_strength * 0.5 : 0;
+
+          // Base shape from frequency content + loudness envelope
+          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
+
+          // Flux excitement — spectral change makes the form wilder
+          amp *= (1 + snap.flux * 0.8);
+
+          // Beat pulse from actual beat positions
+          if (snap.beat) amp *= (1 + snap.beat_strength * 0.6);
+
+          // Kinetic gate — spool up / wind down still applies
+          amp *= k.amplitude / 0.55; // normalize so active state = 1.0
+          amp *= exhale;
+
+          // Hard floor so it doesn't vanish in quiet passages
+          amp = Math.max(amp, isPlaying ? 0.01 : 0.005);
+          amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
           // ── PROCEDURAL MODE: noise-based (fallback) ──
           const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
           const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
           const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
-          raw = n1 + n2 + n3;
+          let raw = n1 + n2 + n3;
           raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+
+          const beatBoost = 1 + beatPulse * 0.8;
+          amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
+          amp = Math.min(amp, amplitudeCeiling);
+          amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.3 : 0.02);
+          amp *= 1 + (Math.random() - 0.5) * 0.08;
         }
-
-        // Beat boost
-        const beatBoost = hasFabric
-          ? (1 + (snap.beat ? snap.beat_strength * 1.2 : beatPulse * 0.5))
-          : (1 + beatPulse * 0.8);
-
-        // Combine
-        let amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
-        amp = Math.min(amp, amplitudeCeiling);
-        amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.3 : 0.02);
-        amp *= 1 + (Math.random() - 0.5) * 0.08;
 
         points.push(Math.max(0, Math.min(1, amp)));
       }
@@ -1049,6 +1054,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }}>
           Fülkit
         </span>
+        {hasFabricData && (
+          <span style={{
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            color: "var(--color-text-dim)",
+            opacity: 0.5,
+            textTransform: "uppercase",
+            marginLeft: 4,
+          }}>
+            Fabric
+          </span>
+        )}
       </div>
 
       {/* Close button — top right */}
@@ -1218,6 +1236,7 @@ export default function FabricPage() {
           duration={currentTrack?.duration || 0}
           features={features}
           getSnapshot={getSnapshot}
+          hasFabricData={!!timeline}
           onClose={() => setVisualizing(false)}
           toggle={toggle}
           skip={skip}
