@@ -195,32 +195,34 @@ export function FabricProvider({ children }) {
     }, 300);
   }, [isDev, apiFetch]);
 
-  // Fetch Fabric timeline when a new track starts playing
+  // Fetch Fabric timeline when track changes
+  const prevTimelineTrack = useRef(null);
   useEffect(() => {
     if (isDev || !connected || !accessToken || !currentTrack?.id) return;
-    if (timelineRequested.current.has(currentTrack.id)) return;
-    timelineRequested.current.add(currentTrack.id);
+    if (prevTimelineTrack.current === currentTrack.id) return;
+    prevTimelineTrack.current = currentTrack.id;
+    setTimeline(null); // clear old data first
 
     apiFetch(`/api/fabric/timeline?id=${currentTrack.id}`).then((data) => {
+      // Only set if still the same track
+      if (prevTimelineTrack.current !== currentTrack.id) return;
       if (data?.status === "complete" && data.timeline) {
         setTimeline(data.timeline);
         setTimelineResolution(data.resolution_ms || 500);
+        console.log(`[Fabric] Timeline loaded: ${data.timeline.length} snapshots`);
       } else {
-        setTimeline(null); // fallback to procedural
+        setTimeline(null);
       }
     }).catch(() => setTimeline(null));
   }, [currentTrack?.id, connected, accessToken, isDev, apiFetch]);
 
-  // Re-fetch timeline on track change
-  useEffect(() => {
-    setTimeline(null);
-  }, [currentTrack?.id]);
-
   // Snapshot interpolator: progress → current snapshot data
   const getSnapshot = useCallback((progressFraction) => {
     if (!timeline || timeline.length === 0) return null;
-    const totalDuration = timeline[timeline.length - 1].t;
-    const currentTime = progressFraction * totalDuration;
+    // Use Spotify's track duration to map progress, clamped to timeline range
+    const trackDurationSec = currentTrack?.duration || timeline[timeline.length - 1].t;
+    const timelineDuration = timeline[timeline.length - 1].t;
+    const currentTime = Math.min(progressFraction * trackDurationSec, timelineDuration);
     // Find surrounding snapshots
     let lo = 0, hi = timeline.length - 1;
     while (lo < hi - 1) {
@@ -249,7 +251,7 @@ export function FabricProvider({ children }) {
       onset: b.onset || false,
       onset_strength: b.onset_strength || 0,
     };
-  }, [timeline]);
+  }, [timeline, currentTrack?.duration]);
 
   // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
   useEffect(() => {

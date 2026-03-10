@@ -201,6 +201,11 @@ function SignalTerrain({
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
   const [canvasWidth, setCanvasWidth] = useState(600);
+  // Keep latest props in refs for the render loop
+  const getSnapshotRef = useRef(getSnapshot);
+  getSnapshotRef.current = getSnapshot;
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
 
   // Layer 1: kinetic state machine
   const kineticRef = useRef({
@@ -478,7 +483,9 @@ function SignalTerrain({
       }
 
       // ── Generate terrain points ──
-      const snap = getSnapshot ? getSnapshot(progress) : null;
+      const gsFn = getSnapshotRef.current;
+      const curProgress = progressRef.current;
+      const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
       const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
       const points = [];
@@ -708,6 +715,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
   const envelopeRef = useRef({ trackId: null, envelope: null });
+  // Keep latest props in refs so the render loop always reads current values
+  const getSnapshotRef = useRef(getSnapshot);
+  getSnapshotRef.current = getSnapshot;
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
   const kineticRef = useRef({
     amplitude: 0.08,
     target: 0.08,
@@ -870,7 +882,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // ── Generate circular terrain points ──
       // When Fabric timeline data is available, use REAL per-second audio data.
       // Otherwise fall back to procedural noise.
-      const snap = getSnapshot ? getSnapshot(progress) : null;
+      const gsFn = getSnapshotRef.current;
+      const curProgress = progressRef.current;
+      const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
       const points = [];
 
