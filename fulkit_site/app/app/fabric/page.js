@@ -841,7 +841,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // Center drift — wider wander
       const cx = w/2 + s.noise(s.time*0.12, 50) * dim * 0.03;
       const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.03;
-      const rot = s.time * 0.04;
+      const rot = s.time * 0.07;
 
       // Tempo-relative scaling — slow music moves slowly
       const tempoScale = bpm / 120;
@@ -983,7 +983,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const pts = [];
         for (let i = 0; i < N; i++) {
           const a = (i/N)*Math.PI*2+rot;
-          pts.push({ x: cx+Math.cos(a)*(layer.r[i]+layer.d[i]-rShift), y: cy+Math.sin(a)*(layer.r[i]+layer.d[i]-rShift) });
+          pts.push({ x: cx+Math.cos(a)*(layer.r[i]+layer.d[i]+rShift), y: cy+Math.sin(a)*(layer.r[i]+layer.d[i]+rShift) });
         }
 
         const edgeAlpha = alpha * 0.8 * (0.4 + s.amp*0.6);
@@ -1016,19 +1016,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           }
         }
 
-        // Inward reflection
-        if (alpha > 0.06) {
-          const iPts = [];
-          for (let i = 0; i < N; i++) {
-            const a = (i/N)*Math.PI*2+rot;
-            const r = Math.max(0, layer.r[i] - layer.d[i]*0.35 + rShift*0.3);
-            iPts.push({ x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r });
-          }
-          drawOrbSmooth(ctx, iPts);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha*0.04})`;
-          ctx.lineWidth = baseLw * ageFade * 2.5;
-          ctx.stroke();
-        }
+        // (reflection removed — was causing center crossover)
       }
 
       animRef.current = requestAnimationFrame(draw);
