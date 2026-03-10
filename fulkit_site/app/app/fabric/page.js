@@ -902,8 +902,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const curVizStyle = vizStyleRef.current;
 
       // ══════════════════════════════════════════
-      // STYLE 2: Deep Amoeba — spring dynamics, tendrils, tracers
-      // Faithful port of fullscreen-viz-*v1.jsx variant A
+      // STYLE 2: Deep Amoeba — tendrils, tracers, clip contours
+      // Uses SHARED kinetic state machine (k.amplitude, beatPulse, exhale)
       // ══════════════════════════════════════════
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
@@ -913,41 +913,17 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const MAX_HITS = 6;
         const CAP_INTERVAL = 3;
 
-        // Own time counter — advances ~1.0/sec at 60fps (matching original)
-        s2.time += dt;
+        // Own time counter for noise evolution (~1.0/sec)
+        if (k.state !== "idle") s2.time += dt;
 
-        // Spring amplitude — bouncy organic feel (from original)
-        const springTarget = isPlaying ? (0.35 + energy * 0.45) : 0.0;
-        s2.ampVel += (springTarget - s2.amp) * 0.055;
-        s2.ampVel *= 0.83;
-        s2.amp += s2.ampVel;
-        s2.amp = Math.max(0, Math.min(1, s2.amp));
-
-        // Center — fixed, no drift
         const cx = w / 2;
         const cy = h / 2;
         const rot = s2.time * 0.04;
-
         const col = [62, 60, 56];
         const lw = 1.0 + acousticness * 1.3;
 
-        // Beat — original style: pow(1-phase, 3) * danceability
-        const s2msPerBeat = 60000 / bpm;
-        const s2bPhase = isPlaying ? ((progress * duration * 1000) % s2msPerBeat) / s2msPerBeat : 1;
-        const s2beat = Math.pow(1 - s2bPhase, 3) * danceability;
-
-        // Silent state — thin resting circle
-        if (s2.amp < 0.03) {
-          ctx.clearRect(0, 0, w, h);
-          const silentAlpha = 0.12 + s2.amp * 2;
-          ctx.beginPath();
-          ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${silentAlpha})`;
-          ctx.lineWidth = 0.6;
-          ctx.stroke();
-          animRef.current = requestAnimationFrame(draw);
-          return;
-        }
+        // Normalized amplitude for style 2 scaling (active = ~1.0)
+        const s2amp = k.amplitude / 0.55;
 
         // Build displacement arrays
         const disp = new Float32Array(S2_N);
@@ -962,7 +938,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const d1 = noise2D(nx * 0.3, ny * 0.3 + s2.time * 0.002);
           const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + s2.time * 0.005);
           const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
-          const warp = s2.amp * 0.55;
+          const warp = s2amp * 0.55;
           const irregularity = 0.5 + energy * 0.5;
           radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * warp);
 
@@ -987,9 +963,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharpness * 0.6);
           }
 
-          // Original formula: nv * amp * energy * beatBoost * exhale * baseR * dispScale
-          const beatBoost = 1 + s2beat * 0.7;
-          disp[i] = nv * s2.amp * energy * beatBoost * exhale * baseR * 0.85;
+          const beatBoost = 1 + beatPulse * 0.7;
+          disp[i] = nv * s2amp * energy * beatBoost * exhale * baseR * 0.85;
           disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
         }
 
@@ -1007,15 +982,17 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           radii.set(tmpR);
         }
 
-        // Capture tracers
+        // Capture tracers — only when active/spooling
+        const isS2Active = k.state === "active" || k.state === "spool-up" || k.state === "skip-spool";
+        const isS2Winding = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
         s2.frame++;
-        if (s2.frame % CAP_INTERVAL === 0 && s2.amp > 0.01) {
+        if (s2.frame % CAP_INTERVAL === 0 && isS2Active) {
           s2.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), op: 0.6, age: 0, hit: false });
           if (s2.tracers.length > MAX_TRACE) s2.tracers.shift();
         }
 
-        // Hit layers on strong beats
-        if (s2beat > 0.65 && isPlaying && s2.frame % CAP_INTERVAL === 0) {
+        // Hit layers on strong beats (only when active)
+        if (beatPulse > 0.65 && isS2Active && s2.frame % CAP_INTERVAL === 0) {
           const hd = new Float32Array(S2_N);
           for (let i = 0; i < S2_N; i++) hd[i] = disp[i] * 2.0;
           for (let pass = 0; pass < 2; pass++) {
@@ -1029,29 +1006,46 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           if (s2.hits.length > MAX_HITS) s2.hits.shift();
         }
 
-        // Age tracers and hits
-        for (const l of s2.tracers) { l.age++; l.op *= 0.96; }
-        for (const l of s2.hits) { l.age++; l.op *= 0.984; }
+        // Age and drain — faster when winding down, drain in idle
+        const ageRate = isS2Winding ? 0.92 : 0.96;
+        const hitAgeRate = isS2Winding ? 0.95 : 0.984;
+        for (const l of s2.tracers) { l.age++; l.op *= ageRate; }
+        for (const l of s2.hits) { l.age++; l.op *= hitAgeRate; }
         s2.tracers = s2.tracers.filter(l => l.op > 0.015);
         s2.hits = s2.hits.filter(l => l.op > 0.015);
+        // Drain in idle
+        if (k.state === "idle") {
+          if (s2.tracers.length > 0) s2.tracers.shift();
+          if (s2.hits.length > 0) s2.hits.shift();
+        }
 
         // ── RENDER ──
         ctx.clearRect(0, 0, w, h);
 
-        // Interior tendrils — curved lines from opposing points through center
-        if (s2.amp > 0.02) {
-          const interiorAlpha = s2.amp * 0.12;
+        // Silent/idle state — thin resting circle
+        if (s2amp < 0.05 && s2.tracers.length === 0 && s2.hits.length === 0) {
+          const silentAlpha = 0.12;
+          ctx.beginPath();
+          ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${silentAlpha})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+          animRef.current = requestAnimationFrame(draw);
+          return;
+        }
+
+        // Interior tendrils
+        if (s2amp > 0.05) {
+          const interiorAlpha = s2amp * 0.12;
           for (let i = 0; i < S2_N; i += 7) {
             const opp = (i + Math.floor(S2_N / 2)) % S2_N;
             const a1 = (i / S2_N) * Math.PI * 2 + rot;
             const a2 = (opp / S2_N) * Math.PI * 2 + rot;
             const r1 = radii[i] * 0.6 + disp[i] * 0.3;
             const r2 = radii[opp] * 0.6 + disp[opp] * 0.3;
-            const x1 = cx + Math.cos(a1) * r1;
-            const y1 = cy + Math.sin(a1) * r1;
-            const x2 = cx + Math.cos(a2) * r2;
-            const y2 = cy + Math.sin(a2) * r2;
-            const cpOff = noise2D(i * 0.5, s2.time * 0.3) * baseR * 0.3 * s2.amp;
+            const x1 = cx + Math.cos(a1) * r1, y1 = cy + Math.sin(a1) * r1;
+            const x2 = cx + Math.cos(a2) * r2, y2 = cy + Math.sin(a2) * r2;
+            const cpOff = noise2D(i * 0.5, s2.time * 0.3) * baseR * 0.3 * s2amp;
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.7, x2, y2);
@@ -1064,7 +1058,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // All layers sorted oldest-first
         const allLayers = [
           ...s2.tracers, ...s2.hits,
-          { d: disp, r: radii, op: 1.0, age: 0, hit: false },
+          ...(s2amp > 0.02 ? [{ d: disp, r: radii, op: 1.0, age: 0, hit: false }] : []),
         ].sort((a, b) => b.age - a.age);
 
         for (const layer of allLayers) {
@@ -1082,8 +1076,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
           }
 
-          // Clip-based inner bleed — soft shadow inside, no outward halo
-          const edgeAlpha = alpha * 0.8 * (0.4 + s2.amp * 0.6);
+          // Clip-based inner bleed
+          const edgeAlpha = alpha * 0.8 * (0.4 + s2amp * 0.6);
           drawOrbSmooth(ctx, pts);
           ctx.save();
           ctx.clip();
@@ -1092,14 +1086,14 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.stroke();
           ctx.restore();
 
-          // Sharp contour — bolder when louder
+          // Sharp contour
           drawOrbSmooth(ctx, pts);
-          const contourPeak = 0.5 + s2.amp * 0.45;
+          const contourPeak = 0.5 + s2amp * 0.45;
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * (layer.age === 0 ? contourPeak : 0.45)})`;
-          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s2.amp * 0.5 : 0.7));
+          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s2amp * 0.5 : 0.7));
           ctx.stroke();
 
-          // Inward reflection — soft shadow
+          // Inward reflection
           if (alpha > 0.06) {
             const iPts = [];
             for (let i = 0; i < S2_N; i++) {
@@ -1291,7 +1285,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     }}>
       <canvas
         ref={canvasRef}
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
       />
 
       {/* Brand — top left */}
@@ -1328,10 +1322,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[1, 2, 3].map((n) => (
+        {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 2) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} } }}
+            onClick={() => { if (n <= 2) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
