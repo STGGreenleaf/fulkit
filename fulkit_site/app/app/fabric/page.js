@@ -1629,11 +1629,7 @@ export default function FabricPage() {
 
   // Debug — remove after confirmed working
   useEffect(() => {
-    if (playlists.length > 0) {
-      console.log("[fabric page] first playlist:", JSON.stringify(playlists[0]));
-      console.log("[fabric page] keys:", Object.keys(playlists[0]));
-    }
-    console.log("[fabric page] playlists:", playlists.length, "filtered:", playlists.filter(pl => pl.tracks > 0).length);
+    console.log("[fabric page] playlists:", playlists.length);
   }, [playlists]);
 
   // Drag handlers for the setlist
@@ -1984,7 +1980,7 @@ export default function FabricPage() {
               {/* Crate shelf — horizontal scroll */}
               <Label>Crates</Label>
 
-              {playlists.filter(pl => pl.tracks > 0).length === 0 && (
+              {playlists.length === 0 && (
                 <div style={{
                   padding: "var(--space-6) var(--space-4)",
                   textAlign: "center",
@@ -2007,7 +2003,7 @@ export default function FabricPage() {
                 overflowX: "auto",
                 paddingBottom: "var(--space-2)",
               }}>
-                {playlists.filter(pl => pl.tracks > 0).map(pl => {
+                {playlists.map(pl => {
                   const isOpen = expandedMix === pl.id;
                   return (
                     <button
@@ -2062,7 +2058,7 @@ export default function FabricPage() {
                         letterSpacing: "var(--letter-spacing-wider)",
                         textTransform: "uppercase",
                       }}>
-                        {pl.tracks} songs
+                        {pl.trackCount} songs
                       </div>
                     </button>
                   );
