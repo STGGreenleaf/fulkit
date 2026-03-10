@@ -805,24 +805,24 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") {
         k.state = "spool-up"; k.stateStart = now; k.target = 0.55;
       } else if (!isPlaying && k.prevPlaying) {
-        k.state = "wind-down"; k.stateStart = now; k.target = 0.12;
+        k.state = "wind-down"; k.stateStart = now; k.target = 0.0;
       }
       k.prevPlaying = isPlaying;
 
       if (k.state === "spool-up" && elapsed > 600) k.state = "active";
-      else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
+      else if (k.state === "wind-down" && elapsed > 1200) k.state = "idle";
       else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
       else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.55; }
-      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.12; }
+      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.0; }
 
       const smoothRate = k.state === "skip-cut" ? 0.2 : 0.06;
       k.amplitude += (k.target - k.amplitude) * smoothRate;
 
-      // Exhale
+      // Exhale — fade out over last 10 seconds of track
       let exhale = 1;
       if (isPlaying && duration > 0 && progress > 0) {
         const remaining = duration * (1 - progress);
-        if (remaining < 6 && remaining > 0) exhale = 0.3 + 0.7 * (remaining / 6);
+        if (remaining < 10 && remaining > 0) exhale = Math.pow(remaining / 10, 1.5);
       }
 
       // Envelope
@@ -863,12 +863,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
       const sharpness = 1 - valence;
 
-      // Phase advance — BPM-synced (60fps), freeze when idle
+      // Phase advance — BPM-synced (60fps), slow during wind-down, stop at idle
       const tempoScale = bpm / 120;
       const beatsPerSec = bpm / 60;
-      const shouldAnimate = k.state !== "idle";
-      if (shouldAnimate) {
-        const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 * tempoScale : 0.002;
+      if (k.state !== "idle") {
+        const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 * tempoScale : 0.001;
         phaseRef.current += phaseStep;
       }
       const phase = phaseRef.current;
@@ -944,10 +943,23 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         points.push(Math.max(0, Math.min(1, amp)));
       }
 
-      // Only push new layers when animating — freeze in place when idle
-      if (shouldAnimate) {
+      // Wind-down: keep pushing frames (shrinking amplitude) + drain old layers
+      // Idle: drain remaining layers until only a thin resting ring remains
+      const isWindingDown = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
+      if (k.state === "active" || k.state === "spool-up" || k.state === "skip-spool") {
+        // Active: normal layer management
         historyRef.current.push(points);
         if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
+      } else if (isWindingDown) {
+        // Wind-down: push quieting frames + drain 2 old layers per frame for fade
+        historyRef.current.push(points);
+        if (historyRef.current.length > 3) historyRef.current.shift();
+        if (historyRef.current.length > 3) historyRef.current.shift();
+      } else if (k.state === "idle") {
+        // Idle: drain remaining layers gradually
+        if (historyRef.current.length > 1) {
+          historyRef.current.shift();
+        }
       }
 
       // ── Render ──
