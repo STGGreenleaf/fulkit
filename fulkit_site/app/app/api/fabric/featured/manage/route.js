@@ -27,7 +27,7 @@ export async function POST(request) {
     }
 
     // Fetch playlist from Spotify
-    const playlistRes = await fabricFetch(userId, `/playlists/${playlistId}?fields=name,description,tracks.items(track(id,name,artists,duration_ms,external_ids)),tracks.total`);
+    const playlistRes = await fabricFetch(userId, `/playlists/${playlistId}`);
     if (!playlistRes.ok) {
       return Response.json({ error: "Failed to fetch playlist from Spotify" }, { status: 400 });
     }

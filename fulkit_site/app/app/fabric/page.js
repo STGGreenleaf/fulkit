@@ -2073,7 +2073,6 @@ export default function FabricPage() {
                           minWidth: 140,
                           background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                           border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                          borderLeft: isOpen ? "2px solid var(--color-text)" : "1px solid var(--color-border-light)",
                           borderRadius: "var(--radius-lg)",
                           cursor: "pointer",
                           fontFamily: "var(--font-primary)",
