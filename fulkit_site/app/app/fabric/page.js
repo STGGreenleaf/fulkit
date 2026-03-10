@@ -709,10 +709,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     };
   }, [trackId, features, duration]);
 
-  // New noise + clear history on track change
+  // New noise on track change — history fades naturally via kinetic wind-down
   useEffect(() => {
     noiseRef.current = createNoise2D();
-    historyRef.current = [];
     const k = kineticRef.current;
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
       k.state = "skip-cut";
@@ -834,11 +833,14 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
       const sharpness = 1 - valence;
 
-      // Phase advance — BPM-synced (60fps), tempo-scaled
+      // Phase advance — BPM-synced (60fps), freeze when idle
       const tempoScale = bpm / 120;
       const beatsPerSec = bpm / 60;
-      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 * tempoScale : 0.004;
-      phaseRef.current += phaseStep;
+      const shouldAnimate = k.state !== "idle";
+      if (shouldAnimate) {
+        const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 * tempoScale : 0.002;
+        phaseRef.current += phaseStep;
+      }
       const phase = phaseRef.current;
 
       // ── Generate circular terrain points ──
@@ -869,8 +871,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         points.push(Math.max(0, Math.min(1, amp)));
       }
 
-      historyRef.current.push(points);
-      if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
+      // Only push new layers when animating — freeze in place when idle
+      if (shouldAnimate) {
+        historyRef.current.push(points);
+        if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
+      }
 
       // ── Render ──
       ctx.clearRect(0, 0, w, h);
@@ -918,37 +923,32 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        // ── Inward mountains — flame toward center ──
-        const inMorph = (1 - age) * 0.35; // older layers get shape distortion
+        // ── Inward reflection — gentle flame toward center ──
+        const inMorph = (1 - age) * 0.12;
         const inPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
           const cnTh = Math.cos(th), snTh = Math.sin(th);
           const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
 
-          // Strong displacement — mountains push inward
-          let inDisp = data[i] * baseR * 1.4;
-          inDisp *= (1 + beatPulse * 0.6); // beat makes inner peaks jab toward center
+          let inDisp = data[i] * baseR * 0.85;
+          inDisp *= (1 + beatPulse * 0.25);
 
-          // Shape evolution — older inner layers warp differently (offset seed +500)
           if (inMorph > 0.01) {
             inDisp += noise2D(cnTh * 3 + l * 0.7 + 500, snTh * 3 + l * 0.7 + 500) * baseR * inMorph;
           }
 
-          // Stack inward — older layers pushed deeper toward center
-          const inShift = (layerCount - 1 - l) * 3.0;
-          const r = Math.max(baseR * 0.04, aR - inDisp - inShift);
+          const inShift = (layerCount - 1 - l) * 1.2;
+          const r = Math.max(baseR * 0.06, aR - inDisp - inShift);
           inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
         }
 
         drawOrbSmooth(ctx, inPts);
-        // Flame alpha: darkest at rim (newest), fading lighter toward center (oldest)
-        const inAlpha = 0.04 + age * age * 0.45;
-        const inLw = (0.3 + age * 1.2) * (0.7 + acousticness * 0.6);
-        const drawInAlpha = isNewest ? inAlpha * (1 + beatPulse * 0.4) : inAlpha;
-        const drawInLw = isNewest ? inLw * (1 + beatPulse * 0.3) : inLw;
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${drawInAlpha})`;
-        ctx.lineWidth = drawInLw;
+        // Fade to invisible toward center
+        const inAlpha = 0.01 + age * age * 0.32;
+        const inLw = (0.2 + age * 0.9) * (0.7 + acousticness * 0.6);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.3) : inAlpha})`;
+        ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.2) : inLw;
         ctx.stroke();
       }
     }
