@@ -54,10 +54,10 @@ export async function POST(request) {
     }
 
     // Insert tracks
-    const items = playlist.tracks?.items || [];
+    const items = playlist.items?.items || [];
     const crateTracks = items
-      .map((item, i) => {
-        const t = item.track;
+      .map((entry, i) => {
+        const t = entry.item;
         if (!t || !t.id) return null;
         return {
           crate_id: crate.id,

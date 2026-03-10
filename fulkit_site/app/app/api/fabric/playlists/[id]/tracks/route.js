@@ -8,18 +8,15 @@ export async function GET(request, { params }) {
   if (!id) return Response.json({ error: "Playlist ID required" }, { status: 400 });
 
   try {
-    const res = await fabricFetch(
-      userId,
-      `/playlists/${id}/tracks?limit=50&fields=items(track(id,name,artists,album(name,images),duration_ms,uri))`
-    );
+    const res = await fabricFetch(userId, `/playlists/${id}/items?limit=50`);
 
     if (res.error) return Response.json({ error: res.error }, { status: res.status });
 
     const data = await res.json();
     const tracks = (data.items || [])
-      .filter((item) => item.track && item.track.id)
-      .map((item) => {
-        const t = item.track;
+      .filter((entry) => entry.item && entry.item.id)
+      .map((entry) => {
+        const t = entry.item;
         return {
           id: t.id,
           title: t.name,

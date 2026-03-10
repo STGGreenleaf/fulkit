@@ -19,7 +19,7 @@ export async function GET(request) {
   const playlists = (data.items || []).map((pl) => ({
     id: pl.id,
     name: pl.name,
-    trackCount: typeof pl.tracks === "object" ? (pl.tracks.total ?? 0) : (pl.tracks ?? 0),
+    trackCount: typeof pl.items === "object" ? (pl.items.total ?? 0) : (pl.items ?? 0),
     description: pl.description || "",
     image: pl.images?.[0]?.url || null,
   }));
