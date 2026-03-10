@@ -5,6 +5,32 @@
 
 ---
 
+## Session 6 — 2026-03-09: Orb polish, brand refresh, Context Engine, Whispers
+
+### What was built
+- **Orb Visualizer refinements** — smaller (0.24 viewport), quieter noise, 48 tracer layers, denser fill, smoother reflections with quadratic curves. Fülkit branding top-left, bigger track info bottom-left.
+- **Visualize button** — restored to Deck transport row (Maximize2 icon, circled style)
+- **Brand refresh** — umlaut2.png → all icon assets: favicon.ico (16+32), apple-touch-icon (180), icon-192, icon-512, web manifest, layout metadata. Logo size fixed at 22px (no expand/collapse jump).
+- **Phase 2.5: Context Gate** — `hasContext` derived in auth (onboarded OR notes > 0). Dashboard nudge card ("Take the quiz or upload files"), chat soft nudge, onboarding "I'll do this later" skip link.
+- **Phase 3: Claude Action Tools** — actions_create, actions_list, actions_update wired into chat API. Source="Chat" tagging. Claude suggests actions naturally.
+- **Phase 5: Context Engine** — memory_save/list/forget tools (preferences table with memory: prefix). notes_search tool (keyword ilike). Cross-session context (recent 10 conversation titles in system prompt). Smart memory behavior (Claude auto-saves facts, uses memories naturally).
+- **Whispers** — GET /api/whispers generates 2 proactive suggestions from user context (actions, memories, conversations). 12hr cache in preferences. Dashboard wired to show real whispers.
+- **Owner portal** — "Import project docs" button: fetches 7 md files from GitHub, imports as notes via /api/notes/import.
+
+### Decisions locked
+- Memory stored as `memory:key` in preferences table (no new table needed)
+- Whispers cached 12hrs in preferences as `cached_whispers` JSON
+- Context Gate is soft (nudge, not block) — nothing prevents usage
+- Logo always 22px in sidebar
+- Orb base radius = 0.24 of viewport min dimension
+
+### What's next
+- Phase 4: Dogfood (import docs via owner button, use daily)
+- Phase 5 advanced: pgvector embeddings, codebase ingestion, RAG pipeline
+- Phase 6: More MCP integrations
+
+---
+
 ## Session 5 — 2026-03-06: Settings cleanup, Chat persistence, Actions page
 
 ### What was built
