@@ -889,9 +889,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const age = l / Math.max(1, layerCount - 1); // 0=oldest, 1=newest
         const outShift = (layerCount - 1 - l) * 4.5; // older → pushed way outward
 
-        // Alpha/width — higher floor so distant layers stay visible
-        const alpha = 0.025 + age * age * 0.15;
-        const baseLw = 0.3 + age * 1.0;
+        // Alpha/width — bold newest, visible oldest
+        const alpha = 0.03 + age * age * 0.55;
+        const baseLw = 0.4 + age * 1.4;
         const lw = baseLw * (0.7 + acousticness * 0.6);
 
         // ── Outward mountains ──
@@ -930,8 +930,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }
 
         drawOrbSmooth(ctx, inPts);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.35})`;
-        ctx.lineWidth = lw * 0.6;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.5})`;
+        ctx.lineWidth = lw * 0.7;
         ctx.stroke();
       }
     }
