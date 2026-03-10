@@ -1974,6 +1974,24 @@ export default function FabricPage() {
             >
               {/* Crate shelf — horizontal scroll */}
               <Label>Crates</Label>
+
+              {playlists.filter(pl => pl.tracks > 0).length === 0 && (
+                <div style={{
+                  padding: "var(--space-6) var(--space-4)",
+                  textAlign: "center",
+                  border: "1px dashed var(--color-border-light)",
+                  borderRadius: "var(--radius-lg)",
+                }}>
+                  <Package size={20} strokeWidth={1.2} style={{ color: "var(--color-text-dim)", marginBottom: "var(--space-2)" }} />
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                    Connect Spotify to browse your playlists
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>
+                    Settings → Sources → Spotify
+                  </div>
+                </div>
+              )}
+
               <div style={{
                 display: "flex",
                 gap: "var(--space-2)",
