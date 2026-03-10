@@ -654,44 +654,17 @@ function SignalTerrain({
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// ORB VISUALIZER — fullscreen circular waveform
-// Same data as Signal Terrain, wrapped radially.
-// ═══════════════════════════════════════════════════════
-// Deep Amoeba v3 — zoned perimeter, variable-weight contour
 
-function createOrbNoise(seed) {
-  const perm = new Uint8Array(512);
-  const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = i;
-  let s = seed || Math.random() * 65536;
-  for (let i = 255; i > 0; i--) {
-    s = (s * 16807) % 2147483647;
-    const j = s % (i + 1);
-    [p[i], p[j]] = [p[j], p[i]];
-  }
-  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
-  const grad2 = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
-  return function(x, y) {
-    const F2 = 0.5*(Math.sqrt(3)-1), G2 = (3-Math.sqrt(3))/6;
-    const ss = (x+y)*F2;
-    const i = Math.floor(x+ss), j = Math.floor(y+ss);
-    const t = (i+j)*G2;
-    const x0 = x-(i-t), y0 = y-(j-t);
-    const i1 = x0>y0?1:0, j1 = x0>y0?0:1;
-    const x1 = x0-i1+G2, y1 = y0-j1+G2;
-    const x2 = x0-1+2*G2, y2 = y0-1+2*G2;
-    const ii = i&255, jj = j&255;
-    let n0=0,n1=0,n2=0;
-    let t0=0.5-x0*x0-y0*y0;
-    if(t0>0){t0*=t0;const gi=perm[ii+perm[jj]]%8;n0=t0*t0*(grad2[gi][0]*x0+grad2[gi][1]*y0);}
-    let t1=0.5-x1*x1-y1*y1;
-    if(t1>0){t1*=t1;const gi=perm[ii+i1+perm[jj+j1]]%8;n1=t1*t1*(grad2[gi][0]*x1+grad2[gi][1]*y1);}
-    let t2=0.5-x2*x2-y2*y2;
-    if(t2>0){t2*=t2;const gi=perm[ii+1+perm[jj+1]]%8;n2=t2*t2*(grad2[gi][0]*x2+grad2[gi][1]*y2);}
-    return 70*(n0+n1+n2);
-  };
-}
+// ═══════════════════════════════════════════════════════
+// ORB VISUALIZER — Radial Terrain
+// Signal Terrain's exact engine wrapped into a seamless
+// 360° circle. Mountains push outward, reflections
+// mirror inward. Same noise, same alpha/weight curves,
+// same stacked-mountain aesthetic.
+// ═══════════════════════════════════════════════════════
+
+const ORB_R_POINTS = 100;
+const ORB_R_LAYERS = 35;
 
 function drawOrbSmooth(ctx, pts) {
   if (pts.length < 3) return;
@@ -704,37 +677,23 @@ function drawOrbSmooth(ctx, pts) {
   ctx.closePath();
 }
 
-function smoothOrbArr(arr, passes) {
-  const len = arr.length;
-  for (let p = 0; p < passes; p++) {
-    const tmp = new Float32Array(len);
-    for (let i = 0; i < len; i++) {
-      tmp[i] = arr[i]*0.5 + arr[(i-1+len)%len]*0.25 + arr[(i+1)%len]*0.25;
-    }
-    arr.set(tmp);
-  }
-}
-
-const KEY_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-
-const ORB_POINTS = 72;
-const ORB_LAYERS = 22;
-const ORB_MAX_HITS = 6;
-
 function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, duration, features, onClose, toggle, skip, prev }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
+  const historyRef = useRef([]);
+  const phaseRef = useRef(0);
+  const noiseRef = useRef(createNoise2D());
   const envelopeRef = useRef({ trackId: null, envelope: null });
-  const stateRef = useRef({
-    noise: createOrbNoise(1), noise2: createOrbNoise(2),
-    noise3: createOrbNoise(3), noise4: createOrbNoise(4),
-    noise5: createOrbNoise(5),
-    time: 0, amp: 0, ampVel: 0,
-    tracers: [], hits: [], frame: 0,
-    beatAccumulator: 0, lastTs: 0,
+  const kineticRef = useRef({
+    amplitude: 0.08,
+    target: 0.08,
+    state: "idle",
+    stateStart: 0,
+    prevPlaying: false,
+    prevTrackId: null,
   });
 
-  // Generate envelope for this track
+  // Envelope — same as terrain
   useEffect(() => {
     if (!trackId) return;
     if (envelopeRef.current.trackId === trackId) return;
@@ -748,16 +707,17 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     };
   }, [trackId, features, duration]);
 
-  // Re-seed noise on track change
+  // New noise + clear history on track change
   useEffect(() => {
-    const keyStr = features?.key || "C";
-    const keyIdx = KEY_NAMES.indexOf(keyStr.replace("m","").replace("♯","#"));
-    const k = (keyIdx >= 0 ? keyIdx : 0) * 100;
-    const s = stateRef.current;
-    s.noise = createOrbNoise(k+1); s.noise2 = createOrbNoise(k+2);
-    s.noise3 = createOrbNoise(k+3); s.noise4 = createOrbNoise(k+4);
-    s.noise5 = createOrbNoise(k+5);
-    s.tracers = []; s.hits = []; s.time = 0; s.frame = 0;
+    noiseRef.current = createNoise2D();
+    historyRef.current = [];
+    const k = kineticRef.current;
+    if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
+      k.state = "skip-cut";
+      k.stateStart = performance.now();
+      k.target = 0;
+    }
+    k.prevTrackId = trackId;
   }, [trackId]);
 
   // Keyboard: ESC to close, Space play/pause, arrows skip
@@ -772,253 +732,190 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, toggle, skip, prev]);
 
-  // Resize canvas to viewport (DPR-aware)
+  // Canvas DPR setup
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
       const dpr = window.devicePixelRatio || 1;
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
-      canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight + "px";
-      const ctx = canvas.getContext("2d");
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  // Render loop — Deep Amoeba v3
+  // Render loop — Radial Terrain
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     let running = true;
-    const N = ORB_POINTS;
+    const N = ORB_R_POINTS;
 
     function draw(ts) {
       if (!running) return;
-      const s = stateRef.current;
-      const dt = s.lastTs > 0 ? Math.min((ts - s.lastTs) / 1000, 0.05) : 0.016;
-      s.lastTs = ts;
+      animRef.current = requestAnimationFrame(draw);
+
+      const noise2D = noiseRef.current;
+      const k = kineticRef.current;
       const w = window.innerWidth, h = window.innerHeight;
       const dim = Math.min(w, h);
-      const baseR = dim * 0.22;
+      const baseR = dim * 0.18;
 
-      s.time += 0.016;
+      // ── Kinetic state machine (mirrors terrain exactly) ──
+      const now = ts;
+      const elapsed = now - k.stateStart;
 
-      // Audio features (ReccoBeats 0-100 → 0-1)
-      const bpm = features?.bpm || 120;
-      const energy = (features?.energy || 50) / 100;
-      const dance = (features?.danceability || 50) / 100;
-      const valence = (features?.valence || 50) / 100;
-      const acoustic = (features?.acousticness || 30) / 100;
-      const loud = features?.loudness != null ? Math.max(0, (features.loudness + 35) / 35) : 0.65;
-      const speech = 0.04;
-      const keyStr = features?.key || "C";
-      const keyIdx = KEY_NAMES.indexOf(keyStr.replace("m","").replace("♯","#"));
-      const keyVal = keyIdx >= 0 ? keyIdx : 0;
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") {
+        k.state = "spool-up"; k.stateStart = now; k.target = 0.55;
+      } else if (!isPlaying && k.prevPlaying) {
+        k.state = "wind-down"; k.stateStart = now; k.target = 0.12;
+      }
+      k.prevPlaying = isPlaying;
+
+      if (k.state === "spool-up" && elapsed > 600) k.state = "active";
+      else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
+      else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
+      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.55; }
+      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.12; }
+
+      const smoothRate = k.state === "skip-cut" ? 0.2 : 0.06;
+      k.amplitude += (k.target - k.amplitude) * smoothRate;
+
+      // Exhale
+      let exhale = 1;
+      if (isPlaying && duration > 0 && progress > 0) {
+        const remaining = duration * (1 - progress);
+        if (remaining < 6 && remaining > 0) exhale = 0.3 + 0.7 * (remaining / 6);
+      }
 
       // Envelope
       const env = envelopeRef.current.envelope;
       let envelopeValue = 1;
       if (env && env.length > 0 && isPlaying && progress > 0) {
-        const barIndex = Math.min(env.length - 1, Math.floor(progress * env.length));
-        envelopeValue = env[barIndex];
+        envelopeValue = env[Math.min(env.length - 1, Math.floor(progress * env.length))];
       }
-      const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
-      const effectiveEnergy = hasEnvelope ? energy * envelopeValue : energy;
 
-      // Spring amplitude — punchy, snappy response. Resting shape when paused.
-      const tgt = isPlaying ? (0.5 + effectiveEnergy * 0.5) : 0.12;
-      s.ampVel += (tgt - s.amp) * (isPlaying ? 0.08 : 0.03);
-      s.ampVel *= 0.78;
-      s.amp += s.ampVel;
-      s.amp = Math.max(0, Math.min(1, s.amp));
+      // ── Audio features ──
+      const bpm = features?.bpm || 100;
+      const energy = (features?.energy || 50) / 100;
+      const valence = (features?.valence || 50) / 100;
+      const danceability = (features?.danceability || 50) / 100;
+      const loudness = features?.loudness || -15;
+      const acousticness = (features?.acousticness || 30) / 100;
+      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
 
-      // Center drift — wider wander
-      const cx = w/2 + s.noise(s.time*0.12, 50) * dim * 0.03;
-      const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.03;
-      const rot = s.time * 0.07;
-
-      // Tempo-relative scaling — slow music moves slowly
-      const tempoScale = bpm / 120;
-
-      // Beat — local clock with soft Spotify sync (frame-accurate, no polling drift)
+      // Beat
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
-      if (isPlaying) {
-        s.beatAccumulator += dt * (bpm / 60);
-        // Soft-correct toward Spotify's reported phase
-        const spotifyPhase = (progressMs % msPerBeat) / msPerBeat;
-        const localPhase = s.beatAccumulator % 1;
-        const diff = spotifyPhase - localPhase;
-        const wrappedDiff = diff - Math.round(diff);
-        s.beatAccumulator += wrappedDiff * 0.03;
-      }
-      const bPhase = isPlaying ? (s.beatAccumulator % 1) : 1;
-      const beatCurve = acoustic > 0.5 ? 2.0 : 2.5; // sharper attack for acoustic
-      const beatStrength = Math.max(dance, 0.35 + acoustic * 0.2); // piano gets a floor
-      const beat = Math.pow(1 - bPhase, beatCurve) * beatStrength;
+      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
+      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
 
-      // Exhale
-      const remainingMs = (duration * 1000) - progressMs;
-      const exhale = remainingMs < 6000 && remainingMs > 0 ? 0.3 + 0.7*(remainingMs/6000) : 1;
+      // Amplitude ceiling (envelope-driven when available)
+      const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
+      const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+      const normalizedLoudness = Math.max(0, (loudness + 35) / 35);
+      const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
+      const sharpness = 1 - valence;
 
-      const sharp = 1 - valence;
+      // Phase advance — BPM-synced (60fps)
+      const beatsPerSec = bpm / 60;
+      const phaseStep = isPlaying ? (beatsPerSec / 60) * 0.15 : 0.004;
+      phaseRef.current += phaseStep;
+      const phase = phaseRef.current;
 
-      // Zone axis slowly rotates — features migrate around the form
-      const zoneRot = s.time * 0.008 * tempoScale + (keyVal / 12) * Math.PI * 2;
-
-      const disp = new Float32Array(N);
-      const radii = new Float32Array(N);
-      const pointWeight = new Float32Array(N);
-
+      // ── Generate circular terrain points ──
+      // Circular noise: (cos(θ)*freq, sin(θ)*freq) → seamless 360° wrap
+      const points = [];
       for (let i = 0; i < N; i++) {
-        const a = (i / N) * Math.PI * 2 + rot;
-        const nx = Math.cos(a), ny = Math.sin(a);
+        const th = (i / N) * Math.PI * 2;
+        const cnx = Math.cos(th), sny = Math.sin(th);
 
-        // Zone weights — soft cosine blend, 4 zones at 90° intervals
-        const za = a - zoneRot;
-        const zBass    = Math.max(0, Math.cos(za)) ** 1.5;
-        const zRhythm  = Math.max(0, Math.cos(za - Math.PI*0.5)) ** 1.5;
-        const zVocal   = Math.max(0, Math.cos(za - Math.PI)) ** 1.5;
-        const zTexture = Math.max(0, Math.cos(za - Math.PI*1.5)) ** 1.5;
+        // Multi-octave simplex noise (same as terrain)
+        const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
+        const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
+        const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
+        let raw = n1 + n2 + n3;
 
-        // Base warp (3 octaves) — speed tied to tempo
-        const d1 = s.noise(nx*0.3, ny*0.3 + s.time*0.002*tempoScale);
-        const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005*tempoScale);
-        const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008*tempoScale);
-        const irregularity = 0.4 + energy * 0.6;
-        radii[i] = baseR * (1 + beat * 0.06) * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.75);
+        // Valence shaping
+        raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
 
-        // BASS: low freq, big slow, energy × loudness
-        const bassN = s.noise(nx*0.8 + s.time*0.12*tempoScale, ny*0.8 + s.time*0.1*tempoScale);
-        const bassD = bassN * energy * loud * 1.8;
+        // Beat boost
+        const beatBoost = 1 + beatPulse * danceability * 0.4;
 
-        // RHYTHM: mid freq, beat-pulsed — tempo-synced movement
-        const rhythmN = s.noise2(nx*2.5 + s.time*0.3*tempoScale, ny*2.5 + s.time*0.25*tempoScale);
-        const rhythmD = rhythmN * (0.5 + beat * 2.5) * beatStrength * 1.3;
+        // Combine
+        let amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
+        amp = Math.min(amp, amplitudeCeiling);
+        amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.3 : 0.02);
+        amp *= 1 + (Math.random() - 0.5) * 0.08;
 
-        // VOCAL: high freq when speech present, flatter when instrumental
-        const vocalF = 4 + speech * 8;
-        const vocalN = s.noise3(nx*vocalF + s.time*0.5*tempoScale, ny*vocalF + s.time*0.4*tempoScale);
-        const vocalD = vocalN * (speech * 3 + 0.15) * 0.6;
-
-        // TEXTURE: acoustic=smooth wide, digital=tight sharp
-        const texF = 1.5 + (1-acoustic) * 4;
-        const texN = s.noise4(nx*texF + s.time*0.2*tempoScale, ny*texF + s.time*0.18*tempoScale);
-        const texD = texN * (0.4 + acoustic * 0.6) * 1.1;
-
-        // Blend by zone weights
-        let totalD = bassD*zBass + rhythmD*zRhythm + vocalD*zVocal + texD*zTexture;
-        const zSum = zBass + zRhythm + zVocal + zTexture;
-        if (zSum > 0) totalD /= (zSum * 0.7 + 0.3);
-
-        totalD = Math.sign(totalD) * Math.pow(Math.abs(totalD), 1 + sharp * 0.5);
-
-        disp[i] = totalD * s.amp * (1 + beat*1.2) * exhale * baseR * 1.3;
-        disp[i] *= (1 + (Math.random()-0.5) * (0.01 + (1-acoustic)*0.03));
-
-        // Per-point weight — bass/acoustic zones thicker
-        pointWeight[i] = 0.7 + zBass*acoustic*0.8 + zTexture*acoustic*0.6 - zVocal*0.2;
+        points.push(Math.max(0, Math.min(1, amp)));
       }
 
-      smoothOrbArr(disp, 3);
-      smoothOrbArr(radii, 3);
+      historyRef.current.push(points);
+      if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
 
-      // Tracers
-      s.frame++;
-      if (s.frame % 3 === 0 && s.amp > 0.01) {
-        s.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.75, age: 0, hit: false });
-        if (s.tracers.length > ORB_LAYERS) s.tracers.shift();
-      }
-
-      // Hits
-      if (beat > 0.4 && isPlaying && s.frame % 3 === 0) {
-        const hd = new Float32Array(N);
-        for (let i = 0; i < N; i++) hd[i] = disp[i] * 2.5;
-        smoothOrbArr(hd, 1);
-        s.hits.push({ d: hd, r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.85, age: 0, hit: true });
-        if (s.hits.length > ORB_MAX_HITS) s.hits.shift();
-      }
-
-      for (const l of s.tracers) { l.age++; l.op *= 0.975; }
-      for (const l of s.hits) { l.age++; l.op *= 0.986; }
-      s.tracers = s.tracers.filter(l => l.op > 0.01);
-      s.hits = s.hits.filter(l => l.op > 0.01);
-
-      // ===== RENDER =====
+      // ── Render ──
       ctx.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const rot = phase * 0.3; // slow rotation, BPM-linked
 
-      const baseLw = 1.0 + acoustic * 1.2;
+      // Amoeba base deformation — acousticness drives organic shape
+      const amoebaMag = 0.03 + acousticness * 0.06;
       const col = [78, 75, 68]; // warm grey
+      const layers = historyRef.current;
+      const layerCount = layers.length;
 
-      // (no silent cutoff — always render amoeba, even at rest)
+      // Draw back to front (oldest first → newest on top, darkest)
+      for (let l = 0; l < layerCount; l++) {
+        const data = layers[l];
+        const age = l / Math.max(1, layerCount - 1); // 0=oldest, 1=newest
+        const outShift = (layerCount - 1 - l) * 0.8; // older → pushed outward
 
-      const layers = [
-        ...s.tracers, ...s.hits,
-        { d: disp, r: radii, w: pointWeight, op: 1.0, age: 0, hit: false },
-      ].sort((a, b) => b.age - a.age);
+        // Alpha/width matching terrain exactly
+        const alpha = 0.012 + age * age * 0.16;
+        const baseLw = 0.3 + age * 1.0;
+        const lw = baseLw * (0.7 + acousticness * 0.6);
 
-      // Rings (no interior tendrils — preserve hollow center)
-      for (const layer of layers) {
-        const alpha = Math.max(0, Math.min(1, layer.op));
-        if (alpha < 0.01) continue;
-
-        const rShift = layer.age * 0.35;
-        const ageFade = Math.max(0, 1 - layer.age * 0.012);
-
-        const pts = [];
-        const minR = baseR * 0.35; // floor — nothing crosses into center
+        // ── Outward mountains ──
+        const outPts = [];
         for (let i = 0; i < N; i++) {
-          const a = (i/N)*Math.PI*2+rot;
-          const r = Math.max(minR, layer.r[i]+layer.d[i]+rShift);
-          pts.push({ x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r });
+          const th = (i / N) * Math.PI * 2 + rot;
+          const aR = baseR * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const displacement = data[i] * baseR * 1.4;
+          const r = aR + displacement + outShift;
+          outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
 
-        const edgeAlpha = alpha * 0.8 * (0.4 + s.amp*0.6);
-
-        // Inward bleed
-        drawOrbSmooth(ctx, pts);
-        ctx.save(); ctx.clip();
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
-        ctx.lineWidth = baseLw * (layer.hit ? 1.6 : 1) * ageFade * 4;
-        ctx.stroke(); ctx.restore();
-
-        // Smooth contour — continuous stroke (matches terrain's mountain stroke)
-        drawOrbSmooth(ctx, pts);
-        const avgW = layer.w.reduce((a,b) => a+b, 0) / N;
-        const layerAlpha = edgeAlpha * (layer.age === 0 ? (0.5 + s.amp*0.45) * (1 + beat*0.4) : 0.50);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${layerAlpha})`;
-        const layerLw = baseLw * (layer.hit?1.5:1) * ageFade * (layer.age===0 ? (0.8+avgW*0.7)*(1+beat*0.3) : (0.5+avgW*0.4));
-        ctx.lineWidth = Math.max(0.3, layerLw);
+        drawOrbSmooth(ctx, outPts);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+        ctx.lineWidth = lw;
         ctx.stroke();
 
-        // Weight band — thicker stroke on heavy zones only
-        if (layer.age === 0 && s.amp > 0.05) {
-          for (let i = 0; i < N; i++) {
-            if (layer.w[i] < 0.8) continue;
-            const i2 = (i+1) % N;
-            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i2].x, pts[i2].y);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${layerAlpha * 0.3})`;
-            ctx.lineWidth = layerLw * 1.5;
-            ctx.stroke();
-          }
+        // ── Inward reflection ──
+        const inPts = [];
+        for (let i = 0; i < N; i++) {
+          const th = (i / N) * Math.PI * 2 + rot;
+          const aR = baseR * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const displacement = data[i] * baseR * 0.38;
+          // Floor: never collapse past 15% of baseR → guarantees hollow center
+          const r = Math.max(baseR * 0.15, aR - displacement - (layerCount - 1 - l) * 0.3);
+          inPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
 
-        // (reflection removed — was causing center crossover)
+        drawOrbSmooth(ctx, inPts);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.35})`;
+        ctx.lineWidth = lw * 0.6;
+        ctx.stroke();
       }
-
-      animRef.current = requestAnimationFrame(draw);
     }
 
     animRef.current = requestAnimationFrame(draw);
     return () => { running = false; cancelAnimationFrame(animRef.current); };
   }, [isPlaying, progress, duration, features]);
-
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
