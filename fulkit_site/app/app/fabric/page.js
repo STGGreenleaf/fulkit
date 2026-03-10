@@ -926,8 +926,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         pointWeight[i] = 0.7 + zBass*acoustic*0.8 + zTexture*acoustic*0.6 - zVocal*0.2;
       }
 
-      smoothOrbArr(disp, 2);
-      smoothOrbArr(radii, 2);
+      smoothOrbArr(disp, 3);
+      smoothOrbArr(radii, 3);
 
       // Tracers
       s.frame++;
@@ -972,9 +972,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const ageFade = Math.max(0, 1 - layer.age * 0.012);
 
         const pts = [];
+        const minR = baseR * 0.35; // floor — nothing crosses into center
         for (let i = 0; i < N; i++) {
           const a = (i/N)*Math.PI*2+rot;
-          pts.push({ x: cx+Math.cos(a)*(layer.r[i]+layer.d[i]+rShift), y: cy+Math.sin(a)*(layer.r[i]+layer.d[i]+rShift) });
+          const r = Math.max(minR, layer.r[i]+layer.d[i]+rShift);
+          pts.push({ x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r });
         }
 
         const edgeAlpha = alpha * 0.8 * (0.4 + s.amp*0.6);
