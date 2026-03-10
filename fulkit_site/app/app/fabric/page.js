@@ -664,7 +664,7 @@ function SignalTerrain({
 // ═══════════════════════════════════════════════════════
 
 const ORB_R_POINTS = 100;
-const ORB_R_LAYERS = 35;
+const ORB_R_LAYERS = 55;
 
 function drawOrbSmooth(ctx, pts) {
   if (pts.length < 3) return;
@@ -887,19 +887,25 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
         const age = l / Math.max(1, layerCount - 1); // 0=oldest, 1=newest
-        const outShift = (layerCount - 1 - l) * 2.0; // older → pushed outward
+        const outShift = (layerCount - 1 - l) * 4.5; // older → pushed way outward
 
-        // Alpha/width matching terrain exactly
-        const alpha = 0.012 + age * age * 0.16;
+        // Alpha/width — higher floor so distant layers stay visible
+        const alpha = 0.025 + age * age * 0.15;
         const baseLw = 0.3 + age * 1.0;
         const lw = baseLw * (0.7 + acousticness * 0.6);
 
         // ── Outward mountains ──
+        // Older layers morph: noise distortion grows with age so shape evolves
+        const ageMorph = (1 - age) * 0.3; // oldest get most distortion
         const outPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
           const aR = baseR * (1 + beatPulse * 0.06) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
-          const displacement = data[i] * baseR * 1.4;
+          let displacement = data[i] * baseR * 1.8;
+          // Shape evolution — older layers warp via noise offset by layer index
+          if (ageMorph > 0.01) {
+            displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
+          }
           const r = aR + displacement + outShift;
           outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
