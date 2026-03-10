@@ -828,23 +828,23 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
       const effectiveEnergy = hasEnvelope ? energy * envelopeValue : energy;
 
-      // Spring amplitude
-      const tgt = isPlaying ? (0.35 + effectiveEnergy * 0.45) : 0.0;
-      s.ampVel += (tgt - s.amp) * 0.055;
-      s.ampVel *= 0.83;
+      // Spring amplitude — punchy, snappy response
+      const tgt = isPlaying ? (0.5 + effectiveEnergy * 0.5) : 0.0;
+      s.ampVel += (tgt - s.amp) * 0.08;
+      s.ampVel *= 0.78;
       s.amp += s.ampVel;
       s.amp = Math.max(0, Math.min(1, s.amp));
 
-      // Center drift
-      const cx = w/2 + s.noise(s.time*0.12, 50) * dim * 0.018;
-      const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.018;
+      // Center drift — wider wander
+      const cx = w/2 + s.noise(s.time*0.12, 50) * dim * 0.03;
+      const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.03;
       const rot = s.time * 0.04;
 
       // Beat
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
       const bPhase = isPlaying ? (progressMs % msPerBeat) / msPerBeat : 1;
-      const beat = Math.pow(1 - bPhase, 3) * dance;
+      const beat = Math.pow(1 - bPhase, 2.5) * dance;
 
       // Exhale
       const remainingMs = (duration * 1000) - progressMs;
@@ -875,15 +875,15 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005);
         const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008);
         const irregularity = 0.4 + energy * 0.6;
-        radii[i] = baseR * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.55);
+        radii[i] = baseR * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.75);
 
         // BASS: low freq, big slow, energy × loudness
         const bassN = s.noise(nx*0.8 + s.time*0.12, ny*0.8 + s.time*0.1);
-        const bassD = bassN * energy * loud * 1.2;
+        const bassD = bassN * energy * loud * 1.8;
 
         // RHYTHM: mid freq, beat-pulsed, danceability
         const rhythmN = s.noise2(nx*2.5 + s.time*0.3, ny*2.5 + s.time*0.25);
-        const rhythmD = rhythmN * (0.5 + beat * 1.5) * dance * 0.9;
+        const rhythmD = rhythmN * (0.5 + beat * 2.5) * dance * 1.3;
 
         // VOCAL: high freq when speech present, flatter when instrumental
         const vocalF = 4 + speech * 8;
@@ -893,7 +893,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // TEXTURE: acoustic=smooth wide, digital=tight sharp
         const texF = 1.5 + (1-acoustic) * 4;
         const texN = s.noise4(nx*texF + s.time*0.2, ny*texF + s.time*0.18);
-        const texD = texN * (0.4 + acoustic * 0.4) * 0.8;
+        const texD = texN * (0.4 + acoustic * 0.6) * 1.1;
 
         // Blend by zone weights
         let totalD = bassD*zBass + rhythmD*zRhythm + vocalD*zVocal + texD*zTexture;
@@ -902,7 +902,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         totalD = Math.sign(totalD) * Math.pow(Math.abs(totalD), 1 + sharp * 0.5);
 
-        disp[i] = totalD * s.amp * (1 + beat*0.7) * exhale * baseR * 0.85;
+        disp[i] = totalD * s.amp * (1 + beat*1.2) * exhale * baseR * 1.15;
         disp[i] *= (1 + (Math.random()-0.5)*0.04);
 
         // Per-point weight — bass/acoustic zones thicker
@@ -920,9 +920,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // Hits
-      if (beat > 0.6 && isPlaying && s.frame % 3 === 0) {
+      if (beat > 0.4 && isPlaying && s.frame % 3 === 0) {
         const hd = new Float32Array(N);
-        for (let i = 0; i < N; i++) hd[i] = disp[i] * 2.0;
+        for (let i = 0; i < N; i++) hd[i] = disp[i] * 2.5;
         smoothOrbArr(hd, 1);
         s.hits.push({ d: hd, r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.85, age: 0, hit: true });
         if (s.hits.length > ORB_MAX_HITS) s.hits.shift();
