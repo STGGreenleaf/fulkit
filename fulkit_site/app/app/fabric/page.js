@@ -731,6 +731,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     noise5: createOrbNoise(5),
     time: 0, amp: 0, ampVel: 0,
     tracers: [], hits: [], frame: 0,
+    beatAccumulator: 0, lastTs: 0,
   });
 
   // Generate envelope for this track
@@ -797,9 +798,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     let running = true;
     const N = ORB_POINTS;
 
-    function draw() {
+    function draw(ts) {
       if (!running) return;
       const s = stateRef.current;
+      const dt = s.lastTs > 0 ? Math.min((ts - s.lastTs) / 1000, 0.05) : 0.016;
+      s.lastTs = ts;
       const w = window.innerWidth, h = window.innerHeight;
       const dim = Math.min(w, h);
       const baseR = dim * 0.22;
@@ -843,10 +846,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // Tempo-relative scaling — slow music moves slowly
       const tempoScale = bpm / 120;
 
-      // Beat — floor ensures every beat is visible, acoustic amplifies attack
+      // Beat — local clock with soft Spotify sync (frame-accurate, no polling drift)
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
-      const bPhase = isPlaying ? (progressMs % msPerBeat) / msPerBeat : 1;
+      if (isPlaying) {
+        s.beatAccumulator += dt * (bpm / 60);
+        // Soft-correct toward Spotify's reported phase
+        const spotifyPhase = (progressMs % msPerBeat) / msPerBeat;
+        const localPhase = s.beatAccumulator % 1;
+        const diff = spotifyPhase - localPhase;
+        const wrappedDiff = diff - Math.round(diff);
+        s.beatAccumulator += wrappedDiff * 0.03;
+      }
+      const bPhase = isPlaying ? (s.beatAccumulator % 1) : 1;
       const beatCurve = acoustic > 0.5 ? 2.0 : 2.5; // sharper attack for acoustic
       const beatStrength = Math.max(dance, 0.35 + acoustic * 0.2); // piano gets a floor
       const beat = Math.pow(1 - bPhase, beatCurve) * beatStrength;
@@ -880,7 +892,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005*tempoScale);
         const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008*tempoScale);
         const irregularity = 0.4 + energy * 0.6;
-        radii[i] = baseR * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.75);
+        radii[i] = baseR * (1 + beat * 0.06) * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.75);
 
         // BASS: low freq, big slow, energy × loudness
         const bassN = s.noise(nx*0.8 + s.time*0.12*tempoScale, ny*0.8 + s.time*0.1*tempoScale);
@@ -1009,22 +1021,25 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = baseLw * (layer.hit ? 1.6 : 1) * ageFade * 4;
         ctx.stroke(); ctx.restore();
 
-        // Variable-weight contour — per-segment
-        for (let i = 0; i < N; i++) {
-          const i2 = (i+1) % N;
-          const p1 = pts[i], p2 = pts[i2];
-          const segW = (layer.w[i] + layer.w[i2]) / 2;
+        // Smooth contour — continuous stroke (matches terrain's mountain stroke)
+        drawOrbSmooth(ctx, pts);
+        const avgW = layer.w.reduce((a,b) => a+b, 0) / N;
+        const layerAlpha = edgeAlpha * (layer.age === 0 ? (0.5 + s.amp*0.45) * (1 + beat*0.4) : 0.35);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${layerAlpha})`;
+        const layerLw = baseLw * (layer.hit?1.5:1) * ageFade * (layer.age===0 ? (0.8+avgW*0.7)*(1+beat*0.3) : (0.5+avgW*0.4));
+        ctx.lineWidth = Math.max(0.3, layerLw);
+        ctx.stroke();
 
-          const segAlpha = edgeAlpha * (layer.age === 0 ?
-            (0.5 + s.amp*0.45) : 0.35 + segW*0.15);
-
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${segAlpha})`;
-          ctx.lineWidth = Math.max(0.2, baseLw * (layer.hit?1.5:1) * ageFade *
-            (layer.age===0 ? (0.8+segW*0.7) : (0.5+segW*0.4)));
-          ctx.stroke();
+        // Weight band — thicker stroke on heavy zones only
+        if (layer.age === 0 && s.amp > 0.05) {
+          for (let i = 0; i < N; i++) {
+            if (layer.w[i] < 0.8) continue;
+            const i2 = (i+1) % N;
+            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i2].x, pts[i2].y);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${layerAlpha * 0.3})`;
+            ctx.lineWidth = layerLw * 1.5;
+            ctx.stroke();
+          }
         }
 
         // Inward reflection
@@ -1108,6 +1123,36 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           fontFamily: "var(--font-primary)", opacity: 0.7,
         }}>
           {trackArtist || ""}
+        </div>
+        {/* Transport — prev / play-pause / next */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 12 }}>
+          <button onClick={prev} style={{
+            width: 36, height: 36, borderRadius: "var(--radius-full)",
+            background: "transparent", border: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", padding: 0, outline: "none",
+          }}>
+            <ChevronLeft size={18} strokeWidth={2} color="var(--color-text-dim)" />
+          </button>
+          <button onClick={toggle} style={{
+            width: 36, height: 36, borderRadius: "var(--radius-full)",
+            background: "transparent", border: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", padding: 0, outline: "none",
+          }}>
+            {isPlaying
+              ? <PauseLines size={18} strokeWidth={2.5} color="var(--color-text-muted)" />
+              : <Play size={18} strokeWidth={2.5} color="var(--color-text-muted)" fill="var(--color-text-muted)" style={{ marginLeft: 1 }} />
+            }
+          </button>
+          <button onClick={skip} style={{
+            width: 36, height: 36, borderRadius: "var(--radius-full)",
+            background: "transparent", border: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", padding: 0, outline: "none",
+          }}>
+            <ChevronRight size={18} strokeWidth={2} color="var(--color-text-dim)" />
+          </button>
         </div>
       </div>
     </div>
