@@ -63,25 +63,28 @@ export function FabricProvider({ children }) {
 
   // Helper for authenticated API calls
   const apiFetch = useCallback(async (endpoint, options = {}) => {
-    if (!accessToken) return null;
-    const res = await fetch(endpoint, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-    if (!res.ok) return null;
-    const text = await res.text();
-    if (!text) return { ok: true };
-    try { return JSON.parse(text); } catch { return { ok: true }; }
+    if (!accessToken) { console.warn("[fabric] No accessToken for", endpoint); return null; }
+    try {
+      const res = await fetch(endpoint, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+      });
+      if (!res.ok) { console.warn("[fabric]", endpoint, res.status); return null; }
+      const text = await res.text();
+      if (!text) return { ok: true };
+      try { return JSON.parse(text); } catch { return { ok: true }; }
+    } catch (e) { console.warn("[fabric]", endpoint, e.message); return null; }
   }, [accessToken]);
 
   // Check connection status
   useEffect(() => {
     if (isDev || !accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
+      console.log("[fabric] status:", data);
       if (data) setConnected(data.connected);
     });
   }, [accessToken, isDev, apiFetch]);
@@ -90,6 +93,7 @@ export function FabricProvider({ children }) {
   useEffect(() => {
     if (isDev || !connected || !accessToken) return;
     apiFetch("/api/fabric/playlists").then((data) => {
+      console.log("[fabric] playlists:", data?.playlists?.length, "items");
       if (data?.playlists) setPlaylists(data.playlists);
     });
   }, [connected, accessToken, isDev, apiFetch]);
