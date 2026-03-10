@@ -873,7 +873,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
         const age = l / Math.max(1, layerCount - 1); // 0=oldest, 1=newest
-        const outShift = (layerCount - 1 - l) * 0.8; // older → pushed outward
+        const outShift = (layerCount - 1 - l) * 2.0; // older → pushed outward
 
         // Alpha/width matching terrain exactly
         const alpha = 0.012 + age * age * 0.16;
