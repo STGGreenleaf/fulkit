@@ -877,8 +877,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3; // slow rotation, BPM-linked
 
-      // Amoeba base deformation — acousticness drives organic shape
-      const amoebaMag = 0.03 + acousticness * 0.06;
+      // Amoeba base deformation — multi-layer for irregular, shifting shape
+      const amoebaMag = 0.05 + acousticness * 0.10;
+      const amoebaSlow = phase * 0.02; // very slow drift layer
       const col = [78, 75, 68]; // warm grey
       const layers = historyRef.current;
       const layerCount = layers.length;
@@ -896,15 +897,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         // ── Outward mountains ──
         // Older layers morph: noise distortion grows with age so shape evolves
-        const ageMorph = (1 - age) * 0.3; // oldest get most distortion
+        const ageMorph = (1 - age) * 0.4; // oldest get most distortion
         const outPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
-          const aR = baseR * (1 + beatPulse * 0.06) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const cnTh = Math.cos(th), snTh = Math.sin(th);
+          // Two-layer amoeba: fast wobble + slow drift for irregular shape
+          const aWobble = noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag;
+          const aDrift = noise2D(cnTh * 0.7 + 50, snTh * 0.7 + amoebaSlow) * amoebaMag * 0.6;
+          const aR = baseR * (1 + beatPulse * 0.06) * (1 + aWobble + aDrift);
           let displacement = data[i] * baseR * 1.8;
           // Shape evolution — older layers warp via noise offset by layer index
           if (ageMorph > 0.01) {
-            displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
+            displacement += noise2D(cnTh * 3 + l * 0.7, snTh * 3 + l * 0.7) * baseR * ageMorph;
           }
           const r = aR + displacement + outShift;
           outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
@@ -914,25 +919,45 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const isNewest = l === layerCount - 1;
         const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.5) : alpha;
         const drawLw = isNewest ? lw * (1 + beatPulse * 0.4) : lw;
+
+        // Shade/blur between outward lines — soft glow
+        ctx.shadowColor = `rgba(${col[0]},${col[1]},${col[2]},${drawAlpha * 0.4})`;
+        ctx.shadowBlur = 6 + (1 - age) * 10; // older layers more diffuse
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${drawAlpha})`;
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        // ── Inward reflection ──
+        // Faint fill inside each outward contour for depth between layers
+        if (age < 0.7) {
+          ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.008 + (1 - age) * 0.015})`;
+          ctx.fill();
+        }
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+
+        // ── Inward reflection — deeper reach, more stacking ──
         const inPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
-          const aR = baseR * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
-          const displacement = data[i] * baseR * 0.65;
-          // Floor: never collapse past 6% of baseR → guarantees hollow center
-          const r = Math.max(baseR * 0.06, aR - displacement - (layerCount - 1 - l) * 0.5);
+          const cnTh = Math.cos(th), snTh = Math.sin(th);
+          const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
+          const displacement = data[i] * baseR * 1.1;
+          // Inward stacking — 2px per layer, deeper into center
+          const inShift = (layerCount - 1 - l) * 2.0;
+          // Floor: never collapse past 3% of baseR → hollow center
+          const r = Math.max(baseR * 0.03, aR - displacement - inShift);
           inPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
 
         drawOrbSmooth(ctx, inPts);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.5})`;
+        // Shade on inner reflection too
+        ctx.shadowColor = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.25})`;
+        ctx.shadowBlur = 4 + (1 - age) * 6;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.55})`;
         ctx.lineWidth = lw * 0.7;
         ctx.stroke();
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       }
     }
 
