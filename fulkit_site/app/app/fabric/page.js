@@ -831,9 +831,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
       const effectiveEnergy = hasEnvelope ? energy * envelopeValue : energy;
 
-      // Spring amplitude — punchy, snappy response
-      const tgt = isPlaying ? (0.5 + effectiveEnergy * 0.5) : 0.0;
-      s.ampVel += (tgt - s.amp) * 0.08;
+      // Spring amplitude — punchy, snappy response. Resting shape when paused.
+      const tgt = isPlaying ? (0.5 + effectiveEnergy * 0.5) : 0.12;
+      s.ampVel += (tgt - s.amp) * (isPlaying ? 0.08 : 0.03);
       s.ampVel *= 0.78;
       s.amp += s.ampVel;
       s.amp = Math.max(0, Math.min(1, s.amp));
@@ -956,16 +956,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const baseLw = 1.0 + acoustic * 1.2;
       const col = [78, 75, 68]; // warm grey
 
-      // Silent: light circle
-      if (s.amp < 0.03) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, baseR, 0, Math.PI*2);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.1 + s.amp*2})`;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-        animRef.current = requestAnimationFrame(draw);
-        return;
-      }
+      // (no silent cutoff — always render amoeba, even at rest)
 
       const layers = [
         ...s.tracers, ...s.hits,
