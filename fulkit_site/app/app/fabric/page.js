@@ -709,11 +709,17 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
   const envelopeRef = useRef({ trackId: null, envelope: null });
+  const [vizStyle, setVizStyle] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    try { return parseInt(localStorage.getItem("fulkit-viz-style")) || 1; } catch { return 1; }
+  });
   // Keep latest props in refs so the render loop always reads current values
   const getSnapshotRef = useRef(getSnapshot);
   getSnapshotRef.current = getSnapshot;
   const progressRef = useRef(progress);
   progressRef.current = progress;
+  const vizStyleRef = useRef(vizStyle);
+  vizStyleRef.current = vizStyle;
   const kineticRef = useRef({
     amplitude: 0.08,
     target: 0.08,
@@ -805,15 +811,15 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") {
         k.state = "spool-up"; k.stateStart = now; k.target = 0.55;
       } else if (!isPlaying && k.prevPlaying) {
-        k.state = "wind-down"; k.stateStart = now; k.target = 0.0;
+        k.state = "wind-down"; k.stateStart = now; k.target = 0.08;
       }
       k.prevPlaying = isPlaying;
 
       if (k.state === "spool-up" && elapsed > 600) k.state = "active";
-      else if (k.state === "wind-down" && elapsed > 1200) k.state = "idle";
+      else if (k.state === "wind-down" && elapsed > 1200) { k.state = "idle"; k.target = 0.08; }
       else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
       else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.55; }
-      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.0; }
+      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
 
       const smoothRate = k.state === "skip-cut" ? 0.2 : 0.06;
       k.amplitude += (k.target - k.amplitude) * smoothRate;
@@ -956,8 +962,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         if (historyRef.current.length > 3) historyRef.current.shift();
         if (historyRef.current.length > 3) historyRef.current.shift();
       } else if (k.state === "idle") {
-        // Idle: drain remaining layers gradually
-        if (historyRef.current.length > 1) {
+        // Idle: drain down to 3 layers — keep a gentle resting ring visible
+        if (historyRef.current.length > 3) {
           historyRef.current.shift();
         }
       }
@@ -1079,6 +1085,33 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             Fabric
           </span>
         )}
+      </div>
+
+      {/* Viz style selector — top center */}
+      <div style={{
+        position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
+        display: "flex", gap: 2, zIndex: 1,
+      }}>
+        {[1, 2, 3].map((n) => (
+          <button
+            key={n}
+            onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} }}
+            style={{
+              width: 28, height: 28,
+              borderRadius: "var(--radius-full)",
+              background: vizStyle === n ? "var(--color-text-dim)" : "transparent",
+              border: `1px solid ${vizStyle === n ? "var(--color-text-dim)" : "var(--color-border)"}`,
+              color: vizStyle === n ? "var(--color-bg)" : "var(--color-text-dim)",
+              fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
+              cursor: "pointer", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 200ms",
+              opacity: vizStyle === n ? 1 : 0.5,
+            }}
+          >
+            {n}
+          </button>
+        ))}
       </div>
 
       {/* Close button — top right */}
