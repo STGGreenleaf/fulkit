@@ -574,21 +574,24 @@ function SignalTerrain({
         ctx.lineWidth = lw;
         ctx.beginPath();
 
+        const maxUp = centerY - 4; // max upward reach (leave 4px margin at top)
+        const maxDown = (h - centerY) - 4; // max downward reach (leave 4px margin at bottom)
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 1.6;
+          const a = Math.min(data[i] * centerY * 1.6, maxUp - yShift);
           const y = centerY - a - yShift;
 
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
             const prevX = ((i - 1) / (data.length - 1)) * w;
-            const prevA = data[i - 1] * centerY * 1.4;
+            const prevA = Math.min(data[i - 1] * centerY * 1.4, maxUp - yShift);
             const prevY = centerY - prevA - yShift;
             ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
           }
         }
-        ctx.lineTo(w, centerY - data[data.length - 1] * centerY * 1.4 - yShift);
+        const lastA = Math.min(data[data.length - 1] * centerY * 1.4, maxUp - yShift);
+        ctx.lineTo(w, centerY - lastA - yShift);
         ctx.stroke();
 
         // Reflection
@@ -597,7 +600,7 @@ function SignalTerrain({
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = data[i] * centerY * 0.38;
+          const a = Math.min(data[i] * centerY * 0.38, maxDown - (layers.length - 1 - l) * 0.4 - 1);
           const y = centerY + a + (layers.length - 1 - l) * 0.4 + 1;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -616,7 +619,7 @@ function SignalTerrain({
   }, [canvasWidth, isPlaying, progress, duration, features, liveActive]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", position: "relative" }}>
+    <div ref={containerRef} style={{ width: "100%", position: "relative", overflow: "hidden" }}>
       <canvas
         ref={canvasRef}
         width={canvasWidth}
