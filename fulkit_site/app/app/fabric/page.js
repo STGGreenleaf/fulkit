@@ -1629,6 +1629,10 @@ export default function FabricPage() {
 
   // Debug — remove after confirmed working
   useEffect(() => {
+    if (playlists.length > 0) {
+      console.log("[fabric page] first playlist:", JSON.stringify(playlists[0]));
+      console.log("[fabric page] keys:", Object.keys(playlists[0]));
+    }
     console.log("[fabric page] playlists:", playlists.length, "filtered:", playlists.filter(pl => pl.tracks > 0).length);
   }, [playlists]);
 
