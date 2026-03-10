@@ -919,7 +919,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         totalD = Math.sign(totalD) * Math.pow(Math.abs(totalD), 1 + sharp * 0.5);
 
-        disp[i] = totalD * s.amp * (1 + beat*1.2) * exhale * baseR * 1.15;
+        disp[i] = totalD * s.amp * (1 + beat*1.2) * exhale * baseR * 1.3;
         disp[i] *= (1 + (Math.random()-0.5) * (0.01 + (1-acoustic)*0.03));
 
         // Per-point weight — bass/acoustic zones thicker
@@ -932,7 +932,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // Tracers
       s.frame++;
       if (s.frame % 3 === 0 && s.amp > 0.01) {
-        s.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.6, age: 0, hit: false });
+        s.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), w: new Float32Array(pointWeight), op: 0.75, age: 0, hit: false });
         if (s.tracers.length > ORB_LAYERS) s.tracers.shift();
       }
 
@@ -945,10 +945,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         if (s.hits.length > ORB_MAX_HITS) s.hits.shift();
       }
 
-      for (const l of s.tracers) { l.age++; l.op *= 0.96; }
-      for (const l of s.hits) { l.age++; l.op *= 0.984; }
-      s.tracers = s.tracers.filter(l => l.op > 0.015);
-      s.hits = s.hits.filter(l => l.op > 0.015);
+      for (const l of s.tracers) { l.age++; l.op *= 0.975; }
+      for (const l of s.hits) { l.age++; l.op *= 0.986; }
+      s.tracers = s.tracers.filter(l => l.op > 0.01);
+      s.hits = s.hits.filter(l => l.op > 0.01);
 
       // ===== RENDER =====
       ctx.clearRect(0, 0, w, h);
@@ -972,33 +972,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         { d: disp, r: radii, w: pointWeight, op: 1.0, age: 0, hit: false },
       ].sort((a, b) => b.age - a.age);
 
-      // Interior tendrils
-      if (s.amp > 0.02) {
-        const iA = s.amp * 0.1;
-        for (let i = 0; i < N; i += 6) {
-          const opp = (i + Math.floor(N/2)) % N;
-          const a1 = (i/N)*Math.PI*2+rot, a2 = (opp/N)*Math.PI*2+rot;
-          const r1 = radii[i]*0.6 + disp[i]*0.3;
-          const r2 = radii[opp]*0.6 + disp[opp]*0.3;
-          const x1 = cx+Math.cos(a1)*r1, y1 = cy+Math.sin(a1)*r1;
-          const x2 = cx+Math.cos(a2)*r2, y2 = cy+Math.sin(a2)*r2;
-          const rawOff = s.noise(i*0.5, s.time*0.3);
-          const minOff = 0.4 * (rawOff >= 0 ? 1 : -1);
-          const cpNoise = Math.abs(rawOff) < 0.4 ? minOff : rawOff;
-          const cpDist = cpNoise * baseR * 0.35 * s.amp;
-          const midX = (x1+x2)/2, midY = (y1+y2)/2;
-          const perpX = -(y2-y1), perpY = (x2-x1);
-          const perpLen = Math.sqrt(perpX*perpX + perpY*perpY) || 1;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.quadraticCurveTo(midX + (perpX/perpLen)*cpDist, midY + (perpY/perpLen)*cpDist, x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${iA * (0.2 + Math.abs(disp[i])/baseR + pointWeight[i]*0.15)})`;
-          ctx.lineWidth = 0.4 + pointWeight[i] * 0.4;
-          ctx.stroke();
-        }
-      }
-
-      // Outer rings
+      // Rings (no interior tendrils — preserve hollow center)
       for (const layer of layers) {
         const alpha = Math.max(0, Math.min(1, layer.op));
         if (alpha < 0.01) continue;
@@ -1024,7 +998,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // Smooth contour — continuous stroke (matches terrain's mountain stroke)
         drawOrbSmooth(ctx, pts);
         const avgW = layer.w.reduce((a,b) => a+b, 0) / N;
-        const layerAlpha = edgeAlpha * (layer.age === 0 ? (0.5 + s.amp*0.45) * (1 + beat*0.4) : 0.35);
+        const layerAlpha = edgeAlpha * (layer.age === 0 ? (0.5 + s.amp*0.45) * (1 + beat*0.4) : 0.50);
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${layerAlpha})`;
         const layerLw = baseLw * (layer.hit?1.5:1) * ageFade * (layer.age===0 ? (0.8+avgW*0.7)*(1+beat*0.3) : (0.5+avgW*0.4));
         ctx.lineWidth = Math.max(0.3, layerLw);
