@@ -1095,18 +1095,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3].map((n) => (
           <button
             key={n}
-            onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} }}
+            onClick={() => { if (n === 1) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", n); } catch {} } }}
             style={{
               width: 28, height: 28,
-              borderRadius: "var(--radius-full)",
-              background: vizStyle === n ? "var(--color-text-dim)" : "transparent",
-              border: `1px solid ${vizStyle === n ? "var(--color-text-dim)" : "var(--color-border)"}`,
-              color: vizStyle === n ? "var(--color-bg)" : "var(--color-text-dim)",
+              background: "transparent",
+              border: "none",
+              color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: "pointer", padding: 0,
+              cursor: n === 1 ? "pointer" : "default",
+              padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 200ms",
-              opacity: vizStyle === n ? 1 : 0.5,
+              transition: "opacity 200ms",
+              opacity: n === 1 ? (vizStyle === 1 ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
