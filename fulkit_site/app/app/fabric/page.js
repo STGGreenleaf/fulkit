@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2 } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1627,10 +1627,6 @@ export default function FabricPage() {
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
-  // Pad grid — 16 slots, fill with flagged tracks
-  const PADS = 16;
-  const pads = Array.from({ length: PADS }, (_, i) => flagged[i] || null);
-
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
     setDragIdx(idx);
@@ -1962,10 +1958,10 @@ export default function FabricPage() {
             />
           </div>
 
-          {/* ═══ CRATE + SET ═══ */}
+          {/* ═══ CRATES + SET ═══ */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-            {/* THE CRATE — 4x4 pad grid */}
+            {/* CRATE BROWSER — playlists as importable crates */}
             <div
               style={{
                 flex: 1,
@@ -1976,277 +1972,231 @@ export default function FabricPage() {
                 gap: "var(--space-3)",
               }}
             >
-              <Label>Crate</Label>
-              <div
-                onDragOver={(e) => { e.preventDefault(); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  try {
-                    const trackData = JSON.parse(e.dataTransfer.getData("application/fulkit-track"));
-                    if (trackData && !isFlagged(trackData.id)) flag(trackData);
-                  } catch {}
-                }}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: 6,
-                  maxWidth: 520,
-                }}
-              >
-                {pads.map((track, i) => {
-                  const isActive = track && currentTrack?.id === track.id;
-                  const padFeat = track ? audioFeatures[track.id] : null;
+              {/* Crate shelf — horizontal scroll */}
+              <Label>Crates</Label>
+              <div style={{
+                display: "flex",
+                gap: "var(--space-2)",
+                overflowX: "auto",
+                paddingBottom: "var(--space-2)",
+              }}>
+                {playlists.filter(pl => pl.tracks > 0).map(pl => {
+                  const isOpen = expandedMix === pl.id;
                   return (
                     <button
-                      key={i}
-                      onClick={() => track && playTrack(track)}
+                      key={pl.id}
+                      onClick={async () => {
+                        if (isOpen) {
+                          setExpandedMix(null);
+                          setMixTracks([]);
+                          return;
+                        }
+                        setExpandedMix(pl.id);
+                        setMixLoading(true);
+                        const tracks = await fetchPlaylistTracks(pl.id);
+                        setMixTracks(tracks);
+                        setMixLoading(false);
+                      }}
                       style={{
-                        aspectRatio: "1",
-                        background: isActive
-                          ? "var(--color-bg-inverse)"
-                          : track
-                            ? "var(--color-bg-elevated)"
-                            : "transparent",
-                        border: track
-                          ? isActive
-                            ? "none"
-                            : "1px solid var(--color-border)"
-                          : "1px dashed var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
-                        cursor: track ? "pointer" : "default",
-                        padding: "var(--space-2)",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
+                        padding: "var(--space-3)",
+                        minWidth: 140,
+                        background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                        border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                        borderLeft: isOpen ? "2px solid var(--color-text)" : "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-lg)",
+                        cursor: "pointer",
                         fontFamily: "var(--font-primary)",
+                        textAlign: "left",
                         transition: "all 120ms",
-                        position: "relative",
-                        overflow: "hidden",
-                        minHeight: 0,
+                        flexShrink: 0,
                       }}
                     >
-                      {track ? (
-                        <>
-                          <div
-                            style={{
-                              fontSize: 8,
-                              fontFamily: "var(--font-mono)",
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                              opacity: 0.6,
-                            }}
-                          >
-                            {String(i + 1).padStart(2, "0")}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: "var(--font-weight-semibold)",
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
-                              lineHeight: 1.2,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              textAlign: "left",
-                              width: "100%",
-                            }}
-                          >
-                            {track.title}
-                          </div>
-                          {padFeat && (
-                            <div
-                              style={{
-                                fontSize: 8,
-                                fontFamily: "var(--font-mono)",
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                                opacity: 0.7,
-                              }}
-                            >
-                              {padFeat.bpm}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div
-                          style={{
-                            fontSize: 8,
-                            fontFamily: "var(--font-mono)",
-                            color: "var(--color-text-dim)",
-                            opacity: 0.4,
-                            alignSelf: "center",
-                            marginTop: "auto",
-                            marginBottom: "auto",
-                          }}
-                        >
-                          {String(i + 1).padStart(2, "0")}
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
+                        {isOpen
+                          ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                          : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+                        }
+                        <div style={{
+                          fontSize: "var(--font-size-xs)",
+                          fontWeight: "var(--font-weight-semibold)",
+                          color: "var(--color-text)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 120,
+                        }}>
+                          {pl.name}
                         </div>
-                      )}
+                      </div>
+                      <div style={{
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-mono)",
+                        color: "var(--color-text-muted)",
+                        letterSpacing: "var(--letter-spacing-wider)",
+                        textTransform: "uppercase",
+                      }}>
+                        {pl.tracks} songs
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Featured playlists */}
-              <FeaturedShelf playTrack={playTrack} currentTrack={currentTrack} />
-
-              {/* Mixes section below crate */}
-              {playlists.length > 0 && (
-                <>
-                  <Label style={{ marginTop: "var(--space-4)" }}>Mixes</Label>
-                  <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                    {playlists.filter((pl) => pl.tracks > 0).map((pl) => (
+              {/* Expanded crate — track list */}
+              {expandedMix && (
+                <div style={{
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  overflow: "hidden",
+                }}>
+                  {/* Crate header */}
+                  <div style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    <div>
+                      <div style={{
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-semibold)",
+                      }}>
+                        {playlists.find(p => p.id === expandedMix)?.name}
+                      </div>
+                      <div style={{
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text-muted)",
+                        marginTop: 1,
+                      }}>
+                        {mixTracks.length} tracks
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                      {/* Play all */}
                       <button
-                        key={pl.id}
-                        onClick={async () => {
-                          if (expandedMix === pl.id) {
-                            setExpandedMix(null);
-                            setMixTracks([]);
-                            return;
-                          }
-                          setExpandedMix(pl.id);
-                          setMixLoading(true);
-                          const tracks = await fetchPlaylistTracks(pl.id);
-                          setMixTracks(tracks);
-                          setMixLoading(false);
-                        }}
+                        onClick={() => playPlaylist(expandedMix)}
                         style={{
-                          padding: "var(--space-2) var(--space-3)",
-                          background: expandedMix === pl.id ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
-                          border: "1px solid var(--color-border-light)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          padding: "var(--space-1-5) var(--space-2-5)",
+                          background: "var(--color-text)",
+                          color: "var(--color-bg)",
+                          border: "none",
                           borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          fontFamily: "var(--font-primary)",
-                          textAlign: "left",
-                          transition: "all 120ms",
-                        }}
-                      >
-                        <div style={{
                           fontSize: "var(--font-size-xs)",
                           fontWeight: "var(--font-weight-semibold)",
-                          color: expandedMix === pl.id ? "var(--color-text-inverse)" : "var(--color-text)",
-                        }}>
-                          {pl.name}
-                        </div>
-                        <div style={{
-                          fontSize: 9,
-                          fontFamily: "var(--font-mono)",
-                          color: expandedMix === pl.id ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                          marginTop: 1,
-                          opacity: expandedMix === pl.id ? 0.7 : 1,
-                        }}>
-                          {pl.tracks} trk
-                        </div>
+                          fontFamily: "var(--font-primary)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Play size={10} strokeWidth={2.5} fill="var(--color-bg)" />
+                        Play
                       </button>
-                    ))}
+                    </div>
                   </div>
 
-                  {/* Expanded mix track list */}
-                  {expandedMix && (
-                    <div style={{
-                      marginTop: "var(--space-3)",
-                      borderTop: "1px solid var(--color-border-light)",
-                      paddingTop: "var(--space-3)",
-                      maxHeight: 200,
-                      overflowY: "auto",
-                    }}>
-                      {mixLoading ? (
-                        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>
-                          loading...
-                        </div>
-                      ) : (
-                        mixTracks.map((track, i) => {
-                          const isActive = currentTrack?.id === track.id;
-                          const trackFlagged = isFlagged(track.id);
-                          return (
-                            <div
-                              key={track.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData("application/fulkit-track", JSON.stringify(track));
-                                e.currentTarget.style.opacity = "0.4";
-                              }}
-                              onDragEnd={(e) => { e.currentTarget.style.opacity = "1"; }}
+                  {/* Track list */}
+                  <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                    {mixLoading ? (
+                      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", padding: "var(--space-4)", textAlign: "center" }}>
+                        loading...
+                      </div>
+                    ) : (
+                      mixTracks.map((track, i) => {
+                        const isActive = currentTrack?.id === track.id;
+                        const trackFlagged = isFlagged(track.id);
+                        return (
+                          <div
+                            key={track.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("application/fulkit-track", JSON.stringify(track));
+                              e.currentTarget.style.opacity = "0.4";
+                            }}
+                            onDragEnd={(e) => { e.currentTarget.style.opacity = "1"; }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "var(--space-3)",
+                              padding: "var(--space-2) var(--space-4)",
+                              borderBottom: "1px solid var(--color-border-light)",
+                              cursor: "grab",
+                              background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                              transition: "background 120ms",
+                            }}
+                          >
+                            <div style={{
+                              fontSize: 8,
+                              fontFamily: "var(--font-mono)",
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                              width: 18,
+                              flexShrink: 0,
+                              textAlign: "right",
+                            }}>
+                              {String(i + 1).padStart(2, "0")}
+                            </div>
+                            <button
+                              onClick={() => playTrack(track)}
                               style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "var(--space-3)",
-                                padding: "var(--space-1) var(--space-2)",
-                                borderRadius: "var(--radius-sm)",
-                                cursor: "grab",
-                                background: isActive ? "var(--color-bg-inverse)" : "transparent",
-                                transition: "background 120ms",
+                                flex: 1,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                padding: 0,
+                                fontFamily: "var(--font-primary)",
+                                minWidth: 0,
                               }}
                             >
                               <div style={{
-                                fontSize: 8,
-                                fontFamily: "var(--font-mono)",
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                                width: 16,
-                                flexShrink: 0,
-                                opacity: 0.5,
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: "var(--font-weight-medium)",
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
                               }}>
-                                {String(i + 1).padStart(2, "0")}
+                                {track.title}
                               </div>
-                              <button
-                                onClick={() => playTrack(track)}
-                                style={{
-                                  flex: 1,
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  textAlign: "left",
-                                  padding: 0,
-                                  fontFamily: "var(--font-primary)",
-                                  minWidth: 0,
-                                }}
-                              >
-                                <div style={{
-                                  fontSize: 10,
-                                  fontWeight: "var(--font-weight-semibold)",
-                                  color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}>
-                                  {track.title}
-                                </div>
-                                <div style={{
-                                  fontSize: 9,
-                                  color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  opacity: 0.7,
-                                }}>
-                                  {track.artist}
-                                </div>
-                              </button>
-                              <button
-                                onClick={() => flag(track)}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  padding: 2,
-                                  flexShrink: 0,
-                                  color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
-                                  opacity: trackFlagged ? 1 : 0.3,
-                                  transition: "opacity 120ms",
-                                }}
-                                title={trackFlagged ? "Remove from crate" : "Add to crate"}
-                              >
-                                <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
-                              </button>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
-                </>
+                              <div style={{
+                                fontSize: 9,
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}>
+                                {track.artist}
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => flag(track)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 2,
+                                flexShrink: 0,
+                                color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
+                                opacity: trackFlagged ? 1 : 0.3,
+                                transition: "opacity 120ms",
+                              }}
+                              title={trackFlagged ? "Remove from set" : "Add to set"}
+                            >
+                              <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               )}
+
+              {/* Featured playlists */}
+              <FeaturedShelf playTrack={playTrack} currentTrack={currentTrack} />
             </div>
 
             {/* THE SET — draggable setlist rail */}
