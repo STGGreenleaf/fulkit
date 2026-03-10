@@ -157,7 +157,7 @@ const ALL_SOURCES = [
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "github", name: "GitHub", cat: "Dev" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
-  { id: "fabric", name: "Fabric", cat: "Media" },
+  { id: "fabric", name: "Spotify", cat: "Media" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
@@ -880,7 +880,7 @@ function SourcesTab() {
               <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
                   logo={SOURCE_LOGOS.fabric}
-                  name="Fabric"
+                  name="Spotify"
                   subtitle={fabricPlayerEnabled ? "Player active" : "Player off"}
                   isExpanded={fabricExpanded}
                   onToggle={() => setFabricExpanded(!fabricExpanded)}

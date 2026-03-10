@@ -1416,6 +1416,165 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 }
 
 // Hardware section label — silk-screened look
+function FeaturedShelf({ playTrack, currentTrack }) {
+  const [featured, setFeatured] = useState([]);
+  const [expanded, setExpanded] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/fabric/featured")
+      .then(r => r.json())
+      .then(data => { setFeatured(data.crates || []); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  if (!loaded || featured.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: "var(--space-4)" }}>
+      <div style={{
+        fontSize: 9,
+        fontFamily: "var(--font-mono)",
+        fontWeight: "var(--font-weight-medium)",
+        textTransform: "uppercase",
+        letterSpacing: "var(--letter-spacing-wider)",
+        color: "var(--color-text-dim)",
+        marginBottom: "var(--space-2)",
+      }}>
+        Featured
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+        {featured.map(crate => (
+          <button
+            key={crate.id}
+            onClick={() => {
+              setExpanded(expanded === crate.id ? null : crate.id);
+            }}
+            style={{
+              padding: "var(--space-2) var(--space-3)",
+              background: expanded === crate.id ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontFamily: "var(--font-primary)",
+              textAlign: "left",
+              transition: "all 120ms",
+            }}
+          >
+            <div style={{
+              fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              color: expanded === crate.id ? "var(--color-text-inverse)" : "var(--color-text)",
+            }}>
+              {crate.name}
+            </div>
+            <div style={{
+              fontSize: 9,
+              fontFamily: "var(--font-mono)",
+              color: expanded === crate.id ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+              marginTop: 1,
+              opacity: expanded === crate.id ? 0.7 : 1,
+            }}>
+              {crate.tracks?.length || 0} trk
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {expanded && (() => {
+        const crate = featured.find(c => c.id === expanded);
+        if (!crate || !crate.tracks?.length) return null;
+        return (
+          <div style={{
+            marginTop: "var(--space-3)",
+            borderTop: "1px solid var(--color-border-light)",
+            paddingTop: "var(--space-3)",
+            maxHeight: 200,
+            overflowY: "auto",
+          }}>
+            {crate.tracks.map((track, i) => {
+              const isActive = currentTrack?.id === track.spotify_id;
+              const hasFabric = track.fabric_status === "complete";
+              return (
+                <div
+                  key={track.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    padding: "var(--space-1) var(--space-2)",
+                    borderRadius: "var(--radius-sm)",
+                    background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                    transition: "background 120ms",
+                  }}
+                >
+                  <div style={{
+                    fontSize: 8,
+                    fontFamily: "var(--font-mono)",
+                    color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                    width: 16,
+                    flexShrink: 0,
+                    opacity: 0.5,
+                  }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </div>
+                  <div style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: hasFabric ? "var(--color-text-muted)" : "transparent",
+                    border: hasFabric ? "none" : "1px solid var(--color-text-dim)",
+                    flexShrink: 0,
+                  }} title={hasFabric ? "Fabric analyzed" : "Pending analysis"} />
+                  <button
+                    onClick={() => playTrack({
+                      id: track.spotify_id,
+                      title: track.title,
+                      artist: track.artist,
+                      duration: Math.round((track.duration_ms || 0) / 1000),
+                    })}
+                    style={{
+                      flex: 1,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      padding: 0,
+                      fontFamily: "var(--font-primary)",
+                      minWidth: 0,
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 10,
+                      fontWeight: "var(--font-weight-semibold)",
+                      color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {track.title}
+                    </div>
+                    <div style={{
+                      fontSize: 9,
+                      color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      opacity: 0.7,
+                    }}>
+                      {track.artist}
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 function Label({ children, style }) {
   return (
     <div
@@ -1928,6 +2087,9 @@ export default function FabricPage() {
                   );
                 })}
               </div>
+
+              {/* Featured playlists */}
+              <FeaturedShelf playTrack={playTrack} currentTrack={currentTrack} />
 
               {/* Mixes section below crate */}
               {playlists.length > 0 && (

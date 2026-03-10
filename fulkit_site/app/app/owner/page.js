@@ -19,6 +19,9 @@ import {
   Check as CheckIcon,
   Upload,
   FileText,
+  Music,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -35,6 +38,7 @@ const TABS = [
   { id: "users", label: "Users", icon: Users },
   { id: "socials", label: "Socials", icon: Share2 },
   { id: "og", label: "OG Creator", icon: Image },
+  { id: "fabric", label: "Fabric", icon: Music },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -128,6 +132,7 @@ export default function Owner() {
             {tab === "users" && <PlaceholderTab title="Users" description="Invite tree, usage stats, revenue per user. Coming soon." />}
             {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
             {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
+            {tab === "fabric" && <FabricTab />}
           </div>
         </div>
       </div>
@@ -143,7 +148,6 @@ function DashboardTab() {
   const PROJECT_DOCS = [
     { path: "md/buildnotes.md", title: "Build Notes", folder: "01-PROJECT" },
     { path: "md/design.md", title: "Design System", folder: "01-PROJECT" },
-    { path: "md/prelaunch.md", title: "Pre-Launch Checklist", folder: "01-PROJECT" },
     { path: "md/trust-model.md", title: "Trust Model", folder: "01-PROJECT" },
     { path: "md/Audio_Crate/audio-spec.md", title: "Audio Spec", folder: "02-FEATURES" },
     { path: "md/Audio_Crate/audio-todo.md", title: "Audio TODO", folder: "02-FEATURES" },
@@ -1206,6 +1210,233 @@ function PlaceholderTab({ title, description }) {
       <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
         {description}
       </p>
+    </div>
+  );
+}
+
+function FabricTab() {
+  const { accessToken } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [featured, setFeatured] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [playlistInput, setPlaylistInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+
+    // Fetch stats
+    const [pendingRes, analyzingRes, completeRes, failedRes, timelinesRes] = await Promise.all([
+      supabase.from("fabric_tracks").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("fabric_tracks").select("id", { count: "exact", head: true }).eq("status", "analyzing"),
+      supabase.from("fabric_tracks").select("id", { count: "exact", head: true }).eq("status", "complete"),
+      supabase.from("fabric_tracks").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      supabase.from("fabric_timelines").select("track_id", { count: "exact", head: true }),
+    ]);
+
+    setStats({
+      pending: pendingRes.count || 0,
+      analyzing: analyzingRes.count || 0,
+      complete: completeRes.count || 0,
+      failed: failedRes.count || 0,
+      timelines: timelinesRes.count || 0,
+    });
+
+    // Fetch featured
+    try {
+      const res = await fetch("/api/fabric/featured");
+      const data = await res.json();
+      setFeatured(data.crates || []);
+    } catch {}
+
+    setLoading(false);
+  }, [accessToken]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const addFeatured = async () => {
+    if (!playlistInput.trim() || !accessToken) return;
+    setAdding(true);
+
+    // Extract playlist ID from URL or raw ID
+    let playlistId = playlistInput.trim();
+    const match = playlistId.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (match) playlistId = match[1];
+
+    try {
+      const res = await fetch("/api/fabric/featured/manage", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ playlistId, name: nameInput.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(`Error: ${data.error}`);
+      } else {
+        setPlaylistInput("");
+        setNameInput("");
+        fetchData();
+      }
+    } catch (e) {
+      alert(`Error: ${e.message}`);
+    }
+    setAdding(false);
+  };
+
+  const removeFeatured = async (crateId) => {
+    if (!accessToken) return;
+    await fetch(`/api/fabric/featured/manage?id=${crateId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    fetchData();
+  };
+
+  const statBox = { padding: "var(--space-3)", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-light)", textAlign: "center", minWidth: 100 };
+  const statNum = { fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)" };
+  const statLabel = { fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.05em" };
+
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
+        <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)" }}>Fabric</h2>
+        <button
+          onClick={fetchData}
+          style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "var(--space-1)" }}
+        >
+          <RefreshCw size={14} strokeWidth={1.8} />
+        </button>
+      </div>
+
+      {/* Analysis Stats */}
+      <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", marginBottom: "var(--space-6)" }}>
+        {loading ? (
+          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>Loading...</p>
+        ) : stats && (
+          <>
+            <div style={statBox}><div style={statNum}>{stats.pending}</div><div style={statLabel}>Pending</div></div>
+            <div style={statBox}><div style={statNum}>{stats.analyzing}</div><div style={statLabel}>Analyzing</div></div>
+            <div style={statBox}><div style={statNum}>{stats.complete}</div><div style={statLabel}>Complete</div></div>
+            <div style={statBox}><div style={statNum}>{stats.failed}</div><div style={statLabel}>Failed</div></div>
+            <div style={statBox}><div style={statNum}>{stats.timelines}</div><div style={statLabel}>Timelines</div></div>
+          </>
+        )}
+      </div>
+
+      {/* Featured Playlists */}
+      <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-3)" }}>Featured Playlists</h3>
+
+      {featured.length === 0 && !loading && (
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+          No featured playlists yet.
+        </p>
+      )}
+
+      {featured.map(crate => {
+        const analyzed = crate.tracks?.filter(t => t.fabric_status === "complete").length || 0;
+        const total = crate.tracks?.length || 0;
+        const pct = total > 0 ? Math.round((analyzed / total) * 100) : 0;
+        return (
+          <div key={crate.id} style={{
+            padding: "var(--space-3) var(--space-4)",
+            background: "var(--color-bg-elevated)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--color-border-light)",
+            marginBottom: "var(--space-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <div>
+              <div style={{ fontWeight: "var(--font-weight-semibold)", fontSize: "var(--font-size-sm)" }}>{crate.name}</div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                {total} tracks · {analyzed}/{total} analyzed ({pct}%)
+              </div>
+            </div>
+            <button
+              onClick={() => removeFeatured(crate.id)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "var(--space-1)" }}
+            >
+              <X size={14} strokeWidth={1.8} />
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Add Featured */}
+      <div style={{ marginTop: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        <input
+          type="text"
+          placeholder="Spotify playlist URL or ID"
+          value={playlistInput}
+          onChange={e => setPlaylistInput(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "var(--space-2) var(--space-2-5)",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-md)",
+            background: "var(--color-bg-elevated)",
+            color: "var(--color-text)",
+            fontSize: "var(--font-size-sm)",
+            fontFamily: "var(--font-primary)",
+            outline: "none",
+          }}
+        />
+        <input
+          type="text"
+          placeholder="Custom name (optional)"
+          value={nameInput}
+          onChange={e => setNameInput(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "var(--space-2) var(--space-2-5)",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-md)",
+            background: "var(--color-bg-elevated)",
+            color: "var(--color-text)",
+            fontSize: "var(--font-size-sm)",
+            fontFamily: "var(--font-primary)",
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={addFeatured}
+          disabled={adding || !playlistInput.trim()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-1-5)",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-text)",
+            color: "var(--color-bg)",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-semibold)",
+            fontFamily: "var(--font-primary)",
+            cursor: adding ? "wait" : "pointer",
+            opacity: !playlistInput.trim() ? 0.5 : 1,
+          }}
+        >
+          <Plus size={14} strokeWidth={2} />
+          {adding ? "Adding..." : "Add Featured Playlist"}
+        </button>
+      </div>
+
+      {/* Harvest Info */}
+      <div style={{ marginTop: "var(--space-6)", padding: "var(--space-3) var(--space-4)", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-light)" }}>
+        <div style={{ fontWeight: "var(--font-weight-semibold)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-1)" }}>Scripts</div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-mono)", lineHeight: "var(--line-height-relaxed)" }}>
+          node scripts/harvest-library.mjs<br />
+          node scripts/batch-analyze.mjs --limit 50
+        </div>
+      </div>
     </div>
   );
 }

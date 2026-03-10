@@ -1,4 +1,5 @@
 import { authenticateUser, fabricFetch } from "../../../../lib/fabric-server";
+import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
 export async function GET(request) {
   const userId = await authenticateUser(request);
@@ -35,6 +36,21 @@ export async function GET(request) {
     progress: (data.progress_ms || 0) / (data.item.duration_ms || 1),
     progressMs: data.progress_ms || 0,
   };
+
+  // Fire-and-forget: queue untracked songs for Fabric analysis
+  const db = getSupabaseAdmin();
+  db.from("fabric_tracks")
+    .upsert({
+      spotify_id: data.item.id,
+      title: data.item.name,
+      artist: data.item.artists?.map(a => a.name).join(", ") || "",
+      duration_ms: data.item.duration_ms || 0,
+      isrc: data.item.external_ids?.isrc || null,
+      composite_key: `${(data.item.artists?.map(a => a.name).join(", ") || "").toLowerCase().trim()}|${(data.item.name || "").toLowerCase().trim()}|${Math.round((data.item.duration_ms || 0) / 5000) * 5}`,
+      status: "pending",
+    }, { onConflict: "spotify_id", ignoreDuplicates: true })
+    .then(() => {})
+    .catch(() => {});
 
   return Response.json({ isPlaying: data.is_playing, track, volume: data.device?.volume_percent ?? null });
 }
