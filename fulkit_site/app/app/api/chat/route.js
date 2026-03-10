@@ -550,7 +550,7 @@ export async function POST(request) {
           .select("title, created_at")
           .eq("user_id", userId)
           .order("updated_at", { ascending: false })
-          .limit(10);
+          .limit(25);
         if (recentConvos && recentConvos.length > 0) {
           const convoBlock = recentConvos
             .map((c) => `- ${c.title} (${new Date(c.created_at).toLocaleDateString()})`)
