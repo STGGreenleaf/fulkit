@@ -840,11 +840,16 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cy = h/2 + s.noise(80, s.time*0.1) * dim * 0.03;
       const rot = s.time * 0.04;
 
-      // Beat
+      // Tempo-relative scaling — slow music moves slowly
+      const tempoScale = bpm / 120;
+
+      // Beat — floor ensures every beat is visible, acoustic amplifies attack
       const progressMs = progress * duration * 1000;
       const msPerBeat = 60000 / bpm;
       const bPhase = isPlaying ? (progressMs % msPerBeat) / msPerBeat : 1;
-      const beat = Math.pow(1 - bPhase, 2.5) * dance;
+      const beatCurve = acoustic > 0.5 ? 2.0 : 2.5; // sharper attack for acoustic
+      const beatStrength = Math.max(dance, 0.35 + acoustic * 0.2); // piano gets a floor
+      const beat = Math.pow(1 - bPhase, beatCurve) * beatStrength;
 
       // Exhale
       const remainingMs = (duration * 1000) - progressMs;
@@ -853,7 +858,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const sharp = 1 - valence;
 
       // Zone axis slowly rotates — features migrate around the form
-      const zoneRot = s.time * 0.008 + (keyVal / 12) * Math.PI * 2;
+      const zoneRot = s.time * 0.008 * tempoScale + (keyVal / 12) * Math.PI * 2;
 
       const disp = new Float32Array(N);
       const radii = new Float32Array(N);
@@ -870,29 +875,29 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const zVocal   = Math.max(0, Math.cos(za - Math.PI)) ** 1.5;
         const zTexture = Math.max(0, Math.cos(za - Math.PI*1.5)) ** 1.5;
 
-        // Base warp (3 octaves)
-        const d1 = s.noise(nx*0.3, ny*0.3 + s.time*0.002);
-        const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005);
-        const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008);
+        // Base warp (3 octaves) — speed tied to tempo
+        const d1 = s.noise(nx*0.3, ny*0.3 + s.time*0.002*tempoScale);
+        const d2 = s.noise2(nx*0.6+10, ny*0.6 + s.time*0.005*tempoScale);
+        const d3 = s.noise3(nx*1.2+30, ny*1.2 + s.time*0.008*tempoScale);
         const irregularity = 0.4 + energy * 0.6;
         radii[i] = baseR * (1 + (d1*0.5 + d2*0.25 + d3*0.25*irregularity) * s.amp * 0.75);
 
         // BASS: low freq, big slow, energy × loudness
-        const bassN = s.noise(nx*0.8 + s.time*0.12, ny*0.8 + s.time*0.1);
+        const bassN = s.noise(nx*0.8 + s.time*0.12*tempoScale, ny*0.8 + s.time*0.1*tempoScale);
         const bassD = bassN * energy * loud * 1.8;
 
-        // RHYTHM: mid freq, beat-pulsed, danceability
-        const rhythmN = s.noise2(nx*2.5 + s.time*0.3, ny*2.5 + s.time*0.25);
-        const rhythmD = rhythmN * (0.5 + beat * 2.5) * dance * 1.3;
+        // RHYTHM: mid freq, beat-pulsed — tempo-synced movement
+        const rhythmN = s.noise2(nx*2.5 + s.time*0.3*tempoScale, ny*2.5 + s.time*0.25*tempoScale);
+        const rhythmD = rhythmN * (0.5 + beat * 2.5) * beatStrength * 1.3;
 
         // VOCAL: high freq when speech present, flatter when instrumental
         const vocalF = 4 + speech * 8;
-        const vocalN = s.noise3(nx*vocalF + s.time*0.5, ny*vocalF + s.time*0.4);
+        const vocalN = s.noise3(nx*vocalF + s.time*0.5*tempoScale, ny*vocalF + s.time*0.4*tempoScale);
         const vocalD = vocalN * (speech * 3 + 0.15) * 0.6;
 
         // TEXTURE: acoustic=smooth wide, digital=tight sharp
         const texF = 1.5 + (1-acoustic) * 4;
-        const texN = s.noise4(nx*texF + s.time*0.2, ny*texF + s.time*0.18);
+        const texN = s.noise4(nx*texF + s.time*0.2*tempoScale, ny*texF + s.time*0.18*tempoScale);
         const texD = texN * (0.4 + acoustic * 0.6) * 1.1;
 
         // Blend by zone weights
@@ -903,7 +908,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         totalD = Math.sign(totalD) * Math.pow(Math.abs(totalD), 1 + sharp * 0.5);
 
         disp[i] = totalD * s.amp * (1 + beat*1.2) * exhale * baseR * 1.15;
-        disp[i] *= (1 + (Math.random()-0.5)*0.04);
+        disp[i] *= (1 + (Math.random()-0.5) * (0.01 + (1-acoustic)*0.03));
 
         // Per-point weight — bass/acoustic zones thicker
         pointWeight[i] = 0.7 + zBass*acoustic*0.8 + zTexture*acoustic*0.6 - zVocal*0.2;
