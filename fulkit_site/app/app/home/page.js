@@ -44,11 +44,12 @@ function timeAgo(dateStr) {
 const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
 
 export default function Dashboard() {
-  const { user, profile, hasContext } = useAuth();
+  const { user, profile, hasContext, accessToken } = useAuth();
   const isDev = user?.isDev;
 
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [whispers, setWhispers] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   useEffect(() => {
@@ -72,6 +73,17 @@ export default function Dashboard() {
       .then(({ data }) => { if (data) setNotes(data); });
   }, [user, isDev]);
 
+  // Fetch whispers (proactive suggestions from Claude)
+  useEffect(() => {
+    if (!accessToken || isDev) return;
+    fetch("/api/whispers", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.whispers) setWhispers(data.whispers); })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
   const completeAction = async (id) => {
@@ -84,7 +96,7 @@ export default function Dashboard() {
 
   const displayActions = isDev ? DEV_ACTIONS : actions;
   const displayNotes = isDev ? DEV_NOTES : notes;
-  const displayWhispers = isDev ? DEV_WHISPERS : [];
+  const displayWhispers = isDev ? DEV_WHISPERS : whispers;
 
   return (
     <AuthGuard>
