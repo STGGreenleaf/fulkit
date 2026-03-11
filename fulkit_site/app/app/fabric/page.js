@@ -2237,20 +2237,6 @@ export default function FabricPage() {
                   </div>
                 </div>
 
-                {/* Ticker — the plate */}
-                {tickerFact && (
-                  <div style={{
-                    fontSize: 9,
-                    fontFamily: "var(--font-primary)",
-                    fontStyle: "italic",
-                    color: "var(--color-text-secondary)",
-                    lineHeight: 1.4,
-                    marginBottom: "var(--space-4)",
-                  }}>
-                    — {tickerFact}
-                  </div>
-                )}
-
                 {/* ── Bin Picks — crowned sets ── */}
                 {crates.filter(c => c.source === "set").length > 0 && (
                   <div style={{ marginBottom: "var(--space-3)" }}>
