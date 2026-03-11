@@ -42,13 +42,30 @@ export function FabricProvider({ children }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
   const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
-  const [flagged, setFlagged] = useState(() => {
-    if (typeof window === "undefined") return [];
+  // Multi-set state (migrates from old single-set format)
+  const [setsData, setSetsData] = useState(() => {
+    if (typeof window === "undefined") return { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] };
     try {
-      const stored = localStorage.getItem("fulkit-flagged-tracks");
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
+      const newFormat = localStorage.getItem("fulkit-sets");
+      if (newFormat) return JSON.parse(newFormat);
+      // Migrate old format
+      const oldTracks = localStorage.getItem("fulkit-flagged-tracks");
+      const tracks = oldTracks ? JSON.parse(oldTracks) : [];
+      const migrated = { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks }] };
+      localStorage.setItem("fulkit-sets", JSON.stringify(migrated));
+      localStorage.removeItem("fulkit-flagged-tracks");
+      return migrated;
+    } catch { return { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] }; }
   });
+
+  // Persist sets to localStorage
+  const persistSets = useCallback((data) => {
+    try { localStorage.setItem("fulkit-sets", JSON.stringify(data)); } catch {}
+  }, []);
+
+  // Derived: active set's tracks (backwards-compatible with old `flagged`)
+  const activeSet = setsData.sets.find(s => s.id === setsData.activeId) || setsData.sets[0];
+  const flagged = activeSet?.tracks || [];
   const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(null);
@@ -277,29 +294,81 @@ export function FabricProvider({ children }) {
   }, [currentTrack?.id, flagged, connected, accessToken, isDev, apiFetch, audioFeatures]);
 
   const reorderFlagged = useCallback((fromIndex, toIndex) => {
-    setFlagged((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      try { localStorage.setItem("fulkit-flagged-tracks", JSON.stringify(next)); } catch {}
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id !== prev.activeId) return s;
+        const tracks = [...s.tracks];
+        const [moved] = tracks.splice(fromIndex, 1);
+        tracks.splice(toIndex, 0, moved);
+        return { ...s, tracks };
+      })};
+      persistSets(next);
       return next;
     });
-  }, []);
+  }, [persistSets]);
 
   const flag = useCallback((track) => {
-    setFlagged((prev) => {
-      const next = prev.some((t) => t.id === track.id)
-        ? prev.filter((t) => t.id !== track.id)
-        : [...prev, track];
-      try { localStorage.setItem("fulkit-flagged-tracks", JSON.stringify(next)); } catch {}
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id !== prev.activeId) return s;
+        const has = s.tracks.some(t => t.id === track.id);
+        return { ...s, tracks: has ? s.tracks.filter(t => t.id !== track.id) : [...s.tracks, track] };
+      })};
+      persistSets(next);
       return next;
     });
-  }, []);
+  }, [persistSets]);
 
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),
     [flagged]
   );
+
+  // Multi-set CRUD
+  const allSets = setsData.sets.map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length }));
+  const activeSetId = setsData.activeId;
+
+  const createSet = useCallback((name) => {
+    setSetsData((prev) => {
+      const num = prev.sets.length + 1;
+      const id = `set-${Date.now()}`;
+      const newSet = { id, name: name || `Set ${num}`, tracks: [] };
+      const next = { activeId: id, sets: [...prev.sets, newSet] };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  const deleteSet = useCallback((setId) => {
+    setSetsData((prev) => {
+      const remaining = prev.sets.filter(s => s.id !== setId);
+      if (remaining.length === 0) {
+        const fallback = { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] };
+        persistSets(fallback);
+        return fallback;
+      }
+      const activeId = prev.activeId === setId ? remaining[0].id : prev.activeId;
+      const next = { activeId, sets: remaining };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  const renameSet = useCallback((setId, name) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s => s.id === setId ? { ...s, name } : s) };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  const switchSet = useCallback((setId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, activeId: setId };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
 
   const playTrack = useCallback((track) => {
     setCurrentTrack(track);
@@ -365,6 +434,12 @@ export function FabricProvider({ children }) {
         flag,
         isFlagged,
         reorderFlagged,
+        allSets,
+        activeSetId,
+        createSet,
+        deleteSet,
+        renameSet,
+        switchSet,
         playTrack,
         playPlaylist,
         fetchPlaylistTracks,

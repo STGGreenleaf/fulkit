@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1609,6 +1609,12 @@ export default function FabricPage() {
     flag,
     isFlagged,
     reorderFlagged,
+    allSets,
+    activeSetId,
+    createSet,
+    deleteSet,
+    renameSet,
+    switchSet,
     playTrack,
     playPlaylist,
     fetchPlaylistTracks,
@@ -1627,6 +1633,9 @@ export default function FabricPage() {
   const [visualizing, setVisualizing] = useState(false);
   const [showSpotifyBrowser, setShowSpotifyBrowser] = useState(false);
   const [importing, setImporting] = useState(null); // playlist id being imported
+  const [showSetMenu, setShowSetMenu] = useState(false);
+  const [renamingSet, setRenamingSet] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
   const [crates, setCrates] = useState([]); // imported crates from DB
   const [cratesLoading, setCratesLoading] = useState(true);
   const [expandedCrate, setExpandedCrate] = useState(null);
@@ -2433,7 +2442,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            <Plus size={12} strokeWidth={trackFlagged ? 2.5 : 1.5} style={trackFlagged ? { transform: "rotate(45deg)" } : {}} />
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
                           </button>
                         </div>
                       );
@@ -2456,14 +2465,127 @@ export default function FabricPage() {
             >
               <div
                 style={{
-                  padding: "var(--space-5) var(--space-4)",
+                  padding: "var(--space-3) var(--space-4)",
                   borderBottom: "1px solid var(--color-border-light)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  gap: "var(--space-2)",
+                  position: "relative",
                 }}
               >
-                <Label>Set · {flagged.length}</Label>
+                {/* Set selector */}
+                <button
+                  onClick={() => setShowSetMenu(v => !v)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 3,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 9,
+                    fontWeight: "var(--font-weight-bold)",
+                    color: "var(--color-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-wider)",
+                  }}
+                >
+                  {allSets.find(s => s.id === activeSetId)?.name || "Set"}
+                  <ChevronDown size={10} strokeWidth={2} style={{ transform: showSetMenu ? "rotate(180deg)" : "none", transition: "transform 120ms" }} />
+                </button>
+                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                  {flagged.length}
+                </span>
+                <div style={{ flex: 1 }} />
+                {/* New set */}
+                <button
+                  onClick={() => createSet()}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                  title="New set"
+                >
+                  <Plus size={12} strokeWidth={1.8} />
+                </button>
+                {/* Delete set */}
+                {allSets.length > 1 && (
+                  <button
+                    onClick={() => deleteSet(activeSetId)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                    title="Delete set"
+                  >
+                    <ListX size={12} strokeWidth={1.8} />
+                  </button>
+                )}
+
+                {/* Dropdown menu */}
+                {showSetMenu && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: "var(--space-4)",
+                    zIndex: 20,
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-md)",
+                    minWidth: 160,
+                    padding: "var(--space-1) 0",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  }}>
+                    {allSets.map(s => (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
+                        {renamingSet === s.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => { if (renameValue.trim()) renameSet(s.id, renameValue.trim()); setRenamingSet(null); }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { if (renameValue.trim()) renameSet(s.id, renameValue.trim()); setRenamingSet(null); }
+                              if (e.key === "Escape") setRenamingSet(null);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "var(--space-1-5) var(--space-3)",
+                              fontSize: "var(--font-size-xs)",
+                              fontFamily: "var(--font-primary)",
+                              border: "none",
+                              background: "transparent",
+                              outline: "none",
+                              color: "var(--color-text)",
+                            }}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
+                            onDoubleClick={() => { setRenamingSet(s.id); setRenameValue(s.name); }}
+                            style={{
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "var(--space-1-5) var(--space-3)",
+                              background: s.id === activeSetId ? "var(--color-bg-alt)" : "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "var(--font-size-xs)",
+                              fontFamily: "var(--font-primary)",
+                              color: "var(--color-text)",
+                              textAlign: "left",
+                            }}
+                          >
+                            {s.name}
+                            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{s.trackCount}</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ flex: 1, overflowY: "auto" }}>
@@ -2592,7 +2714,7 @@ export default function FabricPage() {
                           opacity: 0.5,
                         }}
                       >
-                        <X size={10} strokeWidth={2} />
+                        <ListX size={10} strokeWidth={1.8} />
                       </button>
                     </div>
                   );
