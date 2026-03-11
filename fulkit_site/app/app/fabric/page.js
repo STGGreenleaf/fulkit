@@ -2541,28 +2541,56 @@ export default function FabricPage() {
                   position: "relative",
                 }}
               >
-                {/* Set selector */}
-                <button
-                  onClick={() => setShowSetMenu(v => !v)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 3,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 9,
-                    fontWeight: "var(--font-weight-bold)",
-                    color: "var(--color-text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                  }}
-                >
-                  {allSets.find(s => s.id === activeSetId)?.name || "Set"}
-                  <ChevronDown size={10} strokeWidth={2} style={{ transform: showSetMenu ? "rotate(180deg)" : "none", transition: "transform 120ms" }} />
-                </button>
+                {/* Set selector — click to open dropdown, double-click to rename */}
+                {renamingSet === activeSetId ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => { if (renameValue.trim()) renameSet(activeSetId, renameValue.trim()); setRenamingSet(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { if (renameValue.trim()) renameSet(activeSetId, renameValue.trim()); setRenamingSet(null); }
+                      if (e.key === "Escape") setRenamingSet(null);
+                    }}
+                    style={{
+                      width: 80,
+                      padding: 0,
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 9,
+                      fontWeight: "var(--font-weight-bold)",
+                      color: "var(--color-text)",
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                      border: "none",
+                      borderBottom: "1px solid var(--color-text-muted)",
+                      background: "transparent",
+                      outline: "none",
+                    }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setShowSetMenu(v => !v)}
+                    onDoubleClick={(e) => { e.stopPropagation(); setShowSetMenu(false); setRenamingSet(activeSetId); setRenameValue(allSets.find(s => s.id === activeSetId)?.name || ""); }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 3,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 9,
+                      fontWeight: "var(--font-weight-bold)",
+                      color: "var(--color-text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                    }}
+                  >
+                    {allSets.find(s => s.id === activeSetId)?.name || "Set"}
+                    <ChevronDown size={10} strokeWidth={2} style={{ transform: showSetMenu ? "rotate(180deg)" : "none", transition: "transform 120ms" }} />
+                  </button>
+                )}
                 <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
                   {flagged.length}
                 </span>
@@ -2606,31 +2634,8 @@ export default function FabricPage() {
                   }}>
                     {allSets.map(s => (
                       <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
-                        {renamingSet === s.id ? (
-                          <input
-                            autoFocus
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onBlur={() => { if (renameValue.trim()) renameSet(s.id, renameValue.trim()); setRenamingSet(null); }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") { if (renameValue.trim()) renameSet(s.id, renameValue.trim()); setRenamingSet(null); }
-                              if (e.key === "Escape") setRenamingSet(null);
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: "var(--space-1-5) var(--space-3)",
-                              fontSize: "var(--font-size-xs)",
-                              fontFamily: "var(--font-primary)",
-                              border: "none",
-                              background: "transparent",
-                              outline: "none",
-                              color: "var(--color-text)",
-                            }}
-                          />
-                        ) : (
                           <button
                             onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
-                            onDoubleClick={() => { setRenamingSet(s.id); setRenameValue(s.name); }}
                             style={{
                               flex: 1,
                               display: "flex",
@@ -2649,7 +2654,6 @@ export default function FabricPage() {
                             {s.name}
                             <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{s.trackCount}</span>
                           </button>
-                        )}
                       </div>
                     ))}
                   </div>
