@@ -1506,6 +1506,9 @@ export default function FabricPage() {
   const [featuredTracks, setFeaturedTracks] = useState([]);
   const musicChatEndRef = useRef(null);
   const musicChatScrollRef = useRef(null);
+  const [discoveryAlbum, setDiscoveryAlbum] = useState(null);
+  const [discoveryTracks, setDiscoveryTracks] = useState([]);
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
   // Per-set expand/collapse — default closed, persisted in localStorage
   const [expandedSetIds, setExpandedSetIds] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -1587,8 +1590,33 @@ export default function FabricPage() {
     prevMsgCount.current = musicMsgCount;
   }, [musicMsgCount, musicMessages]);
 
-  // Load imported crates
+  // Discovery — load album tracks from BTC album links
   const { accessToken, compactMode } = useAuth();
+  const loadDiscovery = useCallback(async (query) => {
+    if (!accessToken || discoveryLoading) return;
+    setDiscoveryLoading(true);
+    try {
+      // Search for album
+      const searchRes = await fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=album`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const searchData = await searchRes.json();
+      const album = searchData.albums?.[0];
+      if (!album) { setDiscoveryLoading(false); return; }
+      // Get album tracks
+      const tracksRes = await fetch(`/api/fabric/search?album=${album.id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const tracksData = await tracksRes.json();
+      setDiscoveryAlbum(tracksData.album || album);
+      setDiscoveryTracks(tracksData.tracks || []);
+    } catch (e) {
+      console.warn("[discovery]", e.message);
+    }
+    setDiscoveryLoading(false);
+  }, [accessToken, discoveryLoading]);
+
+  // Load imported crates
   const loadCrates = useCallback(async () => {
     if (!accessToken) return;
     try {
@@ -2144,6 +2172,7 @@ export default function FabricPage() {
                             whiteSpace: "pre-wrap",
                           }}>
                             {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
+                              // Song recommendation: Artist - Title BPM [+]
                               const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
                               if (plusMatch) {
                                 const artist = plusMatch[1].trim();
@@ -2172,6 +2201,44 @@ export default function FabricPage() {
                                     </button>
                                   </div>
                                 );
+                              }
+                              // Parse album/artist links: {Display}[album: query] or {Display}[artist: query]
+                              const linkRegex = /\{(.+?)\}\[(album|artist):\s*(.+?)\]/g;
+                              if (linkRegex.test(line)) {
+                                linkRegex.lastIndex = 0;
+                                const parts = [];
+                                let lastIndex = 0;
+                                let match;
+                                while ((match = linkRegex.exec(line)) !== null) {
+                                  if (match.index > lastIndex) parts.push(line.slice(lastIndex, match.index));
+                                  const display = match[1];
+                                  const query = match[3];
+                                  parts.push(
+                                    <button
+                                      key={`${li}-${match.index}`}
+                                      onClick={() => loadDiscovery(query)}
+                                      style={{
+                                        display: "inline",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                        fontFamily: "var(--font-primary)",
+                                        fontSize: "var(--font-size-xs)",
+                                        color: "var(--color-text)",
+                                        fontWeight: "var(--font-weight-semibold)",
+                                        textDecoration: "underline",
+                                        textDecorationColor: "var(--color-border)",
+                                        textUnderlineOffset: 2,
+                                      }}
+                                    >
+                                      {display}
+                                    </button>
+                                  );
+                                  lastIndex = match.index + match[0].length;
+                                }
+                                if (lastIndex < line.length) parts.push(line.slice(lastIndex));
+                                return <div key={li}>{parts}</div>;
                               }
                               return <div key={li}>{line}</div>;
                             }) : msg.content}
@@ -2206,7 +2273,7 @@ export default function FabricPage() {
                           }
                         }
                       }}
-                      placeholder={musicChatOpen ? "Ask the guy..." : "Search..."}
+                      placeholder="Ask the guy..."
                       disabled={musicStreaming}
                       style={{
                         flex: 1,
@@ -2246,6 +2313,112 @@ export default function FabricPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* ── Discovery Tray — album tracks from BTC links ── */}
+                {(discoveryAlbum || discoveryLoading) && (
+                  <div style={{ marginBottom: "var(--space-3)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                      <Label>{discoveryAlbum ? discoveryAlbum.name : "Loading..."}</Label>
+                      <button
+                        onClick={() => { setDiscoveryAlbum(null); setDiscoveryTracks([]); }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--color-text-dim)",
+                          padding: 2,
+                          fontSize: 14,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {discoveryAlbum && (
+                      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                        {discoveryAlbum.artist} · {discoveryAlbum.year || ""} · {discoveryAlbum.trackCount || discoveryTracks.length} tracks
+                      </div>
+                    )}
+                    {discoveryLoading && (
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: "var(--space-2) 0" }}>
+                        Loading...
+                      </div>
+                    )}
+                    {discoveryTracks.length > 0 && (
+                      <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+                        {discoveryTracks.map((track, i) => (
+                          <div
+                            key={track.spotify_id || i}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "var(--space-1-5)",
+                              padding: "var(--space-1) var(--space-2)",
+                              borderBottom: "1px solid var(--color-border-light)",
+                            }}
+                          >
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
+                              {String(track.track_number || i + 1).padStart(2, "0")}
+                            </div>
+                            <button
+                              onClick={() => playTrack({
+                                id: track.spotify_id,
+                                title: track.title,
+                                artist: track.artist,
+                                duration: Math.round((track.duration_ms || 0) / 1000),
+                              })}
+                              style={{
+                                flex: 1,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                padding: 0,
+                                fontFamily: "var(--font-primary)",
+                                minWidth: 0,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: "var(--font-weight-medium)",
+                                color: currentTrack?.id === track.spotify_id ? "var(--color-text-inverse)" : "var(--color-text)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}>
+                                {track.title}
+                              </div>
+                            </button>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                              {formatTime(Math.round((track.duration_ms || 0) / 1000))}
+                            </div>
+                            <button
+                              onClick={() => flag({
+                                id: track.spotify_id,
+                                title: track.title,
+                                artist: track.artist,
+                                duration: Math.round((track.duration_ms || 0) / 1000),
+                              })}
+                              style={{
+                                background: "none",
+                                border: "1px solid var(--color-border)",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: "pointer",
+                                padding: "0 3px",
+                                fontSize: 8,
+                                fontFamily: "var(--font-mono)",
+                                color: isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isFlagged(track.spotify_id) ? "✓" : "+"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Bin Picks — crowned sets ── */}
                 {crates.filter(c => c.source === "set").length > 0 && (
