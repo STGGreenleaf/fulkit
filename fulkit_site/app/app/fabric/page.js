@@ -1652,7 +1652,16 @@ export default function FabricPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
-      setCrates(data.crates || []);
+      let fetched = data.crates || [];
+      // Apply saved order
+      try {
+        const savedOrder = JSON.parse(localStorage.getItem("fulkit-crate-order") || "[]");
+        if (savedOrder.length > 0) {
+          const orderMap = Object.fromEntries(savedOrder.map((id, i) => [id, i]));
+          fetched.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
+        }
+      } catch {}
+      setCrates(fetched);
     } catch {}
     setCratesLoading(false);
   }, [accessToken]);
@@ -1696,6 +1705,46 @@ export default function FabricPage() {
       await loadCrates();
     } catch {}
   }, [accessToken, expandedCrate, loadCrates]);
+
+  // Drag handlers for crate shelf
+  const [crateDragIdx, setCrateDragIdx] = useState(null);
+  const [crateDragOverIdx, setCrateDragOverIdx] = useState(null);
+  const crateDragNode = useRef(null);
+
+  const handleCrateDragStart = useCallback((e, idx) => {
+    setCrateDragIdx(idx);
+    crateDragNode.current = e.currentTarget;
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(() => { if (crateDragNode.current) crateDragNode.current.style.opacity = "0.4"; }, 0);
+  }, []);
+
+  const handleCrateDragOver = useCallback((e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (idx !== crateDragOverIdx) setCrateDragOverIdx(idx);
+  }, [crateDragOverIdx]);
+
+  const handleCrateDrop = useCallback((e, toIdx) => {
+    e.preventDefault();
+    if (crateDragIdx != null && crateDragIdx !== toIdx) {
+      setCrates(prev => {
+        const next = [...prev];
+        const [moved] = next.splice(crateDragIdx, 1);
+        next.splice(toIdx, 0, moved);
+        try { localStorage.setItem("fulkit-crate-order", JSON.stringify(next.map(c => c.id))); } catch {}
+        return next;
+      });
+    }
+    setCrateDragIdx(null);
+    setCrateDragOverIdx(null);
+    if (crateDragNode.current) crateDragNode.current.style.opacity = "1";
+  }, [crateDragIdx]);
+
+  const handleCrateDragEnd = useCallback(() => {
+    setCrateDragIdx(null);
+    setCrateDragOverIdx(null);
+    if (crateDragNode.current) crateDragNode.current.style.opacity = "1";
+  }, []);
 
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
@@ -2078,12 +2127,26 @@ export default function FabricPage() {
                   overflowX: "auto",
                   paddingBottom: "var(--space-1)",
                 }}>
-                  {crates.map(crate => {
+                  {crates.map((crate, crateIdx) => {
                     const isOpen = expandedCrate === crate.id;
                     const trackCount = crate.tracks?.length || 0;
                     const analyzed = crate.tracks?.filter(t => t.fabric_status === "complete").length || 0;
+                    const isCrateDragTarget = crateDragOverIdx === crateIdx && crateDragIdx !== crateIdx;
                     return (
-                      <div key={crate.id} style={{ position: "relative", flexShrink: 0 }}>
+                      <div
+                        key={crate.id}
+                        draggable
+                        onDragStart={(e) => handleCrateDragStart(e, crateIdx)}
+                        onDragOver={(e) => handleCrateDragOver(e, crateIdx)}
+                        onDrop={(e) => handleCrateDrop(e, crateIdx)}
+                        onDragEnd={handleCrateDragEnd}
+                        style={{
+                          position: "relative",
+                          flexShrink: 0,
+                          borderLeft: isCrateDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
+                          cursor: "grab",
+                        }}
+                      >
                         <button
                           onClick={() => {
                             if (isOpen) {
