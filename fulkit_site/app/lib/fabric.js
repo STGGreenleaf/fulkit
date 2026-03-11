@@ -101,7 +101,6 @@ export function FabricProvider({ children }) {
   useEffect(() => {
     if (isDev || !accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
-      console.log("[fabric] status:", data);
       if (data) setConnected(data.connected);
     });
   }, [accessToken, isDev, apiFetch]);
@@ -110,7 +109,6 @@ export function FabricProvider({ children }) {
   useEffect(() => {
     if (isDev || !connected || !accessToken) return;
     apiFetch("/api/fabric/playlists").then((data) => {
-      console.log("[fabric] playlists:", data?.playlists?.length, "items");
       if (data?.playlists) setPlaylists(data.playlists);
     });
   }, [connected, accessToken, isDev, apiFetch]);
@@ -230,7 +228,6 @@ export function FabricProvider({ children }) {
       if (data?.status === "complete" && data.timeline) {
         setTimeline(data.timeline);
         setTimelineResolution(data.resolution_ms || 500);
-        console.log(`[Fabric] Timeline loaded: ${data.timeline.length} snapshots`);
       } else {
         setTimeline(null);
       }
