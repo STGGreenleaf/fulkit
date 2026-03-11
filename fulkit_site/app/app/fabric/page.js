@@ -1505,6 +1505,7 @@ export default function FabricPage() {
   const [expandedFeatured, setExpandedFeatured] = useState(null);
   const [featuredTracks, setFeaturedTracks] = useState([]);
   const musicChatEndRef = useRef(null);
+  const musicChatScrollRef = useRef(null);
   // Per-set expand/collapse — default closed, persisted in localStorage
   const [expandedSetIds, setExpandedSetIds] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -1574,9 +1575,14 @@ export default function FabricPage() {
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
-  // Auto-scroll music chat
+  // Auto-scroll music chat — only if user is near the bottom
   useEffect(() => {
-    musicChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = musicChatScrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    if (nearBottom) {
+      musicChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [musicMessages]);
 
   // Load imported crates
@@ -2119,7 +2125,7 @@ export default function FabricPage() {
                   {/* RSG chat drawer */}
                   {musicChatOpen && (
                     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                      <div style={{ padding: "var(--space-3)", maxHeight: 240, overflowY: "auto" }}>
+                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", maxHeight: 240, overflowY: "auto" }}>
                         {musicMessages.length === 0 && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
                             {tickerFact || "Ask me anything about music..."}
