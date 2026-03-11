@@ -1874,6 +1874,7 @@ export default function FabricPage() {
               style={{
                 borderBottom: "1px solid var(--color-border-light)",
                 padding: "var(--space-1-5) var(--space-3)",
+                paddingRight: 38,
                 display: "flex",
                 gap: "var(--space-3)",
                 alignItems: "center",
