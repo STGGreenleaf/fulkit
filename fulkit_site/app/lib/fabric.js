@@ -122,9 +122,15 @@ export function FabricProvider({ children }) {
   useEffect(() => {
     if (isDev || !connected || !accessToken) return;
 
+    let failCount = 0;
     const fetchNowPlaying = async () => {
       const data = await apiFetch("/api/fabric/now-playing");
-      if (!data) return;
+      if (!data || data.error) {
+        failCount++;
+        if (failCount >= 3) { setConnected(false); clearInterval(pollRef.current); }
+        return;
+      }
+      failCount = 0;
       setIsPlaying(data.isPlaying);
       if (data.volume != null && Date.now() > volumeLockedUntil.current) setVolumeState(data.volume);
       if (data.track) {
