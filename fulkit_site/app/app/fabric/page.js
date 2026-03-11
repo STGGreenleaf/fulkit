@@ -1639,7 +1639,9 @@ export default function FabricPage() {
   const loadCrates = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const res = await fetch("/api/fabric/featured");
+      const res = await fetch("/api/fabric/featured", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const data = await res.json();
       setCrates(data.crates || []);
     } catch {}
@@ -1669,6 +1671,22 @@ export default function FabricPage() {
     } catch {}
     setImporting(null);
   }, [accessToken, importing, loadCrates]);
+
+  // Delete a crate
+  const deleteCrate = useCallback(async (crateId) => {
+    if (!accessToken) return;
+    try {
+      await fetch(`/api/fabric/featured/manage?id=${crateId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (expandedCrate === crateId) {
+        setExpandedCrate(null);
+        setCrateTracks([]);
+      }
+      await loadCrates();
+    } catch {}
+  }, [accessToken, expandedCrate, loadCrates]);
 
   // Drag handlers for the setlist
   const handleDragStart = useCallback((e, idx) => {
@@ -2057,55 +2075,85 @@ export default function FabricPage() {
                     const trackCount = crate.tracks?.length || 0;
                     const analyzed = crate.tracks?.filter(t => t.fabric_status === "complete").length || 0;
                     return (
-                      <button
-                        key={crate.id}
-                        onClick={() => {
-                          if (isOpen) {
-                            setExpandedCrate(null);
-                            setCrateTracks([]);
-                          } else {
-                            setExpandedCrate(crate.id);
-                            setCrateTracks(crate.tracks || []);
-                          }
-                        }}
-                        style={{
-                          padding: "var(--space-3)",
-                          minWidth: 140,
-                          background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                          border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-lg)",
-                          cursor: "pointer",
-                          fontFamily: "var(--font-primary)",
-                          textAlign: "left",
-                          transition: "all 120ms",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
-                          {isOpen
-                            ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
-                            : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-                          }
+                      <div key={crate.id} style={{ position: "relative", flexShrink: 0 }}>
+                        <button
+                          onClick={() => {
+                            if (isOpen) {
+                              setExpandedCrate(null);
+                              setCrateTracks([]);
+                            } else {
+                              setExpandedCrate(crate.id);
+                              setCrateTracks(crate.tracks || []);
+                            }
+                          }}
+                          style={{
+                            padding: "var(--space-3)",
+                            paddingRight: "var(--space-6)",
+                            minWidth: 140,
+                            background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                            border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-lg)",
+                            cursor: "pointer",
+                            fontFamily: "var(--font-primary)",
+                            textAlign: "left",
+                            transition: "all 120ms",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
+                            {isOpen
+                              ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                              : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+                            }
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-semibold)",
+                              color: "var(--color-text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: 120,
+                            }}>
+                              {crate.name}
+                            </div>
+                          </div>
                           <div style={{
                             fontSize: "var(--font-size-xs)",
-                            fontWeight: "var(--font-weight-semibold)",
-                            color: "var(--color-text)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            maxWidth: 120,
+                            fontFamily: "var(--font-mono)",
+                            color: "var(--color-text-muted)",
                           }}>
-                            {crate.name}
+                            {trackCount} songs · {analyzed} ready
                           </div>
-                        </div>
-                        <div style={{
-                          fontSize: "var(--font-size-xs)",
-                          fontFamily: "var(--font-mono)",
-                          color: "var(--color-text-muted)",
-                        }}>
-                          {trackCount} songs · {analyzed} ready
-                        </div>
-                      </button>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteCrate(crate.id);
+                          }}
+                          style={{
+                            position: "absolute",
+                            top: 6,
+                            right: 6,
+                            width: 18,
+                            height: 18,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "transparent",
+                            border: "none",
+                            borderRadius: "var(--radius-sm)",
+                            cursor: "pointer",
+                            color: "var(--color-text-dim)",
+                            padding: 0,
+                            opacity: 0.5,
+                            transition: "opacity 120ms",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                          title="Remove crate"
+                        >
+                          <X size={10} strokeWidth={2} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
