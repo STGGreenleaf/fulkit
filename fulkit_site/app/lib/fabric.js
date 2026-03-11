@@ -77,6 +77,7 @@ export function FabricProvider({ children }) {
   const volumeTimer = useRef(null);
   const volumeLockedUntil = useRef(0);
   const featuresRequested = useRef(new Set());
+  const prevTrackRef = useRef(null); // track before manual playTrack jump
 
   // Helper for authenticated API calls
   const apiFetch = useCallback(async (endpoint, options = {}) => {
@@ -196,8 +197,21 @@ export function FabricProvider({ children }) {
       setProgress(0);
       return;
     }
+    // If we jumped to a track manually, go back to what was playing
+    const saved = prevTrackRef.current;
+    if (saved) {
+      prevTrackRef.current = null;
+      setCurrentTrack(saved);
+      setProgress(0);
+      setIsPlaying(true);
+      apiFetch("/api/fabric/controls", {
+        method: "POST",
+        body: JSON.stringify({ action: "play_track", value: { uri: saved.uri || `spotify:track:${saved.id}` } }),
+      });
+      return;
+    }
     sendControl("previous");
-  }, [isDev, sendControl]);
+  }, [isDev, sendControl, apiFetch]);
 
   const setVolume = useCallback((val) => {
     const v = Math.max(0, Math.min(100, Math.round(val)));
@@ -368,7 +382,10 @@ export function FabricProvider({ children }) {
   }, [persistSets]);
 
   const playTrack = useCallback((track) => {
-    setCurrentTrack(track);
+    setCurrentTrack((cur) => {
+      if (cur && cur.id !== track.id) prevTrackRef.current = cur;
+      return track;
+    });
     setProgress(0);
     setIsPlaying(true);
     if (isDev) return;
