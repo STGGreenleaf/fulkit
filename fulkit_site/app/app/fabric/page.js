@@ -2123,6 +2123,7 @@ export default function FabricPage() {
                 display: "flex",
                 flexDirection: "column",
                 minHeight: 0,
+                minWidth: 0,
               }}
             >
               {/* ── YOUR CRATES ── */}
@@ -2790,7 +2791,8 @@ export default function FabricPage() {
             <div
               style={{
                 width: 200,
-                flexShrink: 0,
+                minWidth: 160,
+                flexShrink: 1,
                 borderLeft: "1px solid var(--color-border-light)",
                 display: "flex",
                 flexDirection: "column",
