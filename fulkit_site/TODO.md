@@ -85,8 +85,6 @@
 - [x] Claude chat → create actions (actions_create tool)
 - [x] Claude chat → query actions (actions_list tool)
 - [x] Claude chat → update actions (actions_update tool)
-- [ ] Import prelaunch.md tasks as action items (can now do via chat)
-
 ## Phase 4: Dogfood
 
 - [x] Bulk import API (POST /api/notes/import) — owner-only
@@ -106,6 +104,16 @@
 - [ ] File/note uploads with embedding (vector search via pgvector)
 - [ ] Codebase ingestion — feed repo files so Claude knows the project
 - [ ] RAG pipeline — semantic similarity search (requires embeddings)
+
+## Phase 5.5: Pricing & Payments
+
+- [ ] Set up Stripe integration (subscriptions + one-time purchases)
+- [ ] Implement Fül counting — message caps per tier (Standard 450/mo, Pro 800/mo)
+- [ ] "Fül up" prompt when empty — buy credits ($2/100 messages)
+- [ ] Hot seat mechanic — 4 msgs/month threshold, 30-day auto-revoke
+- [ ] Referral credit system — $1/mo per active referral (credits not cash)
+- [ ] Referral page in settings — link, active referrals, credit balance
+- [ ] BYOK nudge whisper for heavy burners
 
 ## Phase 6: MCP Integrations (plug in everything)
 
@@ -128,4 +136,14 @@
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → ~~Actions~~ → **Dogfood** → Context engine → MCP integrations → Self-building.
+## Prelaunch
+
+- [x] Fabric auto-analyze (dev) — Mac launchd cron, every 5 min, processes pending tracks
+- [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg, daemon watches for pending tracks. Shared DB = analyze once, serve all users.
+- [ ] Public mixes — ensure all tracks in a crate are analyzed before it can be published
+- [ ] Spotify App — request Extended Quota Mode (currently Development Mode, only Collin's account)
+- [ ] Domain verification for Spotify OAuth redirect URI
+
+---
+
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → ~~Actions~~ → **Dogfood** → Context engine → **Pricing** → MCP integrations → Self-building.

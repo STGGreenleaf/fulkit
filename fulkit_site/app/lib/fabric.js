@@ -408,6 +408,161 @@ export function FabricProvider({ children }) {
     return tracks;
   }, [isDev, apiFetch]);
 
+  // ═══ Published sets (featured mixes) ═══
+  const [publishedSets, setPublishedSets] = useState({}); // { setName: crateId }
+
+  // Fetch published sets on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    apiFetch("/api/fabric/featured").then((data) => {
+      if (!data?.crates) return;
+      const map = {};
+      for (const c of data.crates) {
+        if (c.source === "set") map[c.name] = c.id;
+      }
+      setPublishedSets(map);
+    });
+  }, [accessToken, isDev, apiFetch]);
+
+  const publishSet = useCallback(async (setId) => {
+    const set = setsData.sets.find(s => s.id === setId);
+    if (!set || set.tracks.length === 0) return { error: "empty" };
+    const res = await apiFetch("/api/fabric/sets/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        name: set.name,
+        tracks: set.tracks.map((t, i) => ({
+          spotify_id: t.id,
+          title: t.title,
+          artist: t.artist,
+          duration_ms: t.duration_ms || (t.duration ? t.duration * 1000 : 0),
+          position: i,
+        })),
+      }),
+    });
+    if (res?.crateId) {
+      setPublishedSets(prev => ({ ...prev, [set.name]: res.crateId }));
+      return { ok: true, crateId: res.crateId };
+    }
+    return res || { error: "failed" };
+  }, [setsData.sets, apiFetch]);
+
+  const unpublishSet = useCallback(async (crateId) => {
+    const res = await apiFetch(`/api/fabric/sets/publish?id=${crateId}`, { method: "DELETE" });
+    if (res?.ok) {
+      setPublishedSets(prev => {
+        const next = { ...prev };
+        for (const [k, v] of Object.entries(next)) {
+          if (v === crateId) delete next[k];
+        }
+        return next;
+      });
+    }
+    return res;
+  }, [apiFetch]);
+
+  // ═══ Record Store Guy (music chat + ticker) ═══
+  const [musicMessages, setMusicMessages] = useState([]);
+  const [musicChatOpen, setMusicChatOpen] = useState(false);
+  const [tickerFact, setTickerFact] = useState(null);
+  const [tickerTrackId, setTickerTrackId] = useState(null);
+  const [musicStreaming, setMusicStreaming] = useState(false);
+
+  // Fetch ticker fact when track changes
+  useEffect(() => {
+    if (isDev || !accessToken || !currentTrack?.id) return;
+    if (tickerTrackId === currentTrack.id) return;
+    setTickerTrackId(currentTrack.id);
+    apiFetch("/api/fabric/ticker", {
+      method: "POST",
+      body: JSON.stringify({
+        trackId: currentTrack.id,
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album,
+      }),
+    }).then((data) => {
+      if (data?.fact) setTickerFact(data.fact);
+      else setTickerFact(null);
+    }).catch(() => setTickerFact(null));
+  }, [currentTrack?.id, accessToken, isDev, apiFetch, tickerTrackId]);
+
+  const sendMusicMessage = useCallback(async (text) => {
+    if (!text.trim() || musicStreaming) return;
+    const userMsg = { role: "user", content: text.trim() };
+    const newMessages = [...musicMessages, userMsg];
+    setMusicMessages(newMessages);
+    setMusicStreaming(true);
+
+    try {
+      const res = await fetch("/api/fabric/chat", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: newMessages,
+          currentTrack,
+          audioFeatures: currentTrack?.id ? audioFeatures[currentTrack.id] : null,
+          setTracks: flagged,
+        }),
+      });
+
+      if (!res.ok) {
+        setMusicMessages(prev => [...prev, { role: "assistant", content: "Couldn't reach the back room. Try again." }]);
+        setMusicStreaming(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        for (const line of chunk.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6);
+          if (payload === "[DONE]") break;
+          try {
+            const { text: t } = JSON.parse(payload);
+            if (t) {
+              assistantText += t;
+              setMusicMessages(prev => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                if (last?.role === "assistant" && last._streaming) {
+                  msgs[msgs.length - 1] = { role: "assistant", content: assistantText, _streaming: true };
+                } else {
+                  msgs.push({ role: "assistant", content: assistantText, _streaming: true });
+                }
+                return msgs;
+              });
+            }
+          } catch {}
+        }
+      }
+
+      // Finalize — remove streaming flag
+      setMusicMessages(prev => {
+        const msgs = [...prev];
+        const last = msgs[msgs.length - 1];
+        if (last?._streaming) {
+          msgs[msgs.length - 1] = { role: "assistant", content: last.content };
+        }
+        return msgs;
+      });
+    } catch (e) {
+      setMusicMessages(prev => [...prev, { role: "assistant", content: "Lost the signal. Try again." }]);
+    }
+    setMusicStreaming(false);
+  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged]);
+
+  const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
+
   const formatTime = useCallback((seconds) => {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -449,6 +604,15 @@ export function FabricProvider({ children }) {
         formatTime,
         timeline,
         getSnapshot,
+        publishedSets,
+        publishSet,
+        unpublishSet,
+        musicMessages,
+        musicChatOpen,
+        musicStreaming,
+        tickerFact,
+        sendMusicMessage,
+        toggleMusicChat,
       }}
     >
       {children}

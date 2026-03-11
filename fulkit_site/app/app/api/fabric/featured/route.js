@@ -6,7 +6,7 @@ export async function GET() {
 
     const { data: crates, error } = await db
       .from("crates")
-      .select("id, name, description, source_spotify_id, created_at")
+      .select("id, name, description, source, source_spotify_id, created_at")
       .eq("visibility", "featured")
       .eq("status", "active")
       .order("created_at", { ascending: false });

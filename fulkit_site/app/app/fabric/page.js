@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, Crown, MessageCircle, Send } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1622,6 +1622,15 @@ export default function FabricPage() {
     setProgress,
     timeline,
     getSnapshot,
+    publishedSets,
+    publishSet,
+    unpublishSet,
+    musicMessages,
+    musicChatOpen,
+    musicStreaming,
+    tickerFact,
+    sendMusicMessage,
+    toggleMusicChat,
   } = useFabric();
 
   const [dragIdx, setDragIdx] = useState(null);
@@ -1638,10 +1647,28 @@ export default function FabricPage() {
   const [renameValue, setRenameValue] = useState("");
   const [crates, setCrates] = useState([]); // imported crates from DB
   const [cratesLoading, setCratesLoading] = useState(true);
-  const [expandedCrate, setExpandedCrate] = useState(null);
+  const [expandedCrate, setExpandedCrateRaw] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { return localStorage.getItem("fulkit-expanded-crate") || null; } catch { return null; }
+  });
+  const setExpandedCrate = useCallback((id) => {
+    setExpandedCrateRaw(id);
+    try { if (id) localStorage.setItem("fulkit-expanded-crate", id); else localStorage.removeItem("fulkit-expanded-crate"); } catch {}
+  }, []);
   const [crateTracks, setCrateTracks] = useState([]);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState(null);
+  const [musicInput, setMusicInput] = useState("");
+  const [expandedFeatured, setExpandedFeatured] = useState(null);
+  const [featuredTracks, setFeaturedTracks] = useState([]);
+  const musicChatEndRef = useRef(null);
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
+
+  // Auto-scroll music chat
+  useEffect(() => {
+    musicChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [musicMessages]);
 
   // Load imported crates
   const { accessToken } = useAuth();
@@ -1662,6 +1689,14 @@ export default function FabricPage() {
         }
       } catch {}
       setCrates(fetched);
+      // Restore expanded crate from localStorage
+      try {
+        const saved = localStorage.getItem("fulkit-expanded-crate");
+        if (saved) {
+          const match = fetched.find(c => c.id === saved);
+          if (match) setCrateTracks(match.tracks || []);
+        }
+      } catch {}
     } catch {}
     setCratesLoading(false);
   }, [accessToken]);
@@ -2119,15 +2154,15 @@ export default function FabricPage() {
                 )}
               </div>
 
-              {/* Imported crate shelf */}
-              {crates.length > 0 && (
+              {/* Imported crate shelf (exclude published sets) */}
+              {crates.filter(c => c.source !== "set").length > 0 && (
                 <div className="thin-scroll-x" style={{
                   display: "flex",
                   gap: "var(--space-2)",
                   overflowX: "auto",
                   paddingBottom: "var(--space-1)",
                 }}>
-                  {crates.map((crate, crateIdx) => {
+                  {crates.filter(c => c.source !== "set").map((crate, crateIdx) => {
                     const isOpen = expandedCrate === crate.id;
                     const trackCount = crate.tracks?.length || 0;
                     const analyzed = crate.tracks?.filter(t => t.fabric_status === "complete").length || 0;
@@ -2155,6 +2190,9 @@ export default function FabricPage() {
                             } else {
                               setExpandedCrate(crate.id);
                               setCrateTracks(crate.tracks || []);
+                              // Close featured mix if open
+                              setExpandedFeatured(null);
+                              setFeaturedTracks([]);
                             }
                           }}
                           style={{
@@ -2231,7 +2269,7 @@ export default function FabricPage() {
               )}
 
               {/* Empty state — no crates yet */}
-              {crates.length === 0 && !cratesLoading && !showSpotifyBrowser && (
+              {crates.filter(c => c.source !== "set").length === 0 && !cratesLoading && !showSpotifyBrowser && (
                 <div style={{
                   padding: "var(--space-6) var(--space-4)",
                   textAlign: "center",
@@ -2268,6 +2306,113 @@ export default function FabricPage() {
                       Browse Spotify Playlists
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* ── FEATURED MIXES ── */}
+              {crates.filter(c => c.source === "set").length > 0 && (
+                <div style={{ padding: "var(--space-3) var(--space-8) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                  <Label>Featured Mixes</Label>
+                  <div className="thin-scroll-x" style={{
+                    display: "flex",
+                    gap: "var(--space-2)",
+                    overflowX: "auto",
+                    paddingBottom: "var(--space-1)",
+                  }}>
+                    {crates.filter(c => c.source === "set").map((mix) => {
+                      const isOpen = expandedFeatured === mix.id;
+                      const trackCount = mix.tracks?.length || 0;
+                      return (
+                        <div key={mix.id} style={{ position: "relative", flexShrink: 0 }}>
+                          <button
+                            onClick={() => {
+                              if (isOpen) {
+                                setExpandedFeatured(null);
+                                setFeaturedTracks([]);
+                              } else {
+                                setExpandedFeatured(mix.id);
+                                setFeaturedTracks(mix.tracks || []);
+                                // Close crate if open
+                                setExpandedCrate(null);
+                                setCrateTracks([]);
+                              }
+                            }}
+                            style={{
+                              padding: "var(--space-2) var(--space-3)",
+                              paddingRight: "var(--space-6)",
+                              minWidth: 140,
+                              background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                              border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                              borderRadius: "var(--radius-lg)",
+                              cursor: "pointer",
+                              fontFamily: "var(--font-primary)",
+                              textAlign: "left",
+                              transition: "all 120ms",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
+                              <Crown size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                              <div style={{
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: "var(--font-weight-semibold)",
+                                color: "var(--color-text)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: 120,
+                              }}>
+                                {mix.name}
+                              </div>
+                            </div>
+                            <div style={{
+                              fontSize: 8,
+                              fontFamily: "var(--font-mono)",
+                              color: "var(--color-text-dim)",
+                              marginBottom: 2,
+                            }}>
+                              by Collin
+                            </div>
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontFamily: "var(--font-mono)",
+                              color: "var(--color-text-muted)",
+                            }}>
+                              {trackCount} songs
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unpublishSet(mix.id).then(() => loadCrates());
+                            }}
+                            style={{
+                              position: "absolute",
+                              top: 6,
+                              right: 6,
+                              width: 18,
+                              height: 18,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "transparent",
+                              border: "none",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                              color: "var(--color-text-dim)",
+                              padding: 0,
+                              opacity: 0.5,
+                              transition: "opacity 120ms",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                            title="Unpublish mix"
+                          >
+                            <X size={10} strokeWidth={2} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -2517,6 +2662,126 @@ export default function FabricPage() {
                   </div>
                 </div>
               )}
+              {/* ── EXPANDED FEATURED MIX — track list ── */}
+              {expandedFeatured && featuredTracks.length > 0 && (
+                <div style={{
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  overflow: "hidden",
+                  marginTop: "var(--space-3)",
+                }}>
+                  <div style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      <Crown size={14} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                      <div>
+                        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                          {crates.find(c => c.id === expandedFeatured)?.name}
+                        </div>
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
+                          {featuredTracks.length} tracks · by Collin
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                    {featuredTracks.map((track, i) => {
+                      const isActive = currentTrack?.id === track.spotify_id;
+                      const trackFlagged = isFlagged(track.spotify_id);
+                      return (
+                        <div
+                          key={track.id || i}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-3)",
+                            padding: "var(--space-2) var(--space-4)",
+                            borderBottom: "1px solid var(--color-border-light)",
+                            background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                            transition: "background 120ms",
+                          }}
+                        >
+                          <div style={{
+                            fontSize: 8,
+                            fontFamily: "var(--font-mono)",
+                            color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                            width: 18,
+                            flexShrink: 0,
+                            textAlign: "right",
+                          }}>
+                            {String(i + 1).padStart(2, "0")}
+                          </div>
+                          <button
+                            onClick={() => playTrack({
+                              id: track.spotify_id,
+                              title: track.title,
+                              artist: track.artist,
+                              duration: Math.round((track.duration_ms || 0) / 1000),
+                            })}
+                            style={{
+                              flex: 1,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              padding: 0,
+                              fontFamily: "var(--font-primary)",
+                              minWidth: 0,
+                            }}
+                          >
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-medium)",
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}>
+                              {track.title}
+                            </div>
+                            <div style={{
+                              fontSize: 9,
+                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}>
+                              {track.artist}
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => flag({
+                              id: track.spotify_id,
+                              title: track.title,
+                              artist: track.artist,
+                              duration: Math.round((track.duration_ms || 0) / 1000),
+                            })}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 2,
+                              flexShrink: 0,
+                              color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
+                              opacity: trackFlagged ? 1 : 0.3,
+                              transition: "opacity 120ms",
+                            }}
+                            title={trackFlagged ? "Remove from set" : "Add to set"}
+                          >
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               </div>{/* end scrollable content */}
             </div>
 
@@ -2617,6 +2882,44 @@ export default function FabricPage() {
                     <ListX size={12} strokeWidth={1.8} />
                   </button>
                 )}
+                {/* Record Store Guy toggle */}
+                <button
+                  onClick={toggleMusicChat}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 2,
+                    color: musicChatOpen ? "var(--color-text)" : "var(--color-text-dim)",
+                    opacity: musicChatOpen ? 1 : 0.5,
+                    transition: "opacity 120ms",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = musicChatOpen ? "1" : "0.5"}
+                  title="Record Store Guy"
+                >
+                  <MessageCircle size={12} strokeWidth={1.8} />
+                </button>
+
+                {/* Publish status message */}
+                {publishMsg && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: "var(--space-4)",
+                    zIndex: 20,
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "var(--space-2) var(--space-3)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-muted)",
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  }}>
+                    {publishMsg}
+                  </div>
+                )}
 
                 {/* Dropdown menu */}
                 {showSetMenu && (
@@ -2632,15 +2935,16 @@ export default function FabricPage() {
                     padding: "var(--space-1) 0",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   }}>
-                    {allSets.map(s => (
-                      <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
+                    {allSets.map(s => {
+                      const isPublished = publishedSets[s.name];
+                      return (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
                           <button
                             onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
                             style={{
                               flex: 1,
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
                               padding: "var(--space-1-5) var(--space-3)",
                               background: s.id === activeSetId ? "var(--color-bg-alt)" : "transparent",
                               border: "none",
@@ -2652,10 +2956,50 @@ export default function FabricPage() {
                             }}
                           >
                             {s.name}
-                            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{s.trackCount}</span>
                           </button>
-                      </div>
-                    ))}
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (publishing) return;
+                              if (isPublished) {
+                                setPublishing(true);
+                                await unpublishSet(isPublished);
+                                await loadCrates();
+                                setPublishing(false);
+                              } else {
+                                if (s.trackCount === 0) { setPublishMsg("Set is empty"); setTimeout(() => setPublishMsg(null), 2000); return; }
+                                setPublishing(true);
+                                const res = await publishSet(s.id);
+                                if (res?.ok) {
+                                  await loadCrates();
+                                } else if (res?.error === "not_ready") {
+                                  setPublishMsg(`${res.pending} of ${res.total} still processing`);
+                                  setTimeout(() => setPublishMsg(null), 3000);
+                                } else {
+                                  setPublishMsg("Failed to publish");
+                                  setTimeout(() => setPublishMsg(null), 2000);
+                                }
+                                setPublishing(false);
+                              }
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: publishing ? "wait" : "pointer",
+                              padding: "var(--space-1-5) var(--space-2)",
+                              color: isPublished ? "var(--color-text)" : "var(--color-text-dim)",
+                              opacity: isPublished ? 1 : 0.3,
+                              transition: "opacity 120ms",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = isPublished ? "1" : "0.3"}
+                            title={isPublished ? "Unpublish" : "Feature this set"}
+                          >
+                            <Crown size={10} strokeWidth={1.8} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2791,6 +3135,207 @@ export default function FabricPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* ═══ RECORD STORE GUY ═══ */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--color-border-light)",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: musicChatOpen ? 200 : 0,
+                  maxHeight: musicChatOpen ? "50%" : 36,
+                  transition: "max-height 200ms ease, min-height 200ms ease",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Ticker tape (passive mode) — always visible */}
+                {!musicChatOpen && (
+                  <button
+                    onClick={toggleMusicChat}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-2)",
+                      padding: "var(--space-2) var(--space-3)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                  >
+                    <MessageCircle size={10} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                    <div style={{
+                      fontSize: 9,
+                      color: "var(--color-text-dim)",
+                      fontFamily: "var(--font-primary)",
+                      fontStyle: "italic",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {tickerFact || (currentTrack ? "Ask me about this track..." : "Play something. I'll talk.")}
+                    </div>
+                  </button>
+                )}
+
+                {/* Active chat mode */}
+                {musicChatOpen && (
+                  <>
+                    <div style={{
+                      padding: "var(--space-2) var(--space-3)",
+                      borderBottom: "1px solid var(--color-border-light)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}>
+                      <div style={{
+                        fontSize: 9,
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: "var(--font-weight-bold)",
+                        color: "var(--color-text-muted)",
+                        textTransform: "uppercase",
+                        letterSpacing: "var(--letter-spacing-wider)",
+                      }}>
+                        Record Store Guy
+                      </div>
+                      <button
+                        onClick={toggleMusicChat}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)" }}
+                      >
+                        <X size={10} strokeWidth={2} />
+                      </button>
+                    </div>
+
+                    {/* Messages */}
+                    <div style={{
+                      flex: 1,
+                      overflowY: "auto",
+                      padding: "var(--space-2) var(--space-3)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--space-2)",
+                    }}>
+                      {musicMessages.length === 0 && (
+                        <div style={{
+                          fontSize: 9,
+                          color: "var(--color-text-dim)",
+                          fontStyle: "italic",
+                          padding: "var(--space-3) 0",
+                          textAlign: "center",
+                        }}>
+                          {tickerFact || "What do you want to hear?"}
+                        </div>
+                      )}
+                      {musicMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            lineHeight: 1.4,
+                            color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
+                            fontFamily: "var(--font-primary)",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            ...(msg.role === "user" ? {
+                              textAlign: "right",
+                              fontStyle: "italic",
+                            } : {}),
+                          }}
+                        >
+                          {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
+                            const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
+                            if (plusMatch) {
+                              const artist = plusMatch[1].trim();
+                              const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
+                              const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
+                              return (
+                                <div key={li}>
+                                  {artist} - {title}{bpmText}{"  "}
+                                  <button
+                                    onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
+                                    style={{
+                                      display: "inline",
+                                      background: "none",
+                                      border: "1px solid var(--color-border)",
+                                      borderRadius: "var(--radius-sm)",
+                                      cursor: "pointer",
+                                      padding: "0 3px",
+                                      fontSize: 8,
+                                      fontFamily: "var(--font-mono)",
+                                      color: "var(--color-text-muted)",
+                                      verticalAlign: "middle",
+                                      marginLeft: 2,
+                                    }}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return <div key={li}>{line}</div>;
+                          }) : msg.content}
+                        </div>
+                      ))}
+                      <div ref={musicChatEndRef} />
+                    </div>
+
+                    {/* Input */}
+                    <div style={{
+                      padding: "var(--space-2) var(--space-3)",
+                      borderTop: "1px solid var(--color-border-light)",
+                      display: "flex",
+                      gap: "var(--space-2)",
+                    }}>
+                      <input
+                        value={musicInput}
+                        onChange={(e) => setMusicInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            if (musicInput.trim() && !musicStreaming) {
+                              sendMusicMessage(musicInput);
+                              setMusicInput("");
+                            }
+                          }
+                        }}
+                        placeholder="Ask about music..."
+                        disabled={musicStreaming}
+                        style={{
+                          flex: 1,
+                          padding: "var(--space-1) var(--space-2)",
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-primary)",
+                          background: "var(--color-bg-elevated)",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          color: "var(--color-text)",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (musicInput.trim() && !musicStreaming) {
+                            sendMusicMessage(musicInput);
+                            setMusicInput("");
+                          }
+                        }}
+                        disabled={musicStreaming || !musicInput.trim()}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: musicStreaming || !musicInput.trim() ? "default" : "pointer",
+                          padding: 2,
+                          color: musicInput.trim() ? "var(--color-text)" : "var(--color-text-dim)",
+                          opacity: musicInput.trim() ? 1 : 0.3,
+                        }}
+                      >
+                        <Send size={12} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
