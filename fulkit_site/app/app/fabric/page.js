@@ -3601,6 +3601,41 @@ export default function FabricPage() {
                   position: "relative",
                 }}
               >
+                {/* Set navigation arrows */}
+                {allSets.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const idx = allSets.findIndex(s => s.id === activeSetId);
+                        if (idx > 0) switchSet(allSets[idx - 1].id);
+                      }}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        color: allSets.findIndex(s => s.id === activeSetId) > 0 ? "var(--color-text-muted)" : "var(--color-text-dim)",
+                        display: "flex", flexShrink: 0,
+                        opacity: allSets.findIndex(s => s.id === activeSetId) > 0 ? 1 : 0.3,
+                      }}
+                      title="Previous set"
+                    >
+                      <ChevronLeft size={10} strokeWidth={2} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const idx = allSets.findIndex(s => s.id === activeSetId);
+                        if (idx < allSets.length - 1) switchSet(allSets[idx + 1].id);
+                      }}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        color: allSets.findIndex(s => s.id === activeSetId) < allSets.length - 1 ? "var(--color-text-muted)" : "var(--color-text-dim)",
+                        display: "flex", flexShrink: 0,
+                        opacity: allSets.findIndex(s => s.id === activeSetId) < allSets.length - 1 ? 1 : 0.3,
+                      }}
+                      title="Next set"
+                    >
+                      <ChevronRight size={10} strokeWidth={2} />
+                    </button>
+                  </>
+                )}
                 {/* Pointer — collapse/expand track list */}
                 <button
                   onClick={() => setSetCollapsed(v => !v)}
@@ -3667,7 +3702,7 @@ export default function FabricPage() {
                   </span>
                 )}
                 <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
-                  {flagged.length}
+                  {flagged.length}{allSets.length > 1 ? ` · ${allSets.findIndex(s => s.id === activeSetId) + 1}/${allSets.length}` : ""}
                 </span>
                 <div style={{ flex: 1 }} />
                 {/* Crown — publish/unpublish active set */}

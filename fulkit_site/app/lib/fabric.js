@@ -620,7 +620,7 @@ export function FabricProvider({ children }) {
       const newSet = { id, name: name || `B-Sides ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, tracks: [...gc.tracks] };
       const userSets = prev.sets.filter(s => s.source !== "guy");
       const guySets = prev.sets.filter(s => s.source === "guy");
-      const next = { activeId: prev.activeId, sets: [newSet, ...userSets, ...guySets] };
+      const next = { activeId: id, sets: [newSet, ...userSets, ...guySets] };
       persistSets(next);
       return next;
     });
