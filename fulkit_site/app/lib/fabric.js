@@ -326,12 +326,12 @@ export function FabricProvider({ children }) {
       setIsPlaying(true);
       apiFetch("/api/fabric/controls", {
         method: "POST",
-        body: JSON.stringify({ action: "play_track", value: { uri: saved.uri || `spotify:track:${saved.id}` } }),
+        body: JSON.stringify({ action: "play_track", value: { uri: saved.uri || `spotify:track:${saved.id}`, device_id: sdkDeviceId } }),
       });
       return;
     }
     sendControl("previous");
-  }, [isDev, sendControl, apiFetch]);
+  }, [isDev, sendControl, apiFetch, sdkDeviceId]);
 
   const setVolume = useCallback((val) => {
     const v = Math.max(0, Math.min(100, Math.round(val)));
@@ -681,9 +681,9 @@ export function FabricProvider({ children }) {
 
     apiFetch("/api/fabric/controls", {
       method: "POST",
-      body: JSON.stringify({ action: "play_track", value: { uri } }),
+      body: JSON.stringify({ action: "play_track", value: { uri, device_id: sdkDeviceId } }),
     });
-  }, [isDev, apiFetch]);
+  }, [isDev, apiFetch, sdkDeviceId]);
   playTrackRef.current = playTrack;
 
   // Play a track with context for auto-continue
