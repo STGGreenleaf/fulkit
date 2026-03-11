@@ -2200,6 +2200,7 @@ export default function FabricPage() {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           if (musicInput.trim() && !musicStreaming) {
+                            if (!musicChatOpen) toggleMusicChat();
                             sendMusicMessage(musicInput);
                             setMusicInput("");
                           }
@@ -2224,6 +2225,7 @@ export default function FabricPage() {
                     <button
                       onClick={() => {
                         if (musicInput.trim() && !musicStreaming) {
+                          if (!musicChatOpen) toggleMusicChat();
                           sendMusicMessage(musicInput);
                           setMusicInput("");
                         }
