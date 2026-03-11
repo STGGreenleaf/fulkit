@@ -40,6 +40,7 @@ export function FabricProvider({ children }) {
   const isDev = user?.isDev;
 
   const [connected, setConnected] = useState(isDev ? true : false);
+  const [statusChecked, setStatusChecked] = useState(isDev ? true : false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
   const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
@@ -130,7 +131,8 @@ export function FabricProvider({ children }) {
     if (isDev || !accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
       if (data) setConnected(data.connected);
-    });
+      setStatusChecked(true);
+    }).catch(() => setStatusChecked(true));
   }, [accessToken, isDev, apiFetch]);
 
   // Fetch playlists when connected
@@ -620,6 +622,7 @@ export function FabricProvider({ children }) {
     <FabricContext.Provider
       value={{
         connected,
+        statusChecked,
         isPlaying,
         currentTrack,
         queue,

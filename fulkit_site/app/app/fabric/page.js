@@ -1432,6 +1432,7 @@ function Label({ children, style }) {
 export default function FabricPage() {
   const {
     connected,
+    statusChecked,
     isPlaying,
     currentTrack,
     flagged,
@@ -1902,7 +1903,7 @@ export default function FabricPage() {
                       {currentTrack.artist}{features ? ` — ${features.bpm} BPM / ${features.key}` : ""}
                     </div>
                   </>
-                ) : !connected ? (
+                ) : statusChecked && !connected ? (
                   <>
                     <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text-muted)" }}>Spotify disconnected</div>
                     <button onClick={reconnectSpotify} style={{ background: "none", border: "none", padding: 0, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", cursor: "pointer", textDecoration: "underline" }}>Reconnect</button>
@@ -2004,7 +2005,7 @@ export default function FabricPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {currentTrack?.title || (!connected ? "Spotify disconnected" : "No track")}
+                    {currentTrack?.title || (statusChecked && !connected ? "Spotify disconnected" : "No track")}
                   </div>
                   <div
                     style={{
@@ -2017,7 +2018,7 @@ export default function FabricPage() {
                   >
                     {currentTrack
                       ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}`
-                      : !connected
+                      : statusChecked && !connected
                         ? <button onClick={reconnectSpotify} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", cursor: "pointer" }}>Reconnect</button>
                         : ""}
                   </div>
@@ -2071,7 +2072,7 @@ export default function FabricPage() {
               )}
 
               {/* Progress */}
-              <div style={{ maxWidth: 400 }}>
+              <div>
                 <div
                   style={{
                     width: "100%",
@@ -2110,8 +2111,8 @@ export default function FabricPage() {
                 </div>
               </div>
 
-              {/* Transport — same pattern as MiniPlayer, scaled up */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 260 }}>
+              {/* Transport */}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 {/* Flag — circled */}
                 <button
                   onClick={() => currentTrack && flag(currentTrack)}
