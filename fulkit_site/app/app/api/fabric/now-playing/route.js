@@ -60,5 +60,10 @@ export async function GET(request) {
     .then(() => {})
     .catch(() => {});
 
-  return Response.json({ isPlaying: data.is_playing, track, volume: data.device?.volume_percent ?? null });
+  return Response.json({
+    isPlaying: data.is_playing,
+    track,
+    volume: data.device?.volume_percent ?? null,
+    device: data.device ? { name: data.device.name, type: data.device.type } : null,
+  });
 }

@@ -24,10 +24,7 @@ export async function POST(request) {
 
   // Play a specific track by URI
   if (action === "play_track" && value?.uri) {
-    const endpoint = value.device_id
-      ? `/me/player/play?device_id=${value.device_id}`
-      : "/me/player/play";
-    const res = await fabricFetch(userId, endpoint, {
+    const res = await fabricFetch(userId, "/me/player/play", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uris: [value.uri] }),
