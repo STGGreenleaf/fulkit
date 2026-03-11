@@ -26,23 +26,14 @@ function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
   );
 }
 
-// Energy/danceability bar — thin segmented readout
-function MeterBar({ value = 0, width = 80 }) {
-  const segments = 10;
-  const filled = Math.round((value / 100) * segments);
+// Energy/danceability bar — solid continuous line
+function MeterBar({ value = 0, label }) {
   return (
-    <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
-      {Array.from({ length: segments }, (_, i) => (
-        <div
-          key={i}
-          style={{
-            width: (width - (segments - 1) * 2) / segments,
-            height: 4,
-            background: i < filled ? "var(--color-text)" : "var(--color-border)",
-            transition: "background 0.3s",
-          }}
-        />
-      ))}
+    <div style={{ flex: 1 }}>
+      {label && <Label style={{ marginBottom: 2 }}>{label}</Label>}
+      <div style={{ width: "100%", height: 3, background: "var(--color-border)", borderRadius: 1.5, overflow: "hidden" }}>
+        <div style={{ width: `${value}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 1.5, transition: "width 0.3s" }} />
+      </div>
     </div>
   );
 }
@@ -2073,18 +2064,9 @@ export default function FabricPage() {
               {/* Meters — only when features available */}
               {features && (
                 <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
-                  <div>
-                    <Label style={{ marginBottom: 3 }}>Energy</Label>
-                    <MeterBar value={features.energy} width={80} />
-                  </div>
-                  <div>
-                    <Label style={{ marginBottom: 3 }}>Dance</Label>
-                    <MeterBar value={features.danceability} width={80} />
-                  </div>
-                  <div>
-                    <Label style={{ marginBottom: 3 }}>Mood</Label>
-                    <MeterBar value={features.valence} width={80} />
-                  </div>
+                  <MeterBar label="Energy" value={features.energy} />
+                  <MeterBar label="Dance" value={features.danceability} />
+                  <MeterBar label="Mood" value={features.valence} />
                 </div>
               )}
 
