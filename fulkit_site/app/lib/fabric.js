@@ -111,6 +111,10 @@ export function FabricProvider({ children }) {
   const featuresRequested = useRef(new Set());
   const prevTrackRef = useRef(null); // track before manual playTrack jump
   const flagAdoptionRef = useRef(null); // deferred adoption signal from flag()
+  const playbackContextRef = useRef(null); // { type, id, tracks, currentIndex }
+  const autoAdvanceTriggered = useRef(false);
+  const autoAdvanceRef = useRef(null); // ref to avoid temporal dead zone (skip defined before autoAdvance)
+  const playTrackRef = useRef(null); // same — skip defined before playTrack
   // Refs for taste signal functions (used by skip/poller which are declared before the history block)
   const findHistoryMatchRef = useRef(null);
   const updateHistorySignalRef = useRef(null);
@@ -217,6 +221,16 @@ export function FabricProvider({ children }) {
         setCurrentTrack(null);
         setProgress(0);
       }
+
+      // Auto-advance: when Spotify stops after track finishes, play next in context
+      if (!data.isPlaying && data.track && data.track.progress > 0.95 && playbackContextRef.current) {
+        if (!autoAdvanceTriggered.current) {
+          autoAdvanceTriggered.current = true;
+          autoAdvanceRef.current?.();
+        }
+      } else if (data.isPlaying) {
+        autoAdvanceTriggered.current = false;
+      }
     };
 
     fetchNowPlaying();
@@ -286,7 +300,16 @@ export function FabricProvider({ children }) {
       });
       playSessionRef.current = { trackId: null, maxProgress: 0 };
     }
-    sendControl("next");
+    // Context-aware skip: advance within current context instead of Spotify's queue
+    const ctx = playbackContextRef.current;
+    if (ctx?.tracks && ctx.currentIndex < ctx.tracks.length - 1) {
+      ctx.currentIndex++;
+      playTrackRef.current?.(ctx.tracks[ctx.currentIndex]);
+    } else if (ctx && autoAdvanceRef.current) {
+      autoAdvanceRef.current();
+    } else {
+      sendControl("next");
+    }
   }, [isDev, queue, sendControl, progress, currentTrack]);
 
   const prev = useCallback(() => {
@@ -579,10 +602,11 @@ export function FabricProvider({ children }) {
 
   const createSet = useCallback((name) => {
     setSetsData((prev) => {
-      const num = prev.sets.length + 1;
       const id = `set-${Date.now()}`;
-      const newSet = { id, name: name || `Set ${num}`, tracks: [] };
-      const next = { activeId: id, sets: [...prev.sets, newSet] };
+      const newSet = { id, name: name || `Set ${prev.sets.filter(s => s.source !== "guy").length + 1}`, tracks: [] };
+      const userSets = prev.sets.filter(s => s.source !== "guy");
+      const guySets = prev.sets.filter(s => s.source === "guy");
+      const next = { activeId: id, sets: [newSet, ...userSets, ...guySets] };
       persistSets(next);
       return next;
     });
@@ -594,7 +618,9 @@ export function FabricProvider({ children }) {
       if (!gc || gc.tracks.length === 0) return prev;
       const id = `set-${Date.now()}`;
       const newSet = { id, name: name || `B-Sides ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, tracks: [...gc.tracks] };
-      const next = { activeId: id, sets: [...prev.sets, newSet] };
+      const userSets = prev.sets.filter(s => s.source !== "guy");
+      const guySets = prev.sets.filter(s => s.source === "guy");
+      const next = { activeId: prev.activeId, sets: [newSet, ...userSets, ...guySets] };
       persistSets(next);
       return next;
     });
@@ -658,6 +684,60 @@ export function FabricProvider({ children }) {
       body: JSON.stringify({ action: "play_track", value: { uri } }),
     });
   }, [isDev, apiFetch]);
+  playTrackRef.current = playTrack;
+
+  // Play a track with context for auto-continue
+  const playTrackInContext = useCallback((track, contextType, contextId, trackList, trackIndex) => {
+    playbackContextRef.current = {
+      type: contextType,
+      id: contextId,
+      tracks: trackList,
+      currentIndex: trackIndex,
+    };
+    playTrack(track);
+  }, [playTrack]);
+
+  // Auto-advance to next track when current finishes
+  const autoAdvance = useCallback(() => {
+    const ctx = playbackContextRef.current;
+    if (!ctx?.tracks?.length) return;
+
+    const nextIndex = ctx.currentIndex + 1;
+
+    // Next track in current context
+    if (nextIndex < ctx.tracks.length) {
+      ctx.currentIndex = nextIndex;
+      playTrack(ctx.tracks[nextIndex]);
+      return;
+    }
+
+    // Context exhausted — try next set
+    const userSets = setsData.sets.filter(s => s.source !== "guy" && s.tracks.length > 0);
+    if (ctx.type === "set") {
+      const setIdx = userSets.findIndex(s => s.id === ctx.id);
+      if (setIdx >= 0 && setIdx < userSets.length - 1) {
+        const nextSet = userSets[setIdx + 1];
+        playbackContextRef.current = { type: "set", id: nextSet.id, tracks: nextSet.tracks, currentIndex: 0 };
+        playTrack(nextSet.tracks[0]);
+        return;
+      }
+    }
+
+    // Fallback: first user set (if not already at it)
+    if (userSets.length > 0 && (ctx.type !== "set" || ctx.id !== userSets[0].id)) {
+      playbackContextRef.current = { type: "set", id: userSets[0].id, tracks: userSets[0].tracks, currentIndex: 0 };
+      playTrack(userSets[0].tracks[0]);
+      return;
+    }
+
+    // Final fallback: B-Sides crate
+    const gc = setsData.sets.find(s => s.id === "guy-crate");
+    if (gc && gc.tracks.length > 0 && ctx.type !== "bsides") {
+      playbackContextRef.current = { type: "bsides", id: "guy-crate", tracks: gc.tracks, currentIndex: 0 };
+      playTrack(gc.tracks[0]);
+    }
+  }, [setsData.sets, playTrack]);
+  autoAdvanceRef.current = autoAdvance;
 
   const playPlaylist = useCallback(async (playlistId, startTrackUri) => {
     if (isDev) return;
@@ -909,6 +989,7 @@ export function FabricProvider({ children }) {
         removeFromGuyCrate,
         clearGuyCrate,
         playTrack,
+        playTrackInContext,
         playPlaylist,
         fetchPlaylistTracks,
         setProgress,

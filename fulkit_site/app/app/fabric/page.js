@@ -1457,6 +1457,7 @@ export default function FabricPage() {
     removeFromGuyCrate,
     clearGuyCrate,
     playTrack,
+    playTrackInContext,
     playPlaylist,
     fetchPlaylistTracks,
     formatTime,
@@ -2556,11 +2557,24 @@ export default function FabricPage() {
                           return (
                           <div
                             key={track.spotify_id || i}
+                            onClick={() => playTrackInContext({
+                              id: track.spotify_id,
+                              title: track.title,
+                              artist: track.artist,
+                              album: discoveryAlbum?.name || "",
+                              art: discoveryAlbum?.image || null,
+                              duration: Math.round((track.duration_ms || 0) / 1000),
+                            }, "discovery", discoveryAlbum?.id || null, discoveryTracks.map(t => ({
+                              id: t.spotify_id, title: t.title, artist: t.artist,
+                              album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null,
+                              duration: Math.round((t.duration_ms || 0) / 1000),
+                            })), i)}
                             style={{
                               display: "flex",
                               alignItems: "center",
                               gap: "var(--space-1-5)",
                               padding: "var(--space-1) var(--space-2)",
+                              cursor: "pointer",
                               borderBottom: "1px solid var(--color-border-light)",
                               background: isActive ? "var(--color-bg-inverse)" : "transparent",
                               borderRadius: isActive ? "var(--radius-sm)" : 0,
@@ -2569,20 +2583,9 @@ export default function FabricPage() {
                             <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
                               {String(track.track_number || i + 1).padStart(2, "0")}
                             </div>
-                            <button
-                              onClick={() => playTrack({
-                                id: track.spotify_id,
-                                title: track.title,
-                                artist: track.artist,
-                                album: discoveryAlbum?.name || "",
-                                art: discoveryAlbum?.image || null,
-                                duration: Math.round((track.duration_ms || 0) / 1000),
-                              })}
+                            <div
                               style={{
                                 flex: 1,
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
                                 textAlign: "left",
                                 padding: 0,
                                 fontFamily: "var(--font-primary)",
@@ -2599,19 +2602,19 @@ export default function FabricPage() {
                               }}>
                                 {track.title}
                               </div>
-                            </button>
+                            </div>
                             <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", flexShrink: 0 }}>
                               {formatTime(Math.round((track.duration_ms || 0) / 1000))}
                             </div>
                             <button
-                              onClick={() => flag({
+                              onClick={(e) => { e.stopPropagation(); flag({
                                 id: track.spotify_id,
                                 title: track.title,
                                 artist: track.artist,
                                 album: discoveryAlbum?.name || "",
                                 art: discoveryAlbum?.image || null,
                                 duration: Math.round((track.duration_ms || 0) / 1000),
-                              })}
+                              }); }}
                               style={{
                                 background: "none",
                                 border: `1px solid ${isActive ? "rgba(255,255,255,0.25)" : "var(--color-border)"}`,
@@ -2676,12 +2679,15 @@ export default function FabricPage() {
                             setCrateTracks([]);
                             const first = mix.tracks?.[0];
                             if (first) {
-                              playTrack({
+                              playTrackInContext({
                                 id: first.spotify_id,
                                 title: first.title,
                                 artist: first.artist,
                                 duration: Math.round((first.duration_ms || 0) / 1000),
-                              });
+                              }, "featured", mix.id, (mix.tracks || []).map(t => ({
+                                id: t.spotify_id, title: t.title, artist: t.artist,
+                                duration: Math.round((t.duration_ms || 0) / 1000),
+                              })), 0);
                             }
                           }}
                         >
@@ -3106,12 +3112,16 @@ export default function FabricPage() {
                         </div>
                       ) : guyCrate.tracks.map((track, i) => {
                         const inSet = isFlagged(track.id);
+                        const isActive = currentTrack?.id === track.id;
                         return (
-                          <div key={track.id} style={{
-                            display: "flex", alignItems: "center", gap: "var(--space-2)",
-                            padding: "var(--space-2)",
-                            borderBottom: "1px solid var(--color-border-light)",
-                          }}>
+                          <div key={track.id}
+                            onClick={() => playTrackInContext(track, "bsides", "guy-crate", guyCrate.tracks, i)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "var(--space-2)",
+                              padding: "var(--space-2)", cursor: "pointer",
+                              borderBottom: "1px solid var(--color-border-light)",
+                              background: isActive ? "var(--color-bg-alt)" : "transparent",
+                            }}>
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
                                 fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",
@@ -3127,19 +3137,7 @@ export default function FabricPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => playTrack(track)}
-                              style={{
-                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: "var(--color-text-muted)", transition: "color 120ms",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
-                              title="Play"
-                            >
-                              <Play size={12} strokeWidth={1.5} />
-                            </button>
-                            <button
-                              onClick={() => flag(track)}
+                              onClick={(e) => { e.stopPropagation(); flag(track); }}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
                                 color: inSet ? "var(--color-text)" : "var(--color-text-muted)",
@@ -3152,7 +3150,7 @@ export default function FabricPage() {
                               {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                             </button>
                             <button
-                              onClick={() => removeFromGuyCrate(track.id)}
+                              onClick={(e) => { e.stopPropagation(); removeFromGuyCrate(track.id); }}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
                                 color: "var(--color-text-muted)", transition: "color 120ms",
@@ -3329,6 +3327,10 @@ export default function FabricPage() {
                           draggable
                           onDragStart={() => { crossDragTrack.current = trackObj; }}
                           onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                          onClick={() => playTrackInContext(trackObj, "crate", expandedCrate, crateTracks.map(t => ({
+                            id: t.spotify_id, title: t.title, artist: t.artist,
+                            duration: Math.round((t.duration_ms || 0) / 1000),
+                          })), i)}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -3337,7 +3339,7 @@ export default function FabricPage() {
                             borderBottom: "1px solid var(--color-border-light)",
                             background: isActive ? "var(--color-bg-inverse)" : "transparent",
                             transition: "background 120ms",
-                            cursor: "grab",
+                            cursor: "pointer",
                           }}
                         >
                           <div style={{
@@ -3358,18 +3360,9 @@ export default function FabricPage() {
                             border: hasFabric ? "none" : "1px solid var(--color-text-dim)",
                             flexShrink: 0,
                           }} title={hasFabric ? "Fabric analyzed" : "Pending"} />
-                          <button
-                            onClick={() => playTrack({
-                              id: track.spotify_id,
-                              title: track.title,
-                              artist: track.artist,
-                              duration: Math.round((track.duration_ms || 0) / 1000),
-                            })}
+                          <div
                             style={{
                               flex: 1,
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
                               textAlign: "left",
                               padding: 0,
                               fontFamily: "var(--font-primary)",
@@ -3395,14 +3388,14 @@ export default function FabricPage() {
                             }}>
                               {track.artist}
                             </div>
-                          </button>
+                          </div>
                           <button
-                            onClick={() => flag({
+                            onClick={(e) => { e.stopPropagation(); flag({
                               id: track.spotify_id,
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),
-                            })}
+                            }); }}
                             style={{
                               background: "none",
                               border: "none",
@@ -3458,6 +3451,15 @@ export default function FabricPage() {
                       return (
                         <div
                           key={track.id || i}
+                          onClick={() => playTrackInContext({
+                            id: track.spotify_id,
+                            title: track.title,
+                            artist: track.artist,
+                            duration: Math.round((track.duration_ms || 0) / 1000),
+                          }, "featured", expandedFeatured, featuredTracks.map(t => ({
+                            id: t.spotify_id, title: t.title, artist: t.artist,
+                            duration: Math.round((t.duration_ms || 0) / 1000),
+                          })), i)}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -3466,6 +3468,7 @@ export default function FabricPage() {
                             borderBottom: "1px solid var(--color-border-light)",
                             background: isActive ? "var(--color-bg-inverse)" : "transparent",
                             transition: "background 120ms",
+                            cursor: "pointer",
                           }}
                         >
                           <div style={{
@@ -3478,18 +3481,9 @@ export default function FabricPage() {
                           }}>
                             {String(i + 1).padStart(2, "0")}
                           </div>
-                          <button
-                            onClick={() => playTrack({
-                              id: track.spotify_id,
-                              title: track.title,
-                              artist: track.artist,
-                              duration: Math.round((track.duration_ms || 0) / 1000),
-                            })}
+                          <div
                             style={{
                               flex: 1,
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
                               textAlign: "left",
                               padding: 0,
                               fontFamily: "var(--font-primary)",
@@ -3515,14 +3509,14 @@ export default function FabricPage() {
                             }}>
                               {track.artist}
                             </div>
-                          </button>
+                          </div>
                           <button
-                            onClick={() => flag({
+                            onClick={(e) => { e.stopPropagation(); flag({
                               id: track.spotify_id,
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),
-                            })}
+                            }); }}
                             style={{
                               background: "none",
                               border: "none",
@@ -3775,7 +3769,7 @@ export default function FabricPage() {
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDrop={(e) => handleDrop(e, i)}
                       onDragEnd={handleDragEnd}
-                      onClick={() => playTrack(track)}
+                      onClick={() => playTrackInContext(track, "set", activeSetId, flagged, i)}
                       style={{
                         display: "flex",
                         alignItems: "center",
