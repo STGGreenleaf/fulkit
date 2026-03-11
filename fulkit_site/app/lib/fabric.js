@@ -596,6 +596,7 @@ export function FabricProvider({ children }) {
           currentTrack,
           audioFeatures: currentTrack?.id ? audioFeatures[currentTrack.id] : null,
           setTracks: flagged,
+          bsidesTracks: guyCrate?.tracks || [],
         }),
       });
 

@@ -6,7 +6,7 @@ export async function POST(request) {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { messages, currentTrack, audioFeatures, setTracks } = await request.json();
+    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks } = await request.json();
     if (!messages?.length) {
       return Response.json({ error: "messages required" }, { status: 400 });
     }
@@ -31,6 +31,10 @@ export async function POST(request) {
     if (setTracks?.length) {
       const setList = setTracks.slice(0, 10).map(t => `${t.artist} - ${t.title}`).join(", ");
       contextParts.push(`User's active set (${setTracks.length} tracks): ${setList}${setTracks.length > 10 ? "..." : ""}`);
+    }
+    if (bsidesTracks?.length) {
+      const bList = bsidesTracks.slice(0, 15).map(t => `${t.artist} - ${t.title}`).join(", ");
+      contextParts.push(`B-Sides (already recommended — do NOT re-recommend): ${bList}${bsidesTracks.length > 15 ? "..." : ""}`);
     }
 
     const dynamicContext = contextParts.length
