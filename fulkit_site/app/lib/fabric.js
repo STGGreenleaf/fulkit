@@ -588,6 +588,18 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets]);
 
+  const saveGuyCrateAsSet = useCallback((name) => {
+    setSetsData((prev) => {
+      const gc = prev.sets.find(s => s.id === "guy-crate");
+      if (!gc || gc.tracks.length === 0) return prev;
+      const id = `set-${Date.now()}`;
+      const newSet = { id, name: name || `B-Sides ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, tracks: [...gc.tracks] };
+      const next = { activeId: id, sets: [...prev.sets, newSet] };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
   const deleteSet = useCallback((setId) => {
     setSetsData((prev) => {
       const remaining = prev.sets.filter(s => s.id !== setId);
@@ -633,12 +645,9 @@ export function FabricProvider({ children }) {
     let uri = track.uri || (track.id.startsWith("btc-") ? null : `spotify:track:${track.id}`);
     if (!uri && track.artist && track.title) {
       try {
-        const res = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.tracks?.[0]?.uri) {
-            uri = data.tracks[0].uri;
-          }
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        if (data?.tracks?.[0]?.uri) {
+          uri = data.tracks[0].uri;
         }
       } catch {}
     }
@@ -895,6 +904,7 @@ export function FabricProvider({ children }) {
         renameSet,
         switchSet,
         guyCrate,
+        saveGuyCrateAsSet,
         addToGuyCrate,
         removeFromGuyCrate,
         clearGuyCrate,

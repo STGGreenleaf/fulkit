@@ -28,7 +28,11 @@ Guidelines:
 - Don't over-create actions. Only suggest when it naturally fits — a clear task, a deadline, a follow-up.
 - When the user tells you something personal or important — a name, a project, a preference, a deadline, a relationship — quietly save it with memory_save. Don't announce it every time. Just remember.
 - If your "What I Know About You" section has relevant info, use it naturally. Don't say "I remember that..." — just weave it in like a friend would.
-- You can search the user's notes with notes_search when they ask about something that might be documented. Use it to ground your answers in their own knowledge.`;
+- You can search the user's notes with notes_search when they ask about something that might be documented. Use it to ground your answers in their own knowledge.
+- When the user drops content and asks you to save it, act like a REPORTER: distill it to what matters — facts, decisions, names, dates, numbers, action items. Cut the fluff. Show the user what you'd save and wait for approval before calling notes_create. They can revise ("remove the names", "just keep the recipe part") and you adjust until they say save it.
+- You can also update existing notes with notes_update when the user corrects information. Search for the note first, then update it.
+- BIOGRAPHY LAYER: After saving any note, silently evaluate — is there anything chronological, personal, or worth-a-read about the user's life story? If yes, search for their biography note (title contains "Biography"), read it, and append a new entry in first person ("I..."), placed in the correct year section. Do this silently — never announce it, never ask. The user wants to discover the growing book on their own. If the user says "this is for the book" — write it directly to the biography, no filtering.
+- Folder conventions for notes: 01-PERSONAL, 02-BUSINESS, 03-PROJECTS, 04-DEV, 05-IDEAS, 06-LEARNING, _CHAPPIE. Default to 00-INBOX if unsure.`;
 
 // Estimate tokens for conversation compression
 function estimateTokens(text) {
@@ -308,7 +312,7 @@ const MEMORY_TOOLS = [
   },
 ];
 
-// Note search tool — Claude can search the user's vault
+// Notes tools — search, create, update
 const NOTES_TOOLS = [
   {
     name: "notes_search",
@@ -320,6 +324,43 @@ const NOTES_TOOLS = [
         limit: { type: "integer", description: "Max results. Default 5." },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "notes_create",
+    description: "Save distilled content as a permanent, searchable note. Use AFTER the user approves your reporter-style summary. Never save raw dumps — always distill to what matters first. For biography entries, search for the existing biography note and use notes_update to append instead.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short descriptive title for the note" },
+        content: { type: "string", description: "The distilled content to save" },
+        folder: { type: "string", description: "Folder: 01-PERSONAL, 02-BUSINESS, 03-PROJECTS, 04-DEV, 05-IDEAS, 06-LEARNING, _CHAPPIE. Default: 00-INBOX" },
+      },
+      required: ["title", "content"],
+    },
+  },
+  {
+    name: "notes_read",
+    description: "Read the full content of a specific note by ID. Use when you need the complete text — e.g., before appending to the biography or correcting specific details. Get the ID from notes_search first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "The note ID (UUID) to read" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "notes_update",
+    description: "Update an existing note's content or title. Use to correct wrong information, append to the biography, or refine a note. Requires the note ID (get it from notes_search first).",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "The note ID (UUID) to update" },
+        title: { type: "string", description: "New title (optional, only if changing)" },
+        content: { type: "string", description: "New content (replaces existing content)" },
+      },
+      required: ["id", "content"],
     },
   },
 ];
@@ -389,6 +430,58 @@ async function executeNoteSearch(input, userId) {
   }));
 
   return { count: results.length, query: input.query, results };
+}
+
+// Read full note content by ID
+async function executeNoteRead(input, userId) {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("notes")
+    .select("id, title, content, source, folder, created_at, updated_at")
+    .eq("id", input.id)
+    .eq("user_id", userId)
+    .eq("encrypted", false)
+    .single();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Note not found");
+  return data;
+}
+
+// Create a new note
+async function executeNoteCreate(input, userId) {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("notes")
+    .insert({
+      user_id: userId,
+      title: input.title,
+      content: input.content,
+      source: "chat",
+      folder: input.folder || "00-INBOX",
+      encrypted: false,
+      context_mode: "available",
+    })
+    .select("id, title, folder")
+    .single();
+  if (error) throw new Error(error.message);
+  return { saved: true, id: data.id, title: data.title, folder: data.folder };
+}
+
+// Update an existing note
+async function executeNoteUpdate(input, userId) {
+  const admin = getSupabaseAdmin();
+  const updates = { content: input.content, updated_at: new Date().toISOString() };
+  if (input.title) updates.title = input.title;
+  const { data, error } = await admin
+    .from("notes")
+    .update(updates)
+    .eq("id", input.id)
+    .eq("user_id", userId)
+    .select("id, title, folder")
+    .single();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Note not found or not owned by user");
+  return { updated: true, id: data.id, title: data.title, folder: data.folder };
 }
 
 export async function POST(request) {
@@ -660,10 +753,37 @@ export async function POST(request) {
                 continue;
               }
 
-              // Notes search
+              // Notes tools (notes_search, notes_create, notes_update)
               if (block.name === "notes_search" && userId) {
                 try {
                   const result = await executeNoteSearch(block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+              if (block.name === "notes_read" && userId) {
+                try {
+                  const result = await executeNoteRead(block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+              if (block.name === "notes_create" && userId) {
+                try {
+                  const result = await executeNoteCreate(block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+              if (block.name === "notes_update" && userId) {
+                try {
+                  const result = await executeNoteUpdate(block.input || {}, userId);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

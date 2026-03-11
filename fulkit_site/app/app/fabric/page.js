@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1452,6 +1452,7 @@ export default function FabricPage() {
     renameSet,
     switchSet,
     guyCrate,
+    saveGuyCrateAsSet,
     addToGuyCrate,
     removeFromGuyCrate,
     clearGuyCrate,
@@ -3068,18 +3069,32 @@ export default function FabricPage() {
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={clearGuyCrate}
-                      style={{
-                        background: "none", border: "none", cursor: "pointer", padding: 2,
-                        color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
-                      title="Clear B-Sides"
-                    >
-                      <Trash2 size={14} strokeWidth={1.5} />
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      <button
+                        onClick={() => saveGuyCrateAsSet()}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 2,
+                          color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        title="Save as set"
+                      >
+                        <Save size={14} strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={clearGuyCrate}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 2,
+                          color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        title="Clear B-Sides"
+                      >
+                        <Trash2 size={14} strokeWidth={1.5} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Track list */}
@@ -3134,7 +3149,7 @@ export default function FabricPage() {
                               onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-muted)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
-                              {inSet ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
+                              {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                             </button>
                             <button
                               onClick={() => removeFromGuyCrate(track.id)}
@@ -3400,7 +3415,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                           </button>
                         </div>
                       );
@@ -3520,7 +3535,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                           </button>
                         </div>
                       );
