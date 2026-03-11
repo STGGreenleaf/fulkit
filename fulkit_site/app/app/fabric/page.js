@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircle, Send, Box, Turntable } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -2121,7 +2121,7 @@ export default function FabricPage() {
                     </div>
                     {musicChatOpen
                       ? <ChevronUp size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }} />
-                      : <MessageCircle size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }} />
+                      : <MessageCircleQuestion size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }} />
                     }
                   </button>
 
