@@ -1505,7 +1505,26 @@ export default function FabricPage() {
   const [expandedFeatured, setExpandedFeatured] = useState(null);
   const [featuredTracks, setFeaturedTracks] = useState([]);
   const musicChatEndRef = useRef(null);
-  const [setCollapsed, setSetCollapsed] = useState(false);
+  // Per-set expand/collapse — default closed, persisted in localStorage
+  const [expandedSetIds, setExpandedSetIds] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem("fulkit-expanded-sets");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const toggleSetExpanded = useCallback((setId) => {
+    setExpandedSetIds(prev => {
+      const next = prev.includes(setId) ? prev.filter(id => id !== setId) : [...prev, setId];
+      try { localStorage.setItem("fulkit-expanded-sets", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+  const setCollapsed = !expandedSetIds.includes(activeSetId);
+  const setSetCollapsed = useCallback((fn) => {
+    // Compat shim: toggle current active set
+    toggleSetExpanded(activeSetId);
+  }, [activeSetId, toggleSetExpanded]);
 
   // Playlist opt-in/opt-out
   const [playlistPickerOpen, setPlaylistPickerOpen] = useState(false);
