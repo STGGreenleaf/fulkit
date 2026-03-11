@@ -1847,9 +1847,9 @@ export default function FabricPage() {
           <div
             style={{
               borderBottom: "1px solid var(--color-border-light)",
-              padding: "var(--space-6) var(--space-8)",
+              padding: "var(--space-4) var(--space-5)",
               display: "flex",
-              gap: "var(--space-8)",
+              gap: "var(--space-5)",
               alignItems: "center",
               minHeight: 0,
             }}
@@ -2125,7 +2125,7 @@ export default function FabricPage() {
               }}
             >
               {/* ── YOUR CRATES ── */}
-              <div style={{ flexShrink: 0, padding: "var(--space-5) var(--space-8) 0", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-4) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Label>Crates</Label>
                 {playlists.length > 0 && (
@@ -2198,7 +2198,7 @@ export default function FabricPage() {
                           style={{
                             padding: "var(--space-2) var(--space-3)",
                             paddingRight: "var(--space-6)",
-                            minWidth: 140,
+                            minWidth: 110,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
                             borderRadius: "var(--radius-lg)",
@@ -2271,7 +2271,7 @@ export default function FabricPage() {
               {/* Empty state — no crates yet */}
               {crates.filter(c => c.source !== "set").length === 0 && !cratesLoading && !showSpotifyBrowser && (
                 <div style={{
-                  padding: "var(--space-6) var(--space-4)",
+                  padding: "var(--space-4) var(--space-3)",
                   textAlign: "center",
                   border: "1px dashed var(--color-border-light)",
                   borderRadius: "var(--radius-lg)",
@@ -2311,7 +2311,7 @@ export default function FabricPage() {
 
               {/* ── FEATURED MIXES ── */}
               {crates.filter(c => c.source === "set").length > 0 && (
-                <div style={{ padding: "var(--space-3) var(--space-8) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <div style={{ padding: "var(--space-3) var(--space-4) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                   <Label>Featured Mixes</Label>
                   <div className="thin-scroll-x" style={{
                     display: "flex",
@@ -2340,7 +2340,7 @@ export default function FabricPage() {
                             style={{
                               padding: "var(--space-2) var(--space-3)",
                               paddingRight: "var(--space-6)",
-                              minWidth: 140,
+                              minWidth: 110,
                               background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                               border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
                               borderRadius: "var(--radius-lg)",
@@ -2419,7 +2419,7 @@ export default function FabricPage() {
               </div>{/* end crate shelf wrapper */}
 
               {/* ── Scrollable content below shelf ── */}
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-8) var(--space-5)" }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-4) var(--space-4)" }}>
 
               {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
               {showSpotifyBrowser && (
@@ -2788,7 +2788,7 @@ export default function FabricPage() {
             {/* THE SET — draggable setlist rail */}
             <div
               style={{
-                width: 260,
+                width: 200,
                 flexShrink: 0,
                 borderLeft: "1px solid var(--color-border-light)",
                 display: "flex",
