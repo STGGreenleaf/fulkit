@@ -2020,7 +2020,7 @@ export default function FabricPage() {
           </div>
 
           {/* ═══ CRATES + SET ═══ */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
 
             {/* CRATES — imported playlists + Spotify browser */}
             <div
