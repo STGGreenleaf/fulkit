@@ -1574,8 +1574,8 @@ export default function FabricPage() {
   const [dragOverCol, setDragOverCol] = useState(null);
 
   const PANELS = [
-    { id: "browse", label: "Browse", icon: Disc3, active: showBrowse, toggle: () => setShowBrowse((v) => !v) },
-    { id: "crates", label: "Crates", icon: Box, active: showCrates, toggle: () => setShowCrates((v) => !v) },
+    { id: "browse", label: "Dig", icon: Disc3, active: showBrowse, toggle: () => setShowBrowse((v) => !v) },
+    { id: "crates", label: "Crates", icon: showCrates ? PackageOpen : Box, active: showCrates, toggle: () => setShowCrates((v) => !v) },
     { id: "sets", label: "Sets", icon: Turntable, active: showSets, toggle: () => setShowSets((v) => !v) },
   ];
 
@@ -2086,7 +2086,7 @@ export default function FabricPage() {
               <div style={{ padding: "var(--space-3) var(--space-2)", flex: 1, overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
                   <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
-                  <Label>Browse</Label>
+                  <Label>Dig</Label>
                 </div>
 
                 {/* ── Record Store Guy — Behind the Counter ── */}
@@ -2463,7 +2463,7 @@ export default function FabricPage() {
               <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-2) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
-                  <Box size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
+                  <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Crates</Label>
                 </div>
                 {playlists.length > 0 && (
