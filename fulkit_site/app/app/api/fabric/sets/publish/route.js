@@ -23,25 +23,6 @@ export async function POST(request) {
       return Response.json({ error: "name and tracks required" }, { status: 400 });
     }
 
-    // Check all tracks are analyzed
-    const spotifyIds = tracks.map(t => t.spotify_id);
-    const { data: fabricRows } = await db
-      .from("fabric_tracks")
-      .select("spotify_id, status")
-      .in("spotify_id", spotifyIds);
-
-    const statusMap = {};
-    for (const r of (fabricRows || [])) statusMap[r.spotify_id] = r.status;
-    const pending = spotifyIds.filter(id => statusMap[id] !== "complete");
-
-    if (pending.length > 0) {
-      return Response.json({
-        error: "not_ready",
-        pending: pending.length,
-        total: spotifyIds.length,
-      }, { status: 422 });
-    }
-
     // Create crate with source='set'
     const { data: crate, error: crateErr } = await db
       .from("crates")
