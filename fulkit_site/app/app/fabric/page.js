@@ -3062,9 +3062,9 @@ export default function FabricPage() {
                   position: "relative",
                 }}
               >
-                {/* Pointer — collapse/expand Sets column */}
+                {/* Pointer — collapse/expand track list */}
                 <button
-                  onClick={() => setShowSets(v => !v)}
+                  onClick={() => setSetCollapsed(v => !v)}
                   style={{
                     background: "none",
                     border: "none",
@@ -3073,10 +3073,12 @@ export default function FabricPage() {
                     color: "var(--color-text-dim)",
                     display: "flex",
                     flexShrink: 0,
+                    transform: setCollapsed ? "rotate(-90deg)" : "none",
+                    transition: "transform 120ms",
                   }}
-                  title="Collapse sets"
+                  title={setCollapsed ? "Expand tracks" : "Collapse tracks"}
                 >
-                  <ChevronLeft size={10} strokeWidth={2} />
+                  <ChevronDown size={10} strokeWidth={2} />
                 </button>
                 {/* Set title — double-click to rename */}
                 {renamingSet === activeSetId ? (
@@ -3201,7 +3203,7 @@ export default function FabricPage() {
                 )}
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto" }}>
+              {!setCollapsed && <div style={{ flex: 1, overflowY: "auto" }}>
                 {flagged.length === 0 && (
                   <div
                     style={{
@@ -3332,7 +3334,7 @@ export default function FabricPage() {
                     </div>
                   );
                 })}
-              </div>
+              </div>}
 
               {/* RSG moved to Browse column */}
             </div>
