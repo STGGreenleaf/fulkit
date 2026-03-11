@@ -2330,47 +2330,41 @@ export default function FabricPage() {
                             } else {
                               setExpandedCrate(crate.id);
                               setCrateTracks(crate.tracks || []);
-                              // Close featured mix if open
                               setExpandedFeatured(null);
                               setFeaturedTracks([]);
                             }
                           }}
                           style={{
-                            padding: "var(--space-2) var(--space-3)",
-                            paddingRight: "var(--space-6)",
-                            minWidth: 110,
+                            padding: "var(--space-1-5) var(--space-2)",
+                            paddingRight: "var(--space-5)",
+                            minWidth: 80,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                            borderRadius: "var(--radius-lg)",
+                            borderRadius: "var(--radius-sm)",
                             cursor: "pointer",
                             fontFamily: "var(--font-primary)",
                             textAlign: "left",
                             transition: "all 120ms",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
-                            {isOpen
-                              ? <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
-                              : <Package size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-                            }
-                            <div style={{
-                              fontSize: "var(--font-size-xs)",
-                              fontWeight: "var(--font-weight-semibold)",
-                              color: "var(--color-text)",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              maxWidth: 120,
-                            }}>
-                              {crate.name}
-                            </div>
+                          <div style={{
+                            fontSize: 10,
+                            fontWeight: "var(--font-weight-semibold)",
+                            color: "var(--color-text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 100,
+                          }}>
+                            {crate.name}
                           </div>
                           <div style={{
-                            fontSize: "var(--font-size-xs)",
+                            fontSize: 9,
                             fontFamily: "var(--font-mono)",
                             color: "var(--color-text-muted)",
+                            marginTop: 1,
                           }}>
-                            {trackCount} songs · {analyzed} ready
+                            {trackCount} · {analyzed} ready
                           </div>
                         </button>
                         <button
@@ -2472,50 +2466,42 @@ export default function FabricPage() {
                               } else {
                                 setExpandedFeatured(mix.id);
                                 setFeaturedTracks(mix.tracks || []);
-                                // Close crate if open
                                 setExpandedCrate(null);
                                 setCrateTracks([]);
                               }
                             }}
                             style={{
-                              padding: "var(--space-2) var(--space-3)",
-                              paddingRight: "var(--space-6)",
-                              minWidth: 110,
+                              padding: "var(--space-1-5) var(--space-2)",
+                              paddingRight: "var(--space-5)",
+                              minWidth: 80,
                               background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                               border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                              borderRadius: "var(--radius-lg)",
+                              borderRadius: "var(--radius-sm)",
                               cursor: "pointer",
                               fontFamily: "var(--font-primary)",
                               textAlign: "left",
                               transition: "all 120ms",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-1)" }}>
-                              <Crown size={12} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                              <Crown size={10} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
                               <div style={{
-                                fontSize: "var(--font-size-xs)",
+                                fontSize: 10,
                                 fontWeight: "var(--font-weight-semibold)",
                                 color: "var(--color-text)",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                maxWidth: 120,
+                                maxWidth: 100,
                               }}>
                                 {mix.name}
                               </div>
                             </div>
                             <div style={{
-                              fontSize: 8,
-                              fontFamily: "var(--font-mono)",
-                              color: "var(--color-text-dim)",
-                              marginBottom: 2,
-                            }}>
-                              by Collin
-                            </div>
-                            <div style={{
-                              fontSize: "var(--font-size-xs)",
+                              fontSize: 9,
                               fontFamily: "var(--font-mono)",
                               color: "var(--color-text-muted)",
+                              marginTop: 1,
                             }}>
                               {trackCount} songs
                             </div>
@@ -2942,7 +2928,7 @@ export default function FabricPage() {
                 setDragOverCol(null);
               }}
               style={{
-                flex: showSets ? 2 : 0,
+                flex: showSets ? 3 : 0,
                 minWidth: showSets ? 160 : 0,
                 width: showSets ? "auto" : 0,
                 overflow: "hidden",
