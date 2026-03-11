@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable, Trash2 } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -2746,7 +2746,6 @@ export default function FabricPage() {
                           }}
                           style={{
                             padding: "var(--space-1-5) var(--space-2)",
-                            paddingRight: "var(--space-5)",
                             minWidth: 80,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
@@ -2776,35 +2775,6 @@ export default function FabricPage() {
                           }}>
                             {trackCount}
                           </div>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteCrate(crate.id);
-                          }}
-                          style={{
-                            position: "absolute",
-                            top: 6,
-                            right: 6,
-                            width: 18,
-                            height: 18,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "transparent",
-                            border: "none",
-                            borderRadius: "var(--radius-sm)",
-                            cursor: "pointer",
-                            color: "var(--color-text-dim)",
-                            padding: 0,
-                            opacity: 0.5,
-                            transition: "opacity 120ms",
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
-                          title="Remove crate"
-                        >
-                          <X size={10} strokeWidth={2} />
                         </button>
                       </div>
                     );
@@ -2973,29 +2943,49 @@ export default function FabricPage() {
                         {crateTracks.length} tracks
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        const crate = crates.find(c => c.id === expandedCrate);
-                        if (crate?.source_spotify_id) playPlaylist(crate.source_spotify_id);
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-1)",
-                        padding: "var(--space-1-5) var(--space-3)",
-                        background: "var(--color-bg-elevated)",
-                        color: "var(--color-text)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "var(--font-size-xs)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        fontFamily: "var(--font-primary)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Play size={10} strokeWidth={2.5} fill="var(--color-text)" />
-                      Play
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
+                      <button
+                        onClick={() => deleteCrate(expandedCrate)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 26,
+                          height: 26,
+                          background: "none",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                          color: "var(--color-text-dim)",
+                          padding: 0,
+                        }}
+                        title="Delete crate"
+                      >
+                        <Trash2 size={12} strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const crate = crates.find(c => c.id === expandedCrate);
+                          if (crate?.source_spotify_id) playPlaylist(crate.source_spotify_id);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 26,
+                          height: 26,
+                          background: "none",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                          color: "var(--color-text)",
+                          padding: 0,
+                        }}
+                        title="Play crate"
+                      >
+                        <Play size={12} strokeWidth={2.5} fill="var(--color-text)" />
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ maxHeight: 320, overflowY: "auto" }}>
