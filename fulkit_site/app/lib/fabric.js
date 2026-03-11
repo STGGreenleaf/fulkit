@@ -91,7 +91,11 @@ export function FabricProvider({ children }) {
           ...options.headers,
         },
       });
-      if (!res.ok) { console.warn("[fabric]", endpoint, res.status); return null; }
+      if (!res.ok) {
+        console.warn("[fabric]", endpoint, res.status);
+        const text = await res.text();
+        try { return JSON.parse(text); } catch { return null; }
+      }
       const text = await res.text();
       if (!text) return { ok: true };
       try { return JSON.parse(text); } catch { return { ok: true }; }

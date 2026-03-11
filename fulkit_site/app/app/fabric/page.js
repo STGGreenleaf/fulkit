@@ -1507,6 +1507,44 @@ export default function FabricPage() {
   const musicChatEndRef = useRef(null);
   const [setCollapsed, setSetCollapsed] = useState(false);
 
+  // Playlist opt-in/opt-out
+  const [playlistPickerOpen, setPlaylistPickerOpen] = useState(false);
+  const [visiblePlaylistIds, setVisiblePlaylistIds] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem("fulkit-visible-playlists");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
+  const filteredPlaylists = useMemo(() => {
+    if (!visiblePlaylistIds) return playlists;
+    return playlists.filter(pl => visiblePlaylistIds.includes(pl.id));
+  }, [playlists, visiblePlaylistIds]);
+
+  const togglePlaylistVisibility = useCallback((playlistId) => {
+    setVisiblePlaylistIds(prev => {
+      const current = prev || playlists.map(pl => pl.id);
+      const next = current.includes(playlistId)
+        ? current.filter(id => id !== playlistId)
+        : [...current, playlistId];
+      try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [playlists]);
+
+  // Auto-add new playlists to visible list
+  useEffect(() => {
+    if (!visiblePlaylistIds || playlists.length === 0) return;
+    const newIds = playlists.filter(pl => !visiblePlaylistIds.includes(pl.id)).map(pl => pl.id);
+    if (newIds.length === 0) return;
+    setVisiblePlaylistIds(prev => {
+      const next = [...(prev || []), ...newIds];
+      try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [playlists, visiblePlaylistIds]);
+
   // Column toggles (3-column layout)
   const [showBrowse, setShowBrowse] = useState(true);
   const [showCrates, setShowCrates] = useState(true);
@@ -2203,10 +2241,162 @@ export default function FabricPage() {
                   </div>
                 )}
 
-                {/* Playlists */}
-                <Label style={{ marginBottom: "var(--space-2)" }}>Playlists</Label>
+                {/* ── Bin Picks — crowned sets ── */}
+                {crates.filter(c => c.source === "set").length > 0 && (
+                  <div style={{ marginBottom: "var(--space-3)" }}>
+                    <Label style={{ marginBottom: "var(--space-2)" }}>Bin Picks</Label>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                      {crates.filter(c => c.source === "set").map((mix) => (
+                        <button
+                          key={mix.id}
+                          onClick={() => {
+                            setExpandedFeatured(mix.id);
+                            setFeaturedTracks(mix.tracks || []);
+                            setExpandedCrate(null);
+                            setCrateTracks([]);
+                            const first = mix.tracks?.[0];
+                            if (first) {
+                              playTrack({
+                                id: first.spotify_id,
+                                title: first.title,
+                                artist: first.artist,
+                                duration: Math.round((first.duration_ms || 0) / 1000),
+                              });
+                            }
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-2)",
+                            padding: "var(--space-2) var(--space-3)",
+                            background: expandedFeatured === mix.id ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                            border: expandedFeatured === mix.id ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-sm)",
+                            cursor: "pointer",
+                            fontFamily: "var(--font-primary)",
+                            textAlign: "left",
+                            width: "100%",
+                            transition: "all 120ms",
+                          }}
+                        >
+                          <Crown size={12} strokeWidth={1.8} style={{ color: "var(--color-text)", flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-medium)",
+                              color: "var(--color-text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}>
+                              {mix.name}
+                            </div>
+                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
+                              {mix.tracks?.length || 0} songs
+                            </div>
+                          </div>
+                          <Play size={10} strokeWidth={2.5} fill="var(--color-text-dim)" style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Playlists with opt-in picker ── */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
+                  <Label>Playlists</Label>
+                  {playlists.length > 0 && (
+                    <button
+                      onClick={() => setPlaylistPickerOpen(v => !v)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 20,
+                        height: 20,
+                        background: playlistPickerOpen ? "var(--color-bg-alt)" : "transparent",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        cursor: "pointer",
+                        color: "var(--color-text-muted)",
+                        padding: 0,
+                        transition: "all 120ms",
+                      }}
+                      title="Choose visible playlists"
+                    >
+                      <Plus size={10} strokeWidth={2} style={{
+                        transform: playlistPickerOpen ? "rotate(45deg)" : "none",
+                        transition: "transform 120ms",
+                      }} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Playlist picker checklist */}
+                {playlistPickerOpen && (
+                  <div style={{
+                    marginBottom: "var(--space-2)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    {playlists.map(pl => {
+                      const isVisible = !visiblePlaylistIds || visiblePlaylistIds.includes(pl.id);
+                      return (
+                        <button
+                          key={pl.id}
+                          onClick={() => togglePlaylistVisibility(pl.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-2)",
+                            width: "100%",
+                            padding: "var(--space-1-5) var(--space-2)",
+                            background: "none",
+                            border: "none",
+                            borderBottom: "1px solid var(--color-border-light)",
+                            cursor: "pointer",
+                            fontFamily: "var(--font-primary)",
+                            textAlign: "left",
+                          }}
+                        >
+                          <div style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: 3,
+                            border: isVisible ? "none" : "1px solid var(--color-border-light)",
+                            background: isVisible ? "var(--color-text)" : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            transition: "all 120ms",
+                          }}>
+                            {isVisible && <Check size={10} strokeWidth={2.5} style={{ color: "var(--color-bg)" }} />}
+                          </div>
+                          <span style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: isVisible ? "var(--color-text)" : "var(--color-text-dim)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            flex: 1,
+                          }}>
+                            {pl.name}
+                          </span>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                            {pl.trackCount || 0}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                  {playlists.map((pl) => {
+                  {filteredPlaylists.map((pl) => {
                     const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
                     return (
                       <div
@@ -2233,6 +2423,11 @@ export default function FabricPage() {
                       </div>
                     );
                   })}
+                  {filteredPlaylists.length === 0 && playlists.length > 0 && (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) 0" }}>
+                      All playlists hidden — click + to manage
+                    </div>
+                  )}
                   {playlists.length === 0 && (
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) 0" }}>
                       Connect Spotify in Settings → Sources
@@ -2440,105 +2635,6 @@ export default function FabricPage() {
                       Browse Spotify Playlists
                     </button>
                   )}
-                </div>
-              )}
-
-              {/* ── FEATURED MIXES ── */}
-              {crates.filter(c => c.source === "set").length > 0 && (
-                <div style={{ padding: "var(--space-3) var(--space-2) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                  <Label>Featured Mixes</Label>
-                  <div className="thin-scroll-x" style={{
-                    display: "flex",
-                    gap: "var(--space-2)",
-                    overflowX: "auto",
-                    paddingBottom: "var(--space-1)",
-                  }}>
-                    {crates.filter(c => c.source === "set").map((mix) => {
-                      const isOpen = expandedFeatured === mix.id;
-                      const trackCount = mix.tracks?.length || 0;
-                      return (
-                        <div key={mix.id} style={{ position: "relative", flexShrink: 0 }}>
-                          <button
-                            onClick={() => {
-                              if (isOpen) {
-                                setExpandedFeatured(null);
-                                setFeaturedTracks([]);
-                              } else {
-                                setExpandedFeatured(mix.id);
-                                setFeaturedTracks(mix.tracks || []);
-                                setExpandedCrate(null);
-                                setCrateTracks([]);
-                              }
-                            }}
-                            style={{
-                              padding: "var(--space-1-5) var(--space-2)",
-                              paddingRight: "var(--space-5)",
-                              minWidth: 80,
-                              background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                              border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                              borderRadius: "var(--radius-sm)",
-                              cursor: "pointer",
-                              fontFamily: "var(--font-primary)",
-                              textAlign: "left",
-                              transition: "all 120ms",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                              <Crown size={10} strokeWidth={1.8} style={{ color: "var(--color-text)" }} />
-                              <div style={{
-                                fontSize: 10,
-                                fontWeight: "var(--font-weight-semibold)",
-                                color: "var(--color-text)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                maxWidth: 100,
-                              }}>
-                                {mix.name}
-                              </div>
-                            </div>
-                            <div style={{
-                              fontSize: 9,
-                              fontFamily: "var(--font-mono)",
-                              color: "var(--color-text-muted)",
-                              marginTop: 1,
-                            }}>
-                              {trackCount} songs
-                            </div>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              unpublishSet(mix.id).then(() => loadCrates());
-                            }}
-                            style={{
-                              position: "absolute",
-                              top: 6,
-                              right: 6,
-                              width: 18,
-                              height: 18,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              background: "transparent",
-                              border: "none",
-                              borderRadius: "var(--radius-sm)",
-                              cursor: "pointer",
-                              color: "var(--color-text-dim)",
-                              padding: 0,
-                              opacity: 0.5,
-                              transition: "opacity 120ms",
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
-                            title="Unpublish mix"
-                          >
-                            <X size={10} strokeWidth={2} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
 
@@ -2944,6 +3040,15 @@ export default function FabricPage() {
                   <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Sets</Label>
                 </div>
+                <button
+                  onClick={() => createSet()}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                  title="New set"
+                >
+                  <Plus size={12} strokeWidth={1.8} />
+                </button>
               </div>
 
               {/* ═══ SET HEADER ═══ */}
@@ -2955,24 +3060,8 @@ export default function FabricPage() {
                   alignItems: "center",
                   gap: "var(--space-2)",
                   position: "relative",
-                  cursor: "pointer",
-                }}
-                onClick={(e) => {
-                  // Don't collapse if clicking buttons/inputs inside
-                  if (e.target.closest("button") || e.target.closest("input")) return;
-                  setSetCollapsed(v => !v);
                 }}
               >
-                <ChevronDown
-                  size={10}
-                  strokeWidth={2}
-                  style={{
-                    color: "var(--color-text-dim)",
-                    flexShrink: 0,
-                    transform: setCollapsed ? "rotate(-90deg)" : "none",
-                    transition: "transform 120ms",
-                  }}
-                />
                 {/* Set selector — click to open dropdown, double-click to rename */}
                 {renamingSet === activeSetId ? (
                   <input
@@ -3027,29 +3116,55 @@ export default function FabricPage() {
                   {flagged.length}
                 </span>
                 <div style={{ flex: 1 }} />
-                {/* New set */}
-                <button
-                  onClick={() => createSet()}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
-                  title="New set"
-                >
-                  <Plus size={12} strokeWidth={1.8} />
-                </button>
-                {/* Delete set */}
-                {allSets.length > 1 && (
-                  <button
-                    onClick={() => deleteSet(activeSetId)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
-                    title="Delete set"
-                  >
-                    <ListX size={12} strokeWidth={1.8} />
-                  </button>
-                )}
-                {/* Record Store Guy toggle removed — RSG is now at top of column */}
+                {/* Crown — publish/unpublish active set */}
+                {(() => {
+                  const activeSetName = allSets.find(s => s.id === activeSetId)?.name;
+                  const isPublished = activeSetName ? publishedSets[activeSetName] : null;
+                  return (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (publishing) return;
+                        try {
+                          if (isPublished) {
+                            setPublishing(true);
+                            await unpublishSet(isPublished);
+                            await loadCrates();
+                          } else {
+                            if (flagged.length === 0) { setPublishMsg("Set is empty"); setTimeout(() => setPublishMsg(null), 2000); return; }
+                            setPublishing(true);
+                            const res = await publishSet(activeSetId);
+                            if (res?.ok) {
+                              await loadCrates();
+                            } else if (res?.error === "not_ready") {
+                              setPublishMsg(`${res.pending} of ${res.total} still processing`);
+                              setTimeout(() => setPublishMsg(null), 3000);
+                            } else {
+                              setPublishMsg("Failed to publish");
+                              setTimeout(() => setPublishMsg(null), 2000);
+                            }
+                          }
+                        } finally {
+                          setPublishing(false);
+                        }
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: publishing ? "wait" : "pointer",
+                        padding: 2,
+                        color: isPublished ? "var(--color-text)" : "var(--color-text-dim)",
+                        opacity: isPublished ? 1 : 0.3,
+                        transition: "opacity 120ms",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = isPublished ? "1" : "0.3"}
+                      title={isPublished ? "Unpublish" : "Feature this set"}
+                    >
+                      <Crown size={10} strokeWidth={1.8} />
+                    </button>
+                  );
+                })()}
 
                 {/* Publish status message */}
                 {publishMsg && (
@@ -3085,76 +3200,32 @@ export default function FabricPage() {
                     padding: "var(--space-1) 0",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   }}>
-                    {allSets.map(s => {
-                      const isPublished = publishedSets[s.name];
-                      return (
-                        <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
-                          <button
-                            onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
-                            style={{
-                              flex: 1,
-                              display: "flex",
-                              alignItems: "center",
-                              padding: "var(--space-1-5) var(--space-3)",
-                              background: s.id === activeSetId ? "var(--color-bg-alt)" : "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              fontSize: "var(--font-size-xs)",
-                              fontFamily: "var(--font-primary)",
-                              color: "var(--color-text)",
-                              textAlign: "left",
-                            }}
-                          >
-                            {s.name}
-                          </button>
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (publishing) return;
-                              if (isPublished) {
-                                setPublishing(true);
-                                await unpublishSet(isPublished);
-                                await loadCrates();
-                                setPublishing(false);
-                              } else {
-                                if (s.trackCount === 0) { setPublishMsg("Set is empty"); setTimeout(() => setPublishMsg(null), 2000); return; }
-                                setPublishing(true);
-                                const res = await publishSet(s.id);
-                                if (res?.ok) {
-                                  await loadCrates();
-                                } else if (res?.error === "not_ready") {
-                                  setPublishMsg(`${res.pending} of ${res.total} still processing`);
-                                  setTimeout(() => setPublishMsg(null), 3000);
-                                } else {
-                                  setPublishMsg("Failed to publish");
-                                  setTimeout(() => setPublishMsg(null), 2000);
-                                }
-                                setPublishing(false);
-                              }
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: publishing ? "wait" : "pointer",
-                              padding: "var(--space-1-5) var(--space-2)",
-                              color: isPublished ? "var(--color-text)" : "var(--color-text-dim)",
-                              opacity: isPublished ? 1 : 0.3,
-                              transition: "opacity 120ms",
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = isPublished ? "1" : "0.3"}
-                            title={isPublished ? "Unpublish" : "Feature this set"}
-                          >
-                            <Crown size={10} strokeWidth={1.8} />
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {allSets.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                          padding: "var(--space-1-5) var(--space-3)",
+                          background: s.id === activeSetId ? "var(--color-bg-alt)" : "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-primary)",
+                          color: "var(--color-text)",
+                          textAlign: "left",
+                        }}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {!setCollapsed && <div style={{ flex: 1, overflowY: "auto" }}>
+              <div style={{ flex: 1, overflowY: "auto" }}>
                 {flagged.length === 0 && (
                   <div
                     style={{
@@ -3287,7 +3358,6 @@ export default function FabricPage() {
                 })}
               </div>
 
-              }
               {/* RSG moved to Browse column */}
             </div>
           </div>

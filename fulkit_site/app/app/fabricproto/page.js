@@ -1,49 +1,13 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Disc3, Box, Package, PackageOpen, Plus, Play, ListX, Turntable, X, MessageCircle, ChevronUp, Send, Loader2, Trash2 } from "lucide-react";
+import { Disc3, Box, Plus, ListX, Turntable, X, MessageCircle, ChevronUp, Send, Loader2, Trash2 } from "lucide-react";
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
 const TAB_ICON_SIZE = 14;
 
-// ── Mock Data ──────────────────────────────────────────────
-
-const MOCK_PLAYLISTS = [
-  { id: "pl1", name: "Deep House Essentials", count: 48 },
-  { id: "pl2", name: "Acid Jazz Rarities", count: 23 },
-  { id: "pl3", name: "Dub Techno Selects", count: 67 },
-  { id: "pl4", name: "Sunday Slow Jams", count: 31 },
-  { id: "pl5", name: "Broken Beat Archive", count: 19 },
-];
-
-const MOCK_BROWSE_TRACKS = [
-  { id: "bt1", title: "Blue in Green", artist: "Miles Davis", bpm: 68 },
-  { id: "bt2", title: "Windowlicker", artist: "Aphex Twin", bpm: 134 },
-  { id: "bt3", title: "Midnight City", artist: "M83", bpm: 105 },
-  { id: "bt4", title: "Teardrop", artist: "Massive Attack", bpm: 79 },
-  { id: "bt5", title: "Donna Summer", artist: "Giorgio Moroder", bpm: 120 },
-  { id: "bt6", title: "Inner City Life", artist: "Goldie", bpm: 170 },
-];
-
-const MOCK_CRATES = [
-  { id: "c1", name: "Electro Static", songs: 44, ready: 43 },
-  { id: "c2", name: "Sunday Morning DJ", songs: 100, ready: 8 },
-  { id: "c3", name: "chill beats wednesday", songs: 100, ready: 1 },
-];
-
-const MOCK_CRATE_TRACKS = [
-  { id: "ct1", title: "Adrift", artist: "Vök", analyzed: true },
-  { id: "ct2", title: "Amber Decay", artist: "Kangding Ray", analyzed: true },
-  { id: "ct3", title: "Phobos", artist: "Stephan Bodzin, Marc Romboy", analyzed: true },
-  { id: "ct4", title: "Crow", artist: "Forest Swords", analyzed: true },
-  { id: "ct5", title: "Recovery", artist: "Rival Consoles", analyzed: true },
-  { id: "ct6", title: "Resolve", artist: "Colyn", analyzed: true },
-  { id: "ct7", title: "Plastic Dreams", artist: "Jaydee", analyzed: true },
-  { id: "ct8", title: "Cafe Del Mar", artist: "Energy 52", analyzed: false },
-  { id: "ct9", title: "French Kiss", artist: "Lil Louis", analyzed: true },
-  { id: "ct10", title: "Strings of Life", artist: "Derrick May", analyzed: true },
-];
+// ── Mock Data (kept for dev fallback / sets column) ──
 
 const MOCK_SET_TRACKS = [
   { id: "st1", title: "Cafe Del Mar", artist: "Energy 52", bpm: 132, duration: "7:12" },
@@ -108,12 +72,44 @@ export default function FabricProto() {
   const [showBrowse, setShowBrowse] = useState(true);
   const [showCrates, setShowCrates] = useState(true);
   const [showSets, setShowSets] = useState(true);
-  const [expandedCrate, setExpandedCrate] = useState("c1");
+  const [expandedCrate, setExpandedCrate] = useState(null);
   const [setTracks, setSetTracks] = useState(MOCK_SET_TRACKS);
   const [musicChatOpen, setMusicChatOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dragTrack = useRef(null);
   const [dragOverCol, setDragOverCol] = useState(null);
+
+  // ── Featured crates from API ──
+  const [featuredCrates, setFeaturedCrates] = useState([]);
+  const [cratesLoading, setCratesLoading] = useState(true);
+  const [expandedCrateTracks, setExpandedCrateTracks] = useState([]);
+
+  useEffect(() => {
+    async function loadFeatured() {
+      try {
+        const res = await fetch("/api/fabric/featured");
+        const data = await res.json();
+        const crates = (data.crates || []).filter(c => c.source === "set");
+        setFeaturedCrates(crates);
+        if (crates.length > 0) setExpandedCrate(crates[0].id);
+      } catch {
+        setFeaturedCrates([]);
+      }
+      setCratesLoading(false);
+    }
+    loadFeatured();
+  }, []);
+
+  // Load tracks when expanded crate changes
+  useEffect(() => {
+    if (!expandedCrate) { setExpandedCrateTracks([]); return; }
+    const crate = featuredCrates.find(c => c.id === expandedCrate);
+    if (crate?.tracks) {
+      setExpandedCrateTracks(crate.tracks);
+    } else {
+      setExpandedCrateTracks([]);
+    }
+  }, [expandedCrate, featuredCrates]);
 
   // RSG state
   const isDev = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("auth") === "dev";
@@ -144,7 +140,6 @@ export default function FabricProto() {
         .order("created_at", { ascending: true });
       if (msgs && msgs.length > 0) {
         setRsgMessages(msgs.map((m) => ({ role: m.role, content: m.content })));
-        // Parse recs from last assistant message
         const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant");
         if (lastAssistant) setRsgRecs(parseRecs(lastAssistant.content));
       }
@@ -199,7 +194,6 @@ export default function FabricProto() {
       const convId = await ensureRsgConv();
       await saveRsgMessage(convId, "user", userMsg.content);
 
-      // Get auth token for API
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
@@ -237,7 +231,6 @@ export default function FabricProto() {
         }
       }
 
-      // Save assistant response & parse recs
       await saveRsgMessage(convId, "assistant", fullResponse);
       const recs = parseRecs(fullResponse);
       if (recs.length > 0) setRsgRecs(recs);
@@ -268,12 +261,12 @@ export default function FabricProto() {
   // Check if a track is in the set
   const isInSet = (id) => setTracks.some((t) => t.id === id);
 
-  // Toggle track in/out of set (mock)
+  // Toggle track in/out of set
   const toggleSet = (track) => {
     if (isInSet(track.id)) {
       setSetTracks((prev) => prev.filter((t) => t.id !== track.id));
     } else {
-      setSetTracks((prev) => [...prev, { ...track, bpm: "—", duration: "—" }]);
+      setSetTracks((prev) => [...prev, { ...track, bpm: track.bpm || "—", duration: track.duration || "—" }]);
     }
   };
 
@@ -281,48 +274,28 @@ export default function FabricProto() {
     <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden", background: "var(--color-bg)" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* ── Mock Header (The Deck) ── */}
+        {/* ── Deck Screenshot ── */}
         <div
           style={{
-            display: "flex",
-            gap: "var(--space-4)",
-            padding: "var(--space-4)",
             borderBottom: "1px solid var(--color-border-light)",
+            background: "var(--color-bg-elevated)",
+            overflow: "hidden",
           }}
         >
-          <div
+          <img
+            src="/fabricproto-deck.png"
+            alt="Fabric Deck"
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: "var(--radius-sm)",
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              flexShrink: 0,
+              width: "100%",
+              display: "block",
+              objectFit: "cover",
+              maxHeight: 160,
+            }}
+            onError={(e) => {
+              e.target.style.display = "none";
             }}
           />
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "var(--space-1)" }}>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", fontFamily: "var(--font-primary)" }}>
-              Adrift
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)" }}>
-              Vök
-            </div>
-            <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-1)" }}>
-              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-bold)" }}>118 BPM</span>
-              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>Cm</span>
-              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>4:32</span>
-            </div>
-          </div>
         </div>
-
-        {/* ── Signal Terrain Placeholder ── */}
-        <div
-          style={{
-            height: 40,
-            background: "var(--color-bg-elevated)",
-            borderBottom: "1px solid var(--color-border-light)",
-          }}
-        />
 
         {/* ── Column Toggle Bar ── */}
         <div
@@ -410,7 +383,7 @@ export default function FabricProto() {
                       Behind the Counter
                     </div>
                     <div style={{ fontSize: 9, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-normal)", fontStyle: "italic", color: "var(--color-text-secondary)", marginTop: 2 }}>
-                      Fülkit's B-Side Brain
+                      Fulkit's B-Side Brain
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
@@ -449,7 +422,6 @@ export default function FabricProto() {
                           lineHeight: 1.4,
                           whiteSpace: "pre-wrap",
                         }}>
-                          {/* Render text without [REC:] lines — recs shown separately */}
                           {msg.content.replace(/\[REC:.*?\]/g, "").trim()}
                         </div>
                       ))}
@@ -570,75 +542,41 @@ export default function FabricProto() {
                 </div>
               </div>
 
-              {/* Playlist cards */}
-              {/* Ticker — the plate */}
-              <div style={{
-                fontSize: 9,
-                fontFamily: "var(--font-primary)",
-                fontStyle: "italic",
-                color: "var(--color-text-secondary)",
-                lineHeight: 1.4,
-                marginBottom: "var(--space-4)",
-              }}>
-                — Adrift was recorded at Greenhouse Studios in Reykjavík using a modified Juno-106 run through a chain of Eventide effects.
-              </div>
-
-              <Label style={{ marginBottom: "var(--space-2)" }}>Playlists</Label>
+              {/* Featured crates as browse list */}
+              <Label style={{ marginTop: "var(--space-4)", marginBottom: "var(--space-2)" }}>Featured Crates</Label>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                {MOCK_PLAYLISTS.map((pl) => (
+                {cratesLoading && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", color: "var(--color-text-dim)", padding: "var(--space-2)" }}>
+                    <Loader2 size={10} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)" }}>Loading...</span>
+                  </div>
+                )}
+                {!cratesLoading && featuredCrates.length === 0 && (
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", padding: "var(--space-2)" }}>
+                    No published crates yet
+                  </div>
+                )}
+                {featuredCrates.map((crate) => (
                   <div
-                    key={pl.id}
+                    key={crate.id}
+                    onClick={() => setExpandedCrate(expandedCrate === crate.id ? null : crate.id)}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "var(--space-2) var(--space-3)",
-                      background: "var(--color-bg-elevated)",
+                      background: expandedCrate === crate.id ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                       borderRadius: "var(--radius-sm)",
                       cursor: "pointer",
+                      border: expandedCrate === crate.id ? "1px solid var(--color-border-focus)" : "1px solid transparent",
+                      transition: "all 120ms",
                     }}
                   >
                     <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
-                      {pl.name}
+                      {crate.name}
                     </span>
                     <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
-                      {pl.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Track results */}
-              <Label style={{ marginTop: "var(--space-4)", marginBottom: "var(--space-2)" }}>Tracks</Label>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {MOCK_BROWSE_TRACKS.map((t, i) => (
-                  <div
-                    key={t.id}
-                    draggable
-                    onDragStart={() => { dragTrack.current = t; }}
-                    onDragEnd={() => { dragTrack.current = null; setDragOverCol(null); }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-2)",
-                      padding: "var(--space-1-5) var(--space-2)",
-                      borderRadius: "var(--radius-sm)",
-                      cursor: "grab",
-                    }}
-                  >
-                    <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 14, flexShrink: 0, opacity: 0.5 }}>
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-primary)" }}>
-                        {t.title}
-                      </div>
-                      <div style={{ fontSize: 9, color: "var(--color-text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "var(--font-primary)" }}>
-                        {t.artist}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
-                      {t.bpm}
+                      {crate.tracks?.length || 0}
                     </span>
                   </div>
                 ))}
@@ -650,7 +588,7 @@ export default function FabricProto() {
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOverCol("crates"); }}
             onDragLeave={() => setDragOverCol(null)}
-            onDrop={() => { setDragOverCol(null); /* proto: visual only for crates drop */ }}
+            onDrop={() => { setDragOverCol(null); }}
             style={{
               flex: showCrates ? 5 : 0,
               minWidth: showCrates ? 200 : 0,
@@ -671,32 +609,11 @@ export default function FabricProto() {
                   <Box size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Crates</Label>
                 </div>
-                <button
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    padding: "var(--space-1) var(--space-2)",
-                    background: "transparent",
-                    border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-sm)",
-                    cursor: "pointer",
-                    fontSize: 9,
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--font-weight-medium)",
-                    color: "var(--color-text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                  }}
-                >
-                  <Plus size={10} strokeWidth={2} />
-                  Import
-                </button>
               </div>
 
               {/* Crate shelf (horizontal scroll) */}
               <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: "var(--space-1)" }}>
-                {MOCK_CRATES.map((crate) => {
+                {featuredCrates.map((crate) => {
                   const isOpen = expandedCrate === crate.id;
                   return (
                     <button
@@ -728,17 +645,22 @@ export default function FabricProto() {
                         color: "var(--color-text-muted)",
                         marginTop: 1,
                       }}>
-                        {crate.songs} songs
+                        {crate.tracks?.length || 0} tracks
                       </div>
                     </button>
                   );
                 })}
+                {cratesLoading && (
+                  <div style={{ display: "flex", alignItems: "center", padding: "var(--space-2)", color: "var(--color-text-dim)" }}>
+                    <Loader2 size={12} strokeWidth={2} style={{ animation: "spin 1s linear infinite" }} />
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Expanded crate track list */}
             <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-4) var(--space-4)" }}>
-              {expandedCrate && (
+              {expandedCrate && expandedCrateTracks.length > 0 && (
                 <div style={{
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
@@ -756,42 +678,25 @@ export default function FabricProto() {
                   }}>
                     <div>
                       <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                        {MOCK_CRATES.find((c) => c.id === expandedCrate)?.name}
+                        {featuredCrates.find((c) => c.id === expandedCrate)?.name}
                       </div>
                       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
-                        {MOCK_CRATE_TRACKS.length} tracks
+                        {expandedCrateTracks.length} tracks
                       </div>
                     </div>
-                    <button
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-1)",
-                        padding: "var(--space-1-5) var(--space-3)",
-                        background: "var(--color-bg-elevated)",
-                        color: "var(--color-text)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "var(--font-size-xs)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        fontFamily: "var(--font-primary)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Play size={10} strokeWidth={2.5} fill="var(--color-text)" />
-                      Play
-                    </button>
                   </div>
 
                   {/* Track rows */}
                   <div style={{ maxHeight: 400, overflowY: "auto" }}>
-                    {MOCK_CRATE_TRACKS.map((track, i) => {
-                      const inSet = isInSet(track.id);
+                    {expandedCrateTracks.map((track, i) => {
+                      const trackId = track.spotify_id || track.id || `t-${i}`;
+                      const inSet = isInSet(trackId);
+                      const isAnalyzed = track.fabric_status === "complete" || track.analyzed;
                       return (
                         <div
-                          key={track.id}
+                          key={trackId}
                           draggable
-                          onDragStart={() => { dragTrack.current = track; }}
+                          onDragStart={() => { dragTrack.current = { ...track, id: trackId }; }}
                           onDragEnd={() => { dragTrack.current = null; setDragOverCol(null); }}
                           style={{
                             display: "flex",
@@ -819,10 +724,10 @@ export default function FabricProto() {
                             width: 5,
                             height: 5,
                             borderRadius: "50%",
-                            background: track.analyzed ? "var(--color-text-muted)" : "transparent",
-                            border: track.analyzed ? "none" : "1px solid var(--color-text-dim)",
+                            background: isAnalyzed ? "var(--color-text-muted)" : "transparent",
+                            border: isAnalyzed ? "none" : "1px solid var(--color-text-dim)",
                             flexShrink: 0,
-                          }} title={track.analyzed ? "Fabric analyzed" : "Pending"} />
+                          }} title={isAnalyzed ? "Fabric analyzed" : "Pending"} />
                           {/* Song info */}
                           <button
                             style={{
@@ -858,7 +763,7 @@ export default function FabricProto() {
                           </button>
                           {/* Add to set */}
                           <button
-                            onClick={() => toggleSet(track)}
+                            onClick={() => toggleSet({ ...track, id: trackId })}
                             style={{
                               background: "none",
                               border: "none",
@@ -876,6 +781,14 @@ export default function FabricProto() {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+              {expandedCrate && expandedCrateTracks.length === 0 && !cratesLoading && (
+                <div style={{ padding: "var(--space-4) var(--space-2)", textAlign: "center" }}>
+                  <Box size={20} strokeWidth={1.2} style={{ color: "var(--color-text-dim)", marginBottom: "var(--space-2)" }} />
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                    No tracks in this crate
                   </div>
                 </div>
               )}
