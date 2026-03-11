@@ -3062,7 +3062,23 @@ export default function FabricPage() {
                   position: "relative",
                 }}
               >
-                {/* Set selector — click to open dropdown, double-click to rename */}
+                {/* Pointer — collapse/expand Sets column */}
+                <button
+                  onClick={() => setShowSets(v => !v)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "var(--color-text-dim)",
+                    display: "flex",
+                    flexShrink: 0,
+                  }}
+                  title="Collapse sets"
+                >
+                  <ChevronLeft size={10} strokeWidth={2} />
+                </button>
+                {/* Set title — double-click to rename */}
                 {renamingSet === activeSetId ? (
                   <input
                     autoFocus
@@ -3074,7 +3090,8 @@ export default function FabricPage() {
                       if (e.key === "Escape") setRenamingSet(null);
                     }}
                     style={{
-                      width: 80,
+                      flex: 1,
+                      minWidth: 0,
                       padding: 0,
                       fontFamily: "var(--font-mono)",
                       fontSize: 9,
@@ -3089,30 +3106,26 @@ export default function FabricPage() {
                     }}
                   />
                 ) : (
-                  <button
-                    onClick={() => setShowSetMenu(v => !v)}
-                    onDoubleClick={(e) => { e.stopPropagation(); setShowSetMenu(false); setRenamingSet(activeSetId); setRenameValue(allSets.find(s => s.id === activeSetId)?.name || ""); }}
+                  <span
+                    onDoubleClick={() => { setRenamingSet(activeSetId); setRenameValue(allSets.find(s => s.id === activeSetId)?.name || ""); }}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 3,
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
                       fontFamily: "var(--font-mono)",
                       fontSize: 9,
                       fontWeight: "var(--font-weight-bold)",
                       color: "var(--color-text-muted)",
                       textTransform: "uppercase",
                       letterSpacing: "var(--letter-spacing-wider)",
+                      cursor: "default",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      minWidth: 0,
                     }}
                   >
                     {allSets.find(s => s.id === activeSetId)?.name || "Set"}
-                    <ChevronDown size={10} strokeWidth={2} style={{ transform: showSetMenu ? "rotate(180deg)" : "none", transition: "transform 120ms" }} />
-                  </button>
+                  </span>
                 )}
-                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
                   {flagged.length}
                 </span>
                 <div style={{ flex: 1 }} />
@@ -3156,6 +3169,7 @@ export default function FabricPage() {
                         color: isPublished ? "var(--color-text)" : "var(--color-text-dim)",
                         opacity: isPublished ? 1 : 0.3,
                         transition: "opacity 120ms",
+                        flexShrink: 0,
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = isPublished ? "1" : "0.3"}
@@ -3183,44 +3197,6 @@ export default function FabricPage() {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   }}>
                     {publishMsg}
-                  </div>
-                )}
-
-                {/* Dropdown menu */}
-                {showSetMenu && (
-                  <div style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: "var(--space-4)",
-                    zIndex: 20,
-                    background: "var(--color-bg-elevated)",
-                    border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-md)",
-                    minWidth: 160,
-                    padding: "var(--space-1) 0",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  }}>
-                    {allSets.map(s => (
-                      <button
-                        key={s.id}
-                        onClick={() => { switchSet(s.id); setShowSetMenu(false); }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          width: "100%",
-                          padding: "var(--space-1-5) var(--space-3)",
-                          background: s.id === activeSetId ? "var(--color-bg-alt)" : "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "var(--font-size-xs)",
-                          fontFamily: "var(--font-primary)",
-                          color: "var(--color-text)",
-                          textAlign: "left",
-                        }}
-                      >
-                        {s.name}
-                      </button>
-                    ))}
                   </div>
                 )}
               </div>
