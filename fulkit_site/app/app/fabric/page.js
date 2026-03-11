@@ -1537,32 +1537,23 @@ export default function FabricPage() {
   });
 
   const filteredPlaylists = useMemo(() => {
-    if (!visiblePlaylistIds) return playlists;
+    if (!visiblePlaylistIds) {
+      // Default: only show playlists already imported as crates
+      return playlists.filter(pl => crates.some(c => c.source_spotify_id === pl.id));
+    }
     return playlists.filter(pl => visiblePlaylistIds.includes(pl.id));
-  }, [playlists, visiblePlaylistIds]);
+  }, [playlists, visiblePlaylistIds, crates]);
 
   const togglePlaylistVisibility = useCallback((playlistId) => {
     setVisiblePlaylistIds(prev => {
-      const current = prev || playlists.map(pl => pl.id);
+      const current = prev || playlists.filter(pl => crates.some(c => c.source_spotify_id === pl.id)).map(pl => pl.id);
       const next = current.includes(playlistId)
         ? current.filter(id => id !== playlistId)
         : [...current, playlistId];
       try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
       return next;
     });
-  }, [playlists]);
-
-  // Auto-add new playlists to visible list
-  useEffect(() => {
-    if (!visiblePlaylistIds || playlists.length === 0) return;
-    const newIds = playlists.filter(pl => !visiblePlaylistIds.includes(pl.id)).map(pl => pl.id);
-    if (newIds.length === 0) return;
-    setVisiblePlaylistIds(prev => {
-      const next = [...(prev || []), ...newIds];
-      try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, [playlists, visiblePlaylistIds]);
+  }, [playlists, crates]);
 
   // Column toggles (3-column layout)
   const [showBrowse, setShowBrowse] = useState(true);
@@ -2414,7 +2405,14 @@ export default function FabricPage() {
                           cursor: "pointer",
                         }}
                         onClick={() => {
-                          if (!alreadyImported && playlists.length > 0) importPlaylist(pl);
+                          if (!alreadyImported && playlists.length > 0) {
+                            importPlaylist(pl);
+                            setVisiblePlaylistIds(prev => {
+                              const next = [...(prev || []), pl.id];
+                              try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
+                              return next;
+                            });
+                          }
                         }}
                       >
                         <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
