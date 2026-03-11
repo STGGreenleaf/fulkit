@@ -2185,7 +2185,7 @@ export default function FabricPage() {
                                   <div key={li}>
                                     {artist} - {title}{bpmText}{"  "}
                                     <button
-                                      onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
+                                      onClick={() => flag({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist })}
                                       style={{
                                         display: "inline",
                                         background: "none",
@@ -2774,7 +2774,7 @@ export default function FabricPage() {
                             color: "var(--color-text-muted)",
                             marginTop: 1,
                           }}>
-                            {trackCount} · {analyzed} ready
+                            {trackCount}
                           </div>
                         </button>
                         <button
@@ -3127,7 +3127,7 @@ export default function FabricPage() {
                           {crates.find(c => c.id === expandedFeatured)?.name}
                         </div>
                         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
-                          {featuredTracks.length} tracks · by Collin
+                          {featuredTracks.length} tracks · by Fülkit
                         </div>
                       </div>
                     </div>
