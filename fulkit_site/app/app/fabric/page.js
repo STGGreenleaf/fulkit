@@ -1575,15 +1575,17 @@ export default function FabricPage() {
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
-  // Auto-scroll music chat — only if user is near the bottom
+  // Auto-scroll music chat — only when user sends a message, not during streaming
+  const musicMsgCount = musicMessages.length;
+  const prevMsgCount = useRef(0);
   useEffect(() => {
-    const el = musicChatScrollRef.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-    if (nearBottom) {
+    // Only scroll when a new user message is added (count increases by a user msg)
+    const lastMsg = musicMessages[musicMessages.length - 1];
+    if (musicMsgCount > prevMsgCount.current && lastMsg?.role === "user") {
       musicChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [musicMessages]);
+    prevMsgCount.current = musicMsgCount;
+  }, [musicMsgCount, musicMessages]);
 
   // Load imported crates
   const { accessToken, compactMode } = useAuth();
