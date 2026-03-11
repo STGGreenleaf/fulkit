@@ -51,6 +51,7 @@ export default function Chat() {
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const abortRef = useRef(null);
 
@@ -146,7 +147,12 @@ export default function Chat() {
   }, [conversationId, isDev]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (nearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -702,6 +708,7 @@ export default function Chat() {
                 </div>
               )}
               <div
+                ref={messagesContainerRef}
                 style={{
                   flex: 1,
                   overflowY: "auto",

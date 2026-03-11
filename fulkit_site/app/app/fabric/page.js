@@ -1532,6 +1532,8 @@ export default function FabricPage() {
 
   // Playlist opt-in/opt-out
   const [playlistPickerOpen, setPlaylistPickerOpen] = useState(false);
+  const [binPicksOpen, setBinPicksOpen] = useState(false);
+  const [playlistsOpen, setPlaylistsOpen] = useState(false);
   const [visiblePlaylistIds, setVisiblePlaylistIds] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -1578,13 +1580,14 @@ export default function FabricPage() {
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
-  // Auto-scroll music chat — only when user sends a message, not during streaming
+  // Auto-scroll music chat — only if user is already near bottom
   const musicMsgCount = musicMessages.length;
   const prevMsgCount = useRef(0);
   useEffect(() => {
-    // Only scroll when a new user message is added (count increases by a user msg)
-    const lastMsg = musicMessages[musicMessages.length - 1];
-    if (musicMsgCount > prevMsgCount.current && lastMsg?.role === "user") {
+    const el = musicChatScrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (musicMsgCount > prevMsgCount.current && nearBottom) {
       musicChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     prevMsgCount.current = musicMsgCount;
@@ -1855,7 +1858,7 @@ export default function FabricPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}
+                    {currentTrack ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}` : ""}
                   </div>
                 </div>
 
@@ -2346,7 +2349,9 @@ export default function FabricPage() {
                     )}
                     {discoveryTracks.length > 0 && (
                       <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-                        {discoveryTracks.map((track, i) => (
+                        {discoveryTracks.map((track, i) => {
+                          const isActive = currentTrack?.id === track.spotify_id;
+                          return (
                           <div
                             key={track.spotify_id || i}
                             style={{
@@ -2355,9 +2360,11 @@ export default function FabricPage() {
                               gap: "var(--space-1-5)",
                               padding: "var(--space-1) var(--space-2)",
                               borderBottom: "1px solid var(--color-border-light)",
+                              background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                              borderRadius: isActive ? "var(--radius-sm)" : 0,
                             }}
                           >
-                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
                               {String(track.track_number || i + 1).padStart(2, "0")}
                             </div>
                             <button
@@ -2365,6 +2372,8 @@ export default function FabricPage() {
                                 id: track.spotify_id,
                                 title: track.title,
                                 artist: track.artist,
+                                album: discoveryAlbum?.name || "",
+                                art: discoveryAlbum?.image || null,
                                 duration: Math.round((track.duration_ms || 0) / 1000),
                               })}
                               style={{
@@ -2381,7 +2390,7 @@ export default function FabricPage() {
                               <div style={{
                                 fontSize: "var(--font-size-xs)",
                                 fontWeight: "var(--font-weight-medium)",
-                                color: currentTrack?.id === track.spotify_id ? "var(--color-text-inverse)" : "var(--color-text)",
+                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
@@ -2389,7 +2398,7 @@ export default function FabricPage() {
                                 {track.title}
                               </div>
                             </button>
-                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", flexShrink: 0 }}>
                               {formatTime(Math.round((track.duration_ms || 0) / 1000))}
                             </div>
                             <button
@@ -2397,24 +2406,29 @@ export default function FabricPage() {
                                 id: track.spotify_id,
                                 title: track.title,
                                 artist: track.artist,
+                                album: discoveryAlbum?.name || "",
+                                art: discoveryAlbum?.image || null,
                                 duration: Math.round((track.duration_ms || 0) / 1000),
                               })}
                               style={{
                                 background: "none",
-                                border: "1px solid var(--color-border)",
+                                border: `1px solid ${isActive ? "rgba(255,255,255,0.25)" : "var(--color-border)"}`,
                                 borderRadius: "var(--radius-sm)",
                                 cursor: "pointer",
                                 padding: "0 3px",
                                 fontSize: 8,
                                 fontFamily: "var(--font-mono)",
-                                color: isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
+                                color: isActive
+                                  ? "var(--color-text-inverse)"
+                                  : isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
                                 flexShrink: 0,
                               }}
                             >
                               {isFlagged(track.spotify_id) ? "✓" : "+"}
                             </button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2423,8 +2437,24 @@ export default function FabricPage() {
                 {/* ── Bin Picks — crowned sets ── */}
                 {crates.filter(c => c.source === "set").length > 0 && (
                   <div style={{ marginBottom: "var(--space-3)" }}>
-                    <Label style={{ marginBottom: "var(--space-2)" }}>Bin Picks</Label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                    <button
+                      onClick={() => setBinPicksOpen(v => !v)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-1)",
+                        width: "100%",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        marginBottom: binPicksOpen ? "var(--space-2)" : 0,
+                      }}
+                    >
+                      {binPicksOpen ? <ChevronDown size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} /> : <ChevronRight size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />}
+                      <Label style={{ cursor: "pointer" }}>Bin Picks</Label>
+                    </button>
+                    {binPicksOpen && <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                       {crates.filter(c => c.source === "set").map((mix) => (
                         <div
                           key={mix.id}
@@ -2461,14 +2491,28 @@ export default function FabricPage() {
                           </span>
                         </div>
                       ))}
-                    </div>
+                    </div>}
                   </div>
                 )}
 
                 {/* ── Playlists with opt-in picker ── */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <Label>Playlists</Label>
-                  {playlists.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: playlistsOpen ? "var(--space-2)" : 0 }}>
+                  <button
+                    onClick={() => setPlaylistsOpen(v => !v)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {playlistsOpen ? <ChevronDown size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} /> : <ChevronRight size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />}
+                    <Label style={{ cursor: "pointer" }}>Playlists</Label>
+                  </button>
+                  {playlistsOpen && playlists.length > 0 && (
                     <button
                       onClick={() => setPlaylistPickerOpen(v => !v)}
                       style={{
@@ -2496,7 +2540,7 @@ export default function FabricPage() {
                 </div>
 
                 {/* Playlist picker checklist */}
-                {playlistPickerOpen && (
+                {playlistsOpen && playlistPickerOpen && (
                   <div style={{
                     marginBottom: "var(--space-2)",
                     border: "1px solid var(--color-border-light)",
@@ -2558,7 +2602,7 @@ export default function FabricPage() {
                   </div>
                 )}
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                {playlistsOpen && <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                   {filteredPlaylists.map((pl) => {
                     const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
                     return (
@@ -2603,7 +2647,7 @@ export default function FabricPage() {
                       Connect Spotify in Settings → Sources
                     </div>
                   )}
-                </div>
+                </div>}
               </div>
             </div>
 

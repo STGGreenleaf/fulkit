@@ -147,9 +147,14 @@ export default function FabricProto() {
     loadRsg();
   }, [user, isDev]);
 
-  // Auto-scroll RSG chat
+  // Auto-scroll RSG chat — only if user is already near bottom
   useEffect(() => {
-    rsgScrollRef.current?.scrollTo({ top: rsgScrollRef.current.scrollHeight, behavior: "smooth" });
+    const el = rsgScrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [rsgMessages]);
 
   // Ensure RSG conversation exists
