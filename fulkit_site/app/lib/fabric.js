@@ -370,8 +370,48 @@ export function FabricProvider({ children }) {
     [flagged]
   );
 
+  // Guy's Crate — auto-populated by BTC recommendations
+  const guyCrate = setsData.sets.find(s => s.id === "guy-crate") || null;
+
+  const addToGuyCrate = useCallback((track) => {
+    setSetsData((prev) => {
+      let gc = prev.sets.find(s => s.id === "guy-crate");
+      if (!gc) {
+        gc = { id: "guy-crate", name: "Guy's Crate", source: "guy", tracks: [] };
+        if (gc.tracks.some(t => t.id === track.id)) return prev;
+        const next = { ...prev, sets: [...prev.sets, { ...gc, tracks: [track] }] };
+        persistSets(next);
+        return next;
+      }
+      if (gc.tracks.some(t => t.id === track.id)) return prev;
+      const next = { ...prev, sets: prev.sets.map(s =>
+        s.id === "guy-crate" ? { ...s, tracks: [...s.tracks, track] } : s
+      )};
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  const removeFromGuyCrate = useCallback((trackId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s =>
+        s.id === "guy-crate" ? { ...s, tracks: s.tracks.filter(t => t.id !== trackId) } : s
+      )};
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  const clearGuyCrate = useCallback(() => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.filter(s => s.id !== "guy-crate") };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
   // Multi-set CRUD
-  const allSets = setsData.sets.map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length }));
+  const allSets = setsData.sets.filter(s => s.source !== "guy").map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length }));
   const activeSetId = setsData.activeId;
 
   const createSet = useCallback((name) => {
@@ -409,6 +449,7 @@ export function FabricProvider({ children }) {
   }, [persistSets]);
 
   const switchSet = useCallback((setId) => {
+    if (setId === "guy-crate") return;
     setSetsData((prev) => {
       const next = { ...prev, activeId: setId };
       persistSets(next);
@@ -645,6 +686,10 @@ export function FabricProvider({ children }) {
         deleteSet,
         renameSet,
         switchSet,
+        guyCrate,
+        addToGuyCrate,
+        removeFromGuyCrate,
+        clearGuyCrate,
         playTrack,
         playPlaylist,
         fetchPlaylistTracks,

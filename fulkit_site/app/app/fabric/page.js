@@ -1451,6 +1451,10 @@ export default function FabricPage() {
     deleteSet,
     renameSet,
     switchSet,
+    guyCrate,
+    addToGuyCrate,
+    removeFromGuyCrate,
+    clearGuyCrate,
     playTrack,
     playPlaylist,
     fetchPlaylistTracks,
@@ -1524,6 +1528,47 @@ export default function FabricPage() {
     // Compat shim: toggle current active set
     toggleSetExpanded(activeSetId);
   }, [activeSetId, toggleSetExpanded]);
+
+  // Guy's Crate collapse state
+  const [guyCrateCollapsed, setGuyCrateCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try { return localStorage.getItem("fulkit-guy-crate-collapsed") !== "false"; } catch { return true; }
+  });
+  const toggleGuyCrateCollapsed = useCallback(() => {
+    setGuyCrateCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem("fulkit-guy-crate-collapsed", String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // Auto-populate B-Sides from BTC recommendations
+  const lastProcessedMsgIdx = useRef(-1);
+  useEffect(() => {
+    if (musicMessages.length === 0) return;
+    const msgIdx = musicMessages.length - 1;
+    if (msgIdx <= lastProcessedMsgIdx.current) return;
+    const lastMsg = musicMessages[msgIdx];
+    if (lastMsg.role !== "assistant" || lastMsg._streaming) return;
+    lastProcessedMsgIdx.current = msgIdx;
+    const lines = lastMsg.content.split("\n");
+    let added = false;
+    for (const line of lines) {
+      const m = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
+      if (m) {
+        const artist = m[1].trim();
+        const title = m[2].replace(/\s+\d+\s*$/, "").trim();
+        const trackId = `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-");
+        addToGuyCrate({ id: trackId, title, artist });
+        added = true;
+      }
+    }
+    // Auto-expand B-Sides when new tracks arrive
+    if (added) {
+      setGuyCrateCollapsed(false);
+      try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+    }
+  }, [musicMessages, addToGuyCrate]);
 
   // Deck collapse
   const [deckExpanded, setDeckExpanded] = useState(() => {
@@ -2355,26 +2400,28 @@ export default function FabricPage() {
                                 const artist = plusMatch[1].trim();
                                 const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
                                 const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
+                                const trackId = `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-");
+                                const added = isFlagged(trackId);
                                 return (
                                   <div key={li}>
                                     {artist} - {title}{bpmText}{"  "}
                                     <button
-                                      onClick={() => flag({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist })}
+                                      onClick={() => flag({ id: trackId, title, artist })}
                                       style={{
                                         display: "inline",
-                                        background: "none",
-                                        border: "1px solid var(--color-border)",
+                                        background: added ? "var(--color-text)" : "none",
+                                        border: added ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
                                         borderRadius: "var(--radius-sm)",
                                         cursor: "pointer",
                                         padding: "0 3px",
                                         fontSize: 8,
                                         fontFamily: "var(--font-mono)",
-                                        color: "var(--color-text-muted)",
+                                        color: added ? "var(--color-bg)" : "var(--color-text-muted)",
                                         verticalAlign: "middle",
                                         marginLeft: 2,
                                       }}
                                     >
-                                      +
+                                      {added ? "✓" : "+"}
                                     </button>
                                   </div>
                                 );
@@ -3001,6 +3048,126 @@ export default function FabricPage() {
 
               {/* ── Scrollable content below shelf ── */}
               <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-2) var(--space-2)" }}>
+
+              {/* ── B-SIDES ── */}
+              {guyCrate && (
+                <div style={{
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  overflow: "hidden",
+                  marginBottom: "var(--space-2)",
+                }}>
+                  {/* Header */}
+                  <div style={{
+                    padding: "var(--space-3) var(--space-2)",
+                    borderBottom: !guyCrateCollapsed && guyCrate.tracks.length > 0 ? "1px solid var(--color-border-light)" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}>
+                      <button
+                        onClick={toggleGuyCrateCollapsed}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 0,
+                          color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                          transform: guyCrateCollapsed ? "rotate(-90deg)" : "none",
+                          transition: "transform 120ms",
+                        }}
+                      >
+                        <ChevronDown size={10} strokeWidth={2} />
+                      </button>
+                      <MessageCircleQuestion size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                          B-Sides
+                        </div>
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
+                          {guyCrate.tracks.length} tracks
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={clearGuyCrate}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 26, height: 26, background: "none",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)", cursor: "pointer",
+                        color: "var(--color-text-dim)", padding: 0,
+                      }}
+                      title="Clear B-Sides"
+                    >
+                      <Trash2 size={12} strokeWidth={1.5} />
+                    </button>
+                  </div>
+
+                  {/* Track list */}
+                  {!guyCrateCollapsed && (
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                      {guyCrate.tracks.length === 0 ? (
+                        <div style={{ padding: "var(--space-4) var(--space-2)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                          All cleared — Guy will refill this
+                        </div>
+                      ) : guyCrate.tracks.map((track, i) => {
+                        const inSet = isFlagged(track.id);
+                        return (
+                          <div key={track.id} style={{
+                            display: "flex", alignItems: "center", gap: "var(--space-3)",
+                            padding: "var(--space-2) var(--space-2)",
+                            borderBottom: "1px solid var(--color-border-light)",
+                          }}>
+                            <div style={{
+                              fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
+                              width: 18, flexShrink: 0, textAlign: "right",
+                            }}>
+                              {String(i + 1).padStart(2, "0")}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
+                              <div style={{
+                                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",
+                                color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                              }}>
+                                {track.title}
+                              </div>
+                              <div style={{
+                                fontSize: 9, color: "var(--color-text-secondary)",
+                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                              }}>
+                                {track.artist}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => flag(track)}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
+                                color: inSet ? "var(--color-text)" : "var(--color-text-dim)",
+                                opacity: inSet ? 1 : 0.3, transition: "opacity 120ms",
+                              }}
+                              title={inSet ? "Remove from set" : "Add to set"}
+                            >
+                              {inSet ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
+                            </button>
+                            <button
+                              onClick={() => removeFromGuyCrate(track.id)}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
+                                color: "var(--color-text-dim)", opacity: 0.3, transition: "opacity 120ms",
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.3"}
+                              title="Remove"
+                            >
+                              <X size={12} strokeWidth={1.8} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
               {showSpotifyBrowser && (
