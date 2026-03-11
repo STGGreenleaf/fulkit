@@ -2073,11 +2073,11 @@ export default function FabricPage() {
 
               {/* Imported crate shelf */}
               {crates.length > 0 && (
-                <div style={{
+                <div className="thin-scroll-x" style={{
                   display: "flex",
                   gap: "var(--space-2)",
                   overflowX: "auto",
-                  paddingBottom: "var(--space-2)",
+                  paddingBottom: "var(--space-1)",
                 }}>
                   {crates.map(crate => {
                     const isOpen = expandedCrate === crate.id;
@@ -2096,7 +2096,7 @@ export default function FabricPage() {
                             }
                           }}
                           style={{
-                            padding: "var(--space-3)",
+                            padding: "var(--space-2) var(--space-3)",
                             paddingRight: "var(--space-6)",
                             minWidth: 140,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
