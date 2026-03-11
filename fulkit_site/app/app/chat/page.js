@@ -125,6 +125,7 @@ export default function Chat() {
     const { data } = await supabase
       .from("conversations")
       .select("id, title, updated_at")
+      .or("type.eq.chat,type.is.null")
       .order("updated_at", { ascending: false })
       .limit(50);
     if (data) setConversations(data);

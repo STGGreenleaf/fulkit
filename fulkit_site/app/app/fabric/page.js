@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, Crown, MessageCircle, Send } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircle, Send, Box, Turntable } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import LogoMark from "../../components/LogoMark";
+import Tooltip from "../../components/Tooltip";
 import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
+
+const TAB_ICON_SIZE = 14;
 
 // Minimal pause mark — two vertical lines
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
@@ -1504,6 +1507,23 @@ export default function FabricPage() {
   const musicChatEndRef = useRef(null);
   const [setCollapsed, setSetCollapsed] = useState(false);
 
+  // Column toggles (3-column layout)
+  const [showBrowse, setShowBrowse] = useState(true);
+  const [showCrates, setShowCrates] = useState(true);
+  const [showSets, setShowSets] = useState(true);
+
+  // Cross-column drag (tracks → sets)
+  const crossDragTrack = useRef(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+
+  const PANELS = [
+    { id: "browse", label: "Browse", icon: Disc3, active: showBrowse, toggle: () => setShowBrowse((v) => !v) },
+    { id: "crates", label: "Crates", icon: Box, active: showCrates, toggle: () => setShowCrates((v) => !v) },
+    { id: "sets", label: "Sets", icon: Turntable, active: showSets, toggle: () => setShowSets((v) => !v) },
+  ];
+
+  const colTransition = "flex 300ms ease, min-width 300ms ease, width 300ms ease, opacity 200ms ease, padding 300ms ease";
+
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
   // Auto-scroll music chat
@@ -1512,7 +1532,7 @@ export default function FabricPage() {
   }, [musicMessages]);
 
   // Load imported crates
-  const { accessToken } = useAuth();
+  const { accessToken, compactMode } = useAuth();
   const loadCrates = useCallback(async () => {
     if (!accessToken) return;
     try {
@@ -1953,23 +1973,301 @@ export default function FabricPage() {
             />
           </div>
 
-          {/* ═══ CRATES + SET ═══ */}
+          {/* ═══ COLUMN TOGGLE BAR ═══ */}
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-1)",
+              padding: "0 var(--space-6)",
+              borderBottom: "1px solid var(--color-border-light)",
+            }}
+          >
+            {PANELS.map((col) => (
+              <Tooltip key={col.id} label={compactMode ? col.label : null}>
+                <button
+                  onClick={col.toggle}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1-5)",
+                    padding: "var(--space-2-5) var(--space-3)",
+                    border: "none",
+                    background: col.active ? "var(--color-bg-alt)" : "transparent",
+                    borderRadius: "var(--radius-md)",
+                    color: col.active ? "var(--color-text)" : "var(--color-text-muted)",
+                    fontWeight: col.active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-primary)",
+                    cursor: "pointer",
+                    transition: `all var(--duration-fast) var(--ease-default)`,
+                  }}
+                >
+                  <col.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                  {!compactMode && col.label}
+                </button>
+              </Tooltip>
+            ))}
+          </div>
+
+          {/* ═══ 3-COLUMN WORKSPACE ═══ */}
           <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
 
-            {/* CRATES — imported playlists + Spotify browser */}
+            {/* ── LEFT: Browse ── */}
             <div
               style={{
-                flex: 1,
+                flex: showBrowse ? 3 : 0,
+                minWidth: showBrowse ? 200 : 0,
+                width: showBrowse ? "auto" : 0,
+                overflow: "hidden",
+                opacity: showBrowse ? 1 : 0,
+                transition: colTransition,
+                borderRight: showBrowse ? "1px solid var(--color-border-light)" : "none",
                 display: "flex",
                 flexDirection: "column",
+              }}
+            >
+              <div style={{ padding: "var(--space-3) var(--space-4)", flex: 1, overflowY: "auto" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
+                  <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
+                  <Label>Browse</Label>
+                </div>
+
+                {/* ── Record Store Guy — Behind the Counter ── */}
+                <div style={{
+                  marginBottom: "var(--space-3)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  overflow: "hidden",
+                }}>
+                  {/* RSG title bar — always visible */}
+                  <button
+                    onClick={toggleMusicChat}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      padding: "var(--space-2) var(--space-3)",
+                      background: "var(--color-bg-elevated)",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-primary)",
+                    }}
+                  >
+                    <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text)" }}>
+                        Behind the Counter
+                      </div>
+                      <div style={{ fontSize: 9, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-normal)", fontStyle: "italic", color: "var(--color-text-secondary)", marginTop: 2 }}>
+                        Fülkit's B-Side Brain
+                      </div>
+                    </div>
+                    {musicChatOpen
+                      ? <ChevronUp size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }} />
+                      : <MessageCircle size={12} strokeWidth={1.8} style={{ color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }} />
+                    }
+                  </button>
+
+                  {/* RSG chat drawer */}
+                  {musicChatOpen && (
+                    <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                      <div style={{ padding: "var(--space-3)", maxHeight: 240, overflowY: "auto" }}>
+                        {musicMessages.length === 0 && (
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
+                            {tickerFact || "Ask me anything about music..."}
+                          </div>
+                        )}
+                        {musicMessages.map((msg, i) => (
+                          <div key={i} style={{
+                            marginBottom: "var(--space-2)",
+                            fontSize: "var(--font-size-xs)",
+                            fontFamily: "var(--font-primary)",
+                            color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
+                            fontStyle: msg.role === "user" ? "italic" : "normal",
+                            lineHeight: 1.4,
+                            whiteSpace: "pre-wrap",
+                          }}>
+                            {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
+                              const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
+                              if (plusMatch) {
+                                const artist = plusMatch[1].trim();
+                                const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
+                                const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
+                                return (
+                                  <div key={li}>
+                                    {artist} - {title}{bpmText}{"  "}
+                                    <button
+                                      onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
+                                      style={{
+                                        display: "inline",
+                                        background: "none",
+                                        border: "1px solid var(--color-border)",
+                                        borderRadius: "var(--radius-sm)",
+                                        cursor: "pointer",
+                                        padding: "0 3px",
+                                        fontSize: 8,
+                                        fontFamily: "var(--font-mono)",
+                                        color: "var(--color-text-muted)",
+                                        verticalAlign: "middle",
+                                        marginLeft: 2,
+                                      }}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                );
+                              }
+                              return <div key={li}>{line}</div>;
+                            }) : msg.content}
+                          </div>
+                        ))}
+                        {musicStreaming && (
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>...</div>
+                        )}
+                        <div ref={musicChatEndRef} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input — always visible */}
+                  <div style={{
+                    display: "flex",
+                    gap: "var(--space-2)",
+                    padding: "var(--space-2) var(--space-3)",
+                    borderTop: "1px solid var(--color-border-light)",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    <input
+                      value={musicInput}
+                      onChange={(e) => setMusicInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          if (musicInput.trim() && !musicStreaming) {
+                            sendMusicMessage(musicInput);
+                            setMusicInput("");
+                          }
+                        }
+                      }}
+                      placeholder={musicChatOpen ? "Ask the guy..." : "Search..."}
+                      disabled={musicStreaming}
+                      style={{
+                        flex: 1,
+                        padding: "var(--space-1-5) var(--space-2)",
+                        background: "var(--color-bg)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text)",
+                        fontFamily: "var(--font-primary)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        opacity: musicStreaming ? 0.5 : 1,
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (musicInput.trim() && !musicStreaming) {
+                          sendMusicMessage(musicInput);
+                          setMusicInput("");
+                        }
+                      }}
+                      disabled={musicStreaming || !musicInput.trim()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: musicStreaming ? "default" : "pointer",
+                        padding: 2,
+                        color: "var(--color-text-dim)",
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: musicStreaming || !musicInput.trim() ? 0.3 : 1,
+                      }}
+                    >
+                      <Send size={12} strokeWidth={1.8} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ticker — the plate */}
+                {tickerFact && (
+                  <div style={{
+                    fontSize: 9,
+                    fontFamily: "var(--font-primary)",
+                    fontStyle: "italic",
+                    color: "var(--color-text-secondary)",
+                    lineHeight: 1.4,
+                    marginBottom: "var(--space-4)",
+                  }}>
+                    — {tickerFact}
+                  </div>
+                )}
+
+                {/* Playlists */}
+                <Label style={{ marginBottom: "var(--space-2)" }}>Playlists</Label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                  {playlists.map((pl) => {
+                    const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
+                    return (
+                      <div
+                        key={pl.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "var(--space-2) var(--space-3)",
+                          background: "var(--color-bg-elevated)",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          if (!alreadyImported && playlists.length > 0) importPlaylist(pl);
+                        }}
+                      >
+                        <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
+                          {pl.name}
+                        </span>
+                        <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: alreadyImported ? "var(--color-text-dim)" : "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
+                          {alreadyImported ? "imported" : `${pl.trackCount || 0}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {playlists.length === 0 && (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) 0" }}>
+                      Connect Spotify in Settings → Sources
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── MIDDLE: Crates ── */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOverCol("crates"); }}
+              onDragLeave={() => setDragOverCol(null)}
+              onDrop={() => { setDragOverCol(null); }}
+              style={{
+                flex: showCrates ? 5 : 0,
+                minWidth: showCrates ? 200 : 0,
+                width: showCrates ? "auto" : 0,
+                overflow: "hidden",
+                opacity: showCrates ? 1 : 0,
+                transition: colTransition,
+                borderRight: showCrates ? "1px solid var(--color-border-light)" : "none",
+                display: "flex",
+                flexDirection: "column",
+                background: dragOverCol === "crates" ? "var(--color-bg-alt)" : undefined,
                 minHeight: 0,
-                minWidth: 0,
               }}
             >
               {/* ── YOUR CRATES ── */}
               <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-4) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Label>Crates</Label>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
+                  <Box size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
+                  <Label>Crates</Label>
+                </div>
                 {playlists.length > 0 && (
                   <button
                     onClick={() => setShowSpotifyBrowser(!showSpotifyBrowser)}
@@ -2408,9 +2706,13 @@ export default function FabricPage() {
                       const isActive = currentTrack?.id === track.spotify_id;
                       const hasFabric = track.fabric_status === "complete";
                       const trackFlagged = isFlagged(track.spotify_id);
+                      const trackObj = { id: track.spotify_id, title: track.title, artist: track.artist, duration: Math.round((track.duration_ms || 0) / 1000) };
                       return (
                         <div
                           key={track.id}
+                          draggable
+                          onDragStart={() => { crossDragTrack.current = trackObj; }}
+                          onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -2419,6 +2721,7 @@ export default function FabricPage() {
                             borderBottom: "1px solid var(--color-border-light)",
                             background: isActive ? "var(--color-bg-inverse)" : "transparent",
                             transition: "background 120ms",
+                            cursor: "grab",
                           }}
                         >
                           <div style={{
@@ -2627,206 +2930,34 @@ export default function FabricPage() {
               </div>{/* end scrollable content */}
             </div>
 
-            {/* RIGHT COLUMN — Record Store Guy + Set */}
+            {/* ── RIGHT: Sets ── */}
             <div
+              onDragOver={(e) => { e.preventDefault(); setDragOverCol("sets"); }}
+              onDragLeave={() => setDragOverCol(null)}
+              onDrop={() => {
+                if (crossDragTrack.current) {
+                  flag(crossDragTrack.current);
+                  crossDragTrack.current = null;
+                }
+                setDragOverCol(null);
+              }}
               style={{
-                width: 200,
-                minWidth: 160,
-                flexShrink: 1,
-                borderLeft: "1px solid var(--color-border-light)",
+                flex: showSets ? 2 : 0,
+                minWidth: showSets ? 160 : 0,
+                width: showSets ? "auto" : 0,
+                overflow: "hidden",
+                opacity: showSets ? 1 : 0,
+                transition: colTransition,
                 display: "flex",
                 flexDirection: "column",
-                overflow: "hidden",
+                background: dragOverCol === "sets" ? "var(--color-bg-alt)" : undefined,
               }}
             >
-              {/* ═══ RECORD STORE GUY — always at top ═══ */}
-              <div style={{ flexShrink: 0 }}>
-                {/* Title bar — always visible */}
-                <div
-                  style={{
-                    padding: "var(--space-2) var(--space-3)",
-                    borderBottom: "1px solid var(--color-border-light)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{
-                    fontSize: 9,
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--font-weight-bold)",
-                    color: "var(--color-text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    flex: 1,
-                  }}>
-                    {!musicChatOpen && tickerFact ? (
-                      <span style={{ fontWeight: "var(--font-weight-normal)", fontStyle: "italic", textTransform: "none", letterSpacing: "normal", color: "var(--color-text-secondary)" }}>
-                        {tickerFact}
-                      </span>
-                    ) : (
-                      "Record Store Guy"
-                    )}
-                  </div>
-                  <button
-                    onClick={toggleMusicChat}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 2,
-                      color: musicChatOpen ? "var(--color-text)" : "var(--color-text-muted)",
-                      flexShrink: 0,
-                      marginLeft: "var(--space-2)",
-                    }}
-                    title={musicChatOpen ? "Close chat" : "Open chat"}
-                  >
-                    {musicChatOpen
-                      ? <ChevronDown size={12} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
-                      : <MessageCircle size={10} strokeWidth={1.8} />
-                    }
-                  </button>
+              <div style={{ padding: "var(--space-3) var(--space-3) 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
+                  <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
+                  <Label>Sets</Label>
                 </div>
-
-                {/* Expandable chat drawer */}
-                {musicChatOpen && (
-                  <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    maxHeight: 280,
-                    borderBottom: "1px solid var(--color-border-light)",
-                  }}>
-                    {/* Messages */}
-                    <div style={{
-                      flex: 1,
-                      overflowY: "auto",
-                      padding: "var(--space-2) var(--space-3)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--space-2)",
-                    }}>
-                      {musicMessages.length === 0 && (
-                        <div style={{
-                          fontSize: "var(--font-size-xs)",
-                          color: "var(--color-text-muted)",
-                          fontStyle: "italic",
-                          padding: "var(--space-3) 0",
-                          textAlign: "center",
-                        }}>
-                          {tickerFact || "What do you want to hear?"}
-                        </div>
-                      )}
-                      {musicMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            fontSize: "var(--font-size-xs)",
-                            lineHeight: 1.4,
-                            color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
-                            fontFamily: "var(--font-primary)",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            ...(msg.role === "user" ? {
-                              textAlign: "right",
-                              fontStyle: "italic",
-                            } : {}),
-                          }}
-                        >
-                          {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
-                            const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
-                            if (plusMatch) {
-                              const artist = plusMatch[1].trim();
-                              const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
-                              const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
-                              return (
-                                <div key={li}>
-                                  {artist} - {title}{bpmText}{"  "}
-                                  <button
-                                    onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
-                                    style={{
-                                      display: "inline",
-                                      background: "none",
-                                      border: "1px solid var(--color-border)",
-                                      borderRadius: "var(--radius-sm)",
-                                      cursor: "pointer",
-                                      padding: "0 3px",
-                                      fontSize: 8,
-                                      fontFamily: "var(--font-mono)",
-                                      color: "var(--color-text-muted)",
-                                      verticalAlign: "middle",
-                                      marginLeft: 2,
-                                    }}
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              );
-                            }
-                            return <div key={li}>{line}</div>;
-                          }) : msg.content}
-                        </div>
-                      ))}
-                      <div ref={musicChatEndRef} />
-                    </div>
-
-                    {/* Input */}
-                    <div style={{
-                      padding: "var(--space-2) var(--space-3)",
-                      borderTop: "1px solid var(--color-border-light)",
-                      display: "flex",
-                      gap: "var(--space-2)",
-                    }}>
-                      <input
-                        value={musicInput}
-                        onChange={(e) => setMusicInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            if (musicInput.trim() && !musicStreaming) {
-                              sendMusicMessage(musicInput);
-                              setMusicInput("");
-                            }
-                          }
-                        }}
-                        placeholder="Ask about music..."
-                        disabled={musicStreaming}
-                        style={{
-                          flex: 1,
-                          padding: "var(--space-1) var(--space-2)",
-                          fontSize: "var(--font-size-xs)",
-                          fontFamily: "var(--font-primary)",
-                          background: "var(--color-bg-elevated)",
-                          border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)",
-                          color: "var(--color-text)",
-                          outline: "none",
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          if (musicInput.trim() && !musicStreaming) {
-                            sendMusicMessage(musicInput);
-                            setMusicInput("");
-                          }
-                        }}
-                        disabled={musicStreaming || !musicInput.trim()}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: musicStreaming || !musicInput.trim() ? "default" : "pointer",
-                          padding: 2,
-                          color: musicInput.trim() ? "var(--color-text)" : "var(--color-text-dim)",
-                          opacity: musicInput.trim() ? 1 : 0.3,
-                        }}
-                      >
-                        <Send size={12} strokeWidth={1.8} />
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* ═══ SET HEADER ═══ */}
@@ -3171,7 +3302,7 @@ export default function FabricPage() {
               </div>
 
               }
-              {/* Record Store Guy was here — moved to top of right column */}
+              {/* RSG moved to Browse column */}
             </div>
           </div>
         </div>

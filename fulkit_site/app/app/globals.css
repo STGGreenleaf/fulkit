@@ -19,6 +19,12 @@ a {
   text-decoration: none;
 }
 
+/* Spinner animation for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Hide Next.js dev overlay — we relocate it via DevInspector */
 nextjs-portal {
   display: none !important;
