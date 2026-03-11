@@ -2035,14 +2035,13 @@ export default function FabricPage() {
             <div
               style={{
                 flex: 1,
-                padding: "var(--space-5) var(--space-8)",
-                overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
-                gap: "var(--space-3)",
+                minHeight: 0,
               }}
             >
               {/* ── YOUR CRATES ── */}
+              <div style={{ flexShrink: 0, padding: "var(--space-5) var(--space-8) 0", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Label>Crates</Label>
                 {playlists.length > 0 && (
@@ -2208,6 +2207,11 @@ export default function FabricPage() {
                   )}
                 </div>
               )}
+
+              </div>{/* end crate shelf wrapper */}
+
+              {/* ── Scrollable content below shelf ── */}
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-8) var(--space-5)" }}>
 
               {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
               {showSpotifyBrowser && (
@@ -2450,6 +2454,7 @@ export default function FabricPage() {
                   </div>
                 </div>
               )}
+              </div>{/* end scrollable content */}
             </div>
 
             {/* THE SET — draggable setlist rail */}
