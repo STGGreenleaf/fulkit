@@ -1978,7 +1978,7 @@ export default function FabricPage() {
             style={{
               display: "flex",
               gap: "var(--space-1)",
-              padding: "0 var(--space-6)",
+              padding: "0 var(--space-3)",
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
@@ -2026,7 +2026,7 @@ export default function FabricPage() {
                 flexDirection: "column",
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-4)", flex: 1, overflowY: "auto" }}>
+              <div style={{ padding: "var(--space-3) var(--space-2)", flex: 1, overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
                   <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Browse</Label>
@@ -2262,7 +2262,7 @@ export default function FabricPage() {
               }}
             >
               {/* ── YOUR CRATES ── */}
-              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-4) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-2) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <Box size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
@@ -2405,7 +2405,7 @@ export default function FabricPage() {
               {/* Empty state — no crates yet */}
               {crates.filter(c => c.source !== "set").length === 0 && !cratesLoading && !showSpotifyBrowser && (
                 <div style={{
-                  padding: "var(--space-4) var(--space-3)",
+                  padding: "var(--space-4) var(--space-2)",
                   textAlign: "center",
                   border: "1px dashed var(--color-border-light)",
                   borderRadius: "var(--radius-lg)",
@@ -2445,7 +2445,7 @@ export default function FabricPage() {
 
               {/* ── FEATURED MIXES ── */}
               {crates.filter(c => c.source === "set").length > 0 && (
-                <div style={{ padding: "var(--space-3) var(--space-4) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <div style={{ padding: "var(--space-3) var(--space-2) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                   <Label>Featured Mixes</Label>
                   <div className="thin-scroll-x" style={{
                     display: "flex",
@@ -2545,7 +2545,7 @@ export default function FabricPage() {
               </div>{/* end crate shelf wrapper */}
 
               {/* ── Scrollable content below shelf ── */}
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-4) var(--space-4)" }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-2) var(--space-2)" }}>
 
               {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
               {showSpotifyBrowser && (
@@ -2555,7 +2555,7 @@ export default function FabricPage() {
                   overflow: "hidden",
                 }}>
                   <div style={{
-                    padding: "var(--space-3) var(--space-4)",
+                    padding: "var(--space-3) var(--space-2)",
                     borderBottom: "1px solid var(--color-border-light)",
                     background: "var(--color-bg-elevated)",
                     display: "flex",
@@ -2579,7 +2579,7 @@ export default function FabricPage() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "var(--space-2-5) var(--space-4)",
+                          padding: "var(--space-2-5) var(--space-2)",
                           borderBottom: "1px solid var(--color-border-light)",
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -2647,7 +2647,7 @@ export default function FabricPage() {
                   overflow: "hidden",
                 }}>
                   <div style={{
-                    padding: "var(--space-3) var(--space-4)",
+                    padding: "var(--space-3) var(--space-2)",
                     borderBottom: "1px solid var(--color-border-light)",
                     display: "flex",
                     alignItems: "center",
@@ -2703,7 +2703,7 @@ export default function FabricPage() {
                             display: "flex",
                             alignItems: "center",
                             gap: "var(--space-3)",
-                            padding: "var(--space-2) var(--space-4)",
+                            padding: "var(--space-2) var(--space-2)",
                             borderBottom: "1px solid var(--color-border-light)",
                             background: isActive ? "var(--color-bg-inverse)" : "transparent",
                             transition: "background 120ms",
@@ -2802,7 +2802,7 @@ export default function FabricPage() {
                   marginTop: "var(--space-3)",
                 }}>
                   <div style={{
-                    padding: "var(--space-3) var(--space-4)",
+                    padding: "var(--space-3) var(--space-2)",
                     borderBottom: "1px solid var(--color-border-light)",
                     display: "flex",
                     alignItems: "center",
@@ -2832,7 +2832,7 @@ export default function FabricPage() {
                             display: "flex",
                             alignItems: "center",
                             gap: "var(--space-3)",
-                            padding: "var(--space-2) var(--space-4)",
+                            padding: "var(--space-2) var(--space-2)",
                             borderBottom: "1px solid var(--color-border-light)",
                             background: isActive ? "var(--color-bg-inverse)" : "transparent",
                             transition: "background 120ms",
@@ -3158,7 +3158,7 @@ export default function FabricPage() {
                 {flagged.length === 0 && (
                   <div
                     style={{
-                      padding: "var(--space-10) var(--space-4)",
+                      padding: "var(--space-10) var(--space-2)",
                       textAlign: "center",
                     }}
                   >
@@ -3186,7 +3186,7 @@ export default function FabricPage() {
                         display: "flex",
                         alignItems: "center",
                         gap: "var(--space-2)",
-                        padding: "var(--space-2) var(--space-4)",
+                        padding: "var(--space-2) var(--space-2)",
                         borderBottom: "1px solid var(--color-border-light)",
                         borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
                         background: isActive ? "var(--color-bg-alt)" : "transparent",
