@@ -15,6 +15,7 @@ export async function POST(request) {
       .single();
 
     if (profile?.role !== "owner") {
+      console.error("[sets/publish] 403 — userId:", userId, "profile:", profile);
       return Response.json({ error: "Owner only" }, { status: 403 });
     }
 

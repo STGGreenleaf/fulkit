@@ -2488,22 +2488,23 @@ export default function FabricPage() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "var(--space-1)",
-                      padding: "var(--space-1) var(--space-2)",
+                      justifyContent: "center",
+                      width: 20,
+                      height: 20,
                       background: showSpotifyBrowser ? "var(--color-bg-alt)" : "transparent",
                       border: "1px solid var(--color-border-light)",
                       borderRadius: "var(--radius-sm)",
                       cursor: "pointer",
-                      fontSize: 9,
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: "var(--font-weight-medium)",
                       color: "var(--color-text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "var(--letter-spacing-wider)",
+                      padding: 0,
+                      transition: "all 120ms",
                     }}
+                    title="Import playlist"
                   >
-                    <Plus size={10} strokeWidth={2} />
-                    Import
+                    <Plus size={10} strokeWidth={2} style={{
+                      transform: showSpotifyBrowser ? "rotate(45deg)" : "none",
+                      transition: "transform 120ms",
+                    }} />
                   </button>
                 )}
               </div>
