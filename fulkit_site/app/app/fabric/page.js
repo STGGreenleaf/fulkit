@@ -3061,12 +3061,23 @@ export default function FabricPage() {
                 </div>
                 <button
                   onClick={() => createSet()}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", opacity: 0.5 }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = "0.5"}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 20,
+                    height: 20,
+                    background: "transparent",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                    color: "var(--color-text-muted)",
+                    padding: 0,
+                    transition: "all 120ms",
+                  }}
                   title="New set"
                 >
-                  <Plus size={12} strokeWidth={1.8} />
+                  <Plus size={10} strokeWidth={2} />
                 </button>
               </div>
 
