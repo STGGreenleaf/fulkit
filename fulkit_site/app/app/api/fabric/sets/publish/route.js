@@ -16,7 +16,7 @@ export async function POST(request) {
 
     if (profile?.role !== "owner") {
       console.error("[sets/publish] 403 — userId:", userId, "profile:", profile);
-      return Response.json({ error: "Owner only" }, { status: 403 });
+      return Response.json({ error: "Owner only", debug: { userId, role: profile?.role || null, hasProfile: !!profile } }, { status: 403 });
     }
 
     const { name, tracks } = await request.json();
@@ -107,10 +107,10 @@ export async function DELETE(request) {
     const crateId = searchParams.get("id");
     if (!crateId) return Response.json({ error: "id required" }, { status: 400 });
 
-    // Delete the crate (cascade deletes crate_tracks)
+    // Soft-delete: archive the crate so users who already have it keep it
     const { error } = await db
       .from("crates")
-      .delete()
+      .update({ visibility: "archived" })
       .eq("id", crateId)
       .eq("source", "set");
 

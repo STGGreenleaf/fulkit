@@ -2266,8 +2266,17 @@ export default function FabricPage() {
                     <Label style={{ marginBottom: "var(--space-2)" }}>Bin Picks</Label>
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
                       {crates.filter(c => c.source === "set").map((mix) => (
-                        <button
+                        <div
                           key={mix.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "var(--color-bg-elevated)",
+                            borderRadius: "var(--radius-sm)",
+                            cursor: "pointer",
+                          }}
                           onClick={() => {
                             setExpandedFeatured(mix.id);
                             setFeaturedTracks(mix.tracks || []);
@@ -2283,39 +2292,14 @@ export default function FabricPage() {
                               });
                             }
                           }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "var(--space-2)",
-                            padding: "var(--space-2) var(--space-3)",
-                            background: expandedFeatured === mix.id ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                            border: expandedFeatured === mix.id ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                            borderRadius: "var(--radius-sm)",
-                            cursor: "pointer",
-                            fontFamily: "var(--font-primary)",
-                            textAlign: "left",
-                            width: "100%",
-                            transition: "all 120ms",
-                          }}
                         >
-                          <Crown size={12} strokeWidth={1.8} style={{ color: "var(--color-text)", flexShrink: 0 }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              fontSize: "var(--font-size-xs)",
-                              fontWeight: "var(--font-weight-medium)",
-                              color: "var(--color-text)",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}>
-                              {mix.name}
-                            </div>
-                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
-                              {mix.tracks?.length || 0} songs
-                            </div>
-                          </div>
-                          <Play size={10} strokeWidth={2.5} fill="var(--color-text-dim)" style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
-                        </button>
+                          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
+                            {mix.name}
+                          </span>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
+                            {mix.tracks?.length || 0} songs
+                          </span>
+                        </div>
                       ))}
                     </div>
                   </div>
