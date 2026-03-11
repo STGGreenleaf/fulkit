@@ -1838,25 +1838,25 @@ export default function FabricPage() {
             position: "relative",
           }}
         >
-          {/* Deck toggle — persistent top-right */}
-          <button onClick={toggleDeck} style={{
-            position: "absolute", top: 8, right: 8,
-            width: 22, height: 22, borderRadius: "var(--radius-full)",
-            background: "transparent", border: "1px solid var(--color-border-light)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", padding: 0, opacity: 0.4, transition: "opacity 120ms",
-            zIndex: 10,
-          }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
-            title={deckExpanded ? "Collapse deck (D)" : "Expand deck (D)"}
-          >
-            {deckExpanded
-              ? <ArrowUpFromLine size={10} strokeWidth={2} color="var(--color-text-muted)" />
-              : <ArrowDownFromLine size={10} strokeWidth={2} color="var(--color-text-muted)" />}
-          </button>
+          {/* Deck toggle — top-right, only in full mode */}
+          {deckExpanded && (
+            <button onClick={toggleDeck} style={{
+              position: "absolute", top: 8, right: 8,
+              width: 22, height: 22, borderRadius: "var(--radius-full)",
+              background: "transparent", border: "1px solid var(--color-border-light)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0, opacity: 0.4, transition: "opacity 120ms",
+              zIndex: 10,
+            }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
+              title="Collapse deck (D)"
+            >
+              <ArrowUpFromLine size={10} strokeWidth={2} color="var(--color-text-muted)" />
+            </button>
+          )}
           {/* First-visit hint */}
-          {!deckHintShown && (
+          {!deckHintShown && deckExpanded && (
             <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
               position: "absolute", top: 8, right: 34,
               background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
@@ -1864,7 +1864,7 @@ export default function FabricPage() {
               padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
               cursor: "pointer", whiteSpace: "nowrap", zIndex: 10,
             }}>
-              Press D to {deckExpanded ? "collapse" : "expand"}
+              Press D to collapse
             </div>
           )}
 
@@ -1934,7 +1934,7 @@ export default function FabricPage() {
                 </div>
               </div>
 
-              {/* Transport mini */}
+              {/* Transport mini + expand toggle — one row */}
               <div style={{ display: "flex", gap: 2, alignItems: "center", flexShrink: 0 }}>
                 <button onClick={prev} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
                   <ChevronLeft size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
@@ -1944,6 +1944,10 @@ export default function FabricPage() {
                 </button>
                 <button onClick={skip} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
                   <ChevronRight size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                </button>
+                <div style={{ width: 1, height: 16, background: "var(--color-border-light)", margin: "0 4px" }} />
+                <button onClick={toggleDeck} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} title="Expand deck (D)">
+                  <ArrowDownFromLine size={12} strokeWidth={2} color="var(--color-text-muted)" />
                 </button>
               </div>
 
