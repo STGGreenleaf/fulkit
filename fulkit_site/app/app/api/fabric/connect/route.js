@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import crypto from "crypto";
 
 const SCOPES = [
+  "streaming",
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",

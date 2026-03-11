@@ -1440,6 +1440,7 @@ function Label({ children, style }) {
 
 export default function FabricPage() {
   const {
+    connected,
     isPlaying,
     currentTrack,
     flagged,
@@ -1474,6 +1475,8 @@ export default function FabricPage() {
     tickerFact,
     sendMusicMessage,
     toggleMusicChat,
+    sdkDeviceId,
+    reconnectSpotify,
   } = useFabric();
 
   const [dragIdx, setDragIdx] = useState(null);
@@ -1847,7 +1850,7 @@ export default function FabricPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {currentTrack?.title || "No track"}
+                    {currentTrack?.title || (!connected ? "Spotify disconnected" : "No track")}
                   </div>
                   <div
                     style={{
@@ -1858,7 +1861,11 @@ export default function FabricPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {currentTrack ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}` : ""}
+                    {currentTrack
+                      ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}`
+                      : !connected
+                        ? <button onClick={reconnectSpotify} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", cursor: "pointer" }}>Reconnect</button>
+                        : ""}
                   </div>
                 </div>
 

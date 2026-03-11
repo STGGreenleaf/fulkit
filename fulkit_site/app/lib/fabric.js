@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./auth";
+import SpotifyPlayer from "../components/SpotifyPlayer";
 
 const FabricContext = createContext(null);
 
@@ -100,6 +101,33 @@ export function FabricProvider({ children }) {
       if (!text) return { ok: true };
       try { return JSON.parse(text); } catch { return { ok: true }; }
     } catch (e) { console.warn("[fabric]", endpoint, e.message); return null; }
+  }, [accessToken]);
+
+  // Web Playback SDK device ID
+  const [sdkDeviceId, setSdkDeviceId] = useState(null);
+  const sdkTransferred = useRef(false);
+
+  const onDeviceReady = useCallback((deviceId) => {
+    setSdkDeviceId(deviceId);
+    // Auto-transfer playback to Fulkit device once
+    if (!sdkTransferred.current && accessToken) {
+      sdkTransferred.current = true;
+      apiFetch("/api/fabric/devices", {
+        method: "POST",
+        body: JSON.stringify({ device_id: deviceId, play: false }),
+      }).then(() => console.log("[Spotify SDK] Transferred playback to Fülkit"));
+    }
+  }, [accessToken, apiFetch]);
+
+  const onDeviceLost = useCallback(() => {
+    setSdkDeviceId(null);
+    sdkTransferred.current = false;
+  }, []);
+
+  // Reconnect: redirect to Spotify OAuth
+  const reconnectSpotify = useCallback(() => {
+    if (!accessToken) return;
+    window.location.href = `/api/fabric/connect?token=${accessToken}`;
   }, [accessToken]);
 
   // Check connection status
@@ -637,8 +665,11 @@ export function FabricProvider({ children }) {
         tickerFact,
         sendMusicMessage,
         toggleMusicChat,
+        sdkDeviceId,
+        reconnectSpotify,
       }}
     >
+      {!isDev && <SpotifyPlayer connected={connected} onDeviceReady={onDeviceReady} onDeviceLost={onDeviceLost} />}
       {children}
     </FabricContext.Provider>
   );
