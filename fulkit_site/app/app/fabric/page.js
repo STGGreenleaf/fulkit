@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable, Trash2 } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1835,8 +1835,39 @@ export default function FabricPage() {
             flexDirection: "column",
             background: "var(--color-bg)",
             overflow: "hidden",
+            position: "relative",
           }}
         >
+          {/* Deck toggle — persistent top-right */}
+          <button onClick={toggleDeck} style={{
+            position: "absolute", top: 8, right: 8,
+            width: 22, height: 22, borderRadius: "var(--radius-full)",
+            background: "transparent", border: "1px solid var(--color-border-light)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", padding: 0, opacity: 0.4, transition: "opacity 120ms",
+            zIndex: 10,
+          }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
+            title={deckExpanded ? "Collapse deck (D)" : "Expand deck (D)"}
+          >
+            {deckExpanded
+              ? <ArrowUpFromLine size={10} strokeWidth={2} color="var(--color-text-muted)" />
+              : <ArrowDownFromLine size={10} strokeWidth={2} color="var(--color-text-muted)" />}
+          </button>
+          {/* First-visit hint */}
+          {!deckHintShown && (
+            <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
+              position: "absolute", top: 8, right: 34,
+              background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
+              fontSize: 9, fontFamily: "var(--font-mono)",
+              padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+              cursor: "pointer", whiteSpace: "nowrap", zIndex: 10,
+            }}>
+              Press D to {deckExpanded ? "collapse" : "expand"}
+            </div>
+          )}
+
           {/* ═══ THE DECK — compact bar when collapsed ═══ */}
           {!deckExpanded && (
             <div
@@ -1916,23 +1947,6 @@ export default function FabricPage() {
                 </button>
               </div>
 
-              {/* Expand */}
-              <button onClick={toggleDeck} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} title="Expand deck (D)">
-                <ChevronDown size={12} strokeWidth={2} color="var(--color-text-muted)" />
-              </button>
-
-              {/* First-visit hint */}
-              {!deckHintShown && (
-                <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
-                  position: "absolute", top: -28, right: "var(--space-3)",
-                  background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
-                  fontSize: 9, fontFamily: "var(--font-mono)",
-                  padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
-                  cursor: "pointer", whiteSpace: "nowrap",
-                }}>
-                  Press D to expand
-                </div>
-              )}
             </div>
           )}
 
@@ -1949,32 +1963,6 @@ export default function FabricPage() {
               position: "relative",
             }}
           >
-            {/* Collapse deck button */}
-            <button onClick={toggleDeck} style={{
-              position: "absolute", top: 8, right: 8,
-              width: 22, height: 22, borderRadius: "var(--radius-full)",
-              background: "transparent", border: "1px solid var(--color-border-light)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", padding: 0, opacity: 0.4, transition: "opacity 120ms",
-              zIndex: 1,
-            }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
-              title="Collapse deck (D)"
-            >
-              <ChevronUp size={10} strokeWidth={2} color="var(--color-text-muted)" />
-            </button>
-            {!deckHintShown && (
-              <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
-                position: "absolute", top: 8, right: 34,
-                background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
-                fontSize: 9, fontFamily: "var(--font-mono)",
-                padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
-                cursor: "pointer", whiteSpace: "nowrap", zIndex: 1,
-              }}>
-                Press D to collapse
-              </div>
-            )}
 
             {/* Album art */}
             <div
@@ -2265,7 +2253,7 @@ export default function FabricPage() {
                   marginRight: "var(--space-1)",
                 }}
               >
-                {deckExpanded ? <ChevronUp size={TAB_ICON_SIZE} strokeWidth={1.8} /> : <ChevronDown size={TAB_ICON_SIZE} strokeWidth={1.8} />}
+                {deckExpanded ? <ArrowUpFromLine size={TAB_ICON_SIZE} strokeWidth={1.8} /> : <ArrowDownFromLine size={TAB_ICON_SIZE} strokeWidth={1.8} />}
               </button>
             </Tooltip>
             {PANELS.map((col) => (
