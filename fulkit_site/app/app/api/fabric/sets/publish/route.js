@@ -10,13 +10,12 @@ export async function POST(request) {
     const db = getSupabaseAdmin();
     const { data: profile } = await db
       .from("profiles")
-      .select("role, display_name")
+      .select("role")
       .eq("id", userId)
       .single();
 
     if (profile?.role !== "owner") {
-      console.error("[sets/publish] 403 — userId:", userId, "profile:", profile);
-      return Response.json({ error: "Owner only", debug: { userId, role: profile?.role || null, hasProfile: !!profile } }, { status: 403 });
+      return Response.json({ error: "Owner only" }, { status: 403 });
     }
 
     const { name, tracks } = await request.json();
@@ -49,7 +48,7 @@ export async function POST(request) {
       .insert({
         user_id: userId,
         name,
-        description: `Featured mix by ${profile.display_name || "Collin"}`,
+        description: "Featured mix",
         source: "set",
         status: "active",
         visibility: "featured",
