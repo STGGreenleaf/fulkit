@@ -35,6 +35,36 @@ const MOCK_FEATURES = {
   "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72, loudness: -13, acousticness: 55 },
 };
 
+// --- Taste Signal Utilities ---
+function normalizeForMatch(str) {
+  if (!str) return "";
+  return str.toLowerCase().replace(/[\u2018\u2019\u201C\u201D]/g, "'").replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+}
+function fuzzyMatch(a, b) {
+  if (!a || !b) return false;
+  const na = normalizeForMatch(a), nb = normalizeForMatch(b);
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const shorter = na.length < nb.length ? na : nb;
+  const longer = na.length < nb.length ? nb : na;
+  return longer.startsWith(shorter) && shorter.length / longer.length > 0.7;
+}
+function computeScore(entry) {
+  const ageWeeks = (Date.now() - (entry.addedAt || Date.now())) / 604800000;
+  const decay = Math.max(0.3, 1 - ageWeeks * 0.02);
+  let raw = 0;
+  if (entry.kept) raw += 2;
+  if (entry.adopted) raw += 3;
+  if (!entry.kept && entry.removedAt) raw -= 1.5;
+  raw += Math.min(entry.playCount || 0, 5) * 1.5;
+  raw += Math.min(entry.totalListenPct || 0, 5) * 0.5;
+  raw -= Math.min(entry.skipCount || 0, 3) * 2;
+  return Math.round(raw * decay * 10) / 10;
+}
+function makeHistoryDefaults() {
+  return { addedAt: Date.now(), kept: true, removedAt: null, adopted: false, adoptedTo: null, playCount: 0, totalListenPct: 0, lastPlayedAt: null, skipCount: 0, score: 0 };
+}
+
 export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
@@ -80,6 +110,10 @@ export function FabricProvider({ children }) {
   const volumeLockedUntil = useRef(0);
   const featuresRequested = useRef(new Set());
   const prevTrackRef = useRef(null); // track before manual playTrack jump
+  const flagAdoptionRef = useRef(null); // deferred adoption signal from flag()
+  // Refs for taste signal functions (used by skip/poller which are declared before the history block)
+  const findHistoryMatchRef = useRef(null);
+  const updateHistorySignalRef = useRef(null);
 
   // Helper for authenticated API calls
   const apiFetch = useCallback(async (endpoint, options = {}) => {
@@ -160,8 +194,22 @@ export function FabricProvider({ children }) {
       if (data.volume != null && Date.now() > volumeLockedUntil.current) setVolumeState(data.volume);
       if (data.track) {
         setCurrentTrack((prev) => {
-          // Only update if track changed or progress jumped
-          if (!prev || prev.id !== data.track.id) return data.track;
+          // Track changed — finalize previous play session, start new one
+          if (!prev || prev.id !== data.track.id) {
+            if (playSessionRef.current.trackId && findHistoryMatchRef.current) {
+              const pct = playSessionRef.current.maxProgress;
+              const match = findHistoryMatchRef.current(playSessionRef.current.trackId, prev?.title, prev?.artist);
+              if (match && updateHistorySignalRef.current) updateHistorySignalRef.current(match.id, {
+                playCount: (match.playCount || 0) + 1,
+                totalListenPct: (match.totalListenPct || 0) + pct,
+                lastPlayedAt: Date.now(),
+              });
+            }
+            playSessionRef.current = { trackId: data.track.id, maxProgress: data.track.progress || 0 };
+            return data.track;
+          }
+          // Same track — update max progress
+          playSessionRef.current.maxProgress = Math.max(playSessionRef.current.maxProgress, data.track.progress || 0);
           return { ...prev, progress: data.track.progress, progressMs: data.track.progressMs };
         });
         setProgress(data.track.progress);
@@ -223,9 +271,23 @@ export function FabricProvider({ children }) {
       setIsPlaying(true);
       return;
     }
+    // Record skip signal if early (<50% through) and matches a BTC rec
+    if (progress < 0.5 && currentTrack && findHistoryMatchRef.current) {
+      const match = findHistoryMatchRef.current(currentTrack.id, currentTrack.title, currentTrack.artist);
+      if (match && updateHistorySignalRef.current) updateHistorySignalRef.current(match.id, { skipCount: (match.skipCount || 0) + 1 });
+    }
+    // Finalize play session
+    if (playSessionRef.current.trackId && findHistoryMatchRef.current) {
+      const match = findHistoryMatchRef.current(playSessionRef.current.trackId, currentTrack?.title, currentTrack?.artist);
+      if (match && updateHistorySignalRef.current) updateHistorySignalRef.current(match.id, {
+        playCount: (match.playCount || 0) + 1,
+        totalListenPct: (match.totalListenPct || 0) + playSessionRef.current.maxProgress,
+        lastPlayedAt: Date.now(),
+      });
+      playSessionRef.current = { trackId: null, maxProgress: 0 };
+    }
     sendControl("next");
-    // Optimistic: poll will catch the actual track shortly
-  }, [isDev, queue, sendControl]);
+  }, [isDev, queue, sendControl, progress, currentTrack]);
 
   const prev = useCallback(() => {
     if (isDev) {
@@ -355,12 +417,15 @@ export function FabricProvider({ children }) {
 
   const flag = useCallback((track) => {
     setSetsData((prev) => {
+      const activeSet = prev.sets.find(s => s.id === prev.activeId);
+      const wasInSet = activeSet?.tracks.some(t => t.id === track.id);
       const next = { ...prev, sets: prev.sets.map(s => {
         if (s.id !== prev.activeId) return s;
-        const has = s.tracks.some(t => t.id === track.id);
-        return { ...s, tracks: has ? s.tracks.filter(t => t.id !== track.id) : [...s.tracks, track] };
+        return { ...s, tracks: wasInSet ? s.tracks.filter(t => t.id !== track.id) : [...s.tracks, track] };
       })};
       persistSets(next);
+      // Mark adoption via ref (history state declared below, accessed via flagAdoptionRef)
+      if (!wasInSet && activeSet) flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
       return next;
     });
   }, [persistSets]);
@@ -373,12 +438,104 @@ export function FabricProvider({ children }) {
   // Guy's Crate — auto-populated by BTC recommendations
   const guyCrate = setsData.sets.find(s => s.id === "guy-crate") || null;
 
+
+  // Shadow history — every track Guy ever recommended, with taste signals
+  const [guyHistory, setGuyHistory] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = JSON.parse(localStorage.getItem("fulkit-guy-history") || "[]");
+      const version = localStorage.getItem("fulkit-guy-history-version");
+      if (version === "2") return raw;
+      // Migrate v1 → v2
+      const now = Date.now();
+      const guyCrateIds = new Set();
+      try {
+        const sets = JSON.parse(localStorage.getItem("fulkit-sets") || "{}");
+        const gc = (sets.sets || []).find(s => s.id === "guy-crate");
+        if (gc) gc.tracks.forEach(t => guyCrateIds.add(t.id));
+      } catch {}
+      const migrated = raw.map((entry, i) => ({
+        ...entry,
+        addedAt: now - (raw.length - i) * 60000,
+        kept: guyCrateIds.has(entry.id),
+        removedAt: guyCrateIds.has(entry.id) ? null : now,
+        adopted: false, adoptedTo: null,
+        playCount: 0, totalListenPct: 0, lastPlayedAt: null, skipCount: 0,
+        score: guyCrateIds.has(entry.id) ? 2 : -0.5,
+      }));
+      localStorage.setItem("fulkit-guy-history", JSON.stringify(migrated));
+      localStorage.setItem("fulkit-guy-history-version", "2");
+      return migrated;
+    } catch { return []; }
+  });
+
+  const persistHistory = useCallback((history) => {
+    try { localStorage.setItem("fulkit-guy-history", JSON.stringify(history)); } catch {}
+  }, []);
+
+  const findHistoryMatch = useCallback((spotifyId, title, artist) => {
+    return guyHistory.find(h => h.id === spotifyId) ||
+      (title && artist ? guyHistory.find(h => fuzzyMatch(h.artist, artist) && fuzzyMatch(h.title, title)) : null) ||
+      null;
+  }, [guyHistory]);
+
+  const updateHistorySignal = useCallback((trackId, updates) => {
+    setGuyHistory((prev) => {
+      const idx = prev.findIndex(h => h.id === trackId);
+      if (idx === -1) return prev;
+      const entry = { ...prev[idx], ...updates };
+      entry.score = computeScore(entry);
+      const next = [...prev];
+      next[idx] = entry;
+      persistHistory(next);
+      return next;
+    });
+  }, [persistHistory]);
+
+  // Keep refs in sync for skip/poller (declared before history block)
+  findHistoryMatchRef.current = findHistoryMatch;
+  updateHistorySignalRef.current = updateHistorySignal;
+
+  const appendToHistory = useCallback((track) => {
+    setGuyHistory((prev) => {
+      if (prev.some(t => t.id === track.id)) return prev;
+      const entry = { id: track.id, title: track.title, artist: track.artist, ...makeHistoryDefaults(), addedAt: Date.now() };
+      let next = [...prev, entry];
+      // Cap at 500 — prune lowest-scored removed entries
+      if (next.length > 500) {
+        const now = Date.now();
+        const thirtyDays = 30 * 86400000;
+        next.sort((a, b) => {
+          const aProt = (a.score > 3 || a.adopted || (now - (a.addedAt || 0)) < thirtyDays) ? 1 : 0;
+          const bProt = (b.score > 3 || b.adopted || (now - (b.addedAt || 0)) < thirtyDays) ? 1 : 0;
+          if (aProt !== bProt) return aProt - bProt;
+          return (a.score || 0) - (b.score || 0);
+        });
+        next = next.slice(next.length - 500);
+      }
+      persistHistory(next);
+      return next;
+    });
+  }, [persistHistory]);
+
+  // Process deferred adoption signal from flag()
+  useEffect(() => {
+    const pending = flagAdoptionRef.current;
+    if (!pending) return;
+    flagAdoptionRef.current = null;
+    const match = guyHistory.find(h => h.id === pending.trackId);
+    if (match) updateHistorySignal(pending.trackId, { adopted: true, adoptedTo: pending.setName });
+  }, [setsData, guyHistory, updateHistorySignal]);
+
+  // Play session tracking for listen signals
+  const playSessionRef = useRef({ trackId: null, maxProgress: 0 });
+
   const addToGuyCrate = useCallback((track) => {
+    appendToHistory(track);
     setSetsData((prev) => {
       let gc = prev.sets.find(s => s.id === "guy-crate");
       if (!gc) {
         gc = { id: "guy-crate", name: "Guy's Crate", source: "guy", tracks: [] };
-        if (gc.tracks.some(t => t.id === track.id)) return prev;
         const next = { ...prev, sets: [...prev.sets, { ...gc, tracks: [track] }] };
         persistSets(next);
         return next;
@@ -393,6 +550,7 @@ export function FabricProvider({ children }) {
   }, [persistSets]);
 
   const removeFromGuyCrate = useCallback((trackId) => {
+    updateHistorySignal(trackId, { kept: false, removedAt: Date.now() });
     setSetsData((prev) => {
       const next = { ...prev, sets: prev.sets.map(s =>
         s.id === "guy-crate" ? { ...s, tracks: s.tracks.filter(t => t.id !== trackId) } : s
@@ -400,15 +558,20 @@ export function FabricProvider({ children }) {
       persistSets(next);
       return next;
     });
-  }, [persistSets]);
+  }, [persistSets, updateHistorySignal]);
 
   const clearGuyCrate = useCallback(() => {
+    const gc = setsData.sets.find(s => s.id === "guy-crate");
+    if (gc) {
+      const now = Date.now();
+      gc.tracks.forEach(t => updateHistorySignal(t.id, { kept: false, removedAt: now }));
+    }
     setSetsData((prev) => {
       const next = { ...prev, sets: prev.sets.filter(s => s.id !== "guy-crate") };
       persistSets(next);
       return next;
     });
-  }, [persistSets]);
+  }, [persistSets, setsData.sets, updateHistorySignal]);
 
   // Multi-set CRUD
   const allSets = setsData.sets.filter(s => s.source !== "guy").map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length }));
@@ -457,7 +620,7 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets]);
 
-  const playTrack = useCallback((track) => {
+  const playTrack = useCallback(async (track) => {
     setCurrentTrack((cur) => {
       if (cur && cur.id !== track.id) prevTrackRef.current = cur;
       return track;
@@ -465,9 +628,25 @@ export function FabricProvider({ children }) {
     setProgress(0);
     setIsPlaying(true);
     if (isDev) return;
+
+    // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
+    let uri = track.uri || (track.id.startsWith("btc-") ? null : `spotify:track:${track.id}`);
+    if (!uri && track.artist && track.title) {
+      try {
+        const res = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tracks?.[0]?.uri) {
+            uri = data.tracks[0].uri;
+          }
+        }
+      } catch {}
+    }
+    if (!uri) return;
+
     apiFetch("/api/fabric/controls", {
       method: "POST",
-      body: JSON.stringify({ action: "play_track", value: { uri: track.uri || `spotify:track:${track.id}` } }),
+      body: JSON.stringify({ action: "play_track", value: { uri } }),
     });
   }, [isDev, apiFetch]);
 
@@ -577,6 +756,33 @@ export function FabricProvider({ children }) {
     }).catch(() => setTickerFact(null));
   }, [currentTrack?.id, accessToken, isDev, apiFetch, tickerTrackId]);
 
+  // Build taste summary for the API (computed per message, not stored)
+  const buildTasteSummary = useCallback(() => {
+    if (!guyHistory.length) return null;
+    const scored = guyHistory.map(e => ({ ...e, score: e.score ?? computeScore(e) })).sort((a, b) => b.score - a.score);
+    const favorites = scored.filter(e => e.score > 3).slice(0, 8).map(e => ({ artist: e.artist, title: e.title, score: e.score }));
+    const passes = scored.filter(e => e.score < 0).slice(-5).map(e => ({ artist: e.artist, title: e.title }));
+    // Artist tendencies
+    const artistMap = {};
+    for (const e of scored) {
+      if (!artistMap[e.artist]) artistMap[e.artist] = { total: 0, count: 0 };
+      artistMap[e.artist].total += e.score;
+      artistMap[e.artist].count++;
+    }
+    const likedArtists = Object.entries(artistMap).filter(([, v]) => v.count >= 2 && v.total / v.count > 2).sort((a, b) => b[1].total / b[1].count - a[1].total / a[1].count).slice(0, 5).map(([a]) => a);
+    const dislikedArtists = Object.entries(artistMap).filter(([, v]) => v.count >= 2 && v.total / v.count < -1).slice(0, 3).map(([a]) => a);
+    // Set names + adoption patterns
+    const setNames = setsData.sets.filter(s => s.source !== "guy" && s.tracks.length > 0).map(s => s.name);
+    const adoptionPatterns = {};
+    for (const e of scored) {
+      if (e.adopted && e.adoptedTo) {
+        if (!adoptionPatterns[e.adoptedTo]) adoptionPatterns[e.adoptedTo] = [];
+        adoptionPatterns[e.adoptedTo].push(`${e.artist} - ${e.title}`);
+      }
+    }
+    return { favorites, passes, likedArtists, dislikedArtists, setNames, adoptionPatterns };
+  }, [guyHistory, setsData.sets]);
+
   const sendMusicMessage = useCallback(async (text) => {
     if (!text.trim() || musicStreaming) return;
     const userMsg = { role: "user", content: text.trim() };
@@ -597,6 +803,7 @@ export function FabricProvider({ children }) {
           audioFeatures: currentTrack?.id ? audioFeatures[currentTrack.id] : null,
           setTracks: flagged,
           bsidesTracks: guyCrate?.tracks || [],
+          tasteSummary: buildTasteSummary(),
         }),
       });
 
@@ -650,7 +857,7 @@ export function FabricProvider({ children }) {
       setMusicMessages(prev => [...prev, { role: "assistant", content: "Lost the signal. Try again." }]);
     }
     setMusicStreaming(false);
-  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged]);
+  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged, buildTasteSummary, guyCrate]);
 
   const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
 

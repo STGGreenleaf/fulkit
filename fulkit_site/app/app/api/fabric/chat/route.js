@@ -6,13 +6,16 @@ export async function POST(request) {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks } = await request.json();
+    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary } = await request.json();
     if (!messages?.length) {
       return Response.json({ error: "messages required" }, { status: 400 });
     }
 
     // Extract latest user message + conversation history for the pipeline
-    const userMessage = messages[messages.length - 1]?.content || "";
+    const userMessage = messages[messages.length - 1]?.content?.trim();
+    if (!userMessage) {
+      return Response.json({ error: "Empty message" }, { status: 400 });
+    }
     const conversationHistory = messages.slice(0, -1);
 
     // Build dynamic context block (same shape as before)
@@ -34,7 +37,33 @@ export async function POST(request) {
     }
     if (bsidesTracks?.length) {
       const bList = bsidesTracks.slice(0, 15).map(t => `${t.artist} - ${t.title}`).join(", ");
-      contextParts.push(`B-Sides (already recommended — do NOT re-recommend): ${bList}${bsidesTracks.length > 15 ? "..." : ""}`);
+      contextParts.push(`B-Sides (current crate — do NOT re-recommend): ${bList}${bsidesTracks.length > 15 ? "..." : ""}`);
+    }
+    // Taste profile — engagement signals from recommendation history
+    if (tasteSummary) {
+      const tp = [];
+      if (tasteSummary.favorites?.length) {
+        tp.push(`Favorites: ${tasteSummary.favorites.map(f => `${f.artist} - ${f.title} (score: ${f.score})`).join(", ")}`);
+      }
+      if (tasteSummary.passes?.length) {
+        tp.push(`Passes (avoid similar): ${tasteSummary.passes.map(p => `${p.artist} - ${p.title}`).join(", ")}`);
+      }
+      if (tasteSummary.likedArtists?.length) {
+        tp.push(`Preferred artists: ${tasteSummary.likedArtists.join(", ")}`);
+      }
+      if (tasteSummary.dislikedArtists?.length) {
+        tp.push(`Avoided artists: ${tasteSummary.dislikedArtists.join(", ")}`);
+      }
+      if (tasteSummary.setNames?.length) {
+        tp.push(`User's sets: ${tasteSummary.setNames.join(", ")}`);
+      }
+      if (tasteSummary.adoptionPatterns && Object.keys(tasteSummary.adoptionPatterns).length) {
+        const adopted = Object.entries(tasteSummary.adoptionPatterns)
+          .map(([set, tracks]) => `${set} \u2190 ${tracks.join(", ")}`)
+          .join("; ");
+        tp.push(`Adopted to sets: ${adopted}`);
+      }
+      if (tp.length) contextParts.push(`TASTE PROFILE:\n${tp.join("\n")}`);
     }
 
     const dynamicContext = contextParts.length

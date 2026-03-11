@@ -78,6 +78,19 @@ export async function GET(request) {
       });
     }
 
+    if (type === "track") {
+      return Response.json({
+        tracks: (data.tracks?.items || []).map(t => ({
+          spotify_id: t.id,
+          title: t.name,
+          artist: t.artists?.[0]?.name || "Unknown",
+          album: t.album?.name || null,
+          duration_ms: t.duration_ms,
+          uri: t.uri,
+        })),
+      });
+    }
+
     return Response.json({ error: "unsupported type" }, { status: 400 });
   } catch (e) {
     console.error("[fabric/search] Error:", e);

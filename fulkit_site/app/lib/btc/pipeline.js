@@ -18,7 +18,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = "claude-sonnet-4-6";
 
 // Ask types where Pass 2 can be skipped (fast path)
-const SKIP_COUNTER_TYPES = ["greeting", "non_music"];
+const SKIP_COUNTER_TYPES = ["non_music"];
 
 // ------------------------------------------------------------
 // PASS 0 — Classification
@@ -167,10 +167,14 @@ export async function qualityCheck(
     ? `\nRECENT BTC RESPONSES (check for phrase repetition):\n${recentResponses}\n`
     : "";
 
+  const conversationBlock = conversationHistory.length
+    ? `\nFULL CONVERSATION SO FAR:\n${conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}\n`
+    : "";
+
   const messages = [
     {
       role: "user",
-      content: `USER'S MESSAGE:\n"${userMessage}"\n\nDRAFT BTC RESPONSE:\n${draftResponse}\n${contextBlock}\nEvaluate and output the final response.`,
+      content: `USER'S MESSAGE:\n"${userMessage}"\n\nDRAFT BTC RESPONSE:\n${draftResponse}\n${contextBlock}${conversationBlock}\nEvaluate and output the final response.`,
     },
   ];
 

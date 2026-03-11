@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -2394,35 +2394,15 @@ export default function FabricPage() {
                             whiteSpace: "pre-wrap",
                           }}>
                             {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
-                              // Song recommendation: Artist - Title BPM [+]
+                              // Song recommendation: Artist - Title BPM [+] — styled text, no button (tracks auto-add to B-Sides)
                               const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
                               if (plusMatch) {
                                 const artist = plusMatch[1].trim();
                                 const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
                                 const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
-                                const trackId = `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-");
-                                const added = isFlagged(trackId);
                                 return (
-                                  <div key={li}>
-                                    {artist} - {title}{bpmText}{"  "}
-                                    <button
-                                      onClick={() => flag({ id: trackId, title, artist })}
-                                      style={{
-                                        display: "inline",
-                                        background: added ? "var(--color-text)" : "none",
-                                        border: added ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
-                                        borderRadius: "var(--radius-sm)",
-                                        cursor: "pointer",
-                                        padding: "0 3px",
-                                        fontSize: 8,
-                                        fontFamily: "var(--font-mono)",
-                                        color: added ? "var(--color-bg)" : "var(--color-text-muted)",
-                                        verticalAlign: "middle",
-                                        marginLeft: 2,
-                                      }}
-                                    >
-                                      {added ? "✓" : "+"}
-                                    </button>
+                                  <div key={li} style={{ fontFamily: "var(--font-mono)", fontSize: "var(--font-size-xs)" }}>
+                                    {artist} - {title}{bpmText}
                                   </div>
                                 );
                               }
@@ -3091,15 +3071,14 @@ export default function FabricPage() {
                     <button
                       onClick={clearGuyCrate}
                       style={{
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        width: 26, height: 26, background: "none",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)", cursor: "pointer",
-                        color: "var(--color-text-dim)", padding: 0,
+                        background: "none", border: "none", cursor: "pointer", padding: 2,
+                        color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                      onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                       title="Clear B-Sides"
                     >
-                      <Trash2 size={12} strokeWidth={1.5} />
+                      <Trash2 size={14} strokeWidth={1.5} />
                     </button>
                   </div>
 
@@ -3114,16 +3093,10 @@ export default function FabricPage() {
                         const inSet = isFlagged(track.id);
                         return (
                           <div key={track.id} style={{
-                            display: "flex", alignItems: "center", gap: "var(--space-3)",
-                            padding: "var(--space-2) var(--space-2)",
+                            display: "flex", alignItems: "center", gap: "var(--space-2)",
+                            padding: "var(--space-2)",
                             borderBottom: "1px solid var(--color-border-light)",
                           }}>
-                            <div style={{
-                              fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
-                              width: 18, flexShrink: 0, textAlign: "right",
-                            }}>
-                              {String(i + 1).padStart(2, "0")}
-                            </div>
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
                                 fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",
@@ -3139,12 +3112,26 @@ export default function FabricPage() {
                               </div>
                             </div>
                             <button
+                              onClick={() => playTrack(track)}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
+                                color: "var(--color-text-muted)", transition: "color 120ms",
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                              title="Play"
+                            >
+                              <Play size={12} strokeWidth={1.5} />
+                            </button>
+                            <button
                               onClick={() => flag(track)}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: inSet ? "var(--color-text)" : "var(--color-text-dim)",
-                                opacity: inSet ? 1 : 0.3, transition: "opacity 120ms",
+                                color: inSet ? "var(--color-text)" : "var(--color-text-muted)",
+                                transition: "color 120ms",
                               }}
+                              onMouseEnter={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text)"; }}
+                              onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-muted)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
                               {inSet ? <ListX size={12} strokeWidth={2} /> : <Plus size={12} strokeWidth={1.5} />}
@@ -3153,13 +3140,13 @@ export default function FabricPage() {
                               onClick={() => removeFromGuyCrate(track.id)}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: "var(--color-text-dim)", opacity: 0.3, transition: "opacity 120ms",
+                                color: "var(--color-text-muted)", transition: "color 120ms",
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.3"}
+                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                               title="Remove"
                             >
-                              <X size={12} strokeWidth={1.8} />
+                              <MessageCircleX size={12} strokeWidth={1.5} />
                             </button>
                           </div>
                         );
@@ -3288,21 +3275,14 @@ export default function FabricPage() {
                       <button
                         onClick={() => deleteCrate(expandedCrate)}
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 26,
-                          height: 26,
-                          background: "none",
-                          border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          color: "var(--color-text-dim)",
-                          padding: 0,
+                          background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex",
+                          color: "var(--color-text-muted)", transition: "color 120ms",
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Delete crate"
                       >
-                        <Trash2 size={12} strokeWidth={1.5} />
+                        <Trash2 size={14} strokeWidth={1.5} />
                       </button>
                       <button
                         onClick={() => {
@@ -3310,21 +3290,14 @@ export default function FabricPage() {
                           if (crate?.source_spotify_id) playPlaylist(crate.source_spotify_id);
                         }}
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 26,
-                          height: 26,
-                          background: "none",
-                          border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          color: "var(--color-text)",
-                          padding: 0,
+                          background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex",
+                          color: "var(--color-text-muted)", transition: "color 120ms",
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Play crate"
                       >
-                        <Play size={12} strokeWidth={2.5} fill="var(--color-text)" />
+                        <Play size={14} strokeWidth={2} />
                       </button>
                     </div>
                   </div>
