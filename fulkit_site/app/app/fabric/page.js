@@ -1662,6 +1662,7 @@ export default function FabricPage() {
   const [expandedFeatured, setExpandedFeatured] = useState(null);
   const [featuredTracks, setFeaturedTracks] = useState([]);
   const musicChatEndRef = useRef(null);
+  const [setCollapsed, setSetCollapsed] = useState(false);
 
   const features = currentTrack ? audioFeatures[currentTrack.id] : null;
 
@@ -2785,7 +2786,7 @@ export default function FabricPage() {
               </div>{/* end scrollable content */}
             </div>
 
-            {/* THE SET — draggable setlist rail */}
+            {/* RIGHT COLUMN — Record Store Guy + Set */}
             <div
               style={{
                 width: 200,
@@ -2796,16 +2797,223 @@ export default function FabricPage() {
                 overflow: "hidden",
               }}
             >
+              {/* ═══ RECORD STORE GUY — always at top ═══ */}
+              <div style={{ flexShrink: 0 }}>
+                {/* Title bar — always visible */}
+                <div
+                  style={{
+                    padding: "var(--space-2) var(--space-3)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{
+                    fontSize: 9,
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: "var(--font-weight-bold)",
+                    color: "var(--color-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-wider)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    flex: 1,
+                  }}>
+                    {!musicChatOpen && tickerFact ? (
+                      <span style={{ fontWeight: "var(--font-weight-normal)", fontStyle: "italic", textTransform: "none", letterSpacing: "normal", color: "var(--color-text-secondary)" }}>
+                        {tickerFact}
+                      </span>
+                    ) : (
+                      "Record Store Guy"
+                    )}
+                  </div>
+                  <button
+                    onClick={toggleMusicChat}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 2,
+                      color: musicChatOpen ? "var(--color-text)" : "var(--color-text-muted)",
+                      flexShrink: 0,
+                      marginLeft: "var(--space-2)",
+                    }}
+                    title={musicChatOpen ? "Close chat" : "Open chat"}
+                  >
+                    {musicChatOpen
+                      ? <ChevronDown size={12} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
+                      : <MessageCircle size={10} strokeWidth={1.8} />
+                    }
+                  </button>
+                </div>
+
+                {/* Expandable chat drawer */}
+                {musicChatOpen && (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    maxHeight: 280,
+                    borderBottom: "1px solid var(--color-border-light)",
+                  }}>
+                    {/* Messages */}
+                    <div style={{
+                      flex: 1,
+                      overflowY: "auto",
+                      padding: "var(--space-2) var(--space-3)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--space-2)",
+                    }}>
+                      {musicMessages.length === 0 && (
+                        <div style={{
+                          fontSize: "var(--font-size-xs)",
+                          color: "var(--color-text-muted)",
+                          fontStyle: "italic",
+                          padding: "var(--space-3) 0",
+                          textAlign: "center",
+                        }}>
+                          {tickerFact || "What do you want to hear?"}
+                        </div>
+                      )}
+                      {musicMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            lineHeight: 1.4,
+                            color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
+                            fontFamily: "var(--font-primary)",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            ...(msg.role === "user" ? {
+                              textAlign: "right",
+                              fontStyle: "italic",
+                            } : {}),
+                          }}
+                        >
+                          {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
+                            const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
+                            if (plusMatch) {
+                              const artist = plusMatch[1].trim();
+                              const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
+                              const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
+                              return (
+                                <div key={li}>
+                                  {artist} - {title}{bpmText}{"  "}
+                                  <button
+                                    onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
+                                    style={{
+                                      display: "inline",
+                                      background: "none",
+                                      border: "1px solid var(--color-border)",
+                                      borderRadius: "var(--radius-sm)",
+                                      cursor: "pointer",
+                                      padding: "0 3px",
+                                      fontSize: 8,
+                                      fontFamily: "var(--font-mono)",
+                                      color: "var(--color-text-muted)",
+                                      verticalAlign: "middle",
+                                      marginLeft: 2,
+                                    }}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return <div key={li}>{line}</div>;
+                          }) : msg.content}
+                        </div>
+                      ))}
+                      <div ref={musicChatEndRef} />
+                    </div>
+
+                    {/* Input */}
+                    <div style={{
+                      padding: "var(--space-2) var(--space-3)",
+                      borderTop: "1px solid var(--color-border-light)",
+                      display: "flex",
+                      gap: "var(--space-2)",
+                    }}>
+                      <input
+                        value={musicInput}
+                        onChange={(e) => setMusicInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            if (musicInput.trim() && !musicStreaming) {
+                              sendMusicMessage(musicInput);
+                              setMusicInput("");
+                            }
+                          }
+                        }}
+                        placeholder="Ask about music..."
+                        disabled={musicStreaming}
+                        style={{
+                          flex: 1,
+                          padding: "var(--space-1) var(--space-2)",
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-primary)",
+                          background: "var(--color-bg-elevated)",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          color: "var(--color-text)",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (musicInput.trim() && !musicStreaming) {
+                            sendMusicMessage(musicInput);
+                            setMusicInput("");
+                          }
+                        }}
+                        disabled={musicStreaming || !musicInput.trim()}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: musicStreaming || !musicInput.trim() ? "default" : "pointer",
+                          padding: 2,
+                          color: musicInput.trim() ? "var(--color-text)" : "var(--color-text-dim)",
+                          opacity: musicInput.trim() ? 1 : 0.3,
+                        }}
+                      >
+                        <Send size={12} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ═══ SET HEADER ═══ */}
               <div
                 style={{
-                  padding: "var(--space-3) var(--space-4)",
+                  padding: "var(--space-2) var(--space-3)",
                   borderBottom: "1px solid var(--color-border-light)",
                   display: "flex",
                   alignItems: "center",
                   gap: "var(--space-2)",
                   position: "relative",
+                  cursor: "pointer",
+                }}
+                onClick={(e) => {
+                  // Don't collapse if clicking buttons/inputs inside
+                  if (e.target.closest("button") || e.target.closest("input")) return;
+                  setSetCollapsed(v => !v);
                 }}
               >
+                <ChevronDown
+                  size={10}
+                  strokeWidth={2}
+                  style={{
+                    color: "var(--color-text-dim)",
+                    flexShrink: 0,
+                    transform: setCollapsed ? "rotate(-90deg)" : "none",
+                    transition: "transform 120ms",
+                  }}
+                />
                 {/* Set selector — click to open dropdown, double-click to rename */}
                 {renamingSet === activeSetId ? (
                   <input
@@ -2882,24 +3090,7 @@ export default function FabricPage() {
                     <ListX size={12} strokeWidth={1.8} />
                   </button>
                 )}
-                {/* Record Store Guy toggle */}
-                <button
-                  onClick={toggleMusicChat}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 2,
-                    color: musicChatOpen ? "var(--color-text)" : "var(--color-text-dim)",
-                    opacity: musicChatOpen ? 1 : 0.5,
-                    transition: "opacity 120ms",
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = musicChatOpen ? "1" : "0.5"}
-                  title="Record Store Guy"
-                >
-                  <MessageCircle size={12} strokeWidth={1.8} />
-                </button>
+                {/* Record Store Guy toggle removed — RSG is now at top of column */}
 
                 {/* Publish status message */}
                 {publishMsg && (
@@ -3004,7 +3195,7 @@ export default function FabricPage() {
                 )}
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto" }}>
+              {!setCollapsed && <div style={{ flex: 1, overflowY: "auto" }}>
                 {flagged.length === 0 && (
                   <div
                     style={{
@@ -3137,206 +3328,8 @@ export default function FabricPage() {
                 })}
               </div>
 
-              {/* ═══ RECORD STORE GUY ═══ */}
-              <div
-                style={{
-                  borderTop: "1px solid var(--color-border-light)",
-                  display: "flex",
-                  flexDirection: "column",
-                  minHeight: musicChatOpen ? 200 : 0,
-                  maxHeight: musicChatOpen ? "50%" : 36,
-                  transition: "max-height 200ms ease, min-height 200ms ease",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Ticker tape (passive mode) — always visible */}
-                {!musicChatOpen && (
-                  <button
-                    onClick={toggleMusicChat}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-2)",
-                      padding: "var(--space-2) var(--space-3)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      width: "100%",
-                      textAlign: "left",
-                    }}
-                  >
-                    <MessageCircle size={10} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
-                    <div style={{
-                      fontSize: 9,
-                      color: "var(--color-text-dim)",
-                      fontFamily: "var(--font-primary)",
-                      fontStyle: "italic",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {tickerFact || (currentTrack ? "Ask me about this track..." : "Play something. I'll talk.")}
-                    </div>
-                  </button>
-                )}
-
-                {/* Active chat mode */}
-                {musicChatOpen && (
-                  <>
-                    <div style={{
-                      padding: "var(--space-2) var(--space-3)",
-                      borderBottom: "1px solid var(--color-border-light)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}>
-                      <div style={{
-                        fontSize: 9,
-                        fontFamily: "var(--font-mono)",
-                        fontWeight: "var(--font-weight-bold)",
-                        color: "var(--color-text-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: "var(--letter-spacing-wider)",
-                      }}>
-                        Record Store Guy
-                      </div>
-                      <button
-                        onClick={toggleMusicChat}
-                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)" }}
-                      >
-                        <X size={10} strokeWidth={2} />
-                      </button>
-                    </div>
-
-                    {/* Messages */}
-                    <div style={{
-                      flex: 1,
-                      overflowY: "auto",
-                      padding: "var(--space-2) var(--space-3)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--space-2)",
-                    }}>
-                      {musicMessages.length === 0 && (
-                        <div style={{
-                          fontSize: 9,
-                          color: "var(--color-text-dim)",
-                          fontStyle: "italic",
-                          padding: "var(--space-3) 0",
-                          textAlign: "center",
-                        }}>
-                          {tickerFact || "What do you want to hear?"}
-                        </div>
-                      )}
-                      {musicMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            fontSize: "var(--font-size-xs)",
-                            lineHeight: 1.4,
-                            color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
-                            fontFamily: "var(--font-primary)",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            ...(msg.role === "user" ? {
-                              textAlign: "right",
-                              fontStyle: "italic",
-                            } : {}),
-                          }}
-                        >
-                          {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
-                            const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
-                            if (plusMatch) {
-                              const artist = plusMatch[1].trim();
-                              const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
-                              const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
-                              return (
-                                <div key={li}>
-                                  {artist} - {title}{bpmText}{"  "}
-                                  <button
-                                    onClick={() => flag({ id: `rsg-${Date.now()}-${li}`, title, artist })}
-                                    style={{
-                                      display: "inline",
-                                      background: "none",
-                                      border: "1px solid var(--color-border)",
-                                      borderRadius: "var(--radius-sm)",
-                                      cursor: "pointer",
-                                      padding: "0 3px",
-                                      fontSize: 8,
-                                      fontFamily: "var(--font-mono)",
-                                      color: "var(--color-text-muted)",
-                                      verticalAlign: "middle",
-                                      marginLeft: 2,
-                                    }}
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              );
-                            }
-                            return <div key={li}>{line}</div>;
-                          }) : msg.content}
-                        </div>
-                      ))}
-                      <div ref={musicChatEndRef} />
-                    </div>
-
-                    {/* Input */}
-                    <div style={{
-                      padding: "var(--space-2) var(--space-3)",
-                      borderTop: "1px solid var(--color-border-light)",
-                      display: "flex",
-                      gap: "var(--space-2)",
-                    }}>
-                      <input
-                        value={musicInput}
-                        onChange={(e) => setMusicInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            if (musicInput.trim() && !musicStreaming) {
-                              sendMusicMessage(musicInput);
-                              setMusicInput("");
-                            }
-                          }
-                        }}
-                        placeholder="Ask about music..."
-                        disabled={musicStreaming}
-                        style={{
-                          flex: 1,
-                          padding: "var(--space-1) var(--space-2)",
-                          fontSize: "var(--font-size-xs)",
-                          fontFamily: "var(--font-primary)",
-                          background: "var(--color-bg-elevated)",
-                          border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)",
-                          color: "var(--color-text)",
-                          outline: "none",
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          if (musicInput.trim() && !musicStreaming) {
-                            sendMusicMessage(musicInput);
-                            setMusicInput("");
-                          }
-                        }}
-                        disabled={musicStreaming || !musicInput.trim()}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: musicStreaming || !musicInput.trim() ? "default" : "pointer",
-                          padding: 2,
-                          color: musicInput.trim() ? "var(--color-text)" : "var(--color-text-dim)",
-                          opacity: musicInput.trim() ? 1 : 0.3,
-                        }}
-                      >
-                        <Send size={12} strokeWidth={1.8} />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              }
+              {/* Record Store Guy was here — moved to top of right column */}
             </div>
           </div>
         </div>
