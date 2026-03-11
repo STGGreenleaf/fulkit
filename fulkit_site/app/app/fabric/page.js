@@ -1533,6 +1533,28 @@ export default function FabricPage() {
     toggleSetExpanded(activeSetId);
   }, [activeSetId, toggleSetExpanded]);
 
+  // Deck collapse
+  const [deckExpanded, setDeckExpanded] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try { return localStorage.getItem("fulkit-deck-expanded") !== "false"; } catch { return true; }
+  });
+  const [deckHintShown, setDeckHintShown] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try { return localStorage.getItem("fulkit-deck-hint") === "1"; } catch { return false; }
+  });
+  const toggleDeck = useCallback(() => {
+    setDeckExpanded(prev => {
+      const next = !prev;
+      try { localStorage.setItem("fulkit-deck-expanded", String(next)); } catch {}
+      return next;
+    });
+    // Dismiss hint on first toggle
+    if (!deckHintShown) {
+      setDeckHintShown(true);
+      try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {}
+    }
+  }, [deckHintShown]);
+
   // Playlist opt-in/opt-out
   const [playlistPickerOpen, setPlaylistPickerOpen] = useState(false);
   const [binPicksOpen, setBinPicksOpen] = useState(false);
@@ -1595,6 +1617,27 @@ export default function FabricPage() {
     }
     prevMsgCount.current = musicMsgCount;
   }, [musicMsgCount, musicMessages]);
+
+  // Keyboard shortcut: D toggles deck
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "d" || e.key === "D") toggleDeck();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [toggleDeck]);
+
+  // Auto-dismiss deck hint after 4s
+  useEffect(() => {
+    if (deckHintShown) return;
+    const t = setTimeout(() => {
+      setDeckHintShown(true);
+      try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {}
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [deckHintShown]);
 
   // Discovery — load album tracks from BTC album links
   const { accessToken, compactMode } = useAuth();
@@ -1794,7 +1837,107 @@ export default function FabricPage() {
             overflow: "hidden",
           }}
         >
-          {/* ═══ THE DECK ═══ */}
+          {/* ═══ THE DECK — compact bar when collapsed ═══ */}
+          {!deckExpanded && (
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border-light)",
+                padding: "var(--space-1-5) var(--space-3)",
+                display: "flex",
+                gap: "var(--space-3)",
+                alignItems: "center",
+                height: 48,
+                position: "relative",
+              }}
+            >
+              {/* Thumbnail */}
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                background: "var(--color-bg-inverse)",
+                borderRadius: "var(--radius-sm)",
+                overflow: "hidden",
+                filter: "grayscale(1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {currentTrack?.art ? (
+                  <img src={currentTrack.art} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="1">
+                    <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Track info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {currentTrack ? (
+                  <>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {currentTrack.title}
+                    </div>
+                    <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {currentTrack.artist}{features ? ` — ${features.bpm} BPM / ${features.key}` : ""}
+                    </div>
+                  </>
+                ) : !connected ? (
+                  <>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text-muted)" }}>Spotify disconnected</div>
+                    <button onClick={reconnectSpotify} style={{ background: "none", border: "none", padding: 0, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", cursor: "pointer", textDecoration: "underline" }}>Reconnect</button>
+                  </>
+                ) : (
+                  <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>No track</div>
+                )}
+              </div>
+
+              {/* Progress */}
+              <div style={{ width: 120, flexShrink: 0 }}>
+                <div
+                  style={{ width: "100%", height: 2, background: "var(--color-border)", cursor: "pointer", position: "relative" }}
+                  onClick={(e) => {
+                    if (!currentTrack) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setProgress((e.clientX - rect.left) / rect.width);
+                  }}
+                >
+                  <div style={{ width: `${progress * 100}%`, height: "100%", background: "var(--color-text)", transition: "width 0.1s linear" }} />
+                </div>
+              </div>
+
+              {/* Transport mini */}
+              <div style={{ display: "flex", gap: 2, alignItems: "center", flexShrink: 0 }}>
+                <button onClick={prev} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+                  <ChevronLeft size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                </button>
+                <button onClick={toggle} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+                  {isPlaying ? <PauseLines size={14} strokeWidth={2.8} color="var(--color-text)" /> : <Play size={14} strokeWidth={2.8} color="var(--color-text)" fill="var(--color-text)" style={{ marginLeft: 1 }} />}
+                </button>
+                <button onClick={skip} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+                  <ChevronRight size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                </button>
+              </div>
+
+              {/* Expand */}
+              <button onClick={toggleDeck} style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} title="Expand deck (D)">
+                <ChevronDown size={12} strokeWidth={2} color="var(--color-text-muted)" />
+              </button>
+
+              {/* First-visit hint */}
+              {!deckHintShown && (
+                <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
+                  position: "absolute", top: -28, right: "var(--space-3)",
+                  background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
+                  fontSize: 9, fontFamily: "var(--font-mono)",
+                  padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+                  cursor: "pointer", whiteSpace: "nowrap",
+                }}>
+                  Press D to expand
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ THE DECK (full) ═══ */}
+          {deckExpanded && <>
           <div
             style={{
               borderBottom: "1px solid var(--color-border-light)",
@@ -1803,8 +1946,36 @@ export default function FabricPage() {
               gap: "var(--space-5)",
               alignItems: "center",
               minHeight: 0,
+              position: "relative",
             }}
           >
+            {/* Collapse deck button */}
+            <button onClick={toggleDeck} style={{
+              position: "absolute", top: 8, right: 8,
+              width: 22, height: 22, borderRadius: "var(--radius-full)",
+              background: "transparent", border: "1px solid var(--color-border-light)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0, opacity: 0.4, transition: "opacity 120ms",
+              zIndex: 1,
+            }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
+              title="Collapse deck (D)"
+            >
+              <ChevronUp size={10} strokeWidth={2} color="var(--color-text-muted)" />
+            </button>
+            {!deckHintShown && (
+              <div onClick={() => { setDeckHintShown(true); try { localStorage.setItem("fulkit-deck-hint", "1"); } catch {} }} style={{
+                position: "absolute", top: 8, right: 34,
+                background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
+                fontSize: 9, fontFamily: "var(--font-mono)",
+                padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+                cursor: "pointer", whiteSpace: "nowrap", zIndex: 1,
+              }}>
+                Press D to collapse
+              </div>
+            )}
+
             {/* Album art */}
             <div
               style={{
@@ -2066,6 +2237,7 @@ export default function FabricPage() {
               onVisualize={() => setVisualizing(true)}
             />
           </div>
+          </>}
 
           {/* ═══ COLUMN TOGGLE BAR ═══ */}
           <div
@@ -2076,6 +2248,26 @@ export default function FabricPage() {
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
+            {/* Deck toggle */}
+            <Tooltip label={deckExpanded ? "Collapse deck (D)" : "Expand deck (D)"}>
+              <button
+                onClick={toggleDeck}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "var(--space-2-5) var(--space-2)",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  borderRight: "1px solid var(--color-border-light)",
+                  marginRight: "var(--space-1)",
+                }}
+              >
+                {deckExpanded ? <ChevronUp size={TAB_ICON_SIZE} strokeWidth={1.8} /> : <ChevronDown size={TAB_ICON_SIZE} strokeWidth={1.8} />}
+              </button>
+            </Tooltip>
             {PANELS.map((col) => (
               <Tooltip key={col.id} label={compactMode ? col.label : null}>
                 <button
