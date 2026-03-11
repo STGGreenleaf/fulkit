@@ -109,15 +109,10 @@ export function FabricProvider({ children }) {
 
   const onDeviceReady = useCallback((deviceId) => {
     setSdkDeviceId(deviceId);
-    // Auto-transfer playback to Fulkit device once
-    if (!sdkTransferred.current && accessToken) {
-      sdkTransferred.current = true;
-      apiFetch("/api/fabric/devices", {
-        method: "POST",
-        body: JSON.stringify({ device_id: deviceId, play: false }),
-      }).then(() => console.log("[Spotify SDK] Transferred playback to Fülkit"));
-    }
-  }, [accessToken, apiFetch]);
+    console.log("[Spotify SDK] Fülkit device available:", deviceId);
+    // Don't auto-transfer — let user's current device keep playing
+    // Transfer only happens when user explicitly activates Fülkit as output
+  }, []);
 
   const onDeviceLost = useCallback(() => {
     setSdkDeviceId(null);
