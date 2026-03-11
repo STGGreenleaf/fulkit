@@ -2036,7 +2036,7 @@ export default function FabricPage() {
               style={{
                 flex: 1,
                 padding: "var(--space-5) var(--space-8)",
-                overflowY: "auto",
+                overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
                 gap: "var(--space-3)",
