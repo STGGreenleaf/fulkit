@@ -2249,7 +2249,7 @@ export default function FabricPage() {
             }}
           >
             {/* Deck toggle */}
-            <Tooltip label={deckExpanded ? "Collapse deck (D)" : "Expand deck (D)"}>
+            <Tooltip label={deckExpanded ? "Collapse deck (D)" : "Expand deck (D)"} align="left">
               <button
                 onClick={toggleDeck}
                 style={{
