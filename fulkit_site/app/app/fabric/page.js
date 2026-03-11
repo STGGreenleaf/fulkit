@@ -2324,10 +2324,10 @@ export default function FabricPage() {
                         display: "flex",
                         alignItems: "center",
                         gap: "var(--space-1)",
-                        padding: "var(--space-1-5) var(--space-2-5)",
-                        background: "var(--color-text)",
-                        color: "var(--color-bg)",
-                        border: "none",
+                        padding: "var(--space-1-5) var(--space-3)",
+                        background: "var(--color-bg-elevated)",
+                        color: "var(--color-text)",
+                        border: "1px solid var(--color-border-light)",
                         borderRadius: "var(--radius-sm)",
                         fontSize: "var(--font-size-xs)",
                         fontWeight: "var(--font-weight-semibold)",
@@ -2335,7 +2335,7 @@ export default function FabricPage() {
                         cursor: "pointer",
                       }}
                     >
-                      <Play size={10} strokeWidth={2.5} fill="var(--color-bg)" />
+                      <Play size={10} strokeWidth={2.5} fill="var(--color-text)" />
                       Play
                     </button>
                   </div>
