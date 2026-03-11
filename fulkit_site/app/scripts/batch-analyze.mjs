@@ -379,6 +379,7 @@ async function main() {
     .select("id, spotify_id, title, artist, duration_ms, retry_count")
     .eq("status", "pending")
     .lt("retry_count", 3)
+    .order("priority", { ascending: false })
     .order("created_at", { ascending: true })
     .limit(limit);
 

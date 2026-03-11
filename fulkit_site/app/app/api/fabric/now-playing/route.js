@@ -37,7 +37,7 @@ export async function GET(request) {
     progressMs: data.progress_ms || 0,
   };
 
-  // Fire-and-forget: queue untracked songs for Fabric analysis
+  // Fire-and-forget: queue untracked songs + bump priority for played tracks
   const db = getSupabaseAdmin();
   db.from("fabric_tracks")
     .upsert({
@@ -48,7 +48,15 @@ export async function GET(request) {
       isrc: data.item.external_ids?.isrc || null,
       composite_key: `${(data.item.artists?.map(a => a.name).join(", ") || "").toLowerCase().trim()}|${(data.item.name || "").toLowerCase().trim()}|${Math.round((data.item.duration_ms || 0) / 5000) * 5}`,
       status: "pending",
+      priority: 1,
     }, { onConflict: "spotify_id", ignoreDuplicates: true })
+    .then(() => {})
+    .catch(() => {});
+  // Also bump priority if track exists but is still pending
+  db.from("fabric_tracks")
+    .update({ priority: 1 })
+    .eq("spotify_id", data.item.id)
+    .eq("status", "pending")
     .then(() => {})
     .catch(() => {});
 
