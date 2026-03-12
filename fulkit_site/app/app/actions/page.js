@@ -266,7 +266,6 @@ export default function Actions() {
               display: "flex",
               gap: "var(--space-1)",
               padding: "0 var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
             }}
           >
             {FILTERS.map(({ key, Icon }) => {
