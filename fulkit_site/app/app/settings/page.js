@@ -868,8 +868,8 @@ function SourcesTab() {
           </div>
         </DrawerItem>
         <DrawerItem index={4} visible={isOpen}>
-          <a href={linkHref} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", textDecoration: "none", fontFamily: "var(--font-primary)" }}>
-            &nearr; {linkLabel}
+          <a href={linkHref} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", textDecoration: "underline", fontFamily: "var(--font-primary)" }}>
+            {linkLabel}
           </a>
         </DrawerItem>
       </div>
