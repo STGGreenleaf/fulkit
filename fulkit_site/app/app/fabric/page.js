@@ -3725,7 +3725,7 @@ export default function FabricPage() {
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
-                  marginTop: "var(--space-3)",
+                  marginTop: "var(--space-1)",
                   flex: 1,
                   minHeight: 0,
                   display: "flex",
