@@ -43,17 +43,155 @@ const TABS = [
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
 
+/* ─── DevToggle (pill switch for dev mode) ─── */
+function DevToggle({ compact }) {
+  const [on, setOn] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("fulkit-dev-mode") === "true";
+    }
+    return false;
+  });
+
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    localStorage.setItem("fulkit-dev-mode", String(next));
+    window.location.reload();
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        padding: "var(--space-1)",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        fontSize: "var(--font-size-2xs)",
+        color: "var(--color-text-muted)",
+        fontFamily: "var(--font-primary)",
+      }}
+      title="Dev mode"
+    >
+      {!compact && <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Dev</span>}
+      <div
+        style={{
+          width: 22,
+          height: 12,
+          borderRadius: 6,
+          border: "1px solid var(--color-text-muted)",
+          background: on ? "var(--color-text-muted)" : "transparent",
+          position: "relative",
+          transition: "all var(--duration-fast) var(--ease-default)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: on ? "var(--color-bg)" : "var(--color-text-muted)",
+            position: "absolute",
+            top: 1,
+            left: on ? 11 : 1,
+            transition: "left var(--duration-fast) var(--ease-default)",
+          }}
+        />
+      </div>
+    </button>
+  );
+}
+
+/* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
+export function OwnerPanel() {
+  const { compactMode } = useAuth();
+  const [tab, setTab] = useState("dashboard");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      {/* Header — Crown + label (left), DevToggle (right) */}
+      <div
+        style={{
+          padding: "var(--space-2-5) var(--space-6)",
+          borderBottom: "1px solid var(--color-border-light)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+        }}
+      >
+        <Crown size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+        {!compactMode && (
+          <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+            Owner Portal
+          </span>
+        )}
+        <div style={{ marginLeft: "auto" }}>
+          <DevToggle compact={compactMode} />
+        </div>
+      </div>
+
+      {/* Sub-tab bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-1)",
+          padding: "0 var(--space-6)",
+          borderBottom: "1px solid var(--color-border-light)",
+        }}
+      >
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <Tooltip key={t.id} label={compactMode ? t.label : null}>
+              <button
+                onClick={() => setTab(t.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-1-5)",
+                  padding: "var(--space-2-5) var(--space-3)",
+                  border: "none",
+                  background: active ? "var(--color-bg-alt)" : "transparent",
+                  borderRadius: "var(--radius-md)",
+                  color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                  fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: "pointer",
+                  transition: `all var(--duration-fast) var(--ease-default)`,
+                }}
+              >
+                <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                {!compactMode && t.label}
+              </button>
+            </Tooltip>
+          );
+        })}
+      </div>
+
+      {/* Sub-tab content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
+        {tab === "dashboard" && <DashboardTab />}
+        {tab === "questions" && <QuestionsTab />}
+        {tab === "design" && <DesignTab />}
+        {tab === "users" && <PlaceholderTab title="Users" description="Invite tree, usage stats, revenue per user. Coming soon." />}
+        {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
+        {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
+        {tab === "fabric" && <FabricTab />}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Standalone /owner page ─── */
 export default function Owner() {
-  const { isOwner, loading, compactMode } = useAuth();
+  const { isOwner, loading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-  const pathTab = pathname.split("/")[2];
-  const resolvedTab = VALID_TAB_IDS.includes(pathTab) ? pathTab : "dashboard";
-  const [tab, setTab] = useState(resolvedTab);
 
-  useEffect(() => { setTab(resolvedTab); }, [resolvedTab]);
-
-  // Non-owners get bounced (wait for auth to load first)
   useEffect(() => {
     if (!loading && !isOwner) router.replace("/");
   }, [loading, isOwner, router]);
@@ -62,78 +200,8 @@ export default function Owner() {
     <AuthGuard>
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
-
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <div
-            style={{
-              padding: "var(--space-2-5) var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-            }}
-          >
-            <Crown size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                Owner Portal
-              </span>
-            )}
-          </div>
-
-          {/* Tab bar */}
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-1)",
-              padding: "0 var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
-            }}
-          >
-            {TABS.map((t) => {
-              const active = tab === t.id;
-              return (
-                <Tooltip key={t.id} label={compactMode ? t.label : null}>
-                  <button
-                    onClick={() => {
-                      setTab(t.id);
-                      window.history.replaceState({}, "", `/owner/${t.id}`);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1-5)",
-                      padding: "var(--space-2-5) var(--space-3)",
-                      border: "none",
-                      background: active ? "var(--color-bg-alt)" : "transparent",
-                      borderRadius: "var(--radius-md)",
-                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                      fontSize: "var(--font-size-xs)",
-                      fontFamily: "var(--font-primary)",
-                      cursor: "pointer",
-                      transition: `all var(--duration-fast) var(--ease-default)`,
-                    }}
-                  >
-                    <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
-                    {!compactMode && t.label}
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
-
-          {/* Content */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
-            {tab === "dashboard" && <DashboardTab />}
-            {tab === "questions" && <QuestionsTab />}
-            {tab === "design" && <DesignTab />}
-            {tab === "users" && <PlaceholderTab title="Users" description="Invite tree, usage stats, revenue per user. Coming soon." />}
-            {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
-            {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
-            {tab === "fabric" && <FabricTab />}
-          </div>
+          <OwnerPanel />
         </div>
       </div>
     </AuthGuard>

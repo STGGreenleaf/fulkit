@@ -23,12 +23,14 @@ import {
   FileText,
   Paperclip,
   Search,
+  Crown,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import StorageModeSelector from "../../components/StorageModeSelector";
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
+import { OwnerPanel } from "../owner/page";
 
 const TAB_ICON_SIZE = 14;
 import { useVaultContext } from "../../lib/vault";
@@ -180,7 +182,8 @@ const REFERRALS = [
 ];
 
 export default function Settings({ initialTab = "account" }) {
-  const { compactMode } = useAuth();
+  const { compactMode, isOwner } = useAuth();
+  const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
@@ -226,7 +229,7 @@ export default function Settings({ initialTab = "account" }) {
             borderBottom: "1px solid var(--color-border-light)",
           }}
         >
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = tab === t.id;
             return (
               <Tooltip key={t.id} label={compactMode ? t.label : null}>
@@ -268,6 +271,7 @@ export default function Settings({ initialTab = "account" }) {
             {tab === "referrals" && <ReferralsTab />}
             {tab === "billing" && <BillingTab />}
             {tab === "privacy" && <PrivacyTab />}
+            {tab === "owner" && isOwner && <OwnerPanel />}
           </div>
         </div>
       </div>

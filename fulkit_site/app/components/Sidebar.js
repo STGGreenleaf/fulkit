@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Home, MessageCircle, CheckSquare, Settings, Crown, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Home, MessageCircle, CheckSquare, Settings, PanelLeftClose } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -20,7 +19,7 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isOwner, compactMode, setCompactMode } = useAuth();
+  const { compactMode, setCompactMode } = useAuth();
 
   return (
     <nav
@@ -102,36 +101,6 @@ export default function Sidebar() {
         {/* Compact toggle — below nav, available to all */}
         <div style={{ margin: compactMode ? "var(--space-2) 0" : "var(--space-2) var(--space-2-5)", borderTop: "1px solid var(--color-border-light)" }} />
         <CompactToggle compact={compactMode} onToggle={() => setCompactMode(!compactMode)} />
-
-        {/* Owner & Dev — separated from nav */}
-        {isOwner && (
-          <>
-            <div style={{ margin: compactMode ? "var(--space-2) 0" : "var(--space-2) var(--space-2-5)", borderTop: "1px solid var(--color-border-light)" }} />
-            <Tooltip label={compactMode ? "Owner" : null}>
-              <Link
-                href="/owner"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: compactMode ? "center" : "flex-start",
-                  gap: "var(--space-2)",
-                  padding: compactMode ? "var(--space-2)" : "var(--space-2) var(--space-2-5)",
-                  borderRadius: "var(--radius-sm)",
-                  color: pathname === "/owner" ? "var(--color-text)" : "var(--color-text-muted)",
-                  fontWeight: pathname === "/owner" ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                  fontSize: "var(--font-size-base)",
-                  background: pathname === "/owner" ? "var(--color-bg-alt)" : "transparent",
-                  textDecoration: "none",
-                  width: "100%",
-                }}
-              >
-                <Crown size={ICON_SIZE} strokeWidth={1.8} />
-                {!compactMode && "Owner"}
-              </Link>
-            </Tooltip>
-            <DevToggle compact={compactMode} />
-          </>
-        )}
       </div>
 
       {/* Mini Player — bottom of sidebar */}
@@ -190,70 +159,5 @@ function CompactToggle({ compact, onToggle }) {
         {!compact && <PanelLeftClose size={12} strokeWidth={1.8} />}
       </button>
     </Tooltip>
-  );
-}
-
-function DevToggle({ compact }) {
-  const [on, setOn] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("fulkit-dev-mode") === "true";
-    }
-    return false;
-  });
-
-  const toggle = () => {
-    const next = !on;
-    setOn(next);
-    localStorage.setItem("fulkit-dev-mode", String(next));
-    window.location.reload();
-  };
-
-  return (
-    <button
-      onClick={toggle}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: compact ? "center" : "flex-start",
-        gap: "var(--space-2)",
-        padding: compact ? "var(--space-1)" : "var(--space-1) var(--space-2-5) var(--space-1) var(--space-8)",
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "var(--font-size-2xs)",
-        color: "var(--color-text-muted)",
-        fontFamily: "var(--font-primary)",
-        width: "100%",
-      }}
-      title={compact ? "Dev mode" : undefined}
-    >
-      {/* Pill switch */}
-      <div
-        style={{
-          width: 22,
-          height: 12,
-          borderRadius: 6,
-          border: "1px solid var(--color-text-muted)",
-          background: on ? "var(--color-text-muted)" : "transparent",
-          position: "relative",
-          transition: "all var(--duration-fast) var(--ease-default)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: on ? "var(--color-bg)" : "var(--color-text-muted)",
-            position: "absolute",
-            top: 1,
-            left: on ? 11 : 1,
-            transition: "left var(--duration-fast) var(--ease-default)",
-          }}
-        />
-      </div>
-      {!compact && "Dev"}
-    </button>
   );
 }
