@@ -1869,6 +1869,7 @@ export default function FabricPage() {
           style={{
             flex: 1,
             minWidth: 0,
+            height: "100%",
             display: "flex",
             flexDirection: "column",
             background: "var(--color-bg)",
@@ -1893,7 +1894,7 @@ export default function FabricPage() {
           </div>
 
           {/* Content area */}
-          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+          <div style={{ flex: 1, height: 0, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {/* Deck toggle — persistent top-right */}
           <button onClick={toggleDeck} style={{
             position: "absolute", top: 8, right: 8,
@@ -1936,6 +1937,7 @@ export default function FabricPage() {
                 alignItems: "center",
                 height: 48,
                 position: "relative",
+                flexShrink: 0,
               }}
             >
               {/* Thumbnail */}
@@ -2021,6 +2023,7 @@ export default function FabricPage() {
               alignItems: "center",
               minHeight: 0,
               position: "relative",
+              flexShrink: 0,
             }}
           >
 
@@ -2264,7 +2267,7 @@ export default function FabricPage() {
           </div>
 
           {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
-          <div>
+          <div style={{ flexShrink: 0 }}>
             <SignalTerrain
               height={120}
               isPlaying={isPlaying}
@@ -2285,6 +2288,7 @@ export default function FabricPage() {
               gap: "var(--space-1)",
               padding: "0 var(--space-3)",
               borderBottom: "1px solid var(--color-border-light)",
+              flexShrink: 0,
             }}
           >
             {/* Deck toggle */}
@@ -2335,7 +2339,7 @@ export default function FabricPage() {
           </div>
 
           {/* ═══ 3-COLUMN WORKSPACE ═══ */}
-          <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+          <div style={{ flex: 1, height: 0, display: "flex", minHeight: 0, overflow: "hidden" }}>
 
             {/* ── LEFT: Browse ── */}
             <div
@@ -2404,78 +2408,184 @@ export default function FabricPage() {
                         )}
                         {musicMessages.map((msg, i) => (
                           <div key={i} style={{
-                            marginBottom: "var(--space-2)",
+                            marginBottom: "var(--space-3)",
                             fontSize: "var(--font-size-xs)",
                             fontFamily: "var(--font-primary)",
                             color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
                             fontStyle: msg.role === "user" ? "italic" : "normal",
-                            lineHeight: 1.4,
+                            lineHeight: msg.role === "assistant" ? "var(--line-height-relaxed)" : 1.4,
                             whiteSpace: "pre-wrap",
                           }}>
-                            {msg.role === "assistant" ? msg.content.split("\n").map((line, li) => {
-                              // Song recommendation: Artist - Title BPM [+] — styled text, no button (tracks auto-add to B-Sides)
-                              const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
-                              if (plusMatch) {
-                                const artist = plusMatch[1].trim();
-                                const title = plusMatch[2].replace(/\s+\d+\s*$/, "").trim();
-                                const bpmText = plusMatch[3] ? `  ${plusMatch[3]} BPM` : "";
-                                return (
-                                  <div key={li} style={{ fontFamily: "var(--font-mono)", fontSize: "var(--font-size-xs)" }}>
-                                    {artist} - {title}{bpmText}
+                            {msg.role === "assistant" ? (() => {
+                              const lines = msg.content.split("\n");
+                              const elements = [];
+                              let songBlock = [];
+
+                              const flushSongs = () => {
+                                if (songBlock.length === 0) return;
+                                elements.push(
+                                  <div key={`songs-${elements.length}`} style={{
+                                    borderLeft: "2px solid var(--color-border)",
+                                    paddingLeft: "var(--space-2)",
+                                    marginTop: "var(--space-1-5)",
+                                    marginBottom: "var(--space-1-5)",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 2,
+                                  }}>
+                                    {songBlock.map((s, si) => (
+                                      <div key={si} style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "var(--font-size-2xs)",
+                                        letterSpacing: "var(--letter-spacing-wide)",
+                                        color: "var(--color-text-secondary)",
+                                        lineHeight: "var(--line-height-snug)",
+                                      }}>
+                                        <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{s.artist}</span>
+                                        {" — "}
+                                        <span>{s.title}</span>
+                                        {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
+                                      </div>
+                                    ))}
                                   </div>
                                 );
-                              }
-                              // Parse album/artist links: {Display}[album: query] or {Display}[artist: query]
-                              const linkRegex = /\{(.+?)\}\[(album|artist):\s*(.+?)\]/g;
-                              if (linkRegex.test(line)) {
-                                linkRegex.lastIndex = 0;
+                                songBlock = [];
+                              };
+
+                              // Helper: parse **bold** and *italic* in a text string
+                              const parseInline = (text, keyPrefix) => {
+                                const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
                                 const parts = [];
-                                let lastIndex = 0;
-                                let match;
-                                while ((match = linkRegex.exec(line)) !== null) {
-                                  if (match.index > lastIndex) parts.push(line.slice(lastIndex, match.index));
-                                  const display = match[1];
-                                  const query = match[3];
-                                  parts.push(
-                                    <button
-                                      key={`${li}-${match.index}`}
-                                      onClick={() => loadDiscovery(query)}
-                                      style={{
-                                        display: "inline",
-                                        background: "none",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        padding: 0,
-                                        fontFamily: "var(--font-primary)",
-                                        fontSize: "var(--font-size-xs)",
-                                        color: "var(--color-text)",
-                                        fontWeight: "var(--font-weight-semibold)",
-                                        textDecoration: "underline",
-                                        textDecorationColor: "var(--color-border)",
-                                        textUnderlineOffset: 2,
-                                      }}
-                                    >
-                                      {display}
-                                    </button>
-                                  );
-                                  lastIndex = match.index + match[0].length;
+                                let last = 0;
+                                let m;
+                                while ((m = regex.exec(text)) !== null) {
+                                  if (m.index > last) parts.push(text.slice(last, m.index));
+                                  if (m[1]) parts.push(<strong key={`${keyPrefix}-b-${m.index}`} style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{m[1]}</strong>);
+                                  else if (m[2]) parts.push(<em key={`${keyPrefix}-i-${m.index}`}>{m[2]}</em>);
+                                  last = m.index + m[0].length;
                                 }
-                                if (lastIndex < line.length) parts.push(line.slice(lastIndex));
-                                return <div key={li}>{parts}</div>;
-                              }
-                              return <div key={li}>{line}</div>;
-                            }) : msg.content}
+                                if (last < text.length) parts.push(text.slice(last));
+                                return parts.length > 0 ? parts : text;
+                              };
+
+                              lines.forEach((line, li) => {
+                                // Song recommendation: Artist - Title BPM [+]
+                                const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
+                                if (plusMatch) {
+                                  songBlock.push({
+                                    artist: plusMatch[1].trim(),
+                                    title: plusMatch[2].replace(/\s+\d+\s*$/, "").trim(),
+                                    bpm: plusMatch[3] ? `${plusMatch[3]} BPM` : null,
+                                  });
+                                  return;
+                                }
+                                flushSongs();
+
+                                // Empty line → paragraph break
+                                if (!line.trim()) {
+                                  elements.push(<div key={li} style={{ height: "var(--space-2)" }} />);
+                                  return;
+                                }
+
+                                // Album/artist links: {Display}[album: query] or {Display}[artist: query]
+                                const linkRegex = /\{(.+?)\}\[(album|artist):\s*(.+?)\]/g;
+                                if (linkRegex.test(line)) {
+                                  linkRegex.lastIndex = 0;
+                                  const parts = [];
+                                  let lastIndex = 0;
+                                  let match;
+                                  while ((match = linkRegex.exec(line)) !== null) {
+                                    if (match.index > lastIndex) parts.push(parseInline(line.slice(lastIndex, match.index), `${li}-t`));
+                                    parts.push(
+                                      <button
+                                        key={`${li}-${match.index}`}
+                                        onClick={() => loadDiscovery(match[3])}
+                                        style={{
+                                          display: "inline",
+                                          background: "none",
+                                          border: "none",
+                                          cursor: "pointer",
+                                          padding: 0,
+                                          fontFamily: "var(--font-primary)",
+                                          fontSize: "var(--font-size-xs)",
+                                          color: "var(--color-text)",
+                                          fontWeight: "var(--font-weight-semibold)",
+                                          textDecoration: "underline",
+                                          textDecorationColor: "var(--color-border)",
+                                          textUnderlineOffset: 2,
+                                        }}
+                                      >
+                                        {match[1]}
+                                      </button>
+                                    );
+                                    lastIndex = match.index + match[0].length;
+                                  }
+                                  if (lastIndex < line.length) parts.push(parseInline(line.slice(lastIndex), `${li}-e`));
+                                  elements.push(<div key={li}>{parts}</div>);
+                                  return;
+                                }
+
+                                // List items (- or •)
+                                const listMatch = line.match(/^[\s]*[-•]\s+(.+)/);
+                                if (listMatch) {
+                                  elements.push(
+                                    <div key={li} style={{
+                                      paddingLeft: "var(--space-3)",
+                                      textIndent: "-var(--space-2)",
+                                      lineHeight: "var(--line-height-relaxed)",
+                                      marginBottom: "var(--space-1)",
+                                    }}>
+                                      <span style={{ color: "var(--color-text-dim)", marginRight: "var(--space-1)" }}>·</span>
+                                      {parseInline(listMatch[1], li)}
+                                    </div>
+                                  );
+                                  return;
+                                }
+
+                                // Numbered items (1. 2. 3.)
+                                const numMatch = line.match(/^(\d+)[.)]\s+(.+)/);
+                                if (numMatch) {
+                                  elements.push(
+                                    <div key={li} style={{
+                                      display: "flex",
+                                      gap: "var(--space-1-5)",
+                                      lineHeight: "var(--line-height-relaxed)",
+                                      marginBottom: "var(--space-1)",
+                                    }}>
+                                      <span style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "var(--font-size-2xs)",
+                                        color: "var(--color-text-dim)",
+                                        flexShrink: 0,
+                                        marginTop: 1,
+                                      }}>{numMatch[1]}.</span>
+                                      <span style={{ textWrap: "pretty" }}>{parseInline(numMatch[2], li)}</span>
+                                    </div>
+                                  );
+                                  return;
+                                }
+
+                                // Regular text — with inline parsing and orphan control
+                                elements.push(
+                                  <div key={li} style={{ textWrap: "pretty", marginBottom: "var(--space-1-5)" }}>
+                                    {parseInline(line, li)}
+                                  </div>
+                                );
+                              });
+                              flushSongs();
+                              return elements;
+                            })() : msg.content}
                           </div>
                         ))}
-                        {musicStreaming && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "var(--space-2) 0" }}>
+                        {musicStreaming && !(musicMessages[musicMessages.length - 1]?._streaming && musicMessages[musicMessages.length - 1]?.content) && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, padding: "var(--space-1) 0" }}>
                             {[0, 1, 2].map((dot) => (
                               <span
                                 key={dot}
                                 style={{
                                   display: "inline-block",
-                                  width: 6,
-                                  height: 6,
+                                  width: 3,
+                                  height: 3,
                                   borderRadius: "50%",
                                   background: "var(--color-text-muted)",
                                   animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
