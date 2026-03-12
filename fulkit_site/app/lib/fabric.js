@@ -694,11 +694,28 @@ export function FabricProvider({ children }) {
     if (!uri) return;
     if (playInFlightRef.current !== requestId) return; // superseded
 
-    const result = await apiFetch("/api/fabric/controls", {
+    let result = await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "play_track", value: { uri } }),
     });
-    if (!result?.ok) console.warn("[fabric] play_track failed:", result);
+
+    // If play failed, try activating a device first then retry
+    if (!result?.ok) {
+      const devRes = await apiFetch("/api/fabric/devices");
+      const device = devRes?.devices?.[0];
+      if (device) {
+        await apiFetch("/api/fabric/devices", {
+          method: "POST",
+          body: JSON.stringify({ device_id: device.id, play: false }),
+        });
+        await new Promise(r => setTimeout(r, 300));
+        result = await apiFetch("/api/fabric/controls", {
+          method: "POST",
+          body: JSON.stringify({ action: "play_track", value: { uri } }),
+        });
+      }
+      if (!result?.ok) console.warn("[fabric] play_track failed:", result);
+    }
   }, [isDev, apiFetch]);
   playTrackRef.current = playTrack;
 
