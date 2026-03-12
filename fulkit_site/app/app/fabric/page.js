@@ -3331,7 +3331,7 @@ export default function FabricPage() {
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
-                  marginBottom: "var(--space-2)",
+                  marginBottom: guyCrateCollapsed ? 0 : "var(--space-2)",
                   flex: guyCrateCollapsed ? "none" : 1,
                   minHeight: 0,
                   display: "flex",
