@@ -5,7 +5,7 @@ import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, Exte
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
-import LogoMark from "../../components/LogoMark";
+// LogoMark removed — using text wordmark to match other pages
 import Tooltip from "../../components/Tooltip";
 import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
@@ -1291,12 +1291,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: 28, zIndex: 1,
         display: "flex", alignItems: "center", gap: "var(--space-2)",
       }}>
-        <LogoMark size={22} />
         <span style={{
-          fontSize: "var(--font-size-base)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-black)",
           letterSpacing: "var(--letter-spacing-tight)",
-          color: "var(--color-text-muted)",
+          color: "var(--color-text)",
         }}>
           Fülkit
         </span>
@@ -1454,6 +1453,7 @@ export default function FabricPage() {
     guyCrate,
     saveGuyCrateAsSet,
     addToGuyCrate,
+    enrichGuyCrateTrack,
     removeFromGuyCrate,
     clearGuyCrate,
     playTrack,
@@ -1652,8 +1652,23 @@ export default function FabricPage() {
     return () => clearTimeout(t);
   }, [deckHintShown]);
 
-  // Discovery — load album tracks from BTC album links
   const { accessToken, compactMode } = useAuth();
+
+  // Fetch album art for a BTC-suggested track and enrich it in B-Sides
+  const enrichTrackArt = useCallback(async (trackId, artist, title) => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`/api/fabric/search?q=${encodeURIComponent(`${artist} ${title}`)}&type=track`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data?.tracks?.[0]?.image) {
+        enrichGuyCrateTrack(trackId, { art: data.tracks[0].image });
+      }
+    } catch {}
+  }, [accessToken, enrichGuyCrateTrack]);
+
+  // Discovery — load album tracks from BTC album links
   const loadDiscovery = useCallback(async (query) => {
     if (!accessToken || discoveryLoading) return;
     setDiscoveryLoading(true);
@@ -2429,52 +2444,57 @@ export default function FabricPage() {
                                         lineHeight: "var(--line-height-snug)",
                                         padding: "var(--space-1) 0",
                                       }}>
-                                        {/* Line 1: Artist — Title */}
-                                        <div style={{ color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
-                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: isPlaying ? "var(--color-text)" : "var(--color-text)" }}>{s.artist}</span>
-                                          {" — "}
-                                          <span>{s.title}</span>
+                                        {/* Line 1: Artist */}
+                                        <div style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
+                                          {s.artist}
                                         </div>
-                                        {/* Line 2: BPM + Play + Add */}
-                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: 2 }}>
-                                          {s.bpm && <span style={{ color: "var(--color-text-dim)", fontSize: 9 }}>{s.bpm}</span>}
-                                          <button
-                                            onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
-                                            style={{
-                                              background: "none", border: "none", cursor: "pointer", padding: 0,
-                                              color: isPlaying ? "var(--color-text)" : "var(--color-text-muted)",
-                                              opacity: isPlaying ? 1 : 0.7,
-                                              transition: "opacity 120ms",
-                                              display: "flex", alignItems: "center",
-                                            }}
-                                            title="Play"
-                                            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                                            onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.opacity = "0.7"; }}
-                                          >
-                                            <Play size={10} strokeWidth={2.5} fill={isPlaying ? "currentColor" : "none"} />
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              if (alreadyAdded) return;
-                                              addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
-                                              setGuyCrateCollapsed(false);
-                                              try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
-                                            }}
-                                            style={{
-                                              background: "none", border: "none",
-                                              cursor: alreadyAdded ? "default" : "pointer",
-                                              padding: 0,
-                                              color: alreadyAdded ? "var(--color-text)" : "var(--color-text-muted)",
-                                              opacity: alreadyAdded ? 0.8 : 0.7,
-                                              transition: "opacity 120ms",
-                                              display: "flex", alignItems: "center",
-                                            }}
-                                            title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
-                                            onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
-                                            onMouseLeave={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "0.7"; }}
-                                          >
-                                            {alreadyAdded ? <Check size={10} strokeWidth={2.2} /> : <CornerDownRight size={10} strokeWidth={2} />}
-                                          </button>
+                                        {/* Line 2: - Song title */}
+                                        <div style={{ color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                                          - {s.title}
+                                        </div>
+                                        {/* Line 3: BPM left, Play + Save right */}
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+                                          <span style={{ color: "var(--color-text-dim)", fontSize: 9 }}>{s.bpm || ""}</span>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                            <button
+                                              onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
+                                              style={{
+                                                background: "none", border: "none", cursor: "pointer", padding: 0,
+                                                color: isPlaying ? "var(--color-text)" : "var(--color-text-muted)",
+                                                opacity: isPlaying ? 1 : 0.7,
+                                                transition: "opacity 120ms",
+                                                display: "flex", alignItems: "center",
+                                              }}
+                                              title="Play"
+                                              onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                                              onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.opacity = "0.7"; }}
+                                            >
+                                              <Play size={10} strokeWidth={2.5} fill={isPlaying ? "currentColor" : "none"} />
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                if (alreadyAdded) return;
+                                                addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                                enrichTrackArt(s.trackId, s.artist, s.title);
+                                                setGuyCrateCollapsed(false);
+                                                try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                              }}
+                                              style={{
+                                                background: "none", border: "none",
+                                                cursor: alreadyAdded ? "default" : "pointer",
+                                                padding: 0,
+                                                color: alreadyAdded ? "var(--color-text)" : "var(--color-text-muted)",
+                                                opacity: alreadyAdded ? 0.8 : 0.7,
+                                                transition: "opacity 120ms",
+                                                display: "flex", alignItems: "center",
+                                              }}
+                                              title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
+                                              onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
+                                              onMouseLeave={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "0.7"; }}
+                                            >
+                                              {alreadyAdded ? <Check size={10} strokeWidth={2.2} /> : <CornerDownRight size={10} strokeWidth={2} />}
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
                                       );
@@ -2486,6 +2506,7 @@ export default function FabricPage() {
                                           songsWithIds.forEach(s => {
                                             if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
                                               addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                              enrichTrackArt(s.trackId, s.artist, s.title);
                                             }
                                           });
                                           setGuyCrateCollapsed(false);
@@ -2588,6 +2609,7 @@ export default function FabricPage() {
                                           allMsgSongs.forEach(s => {
                                             if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
                                               addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                              enrichTrackArt(s.trackId, s.artist, s.title);
                                             }
                                           });
                                           setGuyCrateCollapsed(false);
@@ -3399,6 +3421,11 @@ export default function FabricPage() {
                               borderBottom: "1px solid var(--color-border-light)",
                               background: isActive ? "var(--color-bg-alt)" : "transparent",
                             }}>
+                            {track.art && (
+                              <img src={track.art} alt="" style={{
+                                width: 28, height: 28, borderRadius: 2, flexShrink: 0, objectFit: "cover",
+                              }} />
+                            )}
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
                                 fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",

@@ -561,6 +561,19 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets]);
 
+  const enrichGuyCrateTrack = useCallback((trackId, fields) => {
+    setSetsData((prev) => {
+      const gc = prev.sets.find(s => s.id === "guy-crate");
+      if (!gc) return prev;
+      const t = gc.tracks.find(t => t.id === trackId);
+      if (!t) return prev;
+      Object.assign(t, fields);
+      const next = { ...prev, sets: [...prev.sets] };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
   const removeFromGuyCrate = useCallback((trackId) => {
     updateHistorySignal(trackId, { kept: false, removedAt: Date.now() });
     setSetsData((prev) => {
@@ -671,6 +684,7 @@ export function FabricProvider({ children }) {
           // Cache so we don't search again
           track.uri = uri;
           if (data.tracks[0].spotify_id) track.id = data.tracks[0].spotify_id;
+          if (data.tracks[0].image) track.art = data.tracks[0].image;
         }
       } catch {}
     }
@@ -985,6 +999,7 @@ export function FabricProvider({ children }) {
         guyCrate,
         saveGuyCrateAsSet,
         addToGuyCrate,
+        enrichGuyCrateTrack,
         removeFromGuyCrate,
         clearGuyCrate,
         playTrack,

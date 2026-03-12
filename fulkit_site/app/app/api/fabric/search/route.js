@@ -87,6 +87,7 @@ export async function GET(request) {
           album: t.album?.name || null,
           duration_ms: t.duration_ms,
           uri: t.uri,
+          image: t.album?.images?.[0]?.url || null,
         })),
       });
     }
