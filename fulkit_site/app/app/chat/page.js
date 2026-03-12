@@ -859,7 +859,7 @@ export default function Chat() {
                       }}
                     >
                       {typeof msg.content === "string" ? msg.content.trim() : msg.content}
-                      {streaming && i === messages.length - 1 && msg.role === "assistant" && (
+                      {streaming && i === messages.length - 1 && msg.role === "assistant" && !msg.content && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 4, verticalAlign: "text-bottom" }}>
                           {[0, 1, 2].map((dot) => (
                             <span
