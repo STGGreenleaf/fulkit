@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import { getGitHubToken, githubFetch } from "../../../lib/github";
 import { getNumbrlyToken, numbrlyFetch } from "../../../lib/numbrly";
 import { getTrueGaugeToken, truegaugeFetch } from "../../../lib/truegauge";
+import { getSquareToken, squareFetch } from "../../../lib/square-server";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -342,6 +343,323 @@ const TG_TOOL_ACTION_MAP = {
 
 // Write actions that need POST method
 const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", "undo"]);
+
+// Square tool schemas — POS, orders, inventory, customers, invoices, team
+const SQUARE_TOOLS = [
+  {
+    name: "square_daily_summary",
+    description: "Get today's sales summary — total revenue, order count, payment breakdown, top items. Use when asked about today's business, close-out, daily recap, or 'how did we do today?'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today if omitted." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_orders",
+    description: "Search or list orders. Filter by date range, status, or location.",
+    input_schema: {
+      type: "object",
+      properties: {
+        start_date: { type: "string", description: "Start date (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "End date (YYYY-MM-DD)" },
+        limit: { type: "number", description: "Max results (default 50)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_payments",
+    description: "List payments. Filter by date range, status, source type.",
+    input_schema: {
+      type: "object",
+      properties: {
+        begin_time: { type: "string", description: "Start datetime (RFC3339)" },
+        end_time: { type: "string", description: "End datetime (RFC3339)" },
+        limit: { type: "number", description: "Max results (default 50)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_catalog",
+    description: "Search catalog items (menu items, products). Filter by name or category.",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "Search text (item name, description)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_inventory",
+    description: "Check inventory counts for catalog items at a location.",
+    input_schema: {
+      type: "object",
+      properties: {
+        catalog_object_ids: { type: "array", items: { type: "string" }, description: "Catalog object IDs to check" },
+        location_ids: { type: "array", items: { type: "string" }, description: "Location IDs to check" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_customers",
+    description: "Search customers by name, email, or phone.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query (name, email, or phone)" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_customer_detail",
+    description: "Get full customer profile including visit history and spend.",
+    input_schema: {
+      type: "object",
+      properties: {
+        customer_id: { type: "string", description: "Customer ID" },
+      },
+      required: ["customer_id"],
+    },
+  },
+  {
+    name: "square_invoices",
+    description: "List invoices. Filter by status (DRAFT, UNPAID, PAID, CANCELED, etc.).",
+    input_schema: {
+      type: "object",
+      properties: {
+        location_id: { type: "string", description: "Location ID (required by Square)" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_team",
+    description: "List team members and their roles.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 50)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_shifts",
+    description: "List labor shifts. Filter by team member or date.",
+    input_schema: {
+      type: "object",
+      properties: {
+        start_date: { type: "string", description: "Start date (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "End date (YYYY-MM-DD)" },
+        team_member_id: { type: "string", description: "Filter by team member ID" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_locations",
+    description: "List business locations with addresses and hours.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "square_refunds",
+    description: "List refunds. Filter by date range.",
+    input_schema: {
+      type: "object",
+      properties: {
+        begin_time: { type: "string", description: "Start datetime (RFC3339)" },
+        end_time: { type: "string", description: "End datetime (RFC3339)" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+];
+
+// Execute a Square tool call
+async function executeSquareTool(toolName, input, userId) {
+  const today = new Date().toISOString().split("T")[0];
+
+  switch (toolName) {
+    case "square_daily_summary": {
+      const date = input.date || today;
+      const [ordersRes, paymentsRes] = await Promise.all([
+        squareFetch(userId, "/orders/search", {
+          method: "POST",
+          body: JSON.stringify({
+            query: {
+              filter: {
+                date_time_filter: {
+                  created_at: { start_at: `${date}T00:00:00Z`, end_at: `${date}T23:59:59Z` },
+                },
+              },
+            },
+            limit: 500,
+          }),
+        }),
+        squareFetch(userId, `/payments?begin_time=${date}T00:00:00Z&end_time=${date}T23:59:59Z`),
+      ]);
+      const orders = ordersRes.error ? [] : (await ordersRes.json()).orders || [];
+      const payments = paymentsRes.error ? [] : (await paymentsRes.json()).payments || [];
+      const totalRevenue = payments.reduce((sum, p) => sum + (p.total_money?.amount || 0), 0);
+      const totalTips = payments.reduce((sum, p) => sum + (p.tip_money?.amount || 0), 0);
+      const refundTotal = payments.reduce((sum, p) => sum + (p.refunded_money?.amount || 0), 0);
+      const cardPayments = payments.filter((p) => p.source_type === "CARD").length;
+      const cashPayments = payments.filter((p) => p.source_type === "CASH").length;
+      // Count items sold
+      const itemCounts = {};
+      for (const order of orders) {
+        for (const li of order.line_items || []) {
+          const name = li.name || "Unknown";
+          itemCounts[name] = (itemCounts[name] || 0) + parseInt(li.quantity || "1", 10);
+        }
+      }
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      return {
+        date,
+        orders: orders.length,
+        payments: payments.length,
+        revenue: totalRevenue / 100,
+        tips: totalTips / 100,
+        refunds: refundTotal / 100,
+        net: (totalRevenue - refundTotal) / 100,
+        breakdown: { card: cardPayments, cash: cashPayments, other: payments.length - cardPayments - cashPayments },
+        topItems: topItems.map(([name, qty]) => ({ name, qty })),
+      };
+    }
+    case "square_orders": {
+      const start = input.start_date || today;
+      const end = input.end_date || today;
+      const res = await squareFetch(userId, "/orders/search", {
+        method: "POST",
+        body: JSON.stringify({
+          query: {
+            filter: {
+              date_time_filter: {
+                created_at: { start_at: `${start}T00:00:00Z`, end_at: `${end}T23:59:59Z` },
+              },
+            },
+            sort: { sort_field: "CREATED_AT", sort_order: "DESC" },
+          },
+          limit: input.limit || 50,
+        }),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_payments": {
+      const params = new URLSearchParams();
+      if (input.begin_time) params.set("begin_time", input.begin_time);
+      if (input.end_time) params.set("end_time", input.end_time);
+      if (input.limit) params.set("limit", String(input.limit));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await squareFetch(userId, `/payments${qs}`);
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_catalog": {
+      const body = {};
+      if (input.text) body.text_filter = { keywords: [input.text] };
+      const res = await squareFetch(userId, "/catalog/search", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_inventory": {
+      const res = await squareFetch(userId, "/inventory/counts/batch-retrieve", {
+        method: "POST",
+        body: JSON.stringify({
+          catalog_object_ids: input.catalog_object_ids || [],
+          location_ids: input.location_ids || [],
+        }),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_customers": {
+      const body = {};
+      if (input.query) {
+        body.query = { filter: { fuzzy: { key: "DISPLAY_NAME", value: input.query } } };
+      }
+      body.limit = input.limit || 20;
+      const res = await squareFetch(userId, "/customers/search", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_customer_detail": {
+      const res = await squareFetch(userId, `/customers/${input.customer_id}`);
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_invoices": {
+      const params = new URLSearchParams();
+      if (input.location_id) params.set("location_id", input.location_id);
+      if (input.limit) params.set("limit", String(input.limit));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await squareFetch(userId, `/invoices${qs}`);
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_team": {
+      const res = await squareFetch(userId, "/team-members/search", {
+        method: "POST",
+        body: JSON.stringify({ limit: input.limit || 50 }),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_shifts": {
+      const body = { query: {} };
+      const filters = {};
+      if (input.start_date || input.end_date) {
+        filters.start = {};
+        if (input.start_date) filters.start.start_at = `${input.start_date}T00:00:00Z`;
+        if (input.end_date) filters.start.end_at = `${input.end_date}T23:59:59Z`;
+      }
+      if (input.team_member_id) {
+        filters.team_member_ids = [input.team_member_id];
+      }
+      if (Object.keys(filters).length > 0) body.query.filter = filters;
+      const res = await squareFetch(userId, "/labor/shifts/search", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_locations": {
+      const res = await squareFetch(userId, "/locations");
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    case "square_refunds": {
+      const params = new URLSearchParams();
+      if (input.begin_time) params.set("begin_time", input.begin_time);
+      if (input.end_time) params.set("end_time", input.end_time);
+      if (input.limit) params.set("limit", String(input.limit));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await squareFetch(userId, `/refunds${qs}`);
+      if (res.error) return { error: res.error };
+      return await res.json();
+    }
+    default:
+      return { error: "Unknown Square tool" };
+  }
+}
 
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
@@ -769,10 +1087,12 @@ export async function POST(request) {
     // Fetch integration API keys (needed for tool execution)
     let nblKey = null;
     let tgKey = null;
+    let sqToken = null;
     if (userId) {
-      [nblKey, tgKey] = await Promise.all([
+      [nblKey, tgKey, sqToken] = await Promise.all([
         getNumbrlyToken(userId),
         getTrueGaugeToken(userId),
+        getSquareToken(userId),
       ]);
     }
 
@@ -846,6 +1166,7 @@ export async function POST(request) {
       ...(userId ? NOTES_TOOLS : []),
       ...(nblKey ? NUMBRLY_TOOLS : []),
       ...(tgKey ? TRUEGAUGE_TOOLS : []),
+      ...(sqToken ? SQUARE_TOOLS : []),
     ];
     const baseOpts = {
       model: config.model,
@@ -958,6 +1279,17 @@ export async function POST(request) {
                 try {
                   const opts = TG_WRITE_ACTIONS.has(tgAction) ? { method: "POST" } : {};
                   const result = await truegaugeFetch(tgKey, tgAction, block.input || {}, opts);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Square tools
+              if (block.name.startsWith("square_") && sqToken) {
+                try {
+                  const result = await executeSquareTool(block.name, block.input || {}, userId);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

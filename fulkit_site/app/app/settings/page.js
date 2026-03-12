@@ -138,6 +138,11 @@ const SOURCE_LOGOS = {
       <path d="M13.4 7.2l-3.2 5.6c-.3.5.1 1.1.7 1.1h.2c.5 0 .9-.3 1.1-.7l2.5-5c.3-.5-.2-1.1-.8-1.1-.2 0-.4.1-.5.1z"/>
     </svg>
   ),
+  square: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M18 2H6C3.79 2 2 3.79 2 6v12c0 2.21 1.79 4 4 4h12c2.21 0 4-1.79 4-4V6c0-2.21-1.79-4-4-4zm-1 13c0 .55-.45 1-1 1H8c-.55 0-1-.45-1-1V9c0-.55.45-1 1-1h8c.55 0 1 .45 1 1v6z"/>
+    </svg>
+  ),
 };
 
 // Mock connected state — will come from DB
@@ -145,7 +150,7 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -164,6 +169,7 @@ const ALL_SOURCES = [
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
   { id: "truegauge", name: "TrueGauge", cat: "Profitability Analytics" },
+  { id: "square", name: "Square", cat: "Payments & POS" },
 ];
 
 const PREFERENCES = [
@@ -545,6 +551,11 @@ function SourcesTab() {
   const [tgDisconnecting, setTgDisconnecting] = useState(false);
   const [tgLastSynced, setTgLastSynced] = useState(null);
 
+  const [squareConnected, setSquareConnected] = useState(false);
+  const [squareExpanded, setSquareExpanded] = useState(false);
+  const [squareLastSynced, setSquareLastSynced] = useState(null);
+  const [squareDisconnecting, setSquareDisconnecting] = useState(false);
+
   // Fetch repos and active state on mount
   useEffect(() => {
     if (isDev || !accessToken || !githubConnected) return;
@@ -560,6 +571,9 @@ function SourcesTab() {
     }
     if (params.get("sp") === "connected") {
       setFabricConnected(true);
+    }
+    if (params.get("sq") === "connected") {
+      setSquareConnected(true);
     }
   }, [accessToken, checkGitHub]);
 
@@ -587,6 +601,15 @@ function SourcesTab() {
     fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setTgConnected(data.connected); if (data.lastSynced) setTgLastSynced(data.lastSynced); } })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Square connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/square/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setSquareConnected(data.connected); if (data.lastSynced) setSquareLastSynced(data.lastSynced); } })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -745,17 +768,48 @@ function SourcesTab() {
     setTgDisconnecting(false);
   }
 
+  function connectSquare() {
+    if (isDev) { setSquareConnected(true); return; }
+    if (accessToken) {
+      window.location.href = "/api/square/connect?token=" + encodeURIComponent(accessToken);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.location.href = "/api/square/connect?token=" + encodeURIComponent(token);
+      } else {
+        alert("No active session. Please sign out and sign back in, then try again.");
+      }
+    }).catch(() => {
+      alert("Session error. Please sign out and sign back in.");
+    });
+  }
+
+  async function disconnectSquare() {
+    setSquareDisconnecting(true);
+    try {
+      await fetch("/api/square/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setSquareConnected(false);
+    } catch {}
+    setSquareDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
     ...(fabricConnected ? ["fabric"] : []),
     ...(numbrlyConnected ? ["numbrly"] : []),
     ...(tgConnected ? ["truegauge"] : []),
+    ...(squareConnected ? ["square"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly" && s.id !== "truegauge");
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly" && s.id !== "truegauge" && s.id !== "square");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
-    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && s.id !== "numbrly" && s.id !== "truegauge"
+    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && s.id !== "numbrly" && s.id !== "truegauge" && s.id !== "square"
   );
 
   const connect = (id) => {
@@ -763,6 +817,7 @@ function SourcesTab() {
     if (id === "fabric") { connectFabric(); return; }
     if (id === "numbrly") { setNumbrlyExpanded(true); return; }
     if (id === "truegauge") { setTgExpanded(true); return; }
+    if (id === "square") { connectSquare(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -905,7 +960,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -1120,6 +1175,44 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* Square — connected */}
+            {squareConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.square}
+                  name="Square"
+                  subtitle="Your business, connected."
+                  isExpanded={squareExpanded}
+                  onToggle={() => setSquareExpanded(!squareExpanded)}
+                />
+                <Drawer open={squareExpanded}>
+                  {richDrawerContent({
+                    expanded: squareExpanded,
+                    description: "Square runs your register, tracks your inventory, manages your team, and handles your invoices. Connecting it means F\u00FClkit sees everything your business does in a day \u2014 every transaction, every shift, every item sold.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Live transaction data, daily closeout summaries, inventory counts, customer profiles, team schedules, and invoice status. Ask how the day went and get real numbers.",
+                    tryPrompt: "How did we do today?",
+                    linkLabel: "squareup.com",
+                    linkHref: "https://squareup.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{squareLastSynced ? ` \u00B7 Last synced ${timeAgo(squareLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectSquare}
+                          disabled={squareDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: squareDisconnecting ? 0.5 : 1 }}
+                        >
+                          {squareDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
             {connectedSources.filter((s) => s.id !== "google" && s.id !== "numbrly" && s.id !== "truegauge").map((src) => {
               const isExpanded = expanded[src.id];
@@ -1147,7 +1240,7 @@ function SourcesTab() {
       )}
 
       {/* Suggested */}
-      {(!numbrlyConnected || !tgConnected) && (
+      {(!numbrlyConnected || !tgConnected || !squareConnected) && (
         <>
           <SectionTitle>Suggested</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
@@ -1260,6 +1353,47 @@ function SourcesTab() {
                             </div>
                           </DrawerItem>
                         )}
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Square — suggested card with swivel */}
+            {!squareConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.square}
+                  name="Square"
+                  subtitle="Your business, connected."
+                  isExpanded={squareExpanded}
+                  onToggle={() => setSquareExpanded(!squareExpanded)}
+                />
+                <Drawer open={squareExpanded}>
+                  {richDrawerContent({
+                    expanded: squareExpanded,
+                    description: "Square runs your register, tracks your inventory, manages your team, and handles your invoices. Connecting it means F\u00FClkit sees everything your business does in a day \u2014 every transaction, every shift, every item sold.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Live transaction data, daily closeout summaries, inventory counts, customer profiles, team schedules, and invoice status. Ask how the day went and get real numbers.",
+                    tryPrompt: "How did we do today?",
+                    linkLabel: "squareup.com",
+                    linkHref: "https://squareup.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                        <DrawerItem index={5} visible={squareExpanded}>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                            Connect your Square account to let F{"\u00FC"}lkit access your business data.
+                          </div>
+                        </DrawerItem>
+                        <DrawerItem index={6} visible={squareExpanded}>
+                          <button
+                            onClick={connectSquare}
+                            style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
+                          >
+                            Connect Square
+                          </button>
+                        </DrawerItem>
                       </div>
                     ),
                   })}
