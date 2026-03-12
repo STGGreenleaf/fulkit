@@ -860,17 +860,21 @@ export default function Chat() {
                     >
                       {typeof msg.content === "string" ? msg.content.trim() : msg.content}
                       {streaming && i === messages.length - 1 && msg.role === "assistant" && (
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: 2,
-                            height: "1em",
-                            background: "var(--color-text-muted)",
-                            marginLeft: 2,
-                            animation: "blink 0.8s infinite",
-                            verticalAlign: "text-bottom",
-                          }}
-                        />
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 4, verticalAlign: "text-bottom" }}>
+                          {[0, 1, 2].map((dot) => (
+                            <span
+                              key={dot}
+                              style={{
+                                display: "inline-block",
+                                width: 5,
+                                height: 5,
+                                borderRadius: "50%",
+                                background: "var(--color-text-muted)",
+                                animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
+                              }}
+                            />
+                          ))}
+                        </span>
                       )}
                     </div>
                     {/* Pin + Copy + Export actions — assistant messages, on hover or if pinned */}
@@ -1404,6 +1408,10 @@ export default function Chat() {
           @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0; }
+          }
+          @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
           }
         `}</style>
       </div>
