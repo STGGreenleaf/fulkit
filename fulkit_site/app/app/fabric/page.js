@@ -2468,7 +2468,21 @@ export default function FabricPage() {
                           </div>
                         ))}
                         {musicStreaming && (
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>...</div>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", display: "flex", alignItems: "center", gap: 3, padding: "var(--space-1) 0" }}>
+                            {[0, 1, 2].map((dot) => (
+                              <span
+                                key={dot}
+                                style={{
+                                  display: "inline-block",
+                                  width: 4,
+                                  height: 4,
+                                  borderRadius: "50%",
+                                  background: "var(--color-text-dim)",
+                                  animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
+                                }}
+                              />
+                            ))}
+                          </div>
                         )}
                         <div ref={musicChatEndRef} />
                       </div>
@@ -3848,6 +3862,12 @@ export default function FabricPage() {
           </div>
         </div>
       </div>
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-3px); }
+        }
+      `}</style>
     </AuthGuard>
   );
 }
