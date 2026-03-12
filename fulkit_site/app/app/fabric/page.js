@@ -2705,7 +2705,7 @@ export default function FabricPage() {
                       </div>
                     )}
                     {discoveryTracks.length > 0 && (
-                      <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+                      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
                         {discoveryTracks.map((track, i) => {
                           const isActive = currentTrack?.id === track.spotify_id;
                           return (
@@ -2910,6 +2910,7 @@ export default function FabricPage() {
                     maxHeight: 200,
                     overflowY: "auto",
                     background: "var(--color-bg-elevated)",
+                    flexShrink: 0,
                   }}>
                     {playlists.map(pl => {
                       const isVisible = !visiblePlaylistIds || visiblePlaylistIds.includes(pl.id);
@@ -3334,6 +3335,10 @@ export default function FabricPage() {
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
                   <div style={{
                     padding: "var(--space-3) var(--space-2)",
@@ -3342,6 +3347,7 @@ export default function FabricPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
+                    flexShrink: 0,
                   }}>
                     <Label>Spotify Playlists</Label>
                     <button
@@ -3351,7 +3357,7 @@ export default function FabricPage() {
                       <X size={14} strokeWidth={1.8} />
                     </button>
                   </div>
-                  <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {playlists.map(pl => {
                       const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
                       const isImporting = importing === pl.id;
@@ -3426,6 +3432,10 @@ export default function FabricPage() {
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
                   <div style={{
                     padding: "var(--space-3) var(--space-2)",
@@ -3474,7 +3484,7 @@ export default function FabricPage() {
                     </div>
                   </div>
 
-                  <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {crateTracks.map((track, i) => {
                       const isActive = currentTrack?.id === track.spotify_id;
                       const hasFabric = track.fabric_status === "complete";
@@ -3582,6 +3592,10 @@ export default function FabricPage() {
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
                   marginTop: "var(--space-3)",
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
                   <div style={{
                     padding: "var(--space-3) var(--space-2)",
@@ -3603,7 +3617,7 @@ export default function FabricPage() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {featuredTracks.map((track, i) => {
                       const isActive = currentTrack?.id === track.spotify_id;
                       const trackFlagged = isFlagged(track.spotify_id);
