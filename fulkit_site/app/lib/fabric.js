@@ -716,6 +716,17 @@ export function FabricProvider({ children }) {
       }
       if (!result?.ok) console.warn("[fabric] play_track failed:", result);
     }
+
+    // Fetch album art if we don't have it yet
+    if (!track.art && track.artist && track.title && playInFlightRef.current === requestId) {
+      try {
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        if (playInFlightRef.current === requestId && data?.tracks?.[0]?.image) {
+          track.art = data.tracks[0].image;
+          setCurrentTrack((cur) => (cur && cur.id === track.id) ? { ...cur, art: track.art } : cur);
+        }
+      } catch {}
+    }
   }, [isDev, apiFetch]);
   playTrackRef.current = playTrack;
 
