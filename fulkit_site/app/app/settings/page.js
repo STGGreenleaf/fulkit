@@ -143,7 +143,7 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly", "truegauge"];
+const SUGGESTED_SOURCES = ["numbrly", "truegauge"];
 
 const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge"];
 
@@ -163,7 +163,7 @@ const ALL_SOURCES = [
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
-  { id: "truegauge", name: "TrueGauge", cat: "Analytics" },
+  { id: "truegauge", name: "TrueGauge", cat: "Profitability Analytics" },
 ];
 
 const PREFERENCES = [
@@ -1211,7 +1211,7 @@ function SourcesTab() {
       {suggested.length > 0 && (
         <>
           <SectionTitle>Suggested</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
             {suggested.map(sourceButton)}
           </div>
         </>
