@@ -3361,8 +3361,13 @@ export default function FabricPage() {
                       </button>
                       <MessageCircleQuestion size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)", flexShrink: 0 }} />
                       <div>
-                        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
-                          B-Sides
+                        <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-1-5)" }}>
+                          <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                            B-Sides
+                          </span>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-normal)", fontStyle: "italic", color: "var(--color-text-secondary)" }}>
+                            BTC
+                          </span>
                         </div>
                         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
                           {guyCrate.tracks.length} tracks
