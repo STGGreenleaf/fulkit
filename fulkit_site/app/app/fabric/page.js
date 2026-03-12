@@ -1875,7 +1875,17 @@ export default function FabricPage() {
             gap: "var(--space-2)",
             flexShrink: 0,
           }}>
-            <Disc size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+            <span style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+            )}
             {!compactMode && (
               <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
                 Fabric

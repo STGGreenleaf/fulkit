@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import MiniPlayer from "./MiniPlayer";
-import LogoMark from "./LogoMark";
 import Tooltip from "./Tooltip";
 
 const ICON_SIZE = 18;
@@ -53,19 +52,16 @@ export default function Sidebar() {
           textDecoration: "none",
         }}
       >
-        <LogoMark size={22} />
-        {!compactMode && (
-          <span
-            style={{
-              fontSize: "var(--font-size-lg)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}
-          >
-            Fülkit
-          </span>
-        )}
+        <span
+          style={{
+            fontSize: compactMode ? "var(--font-size-sm)" : "var(--font-size-lg)",
+            fontWeight: "var(--font-weight-black)",
+            letterSpacing: "var(--letter-spacing-tight)",
+            color: "var(--color-text)",
+          }}
+        >
+          {compactMode ? "Fü" : "Fülkit"}
+        </span>
       </Link>
 
       {/* Nav items */}
