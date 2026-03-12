@@ -586,7 +586,7 @@ export function FabricProvider({ children }) {
   }, [persistSets, setsData.sets, updateHistorySignal]);
 
   // Multi-set CRUD
-  const allSets = setsData.sets.filter(s => s.source !== "guy").map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length }));
+  const allSets = setsData.sets.filter(s => s.source !== "guy").map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks }));
   const activeSetId = setsData.activeId;
 
   const createSet = useCallback((name) => {

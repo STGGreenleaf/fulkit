@@ -3589,325 +3589,240 @@ export default function FabricPage() {
                 </button>
               </div>
 
-              {/* ═══ SET HEADER ═══ */}
-              <div
-                style={{
-                  padding: "var(--space-2) var(--space-3)",
-                  borderBottom: "1px solid var(--color-border-light)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  position: "relative",
-                }}
-              >
-                {/* Set navigation arrows */}
-                {allSets.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => {
-                        const idx = allSets.findIndex(s => s.id === activeSetId);
-                        if (idx > 0) switchSet(allSets[idx - 1].id);
-                      }}
-                      style={{
-                        background: "none", border: "none", cursor: "pointer", padding: 0,
-                        color: allSets.findIndex(s => s.id === activeSetId) > 0 ? "var(--color-text-muted)" : "var(--color-text-dim)",
-                        display: "flex", flexShrink: 0,
-                        opacity: allSets.findIndex(s => s.id === activeSetId) > 0 ? 1 : 0.3,
-                      }}
-                      title="Previous set"
-                    >
-                      <ChevronLeft size={10} strokeWidth={2} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const idx = allSets.findIndex(s => s.id === activeSetId);
-                        if (idx < allSets.length - 1) switchSet(allSets[idx + 1].id);
-                      }}
-                      style={{
-                        background: "none", border: "none", cursor: "pointer", padding: 0,
-                        color: allSets.findIndex(s => s.id === activeSetId) < allSets.length - 1 ? "var(--color-text-muted)" : "var(--color-text-dim)",
-                        display: "flex", flexShrink: 0,
-                        opacity: allSets.findIndex(s => s.id === activeSetId) < allSets.length - 1 ? 1 : 0.3,
-                      }}
-                      title="Next set"
-                    >
-                      <ChevronRight size={10} strokeWidth={2} />
-                    </button>
-                  </>
-                )}
-                {/* Pointer — collapse/expand track list */}
-                <button
-                  onClick={() => setSetCollapsed(v => !v)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    color: "var(--color-text-dim)",
-                    display: "flex",
-                    flexShrink: 0,
-                    transform: setCollapsed ? "rotate(-90deg)" : "none",
-                    transition: "transform 120ms",
-                  }}
-                  title={setCollapsed ? "Expand tracks" : "Collapse tracks"}
-                >
-                  <ChevronDown size={10} strokeWidth={2} />
-                </button>
-                {/* Set title — double-click to rename */}
-                {renamingSet === activeSetId ? (
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={() => { if (renameValue.trim()) renameSet(activeSetId, renameValue.trim()); setRenamingSet(null); }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { if (renameValue.trim()) renameSet(activeSetId, renameValue.trim()); setRenamingSet(null); }
-                      if (e.key === "Escape") setRenamingSet(null);
-                    }}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      padding: 0,
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 9,
-                      fontWeight: "var(--font-weight-bold)",
-                      color: "var(--color-text)",
-                      textTransform: "uppercase",
-                      letterSpacing: "var(--letter-spacing-wider)",
-                      border: "none",
-                      borderBottom: "1px solid var(--color-text-muted)",
-                      background: "transparent",
-                      outline: "none",
-                    }}
-                  />
-                ) : (
-                  <span
-                    onDoubleClick={() => { setRenamingSet(activeSetId); setRenameValue(allSets.find(s => s.id === activeSetId)?.name || ""); }}
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 9,
-                      fontWeight: "var(--font-weight-bold)",
-                      color: "var(--color-text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "var(--letter-spacing-wider)",
-                      cursor: "default",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      minWidth: 0,
-                    }}
-                  >
-                    {allSets.find(s => s.id === activeSetId)?.name || "Set"}
-                  </span>
-                )}
-                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
-                  {flagged.length}{allSets.length > 1 ? ` · ${allSets.findIndex(s => s.id === activeSetId) + 1}/${allSets.length}` : ""}
-                </span>
-                <div style={{ flex: 1 }} />
-                {/* Crown — publish/unpublish active set */}
-                {(() => {
-                  const activeSetName = allSets.find(s => s.id === activeSetId)?.name;
-                  const isPublished = activeSetName ? publishedSets[activeSetName] : null;
+              {/* ═══ ALL SETS STACKED ═══ */}
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                {allSets.map((set) => {
+                  const isExpanded = expandedSetIds.includes(set.id);
+                  const isActiveSet = set.id === activeSetId;
+                  const setPublished = publishedSets[set.name] || null;
                   return (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (publishing) return;
-                        try {
-                          if (isPublished) {
-                            setPublishing(true);
-                            await unpublishSet(isPublished);
-                            await loadCrates();
-                          } else {
-                            if (flagged.length === 0) { setPublishMsg("Set is empty"); setTimeout(() => setPublishMsg(null), 2000); return; }
-                            setPublishing(true);
-                            const res = await publishSet(activeSetId);
-                            if (res?.ok) {
-                              await loadCrates();
-                            } else if (res?.error === "not_ready") {
-                              setPublishMsg(`${res.pending} of ${res.total} still processing`);
-                              setTimeout(() => setPublishMsg(null), 3000);
-                            } else {
-                              setPublishMsg("Failed to publish");
-                              setTimeout(() => setPublishMsg(null), 2000);
-                            }
-                          }
-                        } finally {
-                          setPublishing(false);
-                        }
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: publishing ? "wait" : "pointer",
-                        padding: 2,
-                        color: isPublished ? "var(--color-text)" : "var(--color-text-dim)",
-                        opacity: isPublished ? 1 : 0.3,
-                        transition: "opacity 120ms",
-                        flexShrink: 0,
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                      onMouseLeave={(e) => e.currentTarget.style.opacity = isPublished ? "1" : "0.3"}
-                      title={isPublished ? "Unpublish" : "Feature this set"}
-                    >
-                      <Crown size={10} strokeWidth={1.8} />
-                    </button>
-                  );
-                })()}
+                    <div key={set.id}>
+                      {/* Set header row */}
+                      <div
+                        onClick={() => { switchSet(set.id); toggleSetExpanded(set.id); }}
+                        style={{
+                          padding: "var(--space-2) var(--space-3)",
+                          borderBottom: "1px solid var(--color-border-light)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-2)",
+                          cursor: "pointer",
+                          background: isActiveSet ? "var(--color-bg-alt)" : "transparent",
+                          position: "relative",
+                        }}
+                      >
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleSetExpanded(set.id); }}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer", padding: 0,
+                            color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                            transform: isExpanded ? "none" : "rotate(-90deg)",
+                            transition: "transform 120ms",
+                          }}
+                        >
+                          <ChevronDown size={10} strokeWidth={2} />
+                        </button>
+                        {renamingSet === set.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onBlur={() => { if (renameValue.trim()) renameSet(set.id, renameValue.trim()); setRenamingSet(null); }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { if (renameValue.trim()) renameSet(set.id, renameValue.trim()); setRenamingSet(null); }
+                              if (e.key === "Escape") setRenamingSet(null);
+                            }}
+                            style={{
+                              flex: 1, minWidth: 0, padding: 0,
+                              fontFamily: "var(--font-mono)", fontSize: 9,
+                              fontWeight: "var(--font-weight-bold)", color: "var(--color-text)",
+                              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                              border: "none", borderBottom: "1px solid var(--color-text-muted)",
+                              background: "transparent", outline: "none",
+                            }}
+                          />
+                        ) : (
+                          <span
+                            onDoubleClick={(e) => { e.stopPropagation(); setRenamingSet(set.id); setRenameValue(set.name); }}
+                            style={{
+                              fontFamily: "var(--font-mono)", fontSize: 9,
+                              fontWeight: "var(--font-weight-bold)",
+                              color: isActiveSet ? "var(--color-text)" : "var(--color-text-muted)",
+                              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                              cursor: "pointer", whiteSpace: "nowrap",
+                              overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+                            }}
+                          >
+                            {set.name}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                          {set.trackCount}
+                        </span>
+                        <div style={{ flex: 1 }} />
+                        {/* Crown — publish/unpublish */}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (publishing) return;
+                            try {
+                              if (setPublished) {
+                                setPublishing(true);
+                                await unpublishSet(setPublished);
+                                await loadCrates();
+                              } else {
+                                if (set.trackCount === 0) { setPublishMsg("Set is empty"); setTimeout(() => setPublishMsg(null), 2000); return; }
+                                setPublishing(true);
+                                const res = await publishSet(set.id);
+                                if (res?.ok) {
+                                  await loadCrates();
+                                } else if (res?.error === "not_ready") {
+                                  setPublishMsg(`${res.pending} of ${res.total} still processing`);
+                                  setTimeout(() => setPublishMsg(null), 3000);
+                                } else {
+                                  setPublishMsg("Failed to publish");
+                                  setTimeout(() => setPublishMsg(null), 2000);
+                                }
+                              }
+                            } finally { setPublishing(false); }
+                          }}
+                          style={{
+                            background: "none", border: "none",
+                            cursor: publishing ? "wait" : "pointer", padding: 2,
+                            color: setPublished ? "var(--color-text)" : "var(--color-text-dim)",
+                            opacity: setPublished ? 1 : 0.3, transition: "opacity 120ms", flexShrink: 0,
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = setPublished ? "1" : "0.3"}
+                          title={setPublished ? "Unpublish" : "Feature this set"}
+                        >
+                          <Crown size={10} strokeWidth={1.8} />
+                        </button>
+                        {/* Delete set */}
+                        {allSets.length > 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteSet(set.id); }}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer", padding: 2,
+                              color: "var(--color-text-dim)", opacity: 0.3, transition: "opacity 120ms",
+                              flexShrink: 0, display: "flex",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.3"}
+                            title="Delete set"
+                          >
+                            <Trash2 size={9} strokeWidth={1.8} />
+                          </button>
+                        )}
+                      </div>
 
-                {/* Publish status message */}
-                {publishMsg && (
-                  <div style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: "var(--space-4)",
-                    zIndex: 20,
-                    background: "var(--color-bg-elevated)",
-                    border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-sm)",
-                    padding: "var(--space-2) var(--space-3)",
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-muted)",
-                    whiteSpace: "nowrap",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  }}>
-                    {publishMsg}
+                      {/* Tracks */}
+                      {isExpanded && (
+                        <div>
+                          {set.tracks.length === 0 && (
+                            <div style={{ padding: "var(--space-4) var(--space-2)", textAlign: "center" }}>
+                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                                Flag tracks to build this set
+                              </div>
+                            </div>
+                          )}
+                          {set.tracks.map((track, i) => {
+                            const isActive = currentTrack?.id === track.id;
+                            const isDragTarget = isActiveSet && dragOverIdx === i && dragIdx !== i;
+                            const setFeat = audioFeatures[track.id];
+                            return (
+                              <div
+                                key={track.id}
+                                draggable={isActiveSet}
+                                onDragStart={isActiveSet ? (e) => handleDragStart(e, i) : undefined}
+                                onDragOver={isActiveSet ? (e) => handleDragOver(e, i) : undefined}
+                                onDrop={isActiveSet ? (e) => handleDrop(e, i) : undefined}
+                                onDragEnd={isActiveSet ? handleDragEnd : undefined}
+                                onClick={() => playTrackInContext(track, "set", set.id, set.tracks, i)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "var(--space-2)",
+                                  padding: "var(--space-2) var(--space-2)",
+                                  borderBottom: "1px solid var(--color-border-light)",
+                                  borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
+                                  background: isActive ? "var(--color-bg-alt)" : "transparent",
+                                  cursor: isActiveSet ? "grab" : "pointer",
+                                  transition: "background 100ms", userSelect: "none",
+                                }}
+                              >
+                                <div style={{
+                                  width: 16, fontSize: 9, fontFamily: "var(--font-mono)",
+                                  color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
+                                  textAlign: "center", flexShrink: 0,
+                                }}>
+                                  {isActive ? (
+                                    <div style={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "flex-end", height: 10 }}>
+                                      {[0, 1, 2].map((j) => (
+                                        <div key={j} style={{ width: 1.5, height: 3 + Math.random() * 7, background: "var(--color-text)" }} />
+                                      ))}
+                                    </div>
+                                  ) : String(i + 1).padStart(2, "0")}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: "var(--font-size-xs)",
+                                    fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                                    color: "var(--color-text)", whiteSpace: "nowrap",
+                                    overflow: "hidden", textOverflow: "ellipsis",
+                                  }}>
+                                    {track.title}
+                                  </div>
+                                  <div style={{
+                                    fontSize: 9, color: "var(--color-text-dim)",
+                                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                  }}>
+                                    {track.artist}
+                                  </div>
+                                </div>
+                                {setFeat && (
+                                  <div style={{ flexShrink: 0, textAlign: "right" }}>
+                                    <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>{setFeat.bpm}</div>
+                                    <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{setFeat.key}</div>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); flag(track); }}
+                                  style={{
+                                    background: "none", border: "none", cursor: "pointer", padding: 2,
+                                    color: "var(--color-text-dim)", display: "flex", flexShrink: 0, opacity: 0.5,
+                                  }}
+                                >
+                                  <ListX size={10} strokeWidth={1.8} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {allSets.length === 0 && (
+                  <div style={{ padding: "var(--space-10) var(--space-2)", textAlign: "center" }}>
+                    <Plus size={16} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: 6 }} />
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Create a set to get started</div>
                   </div>
                 )}
               </div>
 
-              {!setCollapsed && <div style={{ flex: 1, overflowY: "auto" }}>
-                {flagged.length === 0 && (
-                  <div
-                    style={{
-                      padding: "var(--space-10) var(--space-2)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <Plus size={16} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: 6 }} />
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                      Flag tracks to build your set
-                    </div>
-                  </div>
-                )}
-
-                {flagged.map((track, i) => {
-                  const isActive = currentTrack?.id === track.id;
-                  const isDragTarget = dragOverIdx === i && dragIdx !== i;
-                  const setFeat = audioFeatures[track.id];
-                  return (
-                    <div
-                      key={track.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, i)}
-                      onDragOver={(e) => handleDragOver(e, i)}
-                      onDrop={(e) => handleDrop(e, i)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => playTrackInContext(track, "set", activeSetId, flagged, i)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-2)",
-                        padding: "var(--space-2) var(--space-2)",
-                        borderBottom: "1px solid var(--color-border-light)",
-                        borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
-                        background: isActive ? "var(--color-bg-alt)" : "transparent",
-                        cursor: "grab",
-                        transition: "background 100ms",
-                        userSelect: "none",
-                      }}
-                    >
-                      {/* Index */}
-                      <div
-                        style={{
-                          width: 16,
-                          fontSize: 9,
-                          fontFamily: "var(--font-mono)",
-                          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
-                          textAlign: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {isActive ? (
-                          <div style={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "flex-end", height: 10 }}>
-                            {[0, 1, 2].map((j) => (
-                              <div
-                                key={j}
-                                style={{
-                                  width: 1.5,
-                                  height: 3 + Math.random() * 7,
-                                  background: "var(--color-text)",
-                                }}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          String(i + 1).padStart(2, "0")
-                        )}
-                      </div>
-
-                      {/* Track info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "var(--font-size-xs)",
-                            fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                            color: "var(--color-text)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {track.title}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 9,
-                            color: "var(--color-text-dim)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {track.artist}
-                        </div>
-                      </div>
-
-                      {/* BPM + Key */}
-                      {setFeat && (
-                        <div style={{ flexShrink: 0, textAlign: "right" }}>
-                          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>
-                            {setFeat.bpm}
-                          </div>
-                          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
-                            {setFeat.key}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Remove from set */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          flag(track);
-                        }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 2,
-                          color: "var(--color-text-dim)",
-                          display: "flex",
-                          flexShrink: 0,
-                          opacity: 0.5,
-                        }}
-                      >
-                        <ListX size={10} strokeWidth={1.8} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>}
+              {/* Publish status message */}
+              {publishMsg && (
+                <div style={{
+                  position: "absolute", bottom: "var(--space-2)", right: "var(--space-3)",
+                  zIndex: 20, background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                  padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-muted)", whiteSpace: "nowrap",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}>
+                  {publishMsg}
+                </div>
+              )}
 
               {/* RSG moved to Browse column */}
             </div>
