@@ -839,22 +839,17 @@ function SourcesTab() {
     return `${days}d ago`;
   };
 
-  const richDrawerContent = ({ expanded: isOpen, tagline, description, givesLabel, gives, tryPrompt, linkLabel, linkHref, footer }) => (
+  const richDrawerContent = ({ expanded: isOpen, description, givesLabel, gives, tryPrompt, linkLabel, linkHref, footer }) => (
     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
       <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <DrawerItem index={0} visible={isOpen}>
-          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)" }}>
-            {tagline}
-          </div>
-        </DrawerItem>
-        <DrawerItem index={1} visible={isOpen}>
           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
             {description}
           </div>
         </DrawerItem>
-        <DrawerItem index={2} visible={isOpen}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>
+        <DrawerItem index={1} visible={isOpen}>
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
+            <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
               {givesLabel}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
@@ -862,18 +857,18 @@ function SourcesTab() {
             </div>
           </div>
         </DrawerItem>
-        <DrawerItem index={3} visible={isOpen}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
-            Try asking F&uuml;lkit: &ldquo;{tryPrompt}&rdquo;
+        <DrawerItem index={2} visible={isOpen}>
+          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
+            {`\u201C${tryPrompt}\u201D`}
           </div>
         </DrawerItem>
-        <DrawerItem index={4} visible={isOpen}>
-          <a href={linkHref} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", textDecoration: "underline", fontFamily: "var(--font-primary)" }}>
-            {linkLabel}
+        <DrawerItem index={3} visible={isOpen}>
+          <a href={linkHref} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+            {"\u2197 "}{linkLabel}
           </a>
         </DrawerItem>
       </div>
-      <DrawerItem index={5} visible={isOpen}>
+      <DrawerItem index={4} visible={isOpen}>
         {footer}
       </DrawerItem>
     </div>
@@ -1062,8 +1057,7 @@ function SourcesTab() {
                 <Drawer open={numbrlyExpanded}>
                   {richDrawerContent({
                     expanded: numbrlyExpanded,
-                    tagline: "The numbers engine for small business owners who run on feel and need to run on facts.",
-                    description: "Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
+                    description: "The numbers engine for small business owners who run on feel and need to run on facts. Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Real-time org summary, margin alerts, and recent financial activity flow into every conversation. Ask about your business and F\u00FClkit answers with live numbers, not guesses.",
                     tryPrompt: "What\u2019s my margin on a\u00E7a\u00ED bowls this month?",
@@ -1101,8 +1095,7 @@ function SourcesTab() {
                 <Drawer open={tgExpanded}>
                   {richDrawerContent({
                     expanded: tgExpanded,
-                    tagline: "Numbrly knows the numbers. TrueGauge knows what they mean.",
-                    description: "It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
+                    description: "Numbrly knows the numbers. TrueGauge knows what they mean. It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Health score, pacing data, cash position, expense breakdowns, and alerts. When you ask whether things are on track, F\u00FClkit pulls from this \u2014 not vibes.",
                     tryPrompt: "Am I on pace for the month?",
@@ -1171,8 +1164,7 @@ function SourcesTab() {
                 <Drawer open={numbrlyExpanded}>
                   {richDrawerContent({
                     expanded: numbrlyExpanded,
-                    tagline: "The numbers engine for small business owners who run on feel and need to run on facts.",
-                    description: "Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
+                    description: "The numbers engine for small business owners who run on feel and need to run on facts. Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Real-time org summary, margin alerts, and recent financial activity flow into every conversation. Ask about your business and F\u00FClkit answers with live numbers, not guesses.",
                     tryPrompt: "What\u2019s my margin on a\u00E7a\u00ED bowls this month?",
@@ -1180,12 +1172,12 @@ function SourcesTab() {
                     linkHref: "https://numbrly.app",
                     footer: (
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
-                        <DrawerItem index={6} visible={numbrlyExpanded}>
+                        <DrawerItem index={5} visible={numbrlyExpanded}>
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
                             Generate a key in Numbrly at Settings &rarr; Developer &rarr; API Access.
                           </div>
                         </DrawerItem>
-                        <DrawerItem index={7} visible={numbrlyExpanded}>
+                        <DrawerItem index={6} visible={numbrlyExpanded}>
                           <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
                             <input
                               type="password"
@@ -1204,7 +1196,7 @@ function SourcesTab() {
                           </div>
                         </DrawerItem>
                         {numbrlyError && (
-                          <DrawerItem index={8} visible={numbrlyExpanded}>
+                          <DrawerItem index={7} visible={numbrlyExpanded}>
                             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
                               {numbrlyError}
                             </div>
@@ -1230,8 +1222,7 @@ function SourcesTab() {
                 <Drawer open={tgExpanded}>
                   {richDrawerContent({
                     expanded: tgExpanded,
-                    tagline: "Numbrly knows the numbers. TrueGauge knows what they mean.",
-                    description: "It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
+                    description: "Numbrly knows the numbers. TrueGauge knows what they mean. It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Health score, pacing data, cash position, expense breakdowns, and alerts. When you ask whether things are on track, F\u00FClkit pulls from this \u2014 not vibes.",
                     tryPrompt: "Am I on pace for the month?",
@@ -1239,12 +1230,12 @@ function SourcesTab() {
                     linkHref: "https://www.truegauge.app",
                     footer: (
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
-                        <DrawerItem index={6} visible={tgExpanded}>
+                        <DrawerItem index={5} visible={tgExpanded}>
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
                             Generate a key in TrueGauge at Settings &rarr; Developer &rarr; API Access.
                           </div>
                         </DrawerItem>
-                        <DrawerItem index={7} visible={tgExpanded}>
+                        <DrawerItem index={6} visible={tgExpanded}>
                           <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
                             <input
                               type="password"
@@ -1263,7 +1254,7 @@ function SourcesTab() {
                           </div>
                         </DrawerItem>
                         {tgError && (
-                          <DrawerItem index={8} visible={tgExpanded}>
+                          <DrawerItem index={7} visible={tgExpanded}>
                             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
                               {tgError}
                             </div>
