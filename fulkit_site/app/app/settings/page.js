@@ -367,7 +367,7 @@ export default function Settings({ initialTab = "account" }) {
 
 /* ─── Tab Components ─── */
 
-function SectionTitle({ children }) {
+function SectionTitle({ children, style }) {
   return (
     <h3
       style={{
@@ -377,6 +377,7 @@ function SectionTitle({ children }) {
         letterSpacing: "var(--letter-spacing-wider)",
         color: "var(--color-text-muted)",
         marginBottom: "var(--space-3)",
+        ...style,
       }}
     >
       {children}
@@ -1181,7 +1182,22 @@ function SourcesTab() {
       {/* Connected */}
       {hasConnected && (
         <>
-          <SectionTitle>Connected</SectionTitle>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+            <SectionTitle style={{ marginBottom: 0 }}>Connected</SectionTitle>
+            <a
+              href="/privacy"
+              style={{
+                fontSize: "var(--font-size-2xs)",
+                color: "var(--color-text-dim)",
+                textDecoration: "none",
+                lineHeight: "var(--line-height-tight)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+            >
+              Your data stays yours. We can't see it. →
+            </a>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
             {/* GitHub */}
             {githubConnected && (
