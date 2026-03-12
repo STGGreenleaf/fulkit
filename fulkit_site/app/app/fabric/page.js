@@ -2330,7 +2330,7 @@ export default function FabricPage() {
                 flexDirection: "column",
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-2)", flex: 1, overflowY: "auto" }}>
+              <div style={{ padding: "var(--space-3) var(--space-2)", flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
                   <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Dig</Label>
@@ -2342,6 +2342,10 @@ export default function FabricPage() {
                   border: "1px solid var(--color-border-light)",
                   borderRadius: "var(--radius-sm)",
                   overflow: "hidden",
+                  flex: musicChatOpen ? 1 : undefined,
+                  minHeight: musicChatOpen ? 0 : undefined,
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
                   {/* RSG title bar — always visible */}
                   <button
@@ -2374,8 +2378,8 @@ export default function FabricPage() {
 
                   {/* RSG chat drawer */}
                   {musicChatOpen && (
-                    <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", maxHeight: 240, overflowY: "auto" }}>
+                    <div style={{ borderTop: "1px solid var(--color-border-light)", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", flex: 1, minHeight: 0, overflowY: "auto" }}>
                         {musicMessages.length === 0 && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
                             {tickerFact || "Ask me anything about music..."}
@@ -3184,7 +3188,7 @@ export default function FabricPage() {
               </div>{/* end crate shelf wrapper */}
 
               {/* ── Scrollable content below shelf ── */}
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 var(--space-2) var(--space-2)" }}>
+              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 var(--space-2) var(--space-2)", overflow: "hidden" }}>
 
               {/* ── B-SIDES ── */}
               {guyCrate && (
@@ -3193,12 +3197,17 @@ export default function FabricPage() {
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
                   marginBottom: "var(--space-2)",
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
                   {/* Header */}
                   <div style={{
                     padding: "var(--space-3) var(--space-2)",
                     borderBottom: !guyCrateCollapsed && guyCrate.tracks.length > 0 ? "1px solid var(--color-border-light)" : "none",
                     display: "flex",
+                    flexShrink: 0,
                     alignItems: "center",
                     justifyContent: "space-between",
                     background: "var(--color-bg-elevated)",
@@ -3255,7 +3264,7 @@ export default function FabricPage() {
 
                   {/* Track list */}
                   {!guyCrateCollapsed && (
-                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                       {guyCrate.tracks.length === 0 ? (
                         <div style={{ padding: "var(--space-4) var(--space-2)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
                           All cleared — Guy will refill this
@@ -3713,7 +3722,7 @@ export default function FabricPage() {
                 background: dragOverCol === "sets" ? "var(--color-bg-alt)" : undefined,
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-3) 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ padding: "var(--space-3) var(--space-3) 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Sets</Label>
@@ -3741,7 +3750,7 @@ export default function FabricPage() {
               </div>
 
               {/* ═══ ALL SETS STACKED ═══ */}
-              <div style={{ flex: 1, overflowY: "auto" }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                 {allSets.map((set) => {
                   const isExpanded = expandedSetIds.includes(set.id);
                   const isActiveSet = set.id === activeSetId;
