@@ -227,6 +227,7 @@ export default function Actions() {
               display: "flex",
               gap: "var(--space-1)",
               padding: "0 var(--space-6)",
+              borderBottom: "1px solid var(--color-border-light)",
             }}
           >
             {LENSES.map(({ key, label, Icon }) => {
@@ -238,19 +239,17 @@ export default function Actions() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: "var(--space-1)",
-                      padding: "var(--space-3) var(--space-5)",
+                      gap: "var(--space-1-5)",
+                      padding: "var(--space-2-5) var(--space-3)",
                       border: "none",
-                      background: "transparent",
-                      borderRadius: 0,
-                      color: "var(--color-text)",
-                      opacity: active ? 1 : 0.25,
-                      cursor: "pointer",
-                      transition: "opacity var(--duration-fast) var(--ease-default)",
+                      background: active ? "var(--color-bg-alt)" : "transparent",
+                      borderRadius: "var(--radius-md)",
+                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                       fontSize: "var(--font-size-xs)",
                       fontFamily: "var(--font-primary)",
-                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                      cursor: "pointer",
+                      transition: `all var(--duration-fast) var(--ease-default)`,
                     }}
                   >
                     <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
@@ -267,6 +266,7 @@ export default function Actions() {
               display: "flex",
               gap: "var(--space-1)",
               padding: "0 var(--space-6)",
+              borderBottom: "1px solid var(--color-border-light)",
             }}
           >
             {FILTERS.map(({ key, Icon }) => {
@@ -278,18 +278,18 @@ export default function Actions() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "var(--space-1)",
+                      gap: "var(--space-1-5)",
                       padding: "var(--space-2-5) var(--space-3)",
                       border: "none",
-                      background: "transparent",
-                      borderRadius: 0,
-                      color: active ? "var(--color-text)" : "var(--color-text-dim)",
+                      background: active ? "var(--color-bg-alt)" : "transparent",
+                      borderRadius: "var(--radius-md)",
+                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
                       fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                       fontSize: "var(--font-size-xs)",
-                      transition: "color var(--duration-fast) var(--ease-default)",
                       fontFamily: "var(--font-primary)",
                       cursor: "pointer",
                       textTransform: "capitalize",
+                      transition: `all var(--duration-fast) var(--ease-default)`,
                     }}
                   >
                     <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
