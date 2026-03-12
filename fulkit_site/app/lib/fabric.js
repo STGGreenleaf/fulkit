@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./auth";
-import SpotifyPlayer from "../components/SpotifyPlayer";
 
 const FabricContext = createContext(null);
 
@@ -142,21 +141,8 @@ export function FabricProvider({ children }) {
     } catch (e) { console.warn("[fabric]", endpoint, e.message); return null; }
   }, [accessToken]);
 
-  // Web Playback SDK device ID
-  const [sdkDeviceId, setSdkDeviceId] = useState(null);
-  const sdkTransferred = useRef(false);
-
-  const onDeviceReady = useCallback((deviceId) => {
-    setSdkDeviceId(deviceId);
-    console.log("[Spotify SDK] Fülkit device available:", deviceId);
-    // Don't auto-transfer — let user's current device keep playing
-    // Transfer only happens when user explicitly activates Fülkit as output
-  }, []);
-
-  const onDeviceLost = useCallback(() => {
-    setSdkDeviceId(null);
-    sdkTransferred.current = false;
-  }, []);
+  // Poll suppression — prevent poller from overwriting optimistic UI after play commands
+  const pollSuppressedUntil = useRef(0);
 
   // Reconnect: redirect to Spotify OAuth
   const reconnectSpotify = useCallback(() => {
@@ -194,6 +180,8 @@ export function FabricProvider({ children }) {
         return;
       }
       failCount = 0;
+      // Skip state updates while suppressed (after play commands)
+      if (Date.now() < pollSuppressedUntil.current) return;
       setIsPlaying(data.isPlaying);
       if (data.volume != null && Date.now() > volumeLockedUntil.current) setVolumeState(data.volume);
       if (data.track) {
@@ -679,10 +667,12 @@ export function FabricProvider({ children }) {
     }
     if (!uri) return;
 
-    apiFetch("/api/fabric/controls", {
+    pollSuppressedUntil.current = Date.now() + 5000;
+    const result = await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "play_track", value: { uri } }),
     });
+    if (!result?.ok) console.warn("[fabric] play_track failed:", result);
   }, [isDev, apiFetch]);
   playTrackRef.current = playTrack;
 
@@ -1007,11 +997,9 @@ export function FabricProvider({ children }) {
         tickerFact,
         sendMusicMessage,
         toggleMusicChat,
-        sdkDeviceId,
         reconnectSpotify,
       }}
     >
-      {!isDev && <SpotifyPlayer connected={connected} onDeviceReady={onDeviceReady} onDeviceLost={onDeviceLost} />}
       {children}
     </FabricContext.Provider>
   );

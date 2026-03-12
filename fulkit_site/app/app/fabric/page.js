@@ -1473,7 +1473,6 @@ export default function FabricPage() {
     tickerFact,
     sendMusicMessage,
     toggleMusicChat,
-    sdkDeviceId,
     reconnectSpotify,
   } = useFabric();
 
