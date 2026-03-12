@@ -3,8 +3,12 @@
 
 import { getSupabaseAdmin } from "./supabase-server";
 
-const SQUARE_API = "https://connect.squareup.com/v2";
-const TOKEN_URL = "https://connect.squareup.com/oauth2/token";
+const IS_SANDBOX = (process.env.SQUARE_APP_ID || "").startsWith("sandbox-");
+const SQUARE_BASE = IS_SANDBOX
+  ? "https://connect.squareupsandbox.com"
+  : "https://connect.squareup.com";
+const SQUARE_API = `${SQUARE_BASE}/v2`;
+const TOKEN_URL = `${SQUARE_BASE}/oauth2/token`;
 
 // Reuse authenticateUser from numbrly (same pattern)
 export { authenticateUser } from "./numbrly";

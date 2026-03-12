@@ -9,7 +9,10 @@ export async function DELETE(request) {
   const integration = await getSquareToken(userId);
   if (integration?.access_token) {
     try {
-      await fetch("https://connect.squareup.com/oauth2/revoke", {
+      const squareBase = (process.env.SQUARE_APP_ID || "").startsWith("sandbox-")
+            ? "https://connect.squareupsandbox.com"
+            : "https://connect.squareup.com";
+      await fetch(`${squareBase}/oauth2/revoke`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -31,7 +31,10 @@ export async function GET(request) {
 
     // Exchange code for tokens (Square uses JSON body, not form-encoded)
     const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/square/callback`;
-    const tokenRes = await fetch("https://connect.squareup.com/oauth2/token", {
+    const squareBase = (process.env.SQUARE_APP_ID || "").startsWith("sandbox-")
+      ? "https://connect.squareupsandbox.com"
+      : "https://connect.squareup.com";
+    const tokenRes = await fetch(`${squareBase}/oauth2/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

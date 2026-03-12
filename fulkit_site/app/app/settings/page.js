@@ -768,19 +768,19 @@ function SourcesTab() {
   function connectGitHub() {
     if (isDev || !accessToken) return;
     document.cookie = `gh_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
-    window.location.href = "/api/github/connect";
+    window.open("/api/github/connect", "_blank");
   }
 
   function connectFabric() {
     if (isDev) { setFabricConnected(true); return; }
     if (accessToken) {
-      window.location.href = "/api/fabric/connect?token=" + encodeURIComponent(accessToken);
+      window.open("/api/fabric/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = "/api/fabric/connect?token=" + encodeURIComponent(token);
+        window.open("/api/fabric/connect?token=" + encodeURIComponent(token), "_blank");
       } else {
         alert("No active session. Please sign out and sign back in, then try again.");
       }
@@ -892,13 +892,13 @@ function SourcesTab() {
   function connectSquare() {
     if (isDev) { setSquareConnected(true); return; }
     if (accessToken) {
-      window.location.href = "/api/square/connect?token=" + encodeURIComponent(accessToken);
+      window.open("/api/square/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = "/api/square/connect?token=" + encodeURIComponent(token);
+        window.open("/api/square/connect?token=" + encodeURIComponent(token), "_blank");
       } else {
         alert("No active session. Please sign out and sign back in, then try again.");
       }
@@ -924,13 +924,13 @@ function SourcesTab() {
     if (!shop) return;
     const cleanShop = shop.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
     if (accessToken) {
-      window.location.href = `/api/shopify/connect?token=${encodeURIComponent(accessToken)}&shop=${encodeURIComponent(cleanShop)}`;
+      window.open(`/api/shopify/connect?token=${encodeURIComponent(accessToken)}&shop=${encodeURIComponent(cleanShop)}`, "_blank");
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = `/api/shopify/connect?token=${encodeURIComponent(token)}&shop=${encodeURIComponent(cleanShop)}`;
+        window.open(`/api/shopify/connect?token=${encodeURIComponent(token)}&shop=${encodeURIComponent(cleanShop)}`, "_blank");
       }
     }).catch(() => {});
   }
@@ -950,13 +950,13 @@ function SourcesTab() {
   function connectStripe() {
     if (isDev) { setStripeConnected(true); return; }
     if (accessToken) {
-      window.location.href = "/api/stripe/connect?token=" + encodeURIComponent(accessToken);
+      window.open("/api/stripe/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = "/api/stripe/connect?token=" + encodeURIComponent(token);
+        window.open("/api/stripe/connect?token=" + encodeURIComponent(token), "_blank");
       }
     }).catch(() => {});
   }
@@ -976,13 +976,13 @@ function SourcesTab() {
   function connectToast() {
     if (isDev) { setToastConnected(true); return; }
     if (accessToken) {
-      window.location.href = "/api/toast/connect?token=" + encodeURIComponent(accessToken);
+      window.open("/api/toast/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.location.href = "/api/toast/connect?token=" + encodeURIComponent(token);
+        window.open("/api/toast/connect?token=" + encodeURIComponent(token), "_blank");
       }
     }).catch(() => {});
   }

@@ -70,7 +70,10 @@ export async function GET(request) {
       redirect_uri: redirectUri,
     });
 
-    return NextResponse.redirect(`https://connect.squareup.com/oauth2/authorize?${params.toString()}`);
+    const baseUrl = (process.env.SQUARE_APP_ID || "").startsWith("sandbox-")
+      ? "https://connect.squareupsandbox.com"
+      : "https://connect.squareup.com";
+    return NextResponse.redirect(`${baseUrl}/oauth2/authorize?${params.toString()}`);
   } catch (err) {
     console.error("[square/connect]", err.message);
     return NextResponse.redirect(new URL("/settings/sources?sq=error&reason=server", request.url));
