@@ -2402,6 +2402,12 @@ export default function FabricPage() {
 
                               const flushSongs = () => {
                                 if (songBlock.length === 0) return;
+                                const songs = [...songBlock]; // snapshot before clear
+                                const songsWithIds = songs.map(s => ({
+                                  ...s,
+                                  trackId: `btc-${s.artist}-${s.title}`.toLowerCase().replace(/\s+/g, "-"),
+                                }));
+                                const allAdded = songsWithIds.every(s => guyCrate?.tracks?.some(t => t.id === s.trackId));
                                 elements.push(
                                   <div key={`songs-${elements.length}`} style={{
                                     borderLeft: "2px solid var(--color-border)",
@@ -2412,9 +2418,9 @@ export default function FabricPage() {
                                     flexDirection: "column",
                                     gap: 2,
                                   }}>
-                                    {songBlock.map((s, si) => {
-                                      const trackId = `btc-${s.artist}-${s.title}`.toLowerCase().replace(/\s+/g, "-");
-                                      const alreadyAdded = guyCrate?.tracks?.some(t => t.id === trackId);
+                                    {songsWithIds.map((s, si) => {
+                                      const alreadyAdded = guyCrate?.tracks?.some(t => t.id === s.trackId);
+                                      const isPlaying = currentTrack?.id === s.trackId;
                                       return (
                                       <div key={si} style={{
                                         display: "flex",
@@ -2426,30 +2432,44 @@ export default function FabricPage() {
                                         color: "var(--color-text-secondary)",
                                         lineHeight: "var(--line-height-snug)",
                                       }}>
+                                        {/* Play button */}
+                                        <button
+                                          onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
+                                          style={{
+                                            background: "none", border: "none", cursor: "pointer", padding: 1, flexShrink: 0,
+                                            color: isPlaying ? "var(--color-text)" : "var(--color-text-dim)",
+                                            opacity: isPlaying ? 1 : 0.4,
+                                            transition: "opacity 120ms",
+                                            display: "flex", alignItems: "center",
+                                          }}
+                                          title="Play"
+                                          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                                          onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.opacity = "0.4"; }}
+                                        >
+                                          <Play size={8} strokeWidth={2.5} fill={isPlaying ? "currentColor" : "none"} />
+                                        </button>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{s.artist}</span>
+                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>{s.artist}</span>
                                           {" — "}
-                                          <span>{s.title}</span>
+                                          <span style={{ color: isPlaying ? "var(--color-text)" : undefined }}>{s.title}</span>
                                           {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
                                         </div>
+                                        {/* Add to B-Sides */}
                                         <button
                                           onClick={() => {
                                             if (alreadyAdded) return;
-                                            addToGuyCrate({ id: trackId, title: s.title, artist: s.artist });
+                                            addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
                                             setGuyCrateCollapsed(false);
                                             try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
                                           }}
                                           style={{
-                                            background: "none",
-                                            border: "none",
+                                            background: "none", border: "none",
                                             cursor: alreadyAdded ? "default" : "pointer",
-                                            padding: 1,
-                                            flexShrink: 0,
+                                            padding: 1, flexShrink: 0,
                                             color: alreadyAdded ? "var(--color-text)" : "var(--color-text-dim)",
                                             opacity: alreadyAdded ? 0.6 : 0.4,
                                             transition: "opacity 120ms",
-                                            display: "flex",
-                                            alignItems: "center",
+                                            display: "flex", alignItems: "center",
                                           }}
                                           title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
                                           onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
@@ -2460,6 +2480,35 @@ export default function FabricPage() {
                                       </div>
                                       );
                                     })}
+                                    {/* Add all to B-Sides — only show when multiple songs and not all added */}
+                                    {songsWithIds.length > 1 && !allAdded && (
+                                      <button
+                                        onClick={() => {
+                                          songsWithIds.forEach(s => {
+                                            if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
+                                              addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                            }
+                                          });
+                                          setGuyCrateCollapsed(false);
+                                          try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                        }}
+                                        style={{
+                                          background: "none", border: "none", cursor: "pointer",
+                                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                                          padding: "var(--space-1) 0", marginTop: 2,
+                                          fontFamily: "var(--font-mono)", fontSize: 9,
+                                          letterSpacing: "var(--letter-spacing-wide)",
+                                          color: "var(--color-text-dim)", opacity: 0.5,
+                                          transition: "opacity 120ms",
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; }}
+                                        title="Add all songs to B-Sides"
+                                      >
+                                        <CornerDownRight size={9} strokeWidth={2} />
+                                        Add all to B-Sides
+                                      </button>
+                                    )}
                                   </div>
                                 );
                                 songBlock = [];
