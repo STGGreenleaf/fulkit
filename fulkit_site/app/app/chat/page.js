@@ -858,9 +858,8 @@ export default function Chat() {
                             }),
                       }}
                     >
-                      {typeof msg.content === "string" ? msg.content.trim() : msg.content}
-                      {streaming && i === messages.length - 1 && msg.role === "assistant" && !msg.content && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 4, verticalAlign: "text-bottom" }}>
+                      {streaming && i === messages.length - 1 && msg.role === "assistant" && !msg.content ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                           {[0, 1, 2].map((dot) => (
                             <span
                               key={dot}
@@ -875,6 +874,8 @@ export default function Chat() {
                             />
                           ))}
                         </span>
+                      ) : (
+                        typeof msg.content === "string" ? msg.content.trim() : msg.content
                       )}
                     </div>
                     {/* Pin + Copy + Export actions — assistant messages, on hover or if pinned */}
