@@ -167,6 +167,57 @@ const SUGGESTED_SOURCES = [];
 
 const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast"];
 
+const SOURCE_DESCRIPTIONS = {
+  square: {
+    subtitle: "Your business, connected.",
+    description: "Square runs your register, tracks your inventory, manages your team, and handles your invoices. Connecting it means F\u00FClkit sees everything your business does in a day \u2014 every transaction, every shift, every item sold.",
+    gives: "Live transaction data, daily closeout summaries, inventory counts, customer profiles, team schedules, and invoice status. Ask how the day went and get real numbers.",
+    tryPrompt: "How did we do today?",
+    linkLabel: "squareup.com",
+    linkHref: "https://squareup.com",
+  },
+  shopify: {
+    subtitle: "Your storefront, connected.",
+    description: "Shopify powers your online store \u2014 products, orders, customers, inventory. Connecting it means F\u00FClkit sees every sale, every fulfillment, every customer interaction.",
+    gives: "Product catalog, order history, customer data, inventory levels, and fulfillment status. Ask about your store and get real answers.",
+    tryPrompt: "What sold the most this week?",
+    linkLabel: "shopify.com",
+    linkHref: "https://shopify.com",
+  },
+  stripe: {
+    subtitle: "Your payments, connected.",
+    description: "Stripe handles your payments, subscriptions, invoices, and payouts. Connecting it means F\u00FClkit sees every charge, every refund, every payout in real time.",
+    gives: "Payment history, balance, payout schedule, subscription metrics, invoice status, and dispute tracking. Ask about revenue and get the real numbers.",
+    tryPrompt: "What\u2019s my revenue this month?",
+    linkLabel: "stripe.com",
+    linkHref: "https://stripe.com",
+  },
+  toast: {
+    subtitle: "Your restaurant, connected.",
+    description: "Toast runs your restaurant \u2014 orders, menus, labor, and payments. Connecting it means F\u00FClkit sees every ticket, every shift, every menu change.",
+    gives: "Order history, menu data, labor schedules, payment summaries, and revenue breakdowns. Ask how service went and get real numbers.",
+    tryPrompt: "How was lunch today?",
+    linkLabel: "toasttab.com",
+    linkHref: "https://toasttab.com",
+  },
+  github: {
+    subtitle: "Your code, in context.",
+    description: "GitHub holds your repos, issues, PRs, and commits. Connecting it means F\u00FClkit can reference your codebase, track what changed, and help you think through technical decisions.",
+    gives: "Repo structure, recent commits, open issues, pull request status, and code context. Ask about your projects and get grounded answers.",
+    tryPrompt: "What changed in the API this week?",
+    linkLabel: "github.com",
+    linkHref: "https://github.com",
+  },
+  fabric: {
+    subtitle: "Your music, in context.",
+    description: "Spotify tracks what you\u2019re listening to, your playlists, and your listening history. Connecting it lets F\u00FClkit weave music into the conversation and control playback from the sidebar.",
+    gives: "Now playing, recently played, playlists, and playback controls. Ask what\u2019s playing or queue something up.",
+    tryPrompt: "What have I been listening to lately?",
+    linkLabel: "spotify.com",
+    linkHref: "https://spotify.com",
+  },
+};
+
 const ALL_SOURCES = [
   { id: "square", name: "Square", cat: "Payments & POS" },
   { id: "shopify", name: "Shopify", cat: "E-Commerce" },
@@ -965,6 +1016,8 @@ function SourcesTab() {
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && !["numbrly", "truegauge"].includes(s.id)
   );
+  const moreCards = otherSources.filter((s) => REAL_INTEGRATIONS.includes(s.id) && SOURCE_DESCRIPTIONS[s.id]);
+  const moreTiles = otherSources.filter((s) => !REAL_INTEGRATIONS.includes(s.id) || !SOURCE_DESCRIPTIONS[s.id]);
 
   const connect = (id) => {
     if (id === "github") { connectGitHub(); return; }
@@ -1639,55 +1692,90 @@ function SourcesTab() {
         </>
       )}
 
-      {/* Shopify store URL input — shown when user clicks Shopify in More grid */}
-      {shopifyExpanded && !shopifyConnected && (
-        <div style={{ marginBottom: "var(--space-4)" }}>
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            <CardHeader
-              logo={SOURCE_LOGOS.shopify}
-              name="Shopify"
-              subtitle="Connect your store"
-              isExpanded={shopifyExpanded}
-              onToggle={() => setShopifyExpanded(false)}
-            />
-            <Drawer open={shopifyExpanded}>
-              <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)" }}>
-                <DrawerItem index={0} visible={shopifyExpanded}>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                    Enter your Shopify store URL to connect.
-                  </div>
-                </DrawerItem>
-                <DrawerItem index={1} visible={shopifyExpanded}>
-                  <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
-                    <input
-                      type="text"
-                      placeholder="mystore.myshopify.com"
-                      value={shopifyShopInput}
-                      onChange={(e) => setShopifyShopInput(e.target.value)}
-                      style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
-                    />
-                    <button
-                      onClick={() => connectShopify(shopifyShopInput)}
-                      disabled={!shopifyShopInput.trim()}
-                      style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: !shopifyShopInput.trim() ? "default" : "pointer", opacity: !shopifyShopInput.trim() ? 0.5 : 1 }}
-                    >
-                      Connect
-                    </button>
-                  </div>
-                </DrawerItem>
-              </div>
-            </Drawer>
-          </Card>
-        </div>
-      )}
-
       {/* All other sources */}
-      {otherSources.length > 0 && (
+      {(moreCards.length > 0 || moreTiles.length > 0) && (
         <>
           <SectionTitle>More</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
-            {otherSources.map(sourceButton)}
-          </div>
+
+          {/* Real integrations — expandable swivel cards */}
+          {moreCards.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: moreTiles.length > 0 ? "var(--space-4)" : 0 }}>
+              {moreCards.map((src) => {
+                const desc = SOURCE_DESCRIPTIONS[src.id];
+                const isOpen = src.id === "shopify" ? shopifyExpanded : !!expanded[src.id];
+                const toggle = src.id === "shopify"
+                  ? () => setShopifyExpanded(!shopifyExpanded)
+                  : () => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }));
+                return (
+                  <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
+                    <CardHeader
+                      logo={SOURCE_LOGOS[src.id]}
+                      name={src.name}
+                      subtitle={desc?.subtitle || src.cat}
+                      isExpanded={isOpen}
+                      onToggle={toggle}
+                    />
+                    <Drawer open={isOpen}>
+                      {richDrawerContent({
+                        expanded: isOpen,
+                        description: desc.description,
+                        givesLabel: "What this gives F\u00FClkit",
+                        gives: desc.gives,
+                        tryPrompt: desc.tryPrompt,
+                        linkLabel: desc.linkLabel,
+                        linkHref: desc.linkHref,
+                        footer: src.id === "shopify" ? (
+                          <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                            <DrawerItem index={5} visible={isOpen}>
+                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                                Enter your Shopify store URL to connect.
+                              </div>
+                            </DrawerItem>
+                            <DrawerItem index={6} visible={isOpen}>
+                              <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                                <input
+                                  type="text"
+                                  placeholder="mystore.myshopify.com"
+                                  value={shopifyShopInput}
+                                  onChange={(e) => setShopifyShopInput(e.target.value)}
+                                  style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                                />
+                                <button
+                                  onClick={() => connectShopify(shopifyShopInput)}
+                                  disabled={!shopifyShopInput.trim()}
+                                  style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: !shopifyShopInput.trim() ? "default" : "pointer", opacity: !shopifyShopInput.trim() ? 0.5 : 1 }}
+                                >
+                                  Connect
+                                </button>
+                              </div>
+                            </DrawerItem>
+                          </div>
+                        ) : (
+                          <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                            <DrawerItem index={5} visible={isOpen}>
+                              <button
+                                onClick={() => connect(src.id)}
+                                style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
+                              >
+                                Connect {src.name}
+                              </button>
+                            </DrawerItem>
+                          </div>
+                        ),
+                      })}
+                    </Drawer>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Non-real sources — flat grid tiles */}
+          {moreTiles.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+              {moreTiles.map(sourceButton)}
+            </div>
+          )}
         </>
       )}
     </div>
