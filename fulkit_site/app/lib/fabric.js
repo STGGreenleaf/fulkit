@@ -143,6 +143,7 @@ export function FabricProvider({ children }) {
 
   // Poll suppression — prevent poller from overwriting optimistic UI after play commands
   const pollSuppressedUntil = useRef(0);
+  const playInFlightRef = useRef(null);
 
   // Reconnect: redirect to Spotify OAuth
   const reconnectSpotify = useCallback(() => {
@@ -647,12 +648,16 @@ export function FabricProvider({ children }) {
   }, [persistSets]);
 
   const playTrack = useCallback(async (track) => {
+    const requestId = Date.now();
+    playInFlightRef.current = requestId;
+
     setCurrentTrack((cur) => {
       if (cur && cur.id !== track.id) prevTrackRef.current = cur;
       return track;
     });
     setProgress(0);
     setIsPlaying(true);
+    pollSuppressedUntil.current = Date.now() + 5000;
     if (isDev) return;
 
     // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
@@ -660,14 +665,18 @@ export function FabricProvider({ children }) {
     if (!uri && track.artist && track.title) {
       try {
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
-        if (data?.tracks?.[0]?.uri) {
+        if (playInFlightRef.current !== requestId) return; // superseded by newer click
+        if (data?.tracks?.[0]) {
           uri = data.tracks[0].uri;
+          // Cache so we don't search again
+          track.uri = uri;
+          if (data.tracks[0].spotify_id) track.id = data.tracks[0].spotify_id;
         }
       } catch {}
     }
     if (!uri) return;
+    if (playInFlightRef.current !== requestId) return; // superseded
 
-    pollSuppressedUntil.current = Date.now() + 5000;
     const result = await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "play_track", value: { uri } }),
@@ -677,14 +686,14 @@ export function FabricProvider({ children }) {
   playTrackRef.current = playTrack;
 
   // Play a track with context for auto-continue
-  const playTrackInContext = useCallback((track, contextType, contextId, trackList, trackIndex) => {
+  const playTrackInContext = useCallback(async (track, contextType, contextId, trackList, trackIndex) => {
     playbackContextRef.current = {
       type: contextType,
       id: contextId,
       tracks: trackList,
       currentIndex: trackIndex,
     };
-    playTrack(track);
+    await playTrack(track);
   }, [playTrack]);
 
   // Auto-advance to next track when current finishes
