@@ -1873,9 +1873,27 @@ export default function FabricPage() {
             flexDirection: "column",
             background: "var(--color-bg)",
             overflow: "hidden",
-            position: "relative",
           }}
         >
+          {/* Header */}
+          <div style={{
+            padding: "var(--space-2-5) var(--space-6)",
+            borderBottom: "1px solid var(--color-border-light)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            flexShrink: 0,
+          }}>
+            <Disc size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                Fabric
+              </span>
+            )}
+          </div>
+
+          {/* Content area */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           {/* Deck toggle — persistent top-right */}
           <button onClick={toggleDeck} style={{
             position: "absolute", top: 8, right: 8,
@@ -3826,6 +3844,7 @@ export default function FabricPage() {
 
               {/* RSG moved to Browse column */}
             </div>
+          </div>
           </div>
         </div>
       </div>

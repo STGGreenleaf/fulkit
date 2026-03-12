@@ -557,18 +557,22 @@ export default function Chat() {
               gap: "var(--space-2)",
             }}
           >
-            <Sparkles
-              size={16}
-              strokeWidth={1.8}
-              style={{ color: "var(--color-text-muted)" }}
-            />
+            <span style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
             {!compactMode && (
-              <span
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: "var(--font-weight-semibold)",
-                }}
-              >
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+            )}
+            {!compactMode && (
+              <span style={{
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-semibold)",
+              }}>
                 Chat
               </span>
             )}

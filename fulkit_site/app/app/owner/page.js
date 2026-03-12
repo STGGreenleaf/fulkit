@@ -112,21 +112,20 @@ export function OwnerPanel() {
   const [tab, setTab] = useState("dashboard");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <div style={{ flex: 1, overflowY: "auto" }}>
       {/* Sub-tab bar + DevToggle right-justified */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "var(--space-1)",
-          padding: "0 var(--space-6)",
-          borderBottom: "1px solid var(--color-border-light)",
+          padding: "var(--space-3) var(--space-6)",
         }}
       >
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
-            <Tooltip key={t.id} label={compactMode ? t.label : null}>
+            <Tooltip key={t.id} label={null}>
               <button
                 onClick={() => setTab(t.id)}
                 style={{
@@ -135,6 +134,7 @@ export function OwnerPanel() {
                   gap: "var(--space-1-5)",
                   padding: "var(--space-2-5) var(--space-3)",
                   border: "none",
+                  outline: "none",
                   background: active ? "var(--color-bg-alt)" : "transparent",
                   borderRadius: "var(--radius-md)",
                   color: active ? "var(--color-text)" : "var(--color-text-muted)",
@@ -156,8 +156,8 @@ export function OwnerPanel() {
         </div>
       </div>
 
-      {/* Sub-tab content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
+      {/* Sub-tab content — full width */}
+      <div style={{ padding: "0 var(--space-6) var(--space-6)" }}>
         {tab === "dashboard" && <DashboardTab />}
         {tab === "questions" && <QuestionsTab />}
         {tab === "design" && <DesignTab />}
@@ -253,8 +253,8 @@ function DashboardTab() {
   ];
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
         {metrics.map((m, i) => (
           <div
             key={i}
@@ -412,7 +412,7 @@ function SpacingBlock({ label, size, px }) {
 
 function DesignTab() {
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "var(--space-8) 0" }}>
+    <div>
 
       {/* ═══ MASTHEAD ═══ */}
       <div style={{ marginBottom: "var(--space-12)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -1254,7 +1254,7 @@ function DesignExportButton() {
 
 function PlaceholderTab({ title, description }) {
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-2)" }}>
         {title}
       </h2>
@@ -1353,7 +1353,7 @@ function FabricTab() {
   const statLabel = { fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.05em" };
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
         <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)" }}>Fabric</h2>
         <button
@@ -1669,7 +1669,7 @@ function QuestionsTab() {
   }
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
         <div>
           <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-1)" }}>

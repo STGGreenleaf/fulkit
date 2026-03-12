@@ -3,7 +3,7 @@
 > This file is the single source of truth for all visual decisions in Fülkit.
 > Every component, page, and asset references this file. Nothing is hardcoded.
 > Update here → everything updates. Manual edits sync to owner portal and vice versa.
-> See also: [buildnotes.md](buildnotes.md) for product spec, [prelaunch.md](prelaunch.md) for launch checklist, [features.md](features.md) for marketing copy.
+> See also: [buildnotes.md](buildnotes.md) for product spec, [features.md](features.md) for marketing copy.
 
 ---
 
@@ -794,5 +794,5 @@ When building or modifying any Fülkit component:
 ## Changelog
 - v1.0 — Initial design system. Tokens, typography, spacing, components, orb, OG specs.
 - v1.1 — DIN Pro as default font. German font exploration dropdown (10 options). Weight system for unified header/body hierarchy. Historical easter eggs. Custom font loading instructions.
-- v1.2 — Curated Lucide icon pool (50+ icons organized by category). Asset folder structure. Cross-references to buildnotes.md and prelaunch.md.
+- v1.2 — Curated Lucide icon pool (50+ icons organized by category). Asset folder structure. Cross-references to buildnotes.md.
 - v1.3 — Renamed: Voice Orb → The Hum, Gas Tank → Fül, Jeeves → Chappie (internal personality codename). Third-party icon treatment (monochrome under our vibe). BYOK + service connect onboarding flows. Whisper API locked as transcription engine.

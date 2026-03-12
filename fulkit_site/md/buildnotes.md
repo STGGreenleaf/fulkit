@@ -1,6 +1,6 @@
 # Fülkit — Build Notes
 
-> Living spec for the Fülkit product. See also: [design.md](design.md) for visual system, [prelaunch.md](prelaunch.md) for launch checklist, [features.md](features.md) for marketing & feature copy.
+> Living spec for the Fülkit product. See also: [design.md](design.md) for visual system, [features.md](features.md) for marketing & feature copy.
 
 ## Domains
 - FullKit.app redirects → Fulkit.app (primary)
@@ -835,7 +835,7 @@ That's it. One message, two choices. The onboarding IS the product — it feels 
 **The goal:** Value in under 60 seconds. The user should feel like Fülkit already gets them before the first minute is up.
 
 ### ChappieBrain — Test Case #1
-The founder's personal Obsidian vault (ChappieBrain) is the first import target. This is the real test of the import pipeline and RAG system. If Fülkit can ingest ChappieBrain and immediately have useful conversations about its contents, the product works. See [prelaunch.md](prelaunch.md) for import task.
+The founder's personal Obsidian vault (ChappieBrain) is the first import target. This is the real test of the import pipeline and RAG system. If Fülkit can ingest ChappieBrain and immediately have useful conversations about its contents, the product works.
 
 ---
 
@@ -882,7 +882,7 @@ This is the ultimate use case: a developer (you) using the AI-powered second bra
 ### What lives in Fülkit's own brain
 - buildnotes.md — the living spec
 - design.md — the visual contract
-- prelaunch.md — the task list
+- TODO.md — the task list
 - Every conversation about architecture decisions
 - Bug reports and fixes
 - User feature requests and feedback
@@ -900,7 +900,7 @@ That's your bestie project-managing the build. No Jira. No Trello. No standup wi
 Claude Code (terminal agent) can read the repo, make changes, run tests, push code. The guardrails are already built:
 - **design.md** — Claude reads this FIRST before touching any UI. Tokens prevent rogue values.
 - **buildnotes.md** — Claude reads this for product context. Prevents scope drift.
-- **prelaunch.md** — Claude reads this for task priorities. Knows what's next.
+- **TODO.md** — Claude reads this for task priorities. Knows what's next.
 
 **The flow:**
 1. You tell Claude: "fix the whisper fade timing"
@@ -930,7 +930,7 @@ Fülkit should perpetually want to make itself better. Not just help the user �
 
 ### Managing expectations
 This doesn't all happen day one. The progression:
-1. **Now:** buildnotes/design/prelaunch .md files in the repo. Claude Code reads them. You drive.
+1. **Now:** buildnotes/design/TODO .md files in the repo. Claude Code reads them. You drive.
 2. **Soon:** Fülkit ingests its own repo. You can ask it questions about the codebase.
 3. **V1.5:** Fülkit flags issues and suggests priorities. You approve and execute.
 4. **V2:** Agents that execute changes with your approval. Fülkit iterates on itself.
@@ -1023,7 +1023,7 @@ This is a real company if you want it to be. Or it's just the best personal tool
 | **README.md** | Developer setup, project overview (root) | ✅ Current |
 | **md/buildnotes.md** | Product spec — vision, features, pricing, architecture | ✅ Current |
 | **md/design.md** | Visual system — colors, type, spacing, components, assets | ✅ Current |
-| **md/prelaunch.md** | Launch checklist — tasks, status, dependencies | ✅ Current |
+| **TODO.md** | Master action list — phases, tasks, critical path | ✅ Current |
 | **md/features.md** | Marketing — app replacement, cost comparisons, copy bank | ✅ Current |
 | **jsx/fulkit-app.jsx** | Main app — AI chat, notes, sources, roadmap (3 dev modes) | 🟡 Prototype |
 | **jsx/fulkit-orb.jsx** | The Hum — animated states, mic/stop/back controls | 🟡 Prototype |

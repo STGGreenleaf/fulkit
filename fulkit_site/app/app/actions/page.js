@@ -192,7 +192,17 @@ export default function Actions() {
               gap: "var(--space-2)",
             }}
           >
-            <CheckSquare size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+            <span style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+            )}
             {!compactMode && (
               <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
                 Actions
@@ -209,10 +219,12 @@ export default function Actions() {
                 color: "var(--color-text-muted)",
                 background: "none",
                 border: "none",
+                outline: "none",
                 cursor: "pointer",
                 fontFamily: "var(--font-primary)",
-                padding: "var(--space-1) var(--space-2)",
+                padding: 0,
                 borderRadius: "var(--radius-sm)",
+                lineHeight: 1,
               }}
               title="Add action"
             >
@@ -221,7 +233,7 @@ export default function Actions() {
             </button>
           </div>
 
-          {/* Lens row */}
+          {/* Main tab bar — lenses */}
           <div
             style={{
               display: "flex",
@@ -242,6 +254,7 @@ export default function Actions() {
                       gap: "var(--space-1-5)",
                       padding: "var(--space-2-5) var(--space-3)",
                       border: "none",
+                      outline: "none",
                       background: active ? "var(--color-bg-alt)" : "transparent",
                       borderRadius: "var(--radius-md)",
                       color: active ? "var(--color-text)" : "var(--color-text-muted)",
@@ -249,7 +262,7 @@ export default function Actions() {
                       fontSize: "var(--font-size-xs)",
                       fontFamily: "var(--font-primary)",
                       cursor: "pointer",
-                      transition: `all var(--duration-fast) var(--ease-default)`,
+                      transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                     }}
                   >
                     <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
@@ -260,59 +273,63 @@ export default function Actions() {
             })}
           </div>
 
-          {/* Filter tabs */}
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-1)",
-              padding: "0 var(--space-6)",
-            }}
-          >
-            {FILTERS.map(({ key, Icon }) => {
-              const active = filter === key;
-              return (
-                <Tooltip key={key} label={compactMode ? key : null}>
-                  <button
-                    onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1-5)",
-                      padding: "var(--space-2-5) var(--space-3)",
-                      border: "none",
-                      background: active ? "var(--color-bg-alt)" : "transparent",
-                      borderRadius: "var(--radius-md)",
-                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                      fontSize: "var(--font-size-xs)",
-                      fontFamily: "var(--font-primary)",
-                      cursor: "pointer",
-                      textTransform: "capitalize",
-                      transition: `all var(--duration-fast) var(--ease-default)`,
-                    }}
-                  >
-                    <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
-                    {!compactMode && key}
-                    {counts[key] > 0 && (
-                      <span
-                        style={{
-                          fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-mono)",
-                          color: active ? "var(--color-text-secondary)" : "var(--color-text-dim)",
-                          fontWeight: "var(--font-weight-bold)",
-                        }}
-                      >
-                        {counts[key]}
-                      </span>
-                    )}
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
-
           {/* Content */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6)" }}>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {/* Sub-nav — filters (indented, matches Owner sub-nav pattern) */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                padding: "var(--space-3) var(--space-6)",
+              }}
+            >
+              {FILTERS.map(({ key, Icon }) => {
+                const active = filter === key;
+                return (
+                  <Tooltip key={key} label={null}>
+                    <button
+                      onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-1-5)",
+                        padding: "var(--space-2-5) var(--space-3)",
+                        border: "none",
+                        outline: "none",
+                        background: active ? "var(--color-bg-alt)" : "transparent",
+                        borderRadius: "var(--radius-md)",
+                        color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                        fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-primary)",
+                        cursor: "pointer",
+                        textTransform: "capitalize",
+                        transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
+                      }}
+                    >
+                      <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                      {!compactMode && key}
+                      {counts[key] > 0 && (
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-2xs)",
+                            fontFamily: "var(--font-mono)",
+                            color: active ? "var(--color-text-secondary)" : "var(--color-text-dim)",
+                            fontWeight: "var(--font-weight-bold)",
+                          }}
+                        >
+                          {counts[key]}
+                        </span>
+                      )}
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+
+            {/* Action list */}
+            <div style={{ padding: "0 var(--space-6) var(--space-6)" }}>
             <div style={{ maxWidth: 640 }}>
               {/* Add action inline */}
               {adding && (
@@ -476,6 +493,7 @@ export default function Actions() {
                   {filter === "dismissed" && "Nothing dismissed."}
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>

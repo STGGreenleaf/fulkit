@@ -35,8 +35,7 @@ fulkit/
 └── md/                 ← documentation (the brain)
     ├── buildnotes.md   ← product spec, architecture, pricing
     ├── design.md       ← visual system, tokens, components
-    ├── features.md     ← marketing copy, comparisons, CTA bank
-    └── prelaunch.md    ← launch checklist with status tracking
+    └── features.md     ← marketing copy, comparisons, CTA bank
 ```
 
 ---
@@ -50,8 +49,6 @@ Read these in order if you're new to the project:
 2. **[md/design.md](md/design.md)** — The single source of truth for all visual decisions. Every color, font, spacing value, component spec, and guardrail. **Read this before writing any UI code.**
 
 3. **[md/features.md](md/features.md)** — The marketing treasure trove. App replacement tables, cost comparisons, competitive grid, copy bank, CTA wordplay. Pull from this for any collateral.
-
-4. **[md/prelaunch.md](md/prelaunch.md)** — Every task needed before launch, with status tracking (⬜/🟡/✅). The file structure and launch phases live here.
 
 ---
 
@@ -103,7 +100,7 @@ The `jsx/` folder contains working prototypes built during the initial design se
 | Product spec | ✅ Complete (buildnotes.md) |
 | Design system | ✅ Complete (design.md) |
 | Marketing copy | ✅ Complete (features.md) |
-| Launch checklist | ✅ Complete (prelaunch.md) |
+| Task tracking | ✅ Complete (TODO.md) |
 | App prototype | 🟡 Working prototype |
 | The Hum prototype | 🟡 Working prototype |
 | Supabase setup | ⬜ Not started |

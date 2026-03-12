@@ -2,7 +2,7 @@
 
 > The treasure trove. Everything needed to sell, explain, and demonstrate Fülkit.
 > Pull from this for: landing page, feature page, infographic, social posts, pitch decks, conversations.
-> See also: [buildnotes.md](buildnotes.md) for product spec, [design.md](design.md) for visual system, [prelaunch.md](prelaunch.md) for launch checklist.
+> See also: [buildnotes.md](buildnotes.md) for product spec, [design.md](design.md) for visual system.
 
 ---
 

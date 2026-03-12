@@ -212,7 +212,17 @@ export default function Settings({ initialTab = "account" }) {
             gap: "var(--space-2)",
           }}
         >
-          <SettingsIcon size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+          <span style={{
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-black)",
+            letterSpacing: "var(--letter-spacing-tight)",
+            color: "var(--color-text)",
+          }}>
+            Fülkit
+          </span>
+          {!compactMode && (
+            <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+          )}
           {!compactMode && (
             <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
               Settings
@@ -244,6 +254,7 @@ export default function Settings({ initialTab = "account" }) {
                     gap: "var(--space-1-5)",
                     padding: "var(--space-2-5) var(--space-3)",
                     border: "none",
+                    outline: "none",
                     background: active ? "var(--color-bg-alt)" : "transparent",
                     borderRadius: "var(--radius-md)",
                     color: active ? "var(--color-text)" : "var(--color-text-muted)",
@@ -251,7 +262,7 @@ export default function Settings({ initialTab = "account" }) {
                     fontSize: "var(--font-size-xs)",
                     fontFamily: "var(--font-primary)",
                     cursor: "pointer",
-                    transition: `all var(--duration-fast) var(--ease-default)`,
+                    transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                   }}
                 >
                   <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
@@ -263,7 +274,7 @@ export default function Settings({ initialTab = "account" }) {
         </div>
 
         {/* Tab content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: tab === "owner" ? 0 : "var(--space-4) var(--space-6) var(--space-6)" }}>
             {tab === "account" && <AccountTab />}
             {tab === "sources" && <SourcesTab />}
             {tab === "vault" && <VaultTab />}
@@ -434,7 +445,7 @@ function AccountTab() {
     : "—";
 
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <SectionTitle>Profile</SectionTitle>
       <Card>
         <Row label="Name" value={user?.name || profile?.name || "—"} />
@@ -795,7 +806,7 @@ function SourcesTab() {
   const hasConnected = githubConnected || fabricConnected || numbrlyConnected || connectedSources.length > 0;
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div>
       {/* Connected */}
       {hasConnected && (
         <>
@@ -1079,7 +1090,7 @@ function AITab() {
   const prefs = isDev ? PREFERENCES : [];
 
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <SectionTitle>Learned Preferences</SectionTitle>
       <Card>
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
@@ -1232,7 +1243,7 @@ function ReferralsTab() {
   const credit = activeRefs * 1;
 
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <SectionTitle>Get Fülkit</SectionTitle>
 
       {/* KPI strip */}
@@ -1390,7 +1401,7 @@ function BillingTab() {
   // Owner with own API key = unlimited
   if (!isDev && isOwner) {
     return (
-      <div style={{ maxWidth: 520 }}>
+      <div>
         <SectionTitle>Your plan</SectionTitle>
         <Card style={{ marginBottom: "var(--space-4)" }}>
           <div>
@@ -1414,7 +1425,7 @@ function BillingTab() {
   }
 
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <SectionTitle>Your plan</SectionTitle>
       <Card style={{ marginBottom: "var(--space-4)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
@@ -1671,7 +1682,7 @@ function VaultTab() {
   const isLocal = storageMode === "local";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", maxWidth: 480 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
       <StorageModeSelector />
 
       {/* Mode-specific status */}
@@ -1973,7 +1984,7 @@ function PrivacyTab() {
   }, [user, isDev]);
 
   return (
-    <div style={{ maxWidth: 520 }}>
+    <div>
       <SectionTitle>Your data</SectionTitle>
       <Card>
         {isDev ? (

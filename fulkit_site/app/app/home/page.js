@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckSquare, FileText, Zap, MessageCircle, Sparkles, X, Upload } from "lucide-react";
+import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
@@ -44,7 +45,8 @@ function timeAgo(dateStr) {
 const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
 
 export default function Dashboard() {
-  const { user, profile, hasContext, accessToken } = useAuth();
+  const { user, profile, hasContext, accessToken, compactMode } = useAuth();
+  const router = useRouter();
   const isDev = user?.isDev;
 
   const [actions, setActions] = useState([]);
@@ -104,24 +106,89 @@ export default function Dashboard() {
         <Sidebar />
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-6)" }}>
-            <div style={{ maxWidth: 640 }}>
-              {/* Greeting */}
-              <h1
-                style={{
-                  fontSize: "var(--font-size-2xl)",
-                  fontWeight: "var(--font-weight-black)",
-                  letterSpacing: "var(--letter-spacing-tight)",
-                  marginBottom: "var(--space-1)",
-                }}
-              >
-                {getGreeting()}, {(user?.name || profile?.name || "friend").split(" ")[0]}.
-              </h1>
+          {/* Header */}
+          <div style={{
+            padding: "var(--space-2-5) var(--space-6)",
+            borderBottom: "1px solid var(--color-border-light)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+          }}>
+            <span style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+            )}
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                Home
+              </span>
+            )}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6) var(--space-6)" }}>
+            <div>
+              {/* Greeting + Fül Gauge on same line */}
+              <div style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: "var(--space-4)",
+                marginBottom: 0,
+              }}>
+                <h1
+                  style={{
+                    fontSize: "var(--font-size-2xl)",
+                    fontWeight: "var(--font-weight-black)",
+                    letterSpacing: "var(--letter-spacing-tight)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    margin: 0,
+                  }}
+                >
+                  {getGreeting()}, {(user?.name || profile?.name || "friend").split(" ")[0]}.
+                </h1>
+                <div style={{ flex: 1, minWidth: 0, marginBottom: 10 }}>
+                  <div style={{
+                    width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
+                    textAlign: "right",
+                    marginBottom: 2,
+                  }}>
+                    <span style={{
+                      fontSize: 9,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: "var(--font-weight-bold)",
+                      color: "var(--color-text-dim)",
+                    }}>
+                      {seatLimit - messagesUsed} | {seatLimit}
+                    </span>
+                  </div>
+                  <div style={{
+                    height: 6,
+                    borderRadius: "var(--radius-full)",
+                    background: "var(--color-border-light)",
+                    overflow: "hidden",
+                  }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
+                      borderRadius: "var(--radius-full)",
+                      background: "var(--color-accent)",
+                      transition: "width var(--duration-slow) var(--ease-default)",
+                    }} />
+                  </div>
+                </div>
+              </div>
               <p
                 style={{
                   fontSize: "var(--font-size-sm)",
                   color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-8)",
+                  margin: "var(--space-1) 0 var(--space-6)",
                 }}
               >
                 Here's what's on your desk.
@@ -208,144 +275,169 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Fül Gauge */}
-              <div
-                style={{
-                  padding: "var(--space-4)",
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-lg)",
-                  marginBottom: "var(--space-6)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-                    Fül remaining
-                  </span>
-                  <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>
-                    {seatLimit - messagesUsed} / {seatLimit}
-                  </span>
-                </div>
-                <div style={{ height: 6, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden" }}>
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
-                      borderRadius: "var(--radius-full)",
-                      background: "var(--color-accent)",
-                      transition: `width var(--duration-slow) var(--ease-default)`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Whispers */}
-              <SectionLabel icon={Bell}>Whispers</SectionLabel>
-              {displayWhispers.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
-                  {displayWhispers.map((whisper, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: "var(--space-3) var(--space-4)",
-                        background: "var(--color-bg-elevated)",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-md)",
-                        fontSize: "var(--font-size-sm)",
-                        color: "var(--color-text-secondary)",
-                        lineHeight: "var(--line-height-relaxed)",
-                      }}
-                    >
-                      {whisper}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No whispers yet. I'm still getting to know you." marginBottom="var(--space-8)" />
-              )}
-
-              {/* Action Items */}
-              <SectionLabel icon={CheckSquare}>Action items</SectionLabel>
-              {displayActions.length > 0 ? (
-                <ActionList actions={displayActions} onComplete={completeAction} />
-              ) : (
-                <EmptyState message="No action items yet. Tell me what's on your plate." link="/chat" linkLabel="Start chatting" marginBottom="var(--space-8)" />
-              )}
-
-              {/* Recent Notes */}
-              <SectionLabel icon={FileText}>Recent notes</SectionLabel>
-              {displayNotes.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
-                  {displayNotes.map((note) => (
-                    <div
-                      key={note.id}
+              {/* Two-column dashboard grid */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "var(--space-6)",
+                alignItems: "start",
+              }}>
+                {/* Left column — incoming signals */}
+                <div>
+                  {/* Quick actions */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
+                    <Link
+                      href="/chat"
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
+                        gap: "var(--space-2)",
+                        padding: "var(--space-3) var(--space-4)",
+                        background: "var(--color-accent)",
+                        color: "var(--color-text-inverse)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <MessageCircle size={16} strokeWidth={1.8} />
+                      Start chatting
+                    </Link>
+                    <Link
+                      href="/hum"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-2)",
                         padding: "var(--space-3) var(--space-4)",
                         background: "var(--color-bg-elevated)",
                         border: "1px solid var(--color-border-light)",
+                        color: "var(--color-text)",
                         borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        textDecoration: "none",
                       }}
                     >
-                      <div>
-                        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-                          {note.title}
-                        </div>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
-                          {note.source}
-                        </div>
-                      </div>
-                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                        {isDev ? note.created_at : timeAgo(note.created_at)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No notes yet. Connect a source or start a conversation." link="/settings" linkLabel="Connect sources" marginBottom="var(--space-8)" />
-              )}
+                      <Zap size={16} strokeWidth={1.8} />
+                      Open The Hum
+                    </Link>
+                  </div>
 
-              {/* Quick actions */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                <Link
-                  href="/chat"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-2)",
-                    padding: "var(--space-3) var(--space-4)",
-                    background: "var(--color-accent)",
-                    color: "var(--color-text-inverse)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--font-size-sm)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <MessageCircle size={16} strokeWidth={1.8} />
-                  Start chatting
-                </Link>
-                <Link
-                  href="/hum"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-2)",
-                    padding: "var(--space-3) var(--space-4)",
-                    background: "var(--color-bg-elevated)",
-                    border: "1px solid var(--color-border-light)",
-                    color: "var(--color-text)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--font-size-sm)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Zap size={16} strokeWidth={1.8} />
-                  Open The Hum
-                </Link>
+                  {/* Whispers */}
+                  <SectionLabel icon={Bell}>Whispers</SectionLabel>
+                  {displayWhispers.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
+                      {displayWhispers.map((whisper, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "var(--space-3)",
+                            padding: "var(--space-3) var(--space-4)",
+                            background: "var(--color-bg-elevated)",
+                            border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-md)",
+                            fontSize: "var(--font-size-sm)",
+                            color: "var(--color-text-secondary)",
+                            lineHeight: "var(--line-height-relaxed)",
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>{whisper}</span>
+                          <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>
+                            <button
+                              onClick={() => {
+                                const title = typeof whisper === "string" ? whisper.slice(0, 120) : "Whisper action";
+                                setActions((prev) => [...prev, { id: `whisper-${i}-${Date.now()}`, title, source: "Whisper" }]);
+                                setWhispers((prev) => prev.filter((_, idx) => idx !== i));
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 2,
+                                color: "var(--color-text-dim)",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title="Add to actions"
+                            >
+                              <ListPlus size={14} strokeWidth={1.8} />
+                            </button>
+                            <button
+                              onClick={() => setWhispers((prev) => prev.filter((_, idx) => idx !== i))}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 2,
+                                color: "var(--color-text-dim)",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title="Dismiss"
+                            >
+                              <MessageCircleX size={14} strokeWidth={1.8} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState message="No whispers yet. I'm still getting to know you." marginBottom="var(--space-8)" />
+                  )}
+
+                  {/* Recent Notes */}
+                  <SectionLabel icon={LineSquiggle}>Recent threads</SectionLabel>
+                  {displayNotes.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      {displayNotes.map((note) => (
+                        <div
+                          key={note.id}
+                          onClick={() => router.push(`/threads?id=${note.id}`)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "var(--space-3) var(--space-4)",
+                            background: "var(--color-bg-elevated)",
+                            border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-md)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
+                              {note.title}
+                            </div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                              {note.source}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                            {isDev ? note.created_at : timeAgo(note.created_at)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState message="No threads yet. Start a conversation or import some files." link="/threads" linkLabel="View threads" />
+                  )}
+                </div>
+
+                {/* Right column — outgoing work */}
+                <div>
+                  {/* Action Items */}
+                  <SectionLabel icon={CheckSquare}>Action items</SectionLabel>
+                  {displayActions.length > 0 ? (
+                    <ActionList actions={displayActions} onComplete={completeAction} />
+                  ) : (
+                    <EmptyState message="No action items yet. Tell me what's on your plate." link="/chat" linkLabel="Start chatting" marginBottom="var(--space-8)" />
+                  )}
+
+                </div>
               </div>
             </div>
           </div>
