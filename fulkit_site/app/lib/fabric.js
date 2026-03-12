@@ -680,11 +680,14 @@ export function FabricProvider({ children }) {
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
         if (playInFlightRef.current !== requestId) return; // superseded by newer click
         if (data?.tracks?.[0]) {
-          uri = data.tracks[0].uri;
+          const match = data.tracks[0];
+          uri = match.uri;
           // Cache so we don't search again
           track.uri = uri;
-          if (data.tracks[0].spotify_id) track.id = data.tracks[0].spotify_id;
-          if (data.tracks[0].image) track.art = data.tracks[0].image;
+          if (match.spotify_id) track.id = match.spotify_id;
+          if (match.image) track.art = match.image;
+          // Update currentTrack state so player shows resolved art + ID
+          setCurrentTrack((cur) => (cur && cur.uri === uri) ? cur : { ...track });
         }
       } catch {}
     }

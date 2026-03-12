@@ -1453,7 +1453,6 @@ export default function FabricPage() {
     guyCrate,
     saveGuyCrateAsSet,
     addToGuyCrate,
-    enrichGuyCrateTrack,
     removeFromGuyCrate,
     clearGuyCrate,
     playTrack,
@@ -1653,20 +1652,6 @@ export default function FabricPage() {
   }, [deckHintShown]);
 
   const { accessToken, compactMode } = useAuth();
-
-  // Fetch album art for a BTC-suggested track and enrich it in B-Sides
-  const enrichTrackArt = useCallback(async (trackId, artist, title) => {
-    if (!accessToken) return;
-    try {
-      const res = await fetch(`/api/fabric/search?q=${encodeURIComponent(`${artist} ${title}`)}&type=track`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
-      if (data?.tracks?.[0]?.image) {
-        enrichGuyCrateTrack(trackId, { art: data.tracks[0].image });
-      }
-    } catch {}
-  }, [accessToken, enrichGuyCrateTrack]);
 
   // Discovery — load album tracks from BTC album links
   const loadDiscovery = useCallback(async (query) => {
@@ -2485,7 +2470,7 @@ export default function FabricPage() {
                                               onClick={() => {
                                                 if (alreadyAdded) return;
                                                 addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
-                                                enrichTrackArt(s.trackId, s.artist, s.title);
+
                                                 setGuyCrateCollapsed(false);
                                                 try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
                                               }}
@@ -2516,7 +2501,7 @@ export default function FabricPage() {
                                           songsWithIds.forEach(s => {
                                             if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
                                               addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
-                                              enrichTrackArt(s.trackId, s.artist, s.title);
+
                                             }
                                           });
                                           setGuyCrateCollapsed(false);
@@ -2619,7 +2604,7 @@ export default function FabricPage() {
                                           allMsgSongs.forEach(s => {
                                             if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
                                               addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
-                                              enrichTrackArt(s.trackId, s.artist, s.title);
+
                                             }
                                           });
                                           setGuyCrateCollapsed(false);
@@ -3431,11 +3416,6 @@ export default function FabricPage() {
                               borderBottom: "1px solid var(--color-border-light)",
                               background: isActive ? "var(--color-bg-alt)" : "transparent",
                             }}>
-                            {track.art && (
-                              <img src={track.art} alt="" style={{
-                                width: 28, height: 28, borderRadius: 2, flexShrink: 0, objectFit: "cover",
-                              }} />
-                            )}
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
                                 fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",
