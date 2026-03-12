@@ -1179,25 +1179,45 @@ function SourcesTab() {
 
   return (
     <div>
-      {/* Connected */}
+      {/* Connected header — always visible */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+        <SectionTitle style={{ marginBottom: 0 }}>Connected</SectionTitle>
+        <a
+          href="/privacy"
+          style={{
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-muted)",
+            textDecoration: "none",
+            lineHeight: "var(--line-height-tight)",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+        >
+          Your data stays yours. We can't see it. →
+        </a>
+      </div>
+
+      {/* No sources connected */}
+      {!hasConnected && (
+        <div
+          style={{
+            padding: "var(--space-4) var(--space-5)",
+            background: "var(--color-bg-alt)",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-md)",
+            marginBottom: "var(--space-6)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-muted)",
+            lineHeight: "var(--line-height-relaxed)",
+          }}
+        >
+          No sources connected yet. Connect a source below to give your AI real context — your transactions, inventory, customers, and more. Fülkit holds the connection, not the data.
+        </div>
+      )}
+
+      {/* Connected sources */}
       {hasConnected && (
         <>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
-            <SectionTitle style={{ marginBottom: 0 }}>Connected</SectionTitle>
-            <a
-              href="/privacy"
-              style={{
-                fontSize: "var(--font-size-2xs)",
-                color: "var(--color-text-dim)",
-                textDecoration: "none",
-                lineHeight: "var(--line-height-tight)",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-            >
-              Your data stays yours. We can't see it. →
-            </a>
-          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
             {/* GitHub */}
             {githubConnected && (
