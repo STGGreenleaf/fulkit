@@ -3332,7 +3332,7 @@ export default function FabricPage() {
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
                   marginBottom: "var(--space-2)",
-                  flex: 1,
+                  flex: guyCrateCollapsed ? "none" : 1,
                   minHeight: 0,
                   display: "flex",
                   flexDirection: "column",
