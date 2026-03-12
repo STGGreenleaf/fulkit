@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -2433,20 +2433,49 @@ export default function FabricPage() {
                                     flexDirection: "column",
                                     gap: 2,
                                   }}>
-                                    {songBlock.map((s, si) => (
+                                    {songBlock.map((s, si) => {
+                                      const trackId = `btc-${s.artist}-${s.title}`.toLowerCase().replace(/\s+/g, "-");
+                                      const alreadyAdded = guyCrate?.tracks?.some(t => t.id === trackId);
+                                      return (
                                       <div key={si} style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "var(--space-1-5)",
                                         fontFamily: "var(--font-mono)",
                                         fontSize: "var(--font-size-2xs)",
                                         letterSpacing: "var(--letter-spacing-wide)",
                                         color: "var(--color-text-secondary)",
                                         lineHeight: "var(--line-height-snug)",
                                       }}>
-                                        <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{s.artist}</span>
-                                        {" — "}
-                                        <span>{s.title}</span>
-                                        {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{s.artist}</span>
+                                          {" — "}
+                                          <span>{s.title}</span>
+                                          {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
+                                        </div>
+                                        <button
+                                          onClick={() => addToGuyCrate({ id: trackId, title: s.title, artist: s.artist })}
+                                          style={{
+                                            background: "none",
+                                            border: "none",
+                                            cursor: alreadyAdded ? "default" : "pointer",
+                                            padding: 1,
+                                            flexShrink: 0,
+                                            color: alreadyAdded ? "var(--color-text)" : "var(--color-text-dim)",
+                                            opacity: alreadyAdded ? 0.6 : 0.4,
+                                            transition: "opacity 120ms",
+                                            display: "flex",
+                                            alignItems: "center",
+                                          }}
+                                          title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
+                                          onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
+                                          onMouseLeave={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "0.4"; }}
+                                        >
+                                          {alreadyAdded ? <Check size={10} strokeWidth={2.2} /> : <CornerDownRight size={10} strokeWidth={2} />}
+                                        </button>
                                       </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 );
                                 songBlock = [];
