@@ -2531,13 +2531,16 @@ export default function FabricPage() {
                               };
 
                               lines.forEach((line, li) => {
-                                // Song recommendation: Artist - Title BPM [+]
-                                const plusMatch = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
-                                if (plusMatch) {
+                                // Song recommendation: Artist - Title BPM [+] (or ♪, or just BPM suffix)
+                                // Matches: "Artist - Title 120 BPM [+]", "Artist — Title 68 BPM", "Artist - Title ♪"
+                                const songMatch = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
+                                // Only treat as song if it has a BPM, [+], or ♪ marker (prevents matching every dashed line)
+                                const hasSongSignal = /\d+\s*BPM|\[\+\]|♪/.test(line);
+                                if (songMatch && hasSongSignal) {
                                   songBlock.push({
-                                    artist: plusMatch[1].trim(),
-                                    title: plusMatch[2].replace(/\s+\d+\s*$/, "").trim(),
-                                    bpm: plusMatch[3] ? `${plusMatch[3]} BPM` : null,
+                                    artist: songMatch[1].trim(),
+                                    title: songMatch[2].replace(/\s+\d+\s*$/, "").trim(),
+                                    bpm: songMatch[3] ? `${songMatch[3]} BPM` : null,
                                   });
                                   return;
                                 }
