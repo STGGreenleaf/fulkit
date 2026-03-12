@@ -2468,16 +2468,16 @@ export default function FabricPage() {
                           </div>
                         ))}
                         {musicStreaming && (
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", display: "flex", alignItems: "center", gap: 3, padding: "var(--space-1) 0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "var(--space-2) 0" }}>
                             {[0, 1, 2].map((dot) => (
                               <span
                                 key={dot}
                                 style={{
                                   display: "inline-block",
-                                  width: 4,
-                                  height: 4,
+                                  width: 6,
+                                  height: 6,
                                   borderRadius: "50%",
-                                  background: "var(--color-text-dim)",
+                                  background: "var(--color-text-muted)",
                                   animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
                                 }}
                               />
