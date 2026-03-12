@@ -1543,33 +1543,8 @@ export default function FabricPage() {
     });
   }, []);
 
-  // Auto-populate B-Sides from BTC recommendations
-  const lastProcessedMsgIdx = useRef(-1);
-  useEffect(() => {
-    if (musicMessages.length === 0) return;
-    const msgIdx = musicMessages.length - 1;
-    if (msgIdx <= lastProcessedMsgIdx.current) return;
-    const lastMsg = musicMessages[msgIdx];
-    if (lastMsg.role !== "assistant" || lastMsg._streaming) return;
-    lastProcessedMsgIdx.current = msgIdx;
-    const lines = lastMsg.content.split("\n");
-    let added = false;
-    for (const line of lines) {
-      const m = line.match(/^(.+?)\s*-\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*\[\+\]\s*$/);
-      if (m) {
-        const artist = m[1].trim();
-        const title = m[2].replace(/\s+\d+\s*$/, "").trim();
-        const trackId = `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-");
-        addToGuyCrate({ id: trackId, title, artist });
-        added = true;
-      }
-    }
-    // Auto-expand B-Sides when new tracks arrive
-    if (added) {
-      setGuyCrateCollapsed(false);
-      try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
-    }
-  }, [musicMessages, addToGuyCrate]);
+  // B-Sides: manual add only via arrow icon in chat
+  // (auto-add removed — user clicks CornerDownRight to push songs to B-Sides)
 
   // Deck collapse
   const [deckExpanded, setDeckExpanded] = useState(() => {
@@ -2454,7 +2429,12 @@ export default function FabricPage() {
                                           {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
                                         </div>
                                         <button
-                                          onClick={() => addToGuyCrate({ id: trackId, title: s.title, artist: s.artist })}
+                                          onClick={() => {
+                                            if (alreadyAdded) return;
+                                            addToGuyCrate({ id: trackId, title: s.title, artist: s.artist });
+                                            setGuyCrateCollapsed(false);
+                                            try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                          }}
                                           style={{
                                             background: "none",
                                             border: "none",
