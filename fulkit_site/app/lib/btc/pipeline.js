@@ -91,7 +91,7 @@ export async function generateTake(
   try {
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages,
     });
@@ -138,7 +138,7 @@ export async function generateTakeStreamed(
 
   const stream = await client.messages.stream({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: systemPrompt,
     messages,
   });
@@ -180,7 +180,7 @@ export async function qualityCheck(
 
   const stream = await client.messages.stream({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: PASS_2_COUNTER,
     messages,
   });
