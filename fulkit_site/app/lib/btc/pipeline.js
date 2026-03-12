@@ -153,7 +153,8 @@ export async function generateTakeStreamed(
 export async function qualityCheck(
   userMessage,
   draftResponse,
-  conversationHistory = []
+  conversationHistory = [],
+  dynamicContext = ""
 ) {
   const start = Date.now();
 
@@ -171,10 +172,14 @@ export async function qualityCheck(
     ? `\nFULL CONVERSATION SO FAR:\n${conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}\n`
     : "";
 
+  const dynamicBlock = dynamicContext
+    ? `\nCURRENT SESSION CONTEXT:\n${dynamicContext}\n`
+    : "";
+
   const messages = [
     {
       role: "user",
-      content: `USER'S MESSAGE:\n"${userMessage}"\n\nDRAFT BTC RESPONSE:\n${draftResponse}\n${contextBlock}${conversationBlock}\nEvaluate and output the final response.`,
+      content: `USER'S MESSAGE:\n"${userMessage}"\n\nDRAFT BTC RESPONSE:\n${draftResponse}\n${dynamicBlock}${contextBlock}${conversationBlock}\nEvaluate and output the final response.`,
     },
   ];
 
@@ -234,7 +239,8 @@ export async function runPipeline(
   const finalStream = await qualityCheck(
     userMessage,
     rawResponse,
-    conversationHistory
+    conversationHistory,
+    dynamicContext
   );
 
   console.log(
