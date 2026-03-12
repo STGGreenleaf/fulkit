@@ -4,6 +4,9 @@ import { getGitHubToken, githubFetch } from "../../../lib/github";
 import { getNumbrlyToken, numbrlyFetch } from "../../../lib/numbrly";
 import { getTrueGaugeToken, truegaugeFetch } from "../../../lib/truegauge";
 import { getSquareToken, squareFetch } from "../../../lib/square-server";
+import { getShopifyToken, shopifyFetch } from "../../../lib/shopify-server";
+import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
+import { getToastToken, toastFetch } from "../../../lib/toast-server";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -661,6 +664,360 @@ async function executeSquareTool(toolName, input, userId) {
   }
 }
 
+// Shopify tool schemas
+const SHOPIFY_TOOLS = [
+  {
+    name: "shopify_daily_summary",
+    description: "Get today's e-commerce sales summary — order count, total revenue, top products sold. Use for daily recap or 'how's the store doing?'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "shopify_orders",
+    description: "List recent orders. Filter by status (open, closed, cancelled, any), date, or fulfillment status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Order status: open, closed, cancelled, any (default: any)" },
+        limit: { type: "number", description: "Max results (default 50)" },
+        created_at_min: { type: "string", description: "Minimum creation date (ISO 8601)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "shopify_products",
+    description: "Search or list products in the store catalog.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Filter by product title (partial match)" },
+        limit: { type: "number", description: "Max results (default 50)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "shopify_customers",
+    description: "Search customers by name, email, or list recent customers.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query (name or email)" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "shopify_inventory",
+    description: "Check inventory levels for products across locations.",
+    input_schema: {
+      type: "object",
+      properties: {
+        inventory_item_ids: { type: "string", description: "Comma-separated inventory item IDs" },
+        location_ids: { type: "string", description: "Comma-separated location IDs" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "shopify_shop_info",
+    description: "Get store details — name, domain, currency, plan, address.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+];
+
+async function executeShopifyTool(toolName, input, userId) {
+  switch (toolName) {
+    case "shopify_daily_summary": {
+      const date = input.date || new Date().toISOString().split("T")[0];
+      const data = await shopifyFetch(userId, `/orders.json?status=any&created_at_min=${date}T00:00:00Z&created_at_max=${date}T23:59:59Z&limit=250`);
+      const orders = data?.orders || [];
+      const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.total_price || "0"), 0);
+      const itemCounts = {};
+      for (const order of orders) {
+        for (const li of order.line_items || []) {
+          itemCounts[li.title] = (itemCounts[li.title] || 0) + li.quantity;
+        }
+      }
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      return { date, orders: orders.length, revenue: totalRevenue, topItems: topItems.map(([name, qty]) => ({ name, qty })) };
+    }
+    case "shopify_orders": {
+      const params = new URLSearchParams();
+      params.set("status", input.status || "any");
+      params.set("limit", String(input.limit || 50));
+      if (input.created_at_min) params.set("created_at_min", input.created_at_min);
+      return await shopifyFetch(userId, `/orders.json?${params.toString()}`);
+    }
+    case "shopify_products": {
+      const params = new URLSearchParams();
+      if (input.title) params.set("title", input.title);
+      params.set("limit", String(input.limit || 50));
+      return await shopifyFetch(userId, `/products.json?${params.toString()}`);
+    }
+    case "shopify_customers": {
+      const params = new URLSearchParams();
+      if (input.query) params.set("query", input.query);
+      params.set("limit", String(input.limit || 20));
+      return await shopifyFetch(userId, `/customers/search.json?${params.toString()}`);
+    }
+    case "shopify_inventory": {
+      const params = new URLSearchParams();
+      if (input.inventory_item_ids) params.set("inventory_item_ids", input.inventory_item_ids);
+      if (input.location_ids) params.set("location_ids", input.location_ids);
+      return await shopifyFetch(userId, `/inventory_levels.json?${params.toString()}`);
+    }
+    case "shopify_shop_info":
+      return await shopifyFetch(userId, "/shop.json");
+    default:
+      return { error: "Unknown Shopify tool" };
+  }
+}
+
+// Stripe tool schemas
+const STRIPE_TOOLS = [
+  {
+    name: "stripe_daily_summary",
+    description: "Get today's payment summary — total charges, revenue, refunds, net. Use for daily recap or 'how are payments today?'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_charges",
+    description: "List recent charges/payments. Filter by date or status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 20)" },
+        created_gte: { type: "number", description: "Unix timestamp — charges created after this time" },
+        created_lte: { type: "number", description: "Unix timestamp — charges created before this time" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_customers",
+    description: "List or search Stripe customers.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email: { type: "string", description: "Filter by customer email" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_subscriptions",
+    description: "List active subscriptions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status: active, past_due, canceled, all (default: active)" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_invoices",
+    description: "List invoices. Filter by status (draft, open, paid, void, uncollectible).",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_balance",
+    description: "Get current Stripe account balance — available and pending funds.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "stripe_payouts",
+    description: "List recent payouts to your bank account.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "stripe_refunds",
+    description: "List recent refunds.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+];
+
+async function executeStripeTool(toolName, input, userId) {
+  switch (toolName) {
+    case "stripe_daily_summary": {
+      const date = input.date || new Date().toISOString().split("T")[0];
+      const startTs = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);
+      const endTs = Math.floor(new Date(`${date}T23:59:59Z`).getTime() / 1000);
+      const [charges, refunds] = await Promise.all([
+        stripeFetch(userId, `/charges?created[gte]=${startTs}&created[lte]=${endTs}&limit=100`),
+        stripeFetch(userId, `/refunds?created[gte]=${startTs}&created[lte]=${endTs}&limit=100`),
+      ]);
+      const chargeList = charges?.data || [];
+      const refundList = refunds?.data || [];
+      const totalRevenue = chargeList.filter(c => c.status === "succeeded").reduce((sum, c) => sum + c.amount, 0);
+      const totalRefunds = refundList.reduce((sum, r) => sum + r.amount, 0);
+      return {
+        date,
+        charges: chargeList.length,
+        succeeded: chargeList.filter(c => c.status === "succeeded").length,
+        revenue: totalRevenue / 100,
+        refunds: refundList.length,
+        refundTotal: totalRefunds / 100,
+        net: (totalRevenue - totalRefunds) / 100,
+      };
+    }
+    case "stripe_charges": {
+      const params = new URLSearchParams();
+      params.set("limit", String(input.limit || 20));
+      if (input.created_gte) params.set("created[gte]", String(input.created_gte));
+      if (input.created_lte) params.set("created[lte]", String(input.created_lte));
+      return await stripeFetch(userId, `/charges?${params.toString()}`);
+    }
+    case "stripe_customers": {
+      const params = new URLSearchParams();
+      if (input.email) params.set("email", input.email);
+      params.set("limit", String(input.limit || 20));
+      return await stripeFetch(userId, `/customers?${params.toString()}`);
+    }
+    case "stripe_subscriptions": {
+      const params = new URLSearchParams();
+      if (input.status && input.status !== "all") params.set("status", input.status);
+      params.set("limit", String(input.limit || 20));
+      return await stripeFetch(userId, `/subscriptions?${params.toString()}`);
+    }
+    case "stripe_invoices": {
+      const params = new URLSearchParams();
+      if (input.status) params.set("status", input.status);
+      params.set("limit", String(input.limit || 20));
+      return await stripeFetch(userId, `/invoices?${params.toString()}`);
+    }
+    case "stripe_balance":
+      return await stripeFetch(userId, "/balance");
+    case "stripe_payouts":
+      return await stripeFetch(userId, `/payouts?limit=${input.limit || 10}`);
+    case "stripe_refunds":
+      return await stripeFetch(userId, `/refunds?limit=${input.limit || 20}`);
+    default:
+      return { error: "Unknown Stripe tool" };
+  }
+}
+
+// Toast tool schemas
+const TOAST_TOOLS = [
+  {
+    name: "toast_daily_summary",
+    description: "Get today's restaurant summary — orders, revenue, checks. Use for daily recap or 'how was service today?'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "toast_orders",
+    description: "List recent restaurant orders with items, totals, and payment info.",
+    input_schema: {
+      type: "object",
+      properties: {
+        start_date: { type: "string", description: "Start date (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "End date (YYYY-MM-DD)" },
+        page_size: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "toast_menu",
+    description: "Get the restaurant menu — items, groups, prices.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "toast_employees",
+    description: "List restaurant employees and their roles.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "toast_labor",
+    description: "Get labor data — shifts, hours, labor cost for a date range.",
+    input_schema: {
+      type: "object",
+      properties: {
+        start_date: { type: "string", description: "Start date (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "End date (YYYY-MM-DD)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "toast_restaurant_info",
+    description: "Get restaurant details — name, location, hours, settings.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+];
+
+async function executeToastTool(toolName, input, userId) {
+  const today = new Date().toISOString().split("T")[0];
+  switch (toolName) {
+    case "toast_daily_summary": {
+      const date = input.date || today;
+      const data = await toastFetch(userId, `/orders/v2/orders?businessDate=${date}&pageSize=100`);
+      const orders = Array.isArray(data) ? data : [];
+      const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+      return { date, orders: orders.length, revenue: totalRevenue / 100 };
+    }
+    case "toast_orders": {
+      const start = input.start_date || today;
+      const end = input.end_date || today;
+      return await toastFetch(userId, `/orders/v2/orders?businessDate=${start}&endDate=${end}&pageSize=${input.page_size || 20}`);
+    }
+    case "toast_menu":
+      return await toastFetch(userId, "/menus/v2/menus");
+    case "toast_employees":
+      return await toastFetch(userId, "/labor/v1/employees");
+    case "toast_labor": {
+      const start = input.start_date || today;
+      const end = input.end_date || today;
+      return await toastFetch(userId, `/labor/v1/shifts?startDate=${start}&endDate=${end}`);
+    }
+    case "toast_restaurant_info":
+      return await toastFetch(userId, "/restaurants/v1/restaurants");
+    default:
+      return { error: "Unknown Toast tool" };
+  }
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -1088,11 +1445,17 @@ export async function POST(request) {
     let nblKey = null;
     let tgKey = null;
     let sqToken = null;
+    let shopifyToken = null;
+    let stripeToken = null;
+    let toastToken = null;
     if (userId) {
-      [nblKey, tgKey, sqToken] = await Promise.all([
+      [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken] = await Promise.all([
         getNumbrlyToken(userId),
         getTrueGaugeToken(userId),
         getSquareToken(userId),
+        getShopifyToken(userId),
+        getStripeToken(userId),
+        getToastToken(userId),
       ]);
     }
 
@@ -1167,6 +1530,9 @@ export async function POST(request) {
       ...(nblKey ? NUMBRLY_TOOLS : []),
       ...(tgKey ? TRUEGAUGE_TOOLS : []),
       ...(sqToken ? SQUARE_TOOLS : []),
+      ...(shopifyToken ? SHOPIFY_TOOLS : []),
+      ...(stripeToken ? STRIPE_TOOLS : []),
+      ...(toastToken ? TOAST_TOOLS : []),
     ];
     const baseOpts = {
       model: config.model,
@@ -1290,6 +1656,39 @@ export async function POST(request) {
               if (block.name.startsWith("square_") && sqToken) {
                 try {
                   const result = await executeSquareTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Shopify tools
+              if (block.name.startsWith("shopify_") && shopifyToken) {
+                try {
+                  const result = await executeShopifyTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Stripe tools
+              if (block.name.startsWith("stripe_") && stripeToken) {
+                try {
+                  const result = await executeStripeTool(block.name, block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Toast tools
+              if (block.name.startsWith("toast_") && toastToken) {
+                try {
+                  const result = await executeToastTool(block.name, block.input || {}, userId);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

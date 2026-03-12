@@ -143,6 +143,21 @@ const SOURCE_LOGOS = {
       <path d="M18 2H6C3.79 2 2 3.79 2 6v12c0 2.21 1.79 4 4 4h12c2.21 0 4-1.79 4-4V6c0-2.21-1.79-4-4-4zm-1 13c0 .55-.45 1-1 1H8c-.55 0-1-.45-1-1V9c0-.55.45-1 1-1h8c.55 0 1 .45 1 1v6z"/>
     </svg>
   ),
+  shopify: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M15.34 2.61c-.06-.02-.12 0-.17.04-.04.04-.7.84-.7.84s-.78-.16-1.23-.2c-.06-.56-.32-1.34-1.4-1.34-.04 0-.08 0-.13.01C11.37 1.54 10.98 1 10.58 1c-2.56 0-3.8 3.2-4.18 4.82-.99.3-1.69.52-1.77.55-.55.17-.57.19-.64.71C3.94 7.46 2 21.5 2 21.5l11.46 2 6.2-1.5S15.42 2.64 15.34 2.61zM11 4.42v.2l-2.23.7C9.21 3.74 10.03 2.7 11 4.42zm-1.53-1.7c.08 0 .17.06.25.16-.97.46-2.02 1.42-2.46 3.45L5.6 6.87C6.07 5.34 7.1 2.72 9.47 2.72zm.8 8.95s-.63-.33-1.4-.33c-1.13 0-1.19.71-1.19.89 0 .97 2.54 1.35 2.54 3.63 0 1.84-1.16 3.02-2.73 3.02-1.88 0-2.84-1.17-2.84-1.17l.5-1.66s.99.85 1.82.85c.54 0 .77-.43.77-.74 0-1.28-2.08-1.33-2.08-3.42 0-1.76 1.26-3.46 3.83-3.46.99 0 1.48.28 1.48.28l-.7 2.11z"/>
+    </svg>
+  ),
+  stripe: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M13.98 7.56c0-1.15.94-1.59 2.5-1.59 2.24 0 5.07.68 7.3 1.9V2.86C21.48 2 19.27 1.5 17.04 1.5c-4.63 0-7.72 2.42-7.72 6.46 0 6.3 8.67 5.3 8.67 8.02 0 1.36-1.18 1.8-2.84 1.8-2.46 0-5.6-.97-8.09-2.32v5.1c2.75 1.18 5.53 1.68 8.09 1.68 4.74 0 8-2.35 8-6.44C23.14 9.83 13.98 11.05 13.98 7.56z" transform="scale(0.85) translate(2, 2)"/>
+    </svg>
+  ),
+  toast: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M4 4c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V4zm0 7c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-2zm2 7c-1.1 0-2 .9-2 2v0c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v0c0-1.1-.9-2-2-2H6z"/>
+    </svg>
+  ),
 };
 
 // Mock connected state — will come from DB
@@ -150,9 +165,17 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast"];
 
 const ALL_SOURCES = [
+  { id: "square", name: "Square", cat: "Payments & POS" },
+  { id: "shopify", name: "Shopify", cat: "E-Commerce" },
+  { id: "stripe", name: "Stripe", cat: "Payments" },
+  { id: "toast", name: "Toast", cat: "Restaurant POS" },
+  { id: "github", name: "GitHub", cat: "Dev" },
+  { id: "fabric", name: "Spotify", cat: "Media" },
+  { id: "numbrly", name: "Numbrly", cat: "Small Business" },
+  { id: "truegauge", name: "TrueGauge", cat: "Profitability Analytics" },
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
   { id: "google", name: "Google", cat: "Account" },
   { id: "notion", name: "Notion", cat: "Notes" },
@@ -162,14 +185,9 @@ const ALL_SOURCES = [
   { id: "onenote", name: "OneNote", cat: "Notes" },
   { id: "markdown", name: "Markdown files", cat: "Notes" },
   { id: "slack", name: "Slack", cat: "Chat" },
-  { id: "github", name: "GitHub", cat: "Dev" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
-  { id: "fabric", name: "Spotify", cat: "Media" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
-  { id: "numbrly", name: "Numbrly", cat: "Small Business" },
-  { id: "truegauge", name: "TrueGauge", cat: "Profitability Analytics" },
-  { id: "square", name: "Square", cat: "Payments & POS" },
 ];
 
 const PREFERENCES = [
@@ -556,6 +574,22 @@ function SourcesTab() {
   const [squareLastSynced, setSquareLastSynced] = useState(null);
   const [squareDisconnecting, setSquareDisconnecting] = useState(false);
 
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [shopifyExpanded, setShopifyExpanded] = useState(false);
+  const [shopifyLastSynced, setShopifyLastSynced] = useState(null);
+  const [shopifyDisconnecting, setShopifyDisconnecting] = useState(false);
+  const [shopifyShopInput, setShopifyShopInput] = useState("");
+
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeExpanded, setStripeExpanded] = useState(false);
+  const [stripeLastSynced, setStripeLastSynced] = useState(null);
+  const [stripeDisconnecting, setStripeDisconnecting] = useState(false);
+
+  const [toastConnected, setToastConnected] = useState(false);
+  const [toastExpanded, setToastExpanded] = useState(false);
+  const [toastLastSynced, setToastLastSynced] = useState(null);
+  const [toastDisconnecting, setToastDisconnecting] = useState(false);
+
   // Fetch repos and active state on mount
   useEffect(() => {
     if (isDev || !accessToken || !githubConnected) return;
@@ -574,6 +608,15 @@ function SourcesTab() {
     }
     if (params.get("sq") === "connected") {
       setSquareConnected(true);
+    }
+    if (params.get("shopify") === "connected") {
+      setShopifyConnected(true);
+    }
+    if (params.get("stripe") === "connected") {
+      setStripeConnected(true);
+    }
+    if (params.get("toast") === "connected") {
+      setToastConnected(true);
     }
   }, [accessToken, checkGitHub]);
 
@@ -610,6 +653,33 @@ function SourcesTab() {
     fetch("/api/square/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setSquareConnected(data.connected); if (data.lastSynced) setSquareLastSynced(data.lastSynced); } })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Shopify connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/shopify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setShopifyConnected(data.connected); if (data.lastSynced) setShopifyLastSynced(data.lastSynced); } })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Stripe connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/stripe/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setStripeConnected(data.connected); if (data.lastSynced) setStripeLastSynced(data.lastSynced); } })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Toast connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/toast/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setToastConnected(data.connected); if (data.lastSynced) setToastLastSynced(data.lastSynced); } })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -798,6 +868,86 @@ function SourcesTab() {
     setSquareDisconnecting(false);
   }
 
+  function connectShopify(shop) {
+    if (isDev) { setShopifyConnected(true); return; }
+    if (!shop) return;
+    const cleanShop = shop.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (accessToken) {
+      window.location.href = `/api/shopify/connect?token=${encodeURIComponent(accessToken)}&shop=${encodeURIComponent(cleanShop)}`;
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.location.href = `/api/shopify/connect?token=${encodeURIComponent(token)}&shop=${encodeURIComponent(cleanShop)}`;
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectShopify() {
+    setShopifyDisconnecting(true);
+    try {
+      await fetch("/api/shopify/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setShopifyConnected(false);
+    } catch {}
+    setShopifyDisconnecting(false);
+  }
+
+  function connectStripe() {
+    if (isDev) { setStripeConnected(true); return; }
+    if (accessToken) {
+      window.location.href = "/api/stripe/connect?token=" + encodeURIComponent(accessToken);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.location.href = "/api/stripe/connect?token=" + encodeURIComponent(token);
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectStripe() {
+    setStripeDisconnecting(true);
+    try {
+      await fetch("/api/stripe/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setStripeConnected(false);
+    } catch {}
+    setStripeDisconnecting(false);
+  }
+
+  function connectToast() {
+    if (isDev) { setToastConnected(true); return; }
+    if (accessToken) {
+      window.location.href = "/api/toast/connect?token=" + encodeURIComponent(accessToken);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.location.href = "/api/toast/connect?token=" + encodeURIComponent(token);
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectToast() {
+    setToastDisconnecting(true);
+    try {
+      await fetch("/api/toast/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setToastConnected(false);
+    } catch {}
+    setToastDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -805,11 +955,15 @@ function SourcesTab() {
     ...(numbrlyConnected ? ["numbrly"] : []),
     ...(tgConnected ? ["truegauge"] : []),
     ...(squareConnected ? ["square"] : []),
+    ...(shopifyConnected ? ["shopify"] : []),
+    ...(stripeConnected ? ["stripe"] : []),
+    ...(toastConnected ? ["toast"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly" && s.id !== "truegauge" && s.id !== "square");
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast"];
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
-    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && s.id !== "numbrly" && s.id !== "truegauge" && s.id !== "square"
+    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && !["numbrly", "truegauge"].includes(s.id)
   );
 
   const connect = (id) => {
@@ -818,6 +972,9 @@ function SourcesTab() {
     if (id === "numbrly") { setNumbrlyExpanded(true); return; }
     if (id === "truegauge") { setTgExpanded(true); return; }
     if (id === "square") { connectSquare(); return; }
+    if (id === "shopify") { setShopifyExpanded(true); return; }
+    if (id === "stripe") { connectStripe(); return; }
+    if (id === "toast") { connectToast(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -825,6 +982,10 @@ function SourcesTab() {
     if (id === "fabric") { disconnectFabric(); return; }
     if (id === "numbrly") { disconnectNumbrly(); return; }
     if (id === "truegauge") { disconnectTrueGauge(); return; }
+    if (id === "square") { disconnectSquare(); return; }
+    if (id === "shopify") { disconnectShopify(); return; }
+    if (id === "stripe") { disconnectStripe(); return; }
+    if (id === "toast") { disconnectToast(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -960,7 +1121,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -1213,8 +1374,122 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* Shopify — connected */}
+            {shopifyConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.shopify}
+                  name="Shopify"
+                  subtitle="Your storefront, connected."
+                  isExpanded={shopifyExpanded}
+                  onToggle={() => setShopifyExpanded(!shopifyExpanded)}
+                />
+                <Drawer open={shopifyExpanded}>
+                  {richDrawerContent({
+                    expanded: shopifyExpanded,
+                    description: "Shopify powers your online store \u2014 products, orders, customers, inventory. Connecting it means F\u00FClkit sees every sale, every fulfillment, every customer interaction.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Product catalog, order history, customer data, inventory levels, and fulfillment status. Ask about your store and get real answers.",
+                    tryPrompt: "What sold the most this week?",
+                    linkLabel: "shopify.com",
+                    linkHref: "https://shopify.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{shopifyLastSynced ? ` \u00B7 Last synced ${timeAgo(shopifyLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectShopify}
+                          disabled={shopifyDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: shopifyDisconnecting ? 0.5 : 1 }}
+                        >
+                          {shopifyDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Stripe — connected */}
+            {stripeConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.stripe}
+                  name="Stripe"
+                  subtitle="Your payments, connected."
+                  isExpanded={stripeExpanded}
+                  onToggle={() => setStripeExpanded(!stripeExpanded)}
+                />
+                <Drawer open={stripeExpanded}>
+                  {richDrawerContent({
+                    expanded: stripeExpanded,
+                    description: "Stripe handles your payments, subscriptions, invoices, and payouts. Connecting it means F\u00FClkit sees every charge, every refund, every payout in real time.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Payment history, balance, payout schedule, subscription metrics, invoice status, and dispute tracking. Ask about revenue and get the real numbers.",
+                    tryPrompt: "What\u2019s my revenue this month?",
+                    linkLabel: "stripe.com",
+                    linkHref: "https://stripe.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{stripeLastSynced ? ` \u00B7 Last synced ${timeAgo(stripeLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectStripe}
+                          disabled={stripeDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: stripeDisconnecting ? 0.5 : 1 }}
+                        >
+                          {stripeDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Toast — connected */}
+            {toastConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.toast}
+                  name="Toast"
+                  subtitle="Your restaurant, connected."
+                  isExpanded={toastExpanded}
+                  onToggle={() => setToastExpanded(!toastExpanded)}
+                />
+                <Drawer open={toastExpanded}>
+                  {richDrawerContent({
+                    expanded: toastExpanded,
+                    description: "Toast runs your restaurant \u2014 orders, menus, labor, and payments. Connecting it means F\u00FClkit sees every ticket, every shift, every menu change.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Order history, menu data, labor schedules, payment summaries, and revenue breakdowns. Ask how service went and get real numbers.",
+                    tryPrompt: "How was lunch today?",
+                    linkLabel: "toasttab.com",
+                    linkHref: "https://toasttab.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{toastLastSynced ? ` \u00B7 Last synced ${timeAgo(toastLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectToast}
+                          disabled={toastDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: toastDisconnecting ? 0.5 : 1 }}
+                        >
+                          {toastDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
-            {connectedSources.filter((s) => s.id !== "google" && s.id !== "numbrly" && s.id !== "truegauge").map((src) => {
+            {connectedSources.filter((s) => s.id !== "google").map((src) => {
               const isExpanded = expanded[src.id];
               return (
                 <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
@@ -1240,7 +1515,7 @@ function SourcesTab() {
       )}
 
       {/* Suggested */}
-      {(!numbrlyConnected || !tgConnected || !squareConnected) && (
+      {(!numbrlyConnected || !tgConnected) && (
         <>
           <SectionTitle>Suggested</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
@@ -1360,48 +1635,50 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Square — suggested card with swivel */}
-            {!squareConnected && (
-              <Card style={{ padding: 0, overflow: "hidden" }}>
-                <CardHeader
-                  logo={SOURCE_LOGOS.square}
-                  name="Square"
-                  subtitle="Your business, connected."
-                  isExpanded={squareExpanded}
-                  onToggle={() => setSquareExpanded(!squareExpanded)}
-                />
-                <Drawer open={squareExpanded}>
-                  {richDrawerContent({
-                    expanded: squareExpanded,
-                    description: "Square runs your register, tracks your inventory, manages your team, and handles your invoices. Connecting it means F\u00FClkit sees everything your business does in a day \u2014 every transaction, every shift, every item sold.",
-                    givesLabel: "What this gives F\u00FClkit",
-                    gives: "Live transaction data, daily closeout summaries, inventory counts, customer profiles, team schedules, and invoice status. Ask how the day went and get real numbers.",
-                    tryPrompt: "How did we do today?",
-                    linkLabel: "squareup.com",
-                    linkHref: "https://squareup.com",
-                    footer: (
-                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
-                        <DrawerItem index={5} visible={squareExpanded}>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                            Connect your Square account to let F{"\u00FC"}lkit access your business data.
-                          </div>
-                        </DrawerItem>
-                        <DrawerItem index={6} visible={squareExpanded}>
-                          <button
-                            onClick={connectSquare}
-                            style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
-                          >
-                            Connect Square
-                          </button>
-                        </DrawerItem>
-                      </div>
-                    ),
-                  })}
-                </Drawer>
-              </Card>
-            )}
           </div>
         </>
+      )}
+
+      {/* Shopify store URL input — shown when user clicks Shopify in More grid */}
+      {shopifyExpanded && !shopifyConnected && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Card style={{ padding: 0, overflow: "hidden" }}>
+            <CardHeader
+              logo={SOURCE_LOGOS.shopify}
+              name="Shopify"
+              subtitle="Connect your store"
+              isExpanded={shopifyExpanded}
+              onToggle={() => setShopifyExpanded(false)}
+            />
+            <Drawer open={shopifyExpanded}>
+              <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)" }}>
+                <DrawerItem index={0} visible={shopifyExpanded}>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                    Enter your Shopify store URL to connect.
+                  </div>
+                </DrawerItem>
+                <DrawerItem index={1} visible={shopifyExpanded}>
+                  <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                    <input
+                      type="text"
+                      placeholder="mystore.myshopify.com"
+                      value={shopifyShopInput}
+                      onChange={(e) => setShopifyShopInput(e.target.value)}
+                      style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                    />
+                    <button
+                      onClick={() => connectShopify(shopifyShopInput)}
+                      disabled={!shopifyShopInput.trim()}
+                      style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: !shopifyShopInput.trim() ? "default" : "pointer", opacity: !shopifyShopInput.trim() ? 0.5 : 1 }}
+                    >
+                      Connect
+                    </button>
+                  </div>
+                </DrawerItem>
+              </div>
+            </Drawer>
+          </Card>
+        </div>
       )}
 
       {/* All other sources */}
