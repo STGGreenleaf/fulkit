@@ -3366,7 +3366,7 @@ export default function FabricPage() {
                             B-Sides
                           </span>
                           <span style={{ fontSize: 9, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-normal)", fontStyle: "italic", color: "var(--color-text-secondary)" }}>
-                            BTC
+                            -BTC
                           </span>
                         </div>
                         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 1 }}>
