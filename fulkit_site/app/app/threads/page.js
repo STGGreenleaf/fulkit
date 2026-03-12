@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DynamicIcon, iconNames } from "lucide-react/dynamic";
 import { Plus, Search, X } from "lucide-react";
@@ -50,6 +50,14 @@ function timeAgo(dateStr) {
 }
 
 export default function ThreadsPage() {
+  return (
+    <Suspense>
+      <ThreadsContent />
+    </Suspense>
+  );
+}
+
+function ThreadsContent() {
   const { user, compactMode } = useAuth();
   const searchParams = useSearchParams();
   const isDev = user?.isDev;
