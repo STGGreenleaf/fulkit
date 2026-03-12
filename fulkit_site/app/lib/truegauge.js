@@ -1,7 +1,7 @@
 // Server-side TrueGauge helpers — only import from API routes
 import { getSupabaseAdmin } from "./supabase-server";
 
-const TRUEGAUGE_BASE = "https://truegauge.app/api/external/truegauge";
+const TRUEGAUGE_BASE = "https://www.truegauge.app/api/external/truegauge";
 
 export async function getTrueGaugeToken(userId) {
   const { data } = await getSupabaseAdmin()
