@@ -143,7 +143,7 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["numbrly", "truegauge"];
+const SUGGESTED_SOURCES = [];
 
 const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge"];
 
@@ -755,7 +755,7 @@ function SourcesTab() {
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly" && s.id !== "truegauge");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
-    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
+    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && s.id !== "numbrly" && s.id !== "truegauge"
   );
 
   const connect = (id) => {
@@ -1154,134 +1154,128 @@ function SourcesTab() {
       )}
 
       {/* Suggested */}
-      {(suggested.length > 0 || (!numbrlyConnected && numbrlyExpanded) || (!tgConnected && tgExpanded)) && (
+      {(!numbrlyConnected || !tgConnected) && (
         <>
           <SectionTitle>Suggested</SectionTitle>
-          {suggested.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-              {suggested.map(sourceButton)}
-            </div>
-          )}
-
-          {/* Numbrly — not connected, expanded */}
-          {!numbrlyConnected && numbrlyExpanded && (
-            <Card style={{ padding: 0, overflow: "hidden", marginBottom: "var(--space-2)" }}>
-              <CardHeader
-                logo={SOURCE_LOGOS.numbrly}
-                name="Numbrly"
-                subtitle="Know your real margin."
-                isExpanded={numbrlyExpanded}
-                onToggle={() => { setNumbrlyExpanded(false); setNumbrlyError(""); }}
-              />
-              <Drawer open={numbrlyExpanded}>
-                {richDrawerContent({
-                  expanded: numbrlyExpanded,
-                  tagline: "The numbers engine for small business owners who run on feel and need to run on facts.",
-                  description: "Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
-                  givesLabel: "What this gives F\u00FClkit",
-                  gives: "Real-time org summary, margin alerts, and recent financial activity flow into every conversation. Ask about your business and F\u00FClkit answers with live numbers, not guesses.",
-                  tryPrompt: "What\u2019s my margin on a\u00E7a\u00ED bowls this month?",
-                  linkLabel: "numbrly.app",
-                  linkHref: "https://numbrly.app",
-                  footer: (
-                    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
-                      <DrawerItem index={6} visible={numbrlyExpanded}>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                          Generate a key in Numbrly at Settings &rarr; Developer &rarr; API Access.
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={7} visible={numbrlyExpanded}>
-                        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
-                          <input
-                            type="password"
-                            placeholder="nbl_sk_..."
-                            value={numbrlyKeyInput}
-                            onChange={(e) => { setNumbrlyKeyInput(e.target.value); setNumbrlyError(""); }}
-                            style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: numbrlyError ? "1px solid var(--color-error)" : "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
-                          />
-                          <button
-                            onClick={connectNumbrly}
-                            disabled={numbrlyConnecting || !numbrlyKeyInput.trim()}
-                            style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: numbrlyConnecting || !numbrlyKeyInput.trim() ? "default" : "pointer", opacity: numbrlyConnecting || !numbrlyKeyInput.trim() ? 0.5 : 1 }}
-                          >
-                            {numbrlyConnecting ? "..." : "Connect"}
-                          </button>
-                        </div>
-                      </DrawerItem>
-                      {numbrlyError && (
-                        <DrawerItem index={8} visible={numbrlyExpanded}>
-                          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
-                            {numbrlyError}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+            {/* Numbrly — suggested card with swivel */}
+            {!numbrlyConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.numbrly}
+                  name="Numbrly"
+                  subtitle="Know your real margin."
+                  isExpanded={numbrlyExpanded}
+                  onToggle={() => { setNumbrlyExpanded(!numbrlyExpanded); setNumbrlyError(""); }}
+                />
+                <Drawer open={numbrlyExpanded}>
+                  {richDrawerContent({
+                    expanded: numbrlyExpanded,
+                    tagline: "The numbers engine for small business owners who run on feel and need to run on facts.",
+                    description: "Numbrly watches your revenue, costs, and margins \u2014 not what your register says you made, but what you actually kept after everything.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Real-time org summary, margin alerts, and recent financial activity flow into every conversation. Ask about your business and F\u00FClkit answers with live numbers, not guesses.",
+                    tryPrompt: "What\u2019s my margin on a\u00E7a\u00ED bowls this month?",
+                    linkLabel: "numbrly.app",
+                    linkHref: "https://numbrly.app",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                        <DrawerItem index={6} visible={numbrlyExpanded}>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                            Generate a key in Numbrly at Settings &rarr; Developer &rarr; API Access.
                           </div>
                         </DrawerItem>
-                      )}
-                    </div>
-                  ),
-                })}
-              </Drawer>
-            </Card>
-          )}
-
-          {/* TrueGauge — not connected, expanded */}
-          {!tgConnected && tgExpanded && (
-            <Card style={{ padding: 0, overflow: "hidden", marginBottom: "var(--space-2)" }}>
-              <CardHeader
-                logo={SOURCE_LOGOS.truegauge}
-                name="TrueGauge"
-                subtitle="Precision Business Telemetry."
-                isExpanded={tgExpanded}
-                onToggle={() => { setTgExpanded(false); setTgError(""); }}
-              />
-              <Drawer open={tgExpanded}>
-                {richDrawerContent({
-                  expanded: tgExpanded,
-                  tagline: "Numbrly knows the numbers. TrueGauge knows what they mean.",
-                  description: "It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
-                  givesLabel: "What this gives F\u00FClkit",
-                  gives: "Health score, pacing data, cash position, expense breakdowns, and alerts. When you ask whether things are on track, F\u00FClkit pulls from this \u2014 not vibes.",
-                  tryPrompt: "Am I on pace for the month?",
-                  linkLabel: "truegauge.app",
-                  linkHref: "https://www.truegauge.app",
-                  footer: (
-                    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
-                      <DrawerItem index={6} visible={tgExpanded}>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                          Generate a key in TrueGauge at Settings &rarr; Developer &rarr; API Access.
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={7} visible={tgExpanded}>
-                        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
-                          <input
-                            type="password"
-                            placeholder="tg_sk_..."
-                            value={tgKeyInput}
-                            onChange={(e) => { setTgKeyInput(e.target.value); setTgError(""); }}
-                            style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: tgError ? "1px solid var(--color-error)" : "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
-                          />
-                          <button
-                            onClick={connectTrueGauge}
-                            disabled={tgConnecting || !tgKeyInput.trim()}
-                            style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: tgConnecting || !tgKeyInput.trim() ? "default" : "pointer", opacity: tgConnecting || !tgKeyInput.trim() ? 0.5 : 1 }}
-                          >
-                            {tgConnecting ? "..." : "Connect"}
-                          </button>
-                        </div>
-                      </DrawerItem>
-                      {tgError && (
-                        <DrawerItem index={8} visible={tgExpanded}>
-                          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
-                            {tgError}
+                        <DrawerItem index={7} visible={numbrlyExpanded}>
+                          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                            <input
+                              type="password"
+                              placeholder="nbl_sk_..."
+                              value={numbrlyKeyInput}
+                              onChange={(e) => { setNumbrlyKeyInput(e.target.value); setNumbrlyError(""); }}
+                              style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: numbrlyError ? "1px solid var(--color-error)" : "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                            />
+                            <button
+                              onClick={connectNumbrly}
+                              disabled={numbrlyConnecting || !numbrlyKeyInput.trim()}
+                              style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: numbrlyConnecting || !numbrlyKeyInput.trim() ? "default" : "pointer", opacity: numbrlyConnecting || !numbrlyKeyInput.trim() ? 0.5 : 1 }}
+                            >
+                              {numbrlyConnecting ? "..." : "Connect"}
+                            </button>
                           </div>
                         </DrawerItem>
-                      )}
-                    </div>
-                  ),
-                })}
-              </Drawer>
-            </Card>
-          )}
+                        {numbrlyError && (
+                          <DrawerItem index={8} visible={numbrlyExpanded}>
+                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
+                              {numbrlyError}
+                            </div>
+                          </DrawerItem>
+                        )}
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
 
-          <div style={{ marginBottom: "var(--space-3)" }} />
+            {/* TrueGauge — suggested card with swivel */}
+            {!tgConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.truegauge}
+                  name="TrueGauge"
+                  subtitle="Precision Business Telemetry."
+                  isExpanded={tgExpanded}
+                  onToggle={() => { setTgExpanded(!tgExpanded); setTgError(""); }}
+                />
+                <Drawer open={tgExpanded}>
+                  {richDrawerContent({
+                    expanded: tgExpanded,
+                    tagline: "Numbrly knows the numbers. TrueGauge knows what they mean.",
+                    description: "It scores your business health, tracks your pace against targets, watches your cash position, and flags expense trends before they become problems. The difference between \u201CI think we\u2019re fine\u201D and knowing.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Health score, pacing data, cash position, expense breakdowns, and alerts. When you ask whether things are on track, F\u00FClkit pulls from this \u2014 not vibes.",
+                    tryPrompt: "Am I on pace for the month?",
+                    linkLabel: "truegauge.app",
+                    linkHref: "https://www.truegauge.app",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                        <DrawerItem index={6} visible={tgExpanded}>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                            Generate a key in TrueGauge at Settings &rarr; Developer &rarr; API Access.
+                          </div>
+                        </DrawerItem>
+                        <DrawerItem index={7} visible={tgExpanded}>
+                          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                            <input
+                              type="password"
+                              placeholder="tg_sk_..."
+                              value={tgKeyInput}
+                              onChange={(e) => { setTgKeyInput(e.target.value); setTgError(""); }}
+                              style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: tgError ? "1px solid var(--color-error)" : "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                            />
+                            <button
+                              onClick={connectTrueGauge}
+                              disabled={tgConnecting || !tgKeyInput.trim()}
+                              style={{ padding: "var(--space-2) var(--space-3)", background: "var(--color-accent)", border: "none", borderRadius: "var(--radius-sm)", color: "var(--color-text-inverse)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: tgConnecting || !tgKeyInput.trim() ? "default" : "pointer", opacity: tgConnecting || !tgKeyInput.trim() ? 0.5 : 1 }}
+                            >
+                              {tgConnecting ? "..." : "Connect"}
+                            </button>
+                          </div>
+                        </DrawerItem>
+                        {tgError && (
+                          <DrawerItem index={8} visible={tgExpanded}>
+                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
+                              {tgError}
+                            </div>
+                          </DrawerItem>
+                        )}
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+          </div>
         </>
       )}
 
