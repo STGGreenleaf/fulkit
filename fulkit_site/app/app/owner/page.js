@@ -113,31 +113,11 @@ export function OwnerPanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-      {/* Header — Crown + label (left), DevToggle (right) */}
+      {/* Sub-tab bar + DevToggle right-justified */}
       <div
         style={{
-          padding: "var(--space-2-5) var(--space-6)",
-          borderBottom: "1px solid var(--color-border-light)",
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-2)",
-        }}
-      >
-        <Crown size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
-        {!compactMode && (
-          <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-            Owner Portal
-          </span>
-        )}
-        <div style={{ marginLeft: "auto" }}>
-          <DevToggle compact={compactMode} />
-        </div>
-      </div>
-
-      {/* Sub-tab bar */}
-      <div
-        style={{
-          display: "flex",
           gap: "var(--space-1)",
           padding: "0 var(--space-6)",
           borderBottom: "1px solid var(--color-border-light)",
@@ -171,6 +151,9 @@ export function OwnerPanel() {
             </Tooltip>
           );
         })}
+        <div style={{ marginLeft: "auto" }}>
+          <DevToggle compact={compactMode} />
+        </div>
       </div>
 
       {/* Sub-tab content */}
