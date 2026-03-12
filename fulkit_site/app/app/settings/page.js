@@ -1699,7 +1699,7 @@ function SourcesTab() {
 
           {/* Real integrations — expandable swivel cards */}
           {moreCards.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: moreTiles.length > 0 ? "var(--space-4)" : 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: moreTiles.length > 0 ? "var(--space-4)" : 0 }}>
               {moreCards.map((src) => {
                 const desc = SOURCE_DESCRIPTIONS[src.id];
                 const isOpen = src.id === "shopify" ? shopifyExpanded : !!expanded[src.id];
@@ -1772,7 +1772,7 @@ function SourcesTab() {
 
           {/* Non-real sources — flat grid tiles */}
           {moreTiles.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
               {moreTiles.map(sourceButton)}
             </div>
           )}
