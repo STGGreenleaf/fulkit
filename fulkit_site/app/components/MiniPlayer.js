@@ -5,6 +5,7 @@ import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, D
 import Link from "next/link";
 import { useFabric } from "../lib/fabric";
 import VolumeSlider from "./VolumeSlider";
+import Tooltip from "./Tooltip";
 
 // Minimal pause mark — two vertical lines, no circle
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {
@@ -38,11 +39,9 @@ export default function MiniPlayer({ compact }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  if (!enabled || !connected || !currentTrack) return null;
+  if (!enabled) return null;
 
-  const flaggedNow = isFlagged(currentTrack.id);
-
-  // All buttons share the same circular footprint
+  // Button styles needed for both idle and active states
   const SZ = 28;
   const baseBtn = {
     width: SZ, height: SZ,
@@ -54,12 +53,45 @@ export default function MiniPlayer({ compact }) {
     padding: 0,
     outline: "none",
   };
-  // Circled buttons (flag + disc)
   const circleBtn = {
     ...baseBtn,
     background: "transparent",
     border: "1px solid var(--color-border)",
   };
+
+  // Idle state — Spotify not connected or nothing playing
+  if (!connected || !currentTrack) {
+    return (
+      <div style={{
+        borderTop: "1px solid var(--color-border-light)",
+        padding: "var(--space-2) 0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: compact ? "center" : "flex-start",
+        paddingLeft: compact ? 0 : "var(--space-2-5)",
+      }}>
+        <Tooltip label={compact ? "Fabric" : null}>
+          <Link href="/fabric" style={{ ...circleBtn, textDecoration: "none", color: "var(--color-text-dim)" }}>
+            <Disc size={IC_SM} strokeWidth={1.8} />
+          </Link>
+        </Tooltip>
+        {!compact && (
+          <Link href="/fabric" style={{
+            marginLeft: "var(--space-2)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-muted)",
+            textDecoration: "none",
+            alignSelf: "center",
+          }}>
+            Fabric
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  const flaggedNow = isFlagged(currentTrack.id);
+
   // Bare buttons (prev, play/pause, next) — same footprint, no visible circle
   const bareBtn = {
     ...baseBtn,
