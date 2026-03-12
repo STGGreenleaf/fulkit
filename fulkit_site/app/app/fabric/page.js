@@ -2423,60 +2423,59 @@ export default function FabricPage() {
                                       const isPlaying = currentTrack?.id === s.trackId;
                                       return (
                                       <div key={si} style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "var(--space-1-5)",
                                         fontFamily: "var(--font-mono)",
                                         fontSize: "var(--font-size-2xs)",
                                         letterSpacing: "var(--letter-spacing-wide)",
-                                        color: "var(--color-text-secondary)",
                                         lineHeight: "var(--line-height-snug)",
+                                        padding: "var(--space-1) 0",
                                       }}>
-                                        {/* Play button */}
-                                        <button
-                                          onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
-                                          style={{
-                                            background: "none", border: "none", cursor: "pointer", padding: 1, flexShrink: 0,
-                                            color: isPlaying ? "var(--color-text)" : "var(--color-text-dim)",
-                                            opacity: isPlaying ? 1 : 0.4,
-                                            transition: "opacity 120ms",
-                                            display: "flex", alignItems: "center",
-                                          }}
-                                          title="Play"
-                                          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                                          onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.opacity = "0.4"; }}
-                                        >
-                                          <Play size={8} strokeWidth={2.5} fill={isPlaying ? "currentColor" : "none"} />
-                                        </button>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>{s.artist}</span>
+                                        {/* Line 1: Artist — Title */}
+                                        <div style={{ color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                                          <span style={{ fontWeight: "var(--font-weight-medium)", color: isPlaying ? "var(--color-text)" : "var(--color-text)" }}>{s.artist}</span>
                                           {" — "}
-                                          <span style={{ color: isPlaying ? "var(--color-text)" : undefined }}>{s.title}</span>
-                                          {s.bpm && <span style={{ color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>{s.bpm}</span>}
+                                          <span>{s.title}</span>
                                         </div>
-                                        {/* Add to B-Sides */}
-                                        <button
-                                          onClick={() => {
-                                            if (alreadyAdded) return;
-                                            addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
-                                            setGuyCrateCollapsed(false);
-                                            try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
-                                          }}
-                                          style={{
-                                            background: "none", border: "none",
-                                            cursor: alreadyAdded ? "default" : "pointer",
-                                            padding: 1, flexShrink: 0,
-                                            color: alreadyAdded ? "var(--color-text)" : "var(--color-text-dim)",
-                                            opacity: alreadyAdded ? 0.6 : 0.4,
-                                            transition: "opacity 120ms",
-                                            display: "flex", alignItems: "center",
-                                          }}
-                                          title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
-                                          onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
-                                          onMouseLeave={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "0.4"; }}
-                                        >
-                                          {alreadyAdded ? <Check size={10} strokeWidth={2.2} /> : <CornerDownRight size={10} strokeWidth={2} />}
-                                        </button>
+                                        {/* Line 2: BPM + Play + Add */}
+                                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: 2 }}>
+                                          {s.bpm && <span style={{ color: "var(--color-text-dim)", fontSize: 9 }}>{s.bpm}</span>}
+                                          <button
+                                            onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
+                                            style={{
+                                              background: "none", border: "none", cursor: "pointer", padding: 0,
+                                              color: isPlaying ? "var(--color-text)" : "var(--color-text-muted)",
+                                              opacity: isPlaying ? 1 : 0.7,
+                                              transition: "opacity 120ms",
+                                              display: "flex", alignItems: "center",
+                                            }}
+                                            title="Play"
+                                            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                                            onMouseLeave={(e) => { if (!isPlaying) e.currentTarget.style.opacity = "0.7"; }}
+                                          >
+                                            <Play size={10} strokeWidth={2.5} fill={isPlaying ? "currentColor" : "none"} />
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              if (alreadyAdded) return;
+                                              addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                              setGuyCrateCollapsed(false);
+                                              try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                            }}
+                                            style={{
+                                              background: "none", border: "none",
+                                              cursor: alreadyAdded ? "default" : "pointer",
+                                              padding: 0,
+                                              color: alreadyAdded ? "var(--color-text)" : "var(--color-text-muted)",
+                                              opacity: alreadyAdded ? 0.8 : 0.7,
+                                              transition: "opacity 120ms",
+                                              display: "flex", alignItems: "center",
+                                            }}
+                                            title={alreadyAdded ? "In B-Sides" : "Add to B-Sides"}
+                                            onMouseEnter={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "1"; }}
+                                            onMouseLeave={(e) => { if (!alreadyAdded) e.currentTarget.style.opacity = "0.7"; }}
+                                          >
+                                            {alreadyAdded ? <Check size={10} strokeWidth={2.2} /> : <CornerDownRight size={10} strokeWidth={2} />}
+                                          </button>
+                                        </div>
                                       </div>
                                       );
                                     })}
