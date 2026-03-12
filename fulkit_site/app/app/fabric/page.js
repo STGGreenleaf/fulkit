@@ -2530,11 +2530,23 @@ export default function FabricPage() {
                                 return parts.length > 0 ? parts : text;
                               };
 
+                              // Pre-scan: collect all songs in the message for the mixtape header button
+                              const allMsgSongs = [];
+                              lines.forEach((line) => {
+                                const sm = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
+                                if (sm && /\d+\s*BPM|\[\+\]|♪/.test(line)) {
+                                  allMsgSongs.push({
+                                    artist: sm[1].trim(),
+                                    title: sm[2].replace(/\s+\d+\s*$/, "").trim(),
+                                    trackId: `btc-${sm[1].trim()}-${sm[2].replace(/\s+\d+\s*$/, "").trim()}`.toLowerCase().replace(/\s+/g, "-"),
+                                  });
+                                }
+                              });
+                              const allMsgSongsAdded = allMsgSongs.length > 0 && allMsgSongs.every(s => guyCrate?.tracks?.some(t => t.id === s.trackId));
+
                               lines.forEach((line, li) => {
                                 // Song recommendation: Artist - Title BPM [+] (or ♪, or just BPM suffix)
-                                // Matches: "Artist - Title 120 BPM [+]", "Artist — Title 68 BPM", "Artist - Title ♪"
                                 const songMatch = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
-                                // Only treat as song if it has a BPM, [+], or ♪ marker (prevents matching every dashed line)
                                 const hasSongSignal = /\d+\s*BPM|\[\+\]|♪/.test(line);
                                 if (songMatch && hasSongSignal) {
                                   songBlock.push({
@@ -2545,6 +2557,60 @@ export default function FabricPage() {
                                   return;
                                 }
                                 flushSongs();
+
+                                // Separator line (--- or ═══ etc.)
+                                if (/^[-–—═]{3,}\s*$/.test(line.trim())) {
+                                  elements.push(<div key={li} style={{ borderTop: "1px solid var(--color-border-light)", margin: "var(--space-1-5) 0" }} />);
+                                  return;
+                                }
+
+                                // Mixtape title: ALL CAPS line with — (e.g. "STILL WATER — a mixtape")
+                                const titleMatch = line.match(/^([A-Z][A-Z\s]+)\s*[—–-]\s*(.+)$/);
+                                if (titleMatch && allMsgSongs.length > 1) {
+                                  elements.push(
+                                    <div key={li} style={{
+                                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                                      gap: "var(--space-2)", marginBottom: 2,
+                                    }}>
+                                      <div>
+                                        <div style={{
+                                          fontFamily: "var(--font-mono)", fontSize: "var(--font-size-xs)",
+                                          fontWeight: "var(--font-weight-semibold)",
+                                          letterSpacing: "var(--letter-spacing-wider)",
+                                          textTransform: "uppercase", color: "var(--color-text)",
+                                        }}>{titleMatch[1].trim()}</div>
+                                        <div style={{
+                                          fontSize: "var(--font-size-2xs)", fontStyle: "italic",
+                                          color: "var(--color-text-secondary)", marginTop: 1,
+                                        }}>{titleMatch[2].trim()}</div>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          allMsgSongs.forEach(s => {
+                                            if (!guyCrate?.tracks?.some(t => t.id === s.trackId)) {
+                                              addToGuyCrate({ id: s.trackId, title: s.title, artist: s.artist });
+                                            }
+                                          });
+                                          setGuyCrateCollapsed(false);
+                                          try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                        }}
+                                        style={{
+                                          background: "none", border: "none", cursor: allMsgSongsAdded ? "default" : "pointer",
+                                          padding: 2, flexShrink: 0, display: "flex", alignItems: "center",
+                                          color: allMsgSongsAdded ? "var(--color-text)" : "var(--color-text-dim)",
+                                          opacity: allMsgSongsAdded ? 0.6 : 0.5,
+                                          transition: "opacity 120ms",
+                                        }}
+                                        title={allMsgSongsAdded ? "Mix added to B-Sides" : "Add full mix to B-Sides"}
+                                        onMouseEnter={(e) => { if (!allMsgSongsAdded) e.currentTarget.style.opacity = "1"; }}
+                                        onMouseLeave={(e) => { if (!allMsgSongsAdded) e.currentTarget.style.opacity = "0.5"; }}
+                                      >
+                                        {allMsgSongsAdded ? <Check size={14} strokeWidth={2} /> : <ListMusic size={14} strokeWidth={1.8} />}
+                                      </button>
+                                    </div>
+                                  );
+                                  return;
+                                }
 
                                 // Empty line → paragraph break
                                 if (!line.trim()) {
