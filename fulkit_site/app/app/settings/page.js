@@ -1772,7 +1772,7 @@ function SourcesTab() {
 
           {/* Non-real sources — flat grid tiles */}
           {moreTiles.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
               {moreTiles.map(sourceButton)}
             </div>
           )}
