@@ -47,7 +47,10 @@ export default function Chat() {
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPins, setShowPins] = useState(false);
   const [alerts, setAlerts] = useState([]);
-  const [alertsDismissed, setAlertsDismissed] = useState(false);
+  const [alertsDismissed, setAlertsDismissed] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try { return localStorage.getItem("fulkit-alerts-dismissed") || ""; } catch { return ""; }
+  });
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -100,9 +103,9 @@ export default function Chat() {
           const data = await res.json();
           if (data.alerts?.length) {
             setAlerts((prev) => {
-              const newIds = data.alerts.map((a) => a.message).join("|");
-              const oldIds = prev.map((a) => a.message).join("|");
-              if (newIds !== oldIds) setAlertsDismissed(false);
+              const fingerprint = data.alerts.map((a) => a.message).join("|");
+              const dismissed = localStorage.getItem("fulkit-alerts-dismissed") || "";
+              if (fingerprint !== dismissed) setAlertsDismissed("");
               return data.alerts;
             });
           } else {
@@ -776,7 +779,7 @@ export default function Chat() {
                     )}
 
                     {/* Proactive alerts — below welcome, above input */}
-                    {alerts.length > 0 && !alertsDismissed && (
+                    {alerts.length > 0 && alertsDismissed !== alerts.map((a) => a.message).join("|") && (
                       <div
                         style={{
                           maxWidth: 640,
@@ -804,7 +807,11 @@ export default function Chat() {
                         </div>
                         <div style={{ display: "flex", gap: "var(--space-1)", alignSelf: "flex-end", marginTop: 2 }}>
                           <button
-                            onClick={() => setAlertsDismissed(true)}
+                            onClick={() => {
+                              const fp = alerts.map((a) => a.message).join("|");
+                              setAlertsDismissed(fp);
+                              try { localStorage.setItem("fulkit-alerts-dismissed", fp); } catch {}
+                            }}
                             title="Got it"
                             style={{
                               background: "none",
