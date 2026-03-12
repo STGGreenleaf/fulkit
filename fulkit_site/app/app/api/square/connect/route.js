@@ -19,7 +19,7 @@ const SCOPES = [
   "EMPLOYEES_READ",
   "TIMECARDS_READ",
   "BANK_ACCOUNTS_READ",
-].join("+");
+].join(" ");
 
 export async function GET(request) {
   try {
