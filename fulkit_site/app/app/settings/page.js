@@ -143,9 +143,9 @@ const SOURCE_LOGOS = {
 // Mock connected state — will come from DB
 const INITIAL_CONNECTED = [];
 
-const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly"];
+const SUGGESTED_SOURCES = ["obsidian", "google", "numbrly", "truegauge"];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge"];
 
 const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
@@ -536,6 +536,12 @@ function SourcesTab() {
   const [numbrlyConnecting, setNumbrlyConnecting] = useState(false);
   const [numbrlyError, setNumbrlyError] = useState("");
   const [numbrlyDisconnecting, setNumbrlyDisconnecting] = useState(false);
+  const [tgConnected, setTgConnected] = useState(false);
+  const [tgExpanded, setTgExpanded] = useState(false);
+  const [tgKeyInput, setTgKeyInput] = useState("");
+  const [tgConnecting, setTgConnecting] = useState(false);
+  const [tgError, setTgError] = useState("");
+  const [tgDisconnecting, setTgDisconnecting] = useState(false);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -570,6 +576,15 @@ function SourcesTab() {
     fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setNumbrlyConnected(data.connected); })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check TrueGauge connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setTgConnected(data.connected); })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -693,13 +708,49 @@ function SourcesTab() {
     setNumbrlyDisconnecting(false);
   }
 
+  async function connectTrueGauge() {
+    if (!tgKeyInput.trim()) return;
+    setTgConnecting(true);
+    setTgError("");
+    try {
+      const res = await fetch("/api/truegauge/connect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: tgKeyInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTgError(data.error || "Connection failed");
+      } else {
+        setTgConnected(true);
+        setTgKeyInput("");
+      }
+    } catch {
+      setTgError("Connection failed");
+    }
+    setTgConnecting(false);
+  }
+
+  async function disconnectTrueGauge() {
+    setTgDisconnecting(true);
+    try {
+      await fetch("/api/truegauge/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setTgConnected(false);
+    } catch {}
+    setTgDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
     ...(fabricConnected ? ["fabric"] : []),
     ...(numbrlyConnected ? ["numbrly"] : []),
+    ...(tgConnected ? ["truegauge"] : []),
   ];
-  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly");
+  const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && s.id !== "fabric" && s.id !== "github" && s.id !== "numbrly" && s.id !== "truegauge");
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
     (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id)
@@ -709,12 +760,14 @@ function SourcesTab() {
     if (id === "github") { connectGitHub(); return; }
     if (id === "fabric") { connectFabric(); return; }
     if (id === "numbrly") { setNumbrlyExpanded(true); return; }
+    if (id === "truegauge") { setTgExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
     if (id === "github") { disconnectGitHub(); return; }
     if (id === "fabric") { disconnectFabric(); return; }
     if (id === "numbrly") { disconnectNumbrly(); return; }
+    if (id === "truegauge") { disconnectTrueGauge(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -803,7 +856,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -1035,8 +1088,101 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* TrueGauge — connected */}
+            {tgConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.truegauge}
+                  name="TrueGauge"
+                  subtitle="Business health telemetry"
+                  isExpanded={tgExpanded}
+                  onToggle={() => setTgExpanded(!tgExpanded)}
+                />
+                <Drawer open={tgExpanded}>
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <DrawerItem index={0} visible={tgExpanded}>
+                      <div style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                        Pulls health score, pace, cash position, expenses, and alerts into chat context automatically.
+                      </div>
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={tgExpanded}>
+                      {disconnectFooter(disconnectTrueGauge, tgDisconnecting)}
+                    </DrawerItem>
+                  </div>
+                </Drawer>
+              </Card>
+            )}
+
+            {/* TrueGauge — API key input (not yet connected, tile was clicked) */}
+            {!tgConnected && tgExpanded && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.truegauge}
+                  name="TrueGauge"
+                  subtitle="Paste your API key"
+                  isExpanded={tgExpanded}
+                  onToggle={() => { setTgExpanded(false); setTgError(""); }}
+                />
+                <Drawer open={tgExpanded}>
+                  <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)" }}>
+                    <DrawerItem index={0} visible={tgExpanded}>
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                        Generate a key in TrueGauge at Settings &rarr; Developer &rarr; API Access.
+                      </div>
+                    </DrawerItem>
+                    <DrawerItem index={1} visible={tgExpanded}>
+                      <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                        <input
+                          type="password"
+                          placeholder="tg_sk_..."
+                          value={tgKeyInput}
+                          onChange={(e) => { setTgKeyInput(e.target.value); setTgError(""); }}
+                          style={{
+                            flex: 1,
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "var(--color-bg)",
+                            border: tgError ? "1px solid var(--color-error)" : "1px solid var(--color-border)",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)",
+                            fontFamily: "var(--font-primary)",
+                            color: "var(--color-text)",
+                            outline: "none",
+                          }}
+                        />
+                        <button
+                          onClick={connectTrueGauge}
+                          disabled={tgConnecting || !tgKeyInput.trim()}
+                          style={{
+                            padding: "var(--space-2) var(--space-3)",
+                            background: "var(--color-accent)",
+                            border: "none",
+                            borderRadius: "var(--radius-sm)",
+                            color: "var(--color-text-inverse)",
+                            fontSize: "var(--font-size-xs)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            fontFamily: "var(--font-primary)",
+                            cursor: tgConnecting || !tgKeyInput.trim() ? "default" : "pointer",
+                            opacity: tgConnecting || !tgKeyInput.trim() ? 0.5 : 1,
+                          }}
+                        >
+                          {tgConnecting ? "..." : "Connect"}
+                        </button>
+                      </div>
+                    </DrawerItem>
+                    {tgError && (
+                      <DrawerItem index={2} visible={tgExpanded}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-error)", marginTop: "var(--space-2)" }}>
+                          {tgError}
+                        </div>
+                      </DrawerItem>
+                    )}
+                  </div>
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
-            {connectedSources.filter((s) => s.id !== "google" && s.id !== "numbrly").map((src) => {
+            {connectedSources.filter((s) => s.id !== "google" && s.id !== "numbrly" && s.id !== "truegauge").map((src) => {
               const isExpanded = expanded[src.id];
               return (
                 <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>

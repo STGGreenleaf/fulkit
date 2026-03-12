@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import { getGitHubToken, githubFetch } from "../../../lib/github";
 import { getNumbrlyToken, numbrlyFetch } from "../../../lib/numbrly";
+import { getTrueGaugeToken, truegaugeFetch } from "../../../lib/truegauge";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -186,6 +187,161 @@ const TOOL_ACTION_MAP = {
   numbrly_list_builds: "list_builds",
   numbrly_list_alerts: "list_alerts",
 };
+
+// TrueGauge tool schemas — business health telemetry (pace, cash, expenses)
+const TRUEGAUGE_TOOLS = [
+  {
+    name: "truegauge_context",
+    description: "Full business snapshot: health score, MTD sales, pace, alerts, recent activity, highlights. Call this first for a general 'how am I doing?' question.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_summary",
+    description: "High-level dashboard: organization name, key metric (health score), MTD sales, survival goal, COGS rates.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_get_pace",
+    description: "Current month pace: MTD sales vs survival goal, pace delta, daily needed, remaining open days, status (ahead/behind).",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_get_cash",
+    description: "Cash position: current cash, operating floor, target reserve, runway days, above floor amount.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_get_settings",
+    description: "Business configuration: monthly NUT breakdown (rent, payroll, etc.), target COGS %, operating hours, owner draw goals.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_list_expenses",
+    description: "List expenses with optional filters. Returns expense records with vendor, category, amount, date, memo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        month: { type: "string", description: "Filter by month (e.g. '2026-03')" },
+        category: { type: "string", description: "Filter by category: COGS, OPEX, CAPEX, OWNER_DRAW, OTHER" },
+        limit: { type: "number", description: "Max results (default 50, max 100)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "truegauge_list_day_entries",
+    description: "List daily sales entries. Returns date, net sales (ex tax), and notes for each day.",
+    input_schema: {
+      type: "object",
+      properties: {
+        month: { type: "string", description: "Filter by month (e.g. '2026-03')" },
+        limit: { type: "number", description: "Max results (default 31)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "truegauge_list_alerts",
+    description: "Active business alerts and warnings: behind pace, high COGS, low cash, etc.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_list_activity",
+    description: "Recent API activity / audit log: recent changes, who did what and when.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "truegauge_search",
+    description: "Search across vendors, expenses, and other business data by keyword.",
+    input_schema: {
+      type: "object",
+      properties: {
+        q: { type: "string", description: "Search query (min 2 characters)" },
+      },
+      required: ["q"],
+    },
+  },
+  {
+    name: "truegauge_simulate_pace",
+    description: "What-if: simulate hitting a different target percentage of the survival goal. Returns projection with remaining amount and daily needed.",
+    input_schema: {
+      type: "object",
+      properties: {
+        target_pct: { type: "number", description: "Target percentage of survival goal (e.g. 90 for 90%)" },
+      },
+      required: ["target_pct"],
+    },
+  },
+  {
+    name: "truegauge_add_expense",
+    description: "Log a new expense. Uses preview/confirm: first call with preview=true to see impact, then confirm with the preview_id. Always preview first and show the user what will happen before confirming.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Expense date (YYYY-MM-DD)" },
+        vendorName: { type: "string", description: "Vendor name (e.g. 'Sysco')" },
+        category: { type: "string", description: "Category: COGS, OPEX, CAPEX, OWNER_DRAW, OTHER" },
+        amount: { type: "number", description: "Expense amount in dollars" },
+        memo: { type: "string", description: "Optional memo/description" },
+        preview: { type: "boolean", description: "Set true for preview, omit for confirm" },
+        preview_id: { type: "string", description: "Preview ID to confirm a previewed expense" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "truegauge_update_day_entry",
+    description: "Update a day's sales entry. Uses preview/confirm: first call with preview=true, then confirm. Always preview first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date to update (YYYY-MM-DD)" },
+        netSalesExTax: { type: "number", description: "Net sales excluding tax" },
+        notes: { type: "string", description: "Optional notes for the day" },
+        preview: { type: "boolean", description: "Set true for preview, omit for confirm" },
+        preview_id: { type: "string", description: "Preview ID to confirm a previewed update" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "truegauge_confirm",
+    description: "Confirm a previously previewed write operation (expense or day entry update).",
+    input_schema: {
+      type: "object",
+      properties: {
+        preview_id: { type: "string", description: "The preview_id from a previous preview response" },
+      },
+      required: ["preview_id"],
+    },
+  },
+  {
+    name: "truegauge_undo",
+    description: "Undo the last confirmed write operation (within 1 hour).",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+];
+
+const TG_TOOL_ACTION_MAP = {
+  truegauge_context: "fulkit_context",
+  truegauge_summary: "summary",
+  truegauge_get_pace: "get_pace",
+  truegauge_get_cash: "get_cash",
+  truegauge_get_settings: "get_settings",
+  truegauge_list_expenses: "list_expenses",
+  truegauge_list_day_entries: "list_day_entries",
+  truegauge_list_alerts: "list_alerts",
+  truegauge_list_activity: "list_activity",
+  truegauge_search: "search",
+  truegauge_simulate_pace: "simulate_pace",
+  truegauge_add_expense: "add_expense",
+  truegauge_update_day_entry: "update_day_entry",
+  truegauge_confirm: "confirm",
+  truegauge_undo: "undo",
+};
+
+// Write actions that need POST method
+const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", "undo"]);
 
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
@@ -610,10 +766,14 @@ export async function POST(request) {
       }
     }
 
-    // Fetch Numbrly API key (needed for tool execution)
+    // Fetch integration API keys (needed for tool execution)
     let nblKey = null;
+    let tgKey = null;
     if (userId) {
-      nblKey = await getNumbrlyToken(userId);
+      [nblKey, tgKey] = await Promise.all([
+        getNumbrlyToken(userId),
+        getTrueGaugeToken(userId),
+      ]);
     }
 
     // Build system prompt
@@ -685,6 +845,7 @@ export async function POST(request) {
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
       ...(nblKey ? NUMBRLY_TOOLS : []),
+      ...(tgKey ? TRUEGAUGE_TOOLS : []),
     ];
     const baseOpts = {
       model: config.model,
@@ -784,6 +945,19 @@ export async function POST(request) {
               if (block.name === "notes_update" && userId) {
                 try {
                   const result = await executeNoteUpdate(block.input || {}, userId);
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // TrueGauge tools
+              const tgAction = TG_TOOL_ACTION_MAP[block.name];
+              if (tgAction && tgKey) {
+                try {
+                  const opts = TG_WRITE_ACTIONS.has(tgAction) ? { method: "POST" } : {};
+                  const result = await truegaugeFetch(tgKey, tgAction, block.input || {}, opts);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
