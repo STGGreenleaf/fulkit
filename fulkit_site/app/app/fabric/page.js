@@ -1879,7 +1879,7 @@ export default function FabricPage() {
           </div>
 
           {/* Content area */}
-          <div style={{ flex: 1, height: 0, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, height: 0, position: "relative", overflow: deckExpanded ? "auto" : "hidden", display: "flex", flexDirection: "column" }}>
           {/* Deck toggle — persistent top-right */}
           <button onClick={toggleDeck} style={{
             position: "absolute", top: 8, right: 8,
@@ -2324,7 +2324,7 @@ export default function FabricPage() {
           </div>
 
           {/* ═══ 3-COLUMN WORKSPACE ═══ */}
-          <div style={{ flex: 1, height: 0, display: "flex", minHeight: 0, overflow: "hidden" }}>
+          <div style={{ flex: 1, height: 0, display: "flex", minHeight: deckExpanded ? "60vh" : 0, overflow: "hidden" }}>
 
             {/* ── LEFT: Browse ── */}
             <div
