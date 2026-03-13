@@ -2846,9 +2846,9 @@ function PrivacyTab() {
 
     async function fetchCounts() {
       const [notes, actions, preferences] = await Promise.all([
-        supabase.from("notes").select("id", { count: "exact", head: true }),
-        supabase.from("actions").select("id", { count: "exact", head: true }),
-        supabase.from("preferences").select("id", { count: "exact", head: true }),
+        supabase.from("notes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("actions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("preferences").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
       setCounts({
         notes: notes.count || 0,

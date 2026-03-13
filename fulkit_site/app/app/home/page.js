@@ -61,18 +61,26 @@ export default function Dashboard() {
     supabase
       .from("actions")
       .select("*")
+      .eq("user_id", user.id)
       .eq("status", "active")
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true })
-      .then(({ data }) => { if (data) setActions(data); });
+      .then(({ data, error }) => {
+        if (error) console.error("[home] actions query failed:", error.message);
+        if (data) setActions(data);
+      });
 
     // Fetch real notes
     supabase
       .from("notes")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5)
-      .then(({ data }) => { if (data) setNotes(data); });
+      .then(({ data, error }) => {
+        if (error) console.error("[home] notes query failed:", error.message);
+        if (data) setNotes(data);
+      });
   }, [user, isDev]);
 
   // Fetch whispers (proactive suggestions from Claude)

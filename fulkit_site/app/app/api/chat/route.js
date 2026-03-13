@@ -1387,7 +1387,6 @@ async function executeNoteUpdate(input, userId) {
 }
 
 export async function POST(request) {
-  const t0 = Date.now();
   try {
     // Authenticate user via Supabase
     const authHeader = request.headers.get("authorization");
@@ -1439,7 +1438,6 @@ export async function POST(request) {
       } catch (err) { console.warn("[chat] BYOK lookup failed:", err.message); }
     }
 
-    console.log("[chat] +%dms user:%s role:%s byok:%s", Date.now() - t0, userId?.slice(0, 8), profile?.role, !!byokKey);
     const config = getModelConfig(profile?.role, profile?.seat_type, !!byokKey);
 
     // Use BYOK client if available, otherwise default
@@ -1557,7 +1555,6 @@ export async function POST(request) {
       } catch { /* GitHub enrichment timed out or failed — proceed without it */ }
     }
 
-    console.log("[chat] +%dms pre-stream setup (prefs+memories+github) done", Date.now() - t0);
     // Fetch integration API keys (needed for tool execution)
     let nblKey = null;
     let tgKey = null;
@@ -1685,7 +1682,6 @@ export async function POST(request) {
       ...(allTools.length > 0 ? { tools: allTools } : {}),
     };
 
-    console.log("[chat] +%dms tools:%d model:%s returning stream", Date.now() - t0, allTools.length, config.model);
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {

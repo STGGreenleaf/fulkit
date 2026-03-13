@@ -113,11 +113,13 @@ export default function Actions() {
   }, [user, isDev]);
 
   async function loadActions() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("actions")
       .select("*")
+      .eq("user_id", user.id)
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
+    if (error) console.error("[actions] query failed:", error.message);
     if (data) setActions(data);
   }
 

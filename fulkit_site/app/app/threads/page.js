@@ -111,8 +111,10 @@ function ThreadsContent() {
     supabase
       .from("notes")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("[threads] notes query failed:", error.message);
         if (data) setNotes(data);
       });
   }, [user, isDev]);
