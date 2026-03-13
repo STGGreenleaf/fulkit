@@ -89,18 +89,34 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
 
   // ─── File handling ────────────────────────────────────────
 
+  const [fileError, setFileError] = useState(null);
+
   const handleChatFiles = useCallback(async (files) => {
+    setFileError(null);
+    const ALLOWED = /\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv|xml|rtf|log|ini|cfg|conf|tsv|tex)$/i;
     const results = [];
+    const rejected = [];
     for (const file of files) {
-      if (!file.name.match(/\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv)$/i)) continue;
+      if (!file.name.match(ALLOWED)) {
+        rejected.push(file.name);
+        continue;
+      }
       try {
         const content = await file.text();
+        if (content.length > 500000) {
+          rejected.push(`${file.name} (too large)`);
+          continue;
+        }
         results.push({ name: file.name, content });
       } catch {
-        // skip unreadable files
+        rejected.push(`${file.name} (unreadable)`);
       }
     }
     if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
+    if (rejected.length > 0) {
+      setFileError(`Can't attach: ${rejected.join(", ")}. Only text-based files supported.`);
+      setTimeout(() => setFileError(null), 5000);
+    }
   }, []);
 
   // ─── Recall command ───────────────────────────────────────
@@ -235,6 +251,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     attachedFiles,
     setAttachedFiles,
     handleChatFiles,
+    fileError,
     // Recall
     recalledNotes,
     setRecalledNotes,

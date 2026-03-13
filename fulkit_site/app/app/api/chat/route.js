@@ -1525,7 +1525,12 @@ export async function POST(request) {
       const contextBlock = context
         .map((c) => `### ${c.title}\n${c.content}`)
         .join("\n\n---\n\n");
-      system += `\n\n## User's Notes & Context\nThe following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.\n\n${contextBlock}`;
+      // Check if any context items are uploaded files
+      const hasUploads = context.some((c) => c.title?.startsWith("[Uploaded]"));
+      const contextIntro = hasUploads
+        ? "The following includes uploaded files and notes. Items marked [Uploaded] were just shared by the user — analyze them proactively when the user asks about them or references them. Other items are vault notes — use them naturally as background context."
+        : "The following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.";
+      system += `\n\n## User's Notes & Context\n${contextIntro}\n\n${contextBlock}`;
     }
 
     // Increment message count (Fül cap)

@@ -774,6 +774,28 @@ export default function Chat() {
                 </div>
               )}
 
+              {/* File error */}
+              {ctx.fileError && (
+                <div
+                  style={{
+                    maxWidth: 640,
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0 var(--space-6) var(--space-1)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-error, #c44)",
+                      fontFamily: "var(--font-primary)",
+                    }}
+                  >
+                    {ctx.fileError}
+                  </span>
+                </div>
+              )}
+
               {/* Numbrly error */}
               {ctx.nblError && (
                 <div
