@@ -21,7 +21,7 @@ export async function POST(request) {
     // Build dynamic context block (same shape as before)
     const contextParts = [];
     if (currentTrack) {
-      contextParts.push(`Now playing: "${currentTrack.title}" by ${currentTrack.artist} (${currentTrack.album || "unknown album"})`);
+      contextParts.push(`Now playing: "${currentTrack.title}" by ${currentTrack.artist} (${currentTrack.album || "unknown album"}) — the user is already listening to this. NEVER include the currently playing track in your suggestions.`);
     }
     if (audioFeatures) {
       const parts = [];
