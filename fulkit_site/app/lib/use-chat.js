@@ -137,7 +137,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
 
   const sendMessage = useCallback(async (assembleContext) => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || streamingRef.current) return;
 
     const userMsg = { role: "user", content: text };
     let apiMessages = [...messages, userMsg];
@@ -172,17 +172,38 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
       // Add empty assistant placeholder
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-      // Assemble context (provided by useChatContext)
-      const { context, annotatedMessages } = await assembleContext(text, apiMessages);
+      // Assemble context (provided by useChatContext) — 10s timeout
+      let context = [];
+      let annotatedMessages = null;
+      try {
+        const ctxResult = await Promise.race([
+          assembleContext(text, apiMessages),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Context assembly timed out")), 10000)
+          ),
+        ]);
+        context = ctxResult.context;
+        annotatedMessages = ctxResult.annotatedMessages;
+      } catch (err) {
+        console.warn("[sendMessage] context assembly failed/timed out:", err.message);
+      }
       if (annotatedMessages) apiMessages = annotatedMessages;
 
       const controller = new AbortController();
       abortRef.current = controller;
 
       // Safety timeout — abort if no chunks arrive within 90 seconds
-      const safetyTimeout = setTimeout(() => {
-        if (!firstChunkReceived) controller.abort();
+      let safetyTimeout = setTimeout(() => {
+        controller.abort();
       }, 90000);
+
+      // Rolling inactivity watchdog — resets on each chunk
+      function resetWatchdog() {
+        clearTimeout(safetyTimeout);
+        safetyTimeout = setTimeout(() => {
+          controller.abort();
+        }, 30000);
+      }
 
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -199,7 +220,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
       });
 
       if (!res.ok) {
-        clearTimeout(safetyTimeout);
+        clearTimeout(safetyTimeout); // kill watchdog
         const err = await res.json().catch(() => ({}));
         const errMsg = err.error || "Something went wrong.";
         setMessages((prev) => {
@@ -222,8 +243,8 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
 
         if (!firstChunkReceived) {
           firstChunkReceived = true;
-          clearTimeout(safetyTimeout);
         }
+        resetWatchdog();
 
         sseBuffer += decoder.decode(value, { stream: true });
         const lines = sseBuffer.split("\n");
@@ -283,8 +304,12 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         });
       }
     } catch (err) {
+      clearTimeout(safetyTimeout);
       if (err.name === "AbortError" && !firstChunkReceived) {
         fullResponse = "Took too long to respond. Try again or rephrase.";
+      } else if (err.name === "AbortError" && firstChunkReceived) {
+        // Mid-stream inactivity timeout — show what we have + error
+        fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent. Try again.)*";
       } else if (err.name !== "AbortError") {
         fullResponse = "Connection error. Try again.";
       }

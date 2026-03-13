@@ -1340,12 +1340,15 @@ export async function POST(request) {
     // Fetch profile for tier-based model selection
     let profile = null;
     if (userId) {
-      const { data } = await getSupabaseAdmin()
-        .from("profiles")
-        .select("role, seat_type")
-        .eq("id", userId)
-        .single();
-      profile = data;
+      try {
+        const { data } = await getSupabaseAdmin()
+          .from("profiles")
+          .select("role, seat_type")
+          .eq("id", userId)
+          .single()
+          .abortSignal(AbortSignal.timeout(5000));
+        profile = data;
+      } catch { /* proceed with defaults */ }
     }
     const config = getModelConfig(profile?.role, profile?.seat_type);
 
@@ -1368,18 +1371,20 @@ export async function POST(request) {
     let prefs = null;
     let memories = null;
     if (userId) {
-      const { data } = await getSupabaseAdmin()
-        .from("preferences")
-        .select("key, value")
-        .eq("user_id", userId);
-      // Separate settings from learned memories
-      prefs = (data || []).filter(p => !p.key.startsWith("memory:") && ["tone", "frequency", "chronotype"].includes(p.key));
-      memories = (data || []).filter(p => p.key.startsWith("memory:"));
+      try {
+        const { data } = await getSupabaseAdmin()
+          .from("preferences")
+          .select("key, value")
+          .eq("user_id", userId)
+          .abortSignal(AbortSignal.timeout(5000));
+        prefs = (data || []).filter(p => !p.key.startsWith("memory:") && ["tone", "frequency", "chronotype"].includes(p.key));
+        memories = (data || []).filter(p => p.key.startsWith("memory:"));
+      } catch { /* proceed without preferences */ }
     }
 
     // Enrich GitHub tree context with actual file contents
     if (userId && Array.isArray(context)) {
-      const ghToken = await getGitHubToken(userId);
+      const ghToken = await getGitHubToken(userId).catch(() => null);
       if (ghToken) {
         const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
         const words = lastMessage.split(/\W+/).filter((w) => w.length > 2);
@@ -1494,7 +1499,8 @@ export async function POST(request) {
           .select("title, created_at")
           .eq("user_id", userId)
           .order("updated_at", { ascending: false })
-          .limit(25);
+          .limit(25)
+          .abortSignal(AbortSignal.timeout(5000));
         if (recentConvos && recentConvos.length > 0) {
           const convoBlock = recentConvos
             .map((c) => `- ${c.title} (${new Date(c.created_at).toLocaleDateString()})`)
@@ -1570,7 +1576,14 @@ export async function POST(request) {
           }));
 
           let needsFinalResponse = false;
+          const loopStart = Date.now();
+          const MAX_LOOP_MS = 50000; // 50s total — stay under Vercel's 60s limit
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            // Check total execution time before starting a new round
+            if (Date.now() - loopStart > MAX_LOOP_MS) {
+              needsFinalResponse = true;
+              break;
+            }
             const stream = anthropic.messages.stream({
               ...baseOpts,
               messages: loopMessages,
