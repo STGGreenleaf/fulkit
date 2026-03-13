@@ -5,6 +5,47 @@
 
 ---
 
+## Session 11 — 2026-03-12: Chat infrastructure rebuild + hardening
+
+### What was built
+- **Phase 1: Hook extraction** — Broke 1,488-line God component (`chat/page.js`) into three focused files:
+  - `lib/use-chat.js` (~280 lines) — messages, streaming, conversations, send flow, DB persistence
+  - `lib/use-chat-context.js` (~210 lines) — context assembly, files, GitHub, Numbrly, alerts
+  - `chat/page.js` (~800 lines) — pure UI: rendering, layout, drag-resize, pins
+- **Chunk buffering via rAF** — SSE chunks accumulate in a ref buffer, flushed on `requestAnimationFrame`. Reduces re-renders from 40+/sec to ~7/sec.
+- **stream.finalMessage() try/catch** — Claude API mid-stream disconnect sends clean error to client instead of tearing down the ReadableStream.
+- **15s per-tool timeout** — `withTimeout()` wraps every tool executor via `Promise.race`. No single tool call can hang the round.
+- **Keep-alive SSE pings** — `:ping\n\n` comment sent before tool execution rounds.
+- **Safe integration token fetches** — `safeGet()` wrapper catches per-integration failures.
+- **Phase 2: Hardening audit** — 32 failure modes identified, top 5 fixed:
+  1. **Double-send guard** — checks `streamingRef.current` (sync) not `streaming` state (async React batching race)
+  2. **assembleContext 10s timeout** — vault hang falls back to no context, never blocks chat
+  3. **Rolling 30s inactivity watchdog** — resets on each SSE chunk, catches mid-stream stalls
+  4. **Server Supabase timeouts** — profile, prefs, conversations queries get 5s `AbortSignal.timeout`
+  5. **50s tool loop cap** — total execution bounded under Vercel's 60s function limit
+- **Mid-stream abort UX** — partial response preserved, appended with "*(Response interrupted)*" notice.
+- **GitHub token fetch** — wrapped in `.catch(() => null)` so failure doesn't block chat.
+
+### Decisions locked
+- Chat page is pure UI — all logic lives in hooks
+- Every `await` in the chat path has either a timeout or error catch — zero uncapped waits
+- Tool loop capped at 50s total, 15s per tool, 5 rounds max
+- Context assembly failure is non-fatal — chat sends without context
+- Mid-stream stall detected by rolling watchdog, not just initial timeout
+
+### Remaining edge cases (non-blocking)
+- Token estimation is 1:4 char ratio — could undercount CJK text (would need tiktoken)
+- Client disconnect not detected server-side (wastes API credits but doesn't hang)
+- Large tool results unbounded (could exceed context window in tool rounds)
+- Conversation compression with all-large messages could produce thin summary
+
+### What's next
+- Test multi-turn conversation in production (5+ back-and-forth)
+- Test file upload, recall, tool execution end-to-end
+- Virtual scrolling for very long conversations (future)
+
+---
+
 ## Session 10 — 2026-03-12: Chat reliability, timezone, file upload fix
 
 ### What was built
