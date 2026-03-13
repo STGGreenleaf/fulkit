@@ -2340,7 +2340,7 @@ export default function FabricPage() {
                 flexDirection: "column",
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-2)", flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "var(--space-3) var(--space-1)", flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
                   <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Dig</Label>
@@ -3168,7 +3168,7 @@ export default function FabricPage() {
               }}
             >
               {/* ── YOUR CRATES ── */}
-              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-2) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-1) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
@@ -3323,7 +3323,7 @@ export default function FabricPage() {
               </div>{/* end crate shelf wrapper */}
 
               {/* ── Scrollable content below shelf ── */}
-              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 var(--space-2) var(--space-2)", overflow: "hidden" }}>
+              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 var(--space-1) var(--space-1)", overflow: "hidden" }}>
 
               {/* ── B-SIDES ── */}
               {guyCrate && (
@@ -3875,7 +3875,7 @@ export default function FabricPage() {
                 background: dragOverCol === "sets" ? "var(--color-bg-alt)" : undefined,
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-3) 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ padding: "var(--space-3) var(--space-1) 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Sets</Label>
