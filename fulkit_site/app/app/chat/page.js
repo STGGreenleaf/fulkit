@@ -303,7 +303,7 @@ export default function Chat() {
     }
 
     const userMsg = { role: "user", content: text };
-    const updated = [...messages, userMsg];
+    let updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
     setStreaming(true);
@@ -344,7 +344,16 @@ export default function Chat() {
       }
       // Append attached files as ephemeral context + auto-save as notes
       for (const af of attachedFiles) {
-        context.push({ title: af.name, content: af.content });
+        context.push({ title: `[Uploaded] ${af.name}`, content: af.content });
+      }
+      // Annotate the API message so Claude knows files were attached to this message
+      if (attachedFiles.length > 0) {
+        const fileNames = attachedFiles.map((af) => af.name).join(", ");
+        updated = updated.map((m, i) =>
+          i === updated.length - 1
+            ? { ...m, content: `${m.content}\n\n[Attached files: ${fileNames}]` }
+            : m
+        );
       }
       if (attachedFiles.length > 0 && user) {
         for (const af of attachedFiles) {

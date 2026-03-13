@@ -5,6 +5,28 @@
 
 ---
 
+## Session 10 — 2026-03-12: Chat reliability, timezone, file upload fix
+
+### What was built
+- **Follow-up hang fix** — Root cause: Supabase client deadlocks on concurrent awaits. All `saveMessage` calls changed to fire-and-forget (`.then/.catch`), 8s AbortSignal timeout. DB saves never block conversation flow.
+- **streamingRef guard** — `useRef` tracks streaming synchronously so `loadMessages` useEffect can't overwrite in-progress streams.
+- **Timezone fix** — Client sends `Intl.DateTimeFormat().resolvedOptions().timeZone`, server computes local "today" using `toLocaleDateString("en-CA", { timeZone })`. Injected into system prompt + all tool executors.
+- **File upload visibility** — Attached files now titled `[Uploaded] filename.csv` in context, and user message annotated with `[Attached files: ...]` so Claude knows to analyze them.
+- **MessageRenderer ErrorBoundary** — Dev-mode red error box shows render errors for diagnosis.
+- **Conversation length documented** — No per-convo cap. Compression at 180K (owner) / 80K (others) keeps context manageable. Monthly msg limits: free 100, std 450, pro 800, owner unlimited.
+
+### Decisions locked
+- React state IS the conversation context — API gets full history from state, DB is only for cross-session persistence
+- Fire-and-forget saves — conversation flow never waits for DB
+- Uploaded files get `[Uploaded]` prefix + message annotation for Claude visibility
+
+### What's next
+- Verify multi-turn conversation works end-to-end in production
+- CSV/file upload testing
+- Virtual scrolling for very long conversations (future)
+
+---
+
 ## Session 6 — 2026-03-09: Orb polish, brand refresh, Context Engine, Whispers
 
 ### What was built
