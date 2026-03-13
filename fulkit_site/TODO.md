@@ -21,7 +21,8 @@
 - [x] PKCE auth callback — code exchange, error display
 - [x] Google OAuth confirmed working (sign in → dashboard → sign out loop)
 - [x] Collin's account created, role=owner, onboarded=true
-- [ ] Test magic link delivery
+- [x] Magic link sign-in (code + UI complete — signInWithOtp + login page email flow)
+- [ ] Test magic link delivery (send a real one, confirm it arrives)
 
 ## Phase 2.1: Core Features -- DONE
 
@@ -90,9 +91,9 @@
 - [x] Bulk import API (POST /api/notes/import) — owner-only
 - [x] Import project docs — owner portal button fetches from GitHub + imports as notes
 - [ ] Flood personal todos into Actions (use chat → actions_create)
-- [ ] Use Fulkit daily for 1 week
-- [ ] Build Fulkit features by chatting with Fulkit (dogfood the dev loop)
-- [ ] Iterate based on friction
+- [x] Use Fulkit daily for 1 week (active — CSV reconciliation, file uploads, integrations)
+- [x] Build Fulkit features by chatting with Fulkit (active — using chat to drive dev)
+- [x] Iterate based on friction (ongoing — file attach fix, blank data fix, message rendering)
 
 ## Phase 5: Context Engine
 
@@ -108,7 +109,8 @@
 ## Phase 5.5: Pricing & Payments
 
 - [ ] Set up Stripe integration (subscriptions + one-time purchases)
-- [ ] Implement Fül counting — message caps per tier (Standard 450/mo, Pro 800/mo)
+- [x] Fül counting — message tracking + dashboard gauge (Standard 450/mo, Pro 800/mo)
+- [ ] Fül cap enforcement — reject chat when limit exceeded (counting done, gate missing)
 - [ ] "Fül up" prompt when empty — buy credits ($2/100 messages)
 - [ ] Hot seat mechanic — 4 msgs/month threshold, 30-day auto-revoke
 - [ ] Referral credit system — $1/mo per active referral (credits not cash)

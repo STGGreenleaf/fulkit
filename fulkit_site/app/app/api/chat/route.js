@@ -1414,7 +1414,7 @@ export async function POST(request) {
       try {
         const { data } = await getSupabaseAdmin()
           .from("profiles")
-          .select("role, seat_type")
+          .select("role, seat_type, messages_this_month")
           .eq("id", userId)
           .single()
           .abortSignal(AbortSignal.timeout(5000));
@@ -1439,6 +1439,18 @@ export async function POST(request) {
     }
 
     const config = getModelConfig(profile?.role, profile?.seat_type, !!byokKey);
+
+    // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
+    if (userId && !config.isByok && profile?.role !== "owner") {
+      const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
+      const limit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+      const used = profile?.messages_this_month || 0;
+      if (used >= limit) {
+        return Response.json({
+          error: `You've used all ${limit} messages this month. Upgrade your plan or add a BYOK key to keep chatting.`,
+        }, { status: 429 });
+      }
+    }
 
     // Use BYOK client if available, otherwise default
     const anthropic = byokKey
