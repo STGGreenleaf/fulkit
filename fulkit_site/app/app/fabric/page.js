@@ -3909,18 +3909,24 @@ export default function FabricPage() {
                   const isActiveSet = set.id === activeSetId;
                   const setPublished = publishedSets[set.name] || null;
                   return (
-                    <div key={set.id}>
+                    <div key={set.id} style={{
+                      border: "1px solid var(--color-border-light)",
+                      borderRadius: "var(--radius-md)",
+                      overflow: "hidden",
+                      margin: "var(--space-1) var(--space-2)",
+                      background: "var(--color-bg-elevated)",
+                    }}>
                       {/* Set header row */}
                       <div
                         onClick={() => { switchSet(set.id); toggleSetExpanded(set.id); }}
                         style={{
                           padding: "var(--space-2) var(--space-3)",
-                          borderBottom: "1px solid var(--color-border-light)",
+                          borderBottom: isExpanded ? "1px solid var(--color-border-light)" : "none",
                           display: "flex",
                           alignItems: "center",
                           gap: "var(--space-2)",
                           cursor: "pointer",
-                          background: isActiveSet ? "var(--color-bg-alt)" : "transparent",
+                          background: isActiveSet ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                           position: "relative",
                         }}
                       >
