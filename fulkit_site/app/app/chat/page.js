@@ -9,8 +9,9 @@ import VaultGate from "../../components/VaultGate";
 import { useAuth } from "../../lib/auth";
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
-import { extractArtifacts, writeBackLocal, writeBackSupabase } from "../../lib/vault-writeback";
 import MessageRenderer from "../../components/MessageRenderer";
+import { useChat } from "../../lib/use-chat";
+import { useChatContext } from "../../lib/use-chat-context";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -26,210 +27,34 @@ function timeAgo(dateStr) {
 export default function Chat() {
   const { user, accessToken, githubConnected, compactMode, hasContext } = useAuth();
   const isDev = user?.isDev;
-  const { getContext, getContextWithMeta, recallNotes, isReady, storageMode, vaultConnected, directoryHandle } = useVaultContext();
+  const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
 
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
-  const [conversations, setConversations] = useState([]);
+  // ─── Core chat hook ───────────────────────────────────────
+  const chat = useChat({ user, isDev, accessToken, storageMode, directoryHandle });
+
+  // ─── Context hook ─────────────────────────────────────────
+  const ctx = useChatContext({
+    user, isDev, accessToken, githubConnected,
+    getContextWithMeta, recallNotes, isReady,
+  });
+
+  // ─── UI-only state ────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(260);
-  const [contextMeta, setContextMeta] = useState(null);
-  const [recalledNotes, setRecalledNotes] = useState([]);
-  const [recallResults, setRecallResults] = useState(null);
-  const [attachedFiles, setAttachedFiles] = useState([]);
   const [chatDragOver, setChatDragOver] = useState(false);
-  const [ghContext, setGhContext] = useState([]);
-  const [nblContext, setNblContext] = useState(null);
-  const [nblError, setNblError] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
-  const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPins, setShowPins] = useState(false);
-  const [alerts, setAlerts] = useState([]);
-  const [alertsDismissed, setAlertsDismissed] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try { return localStorage.getItem("fulkit-alerts-dismissed") || ""; } catch { return ""; }
-  });
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+
   const chatFileRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
-  const abortRef = useRef(null);
-  const streamingRef = useRef(false);
 
-  // Load active GitHub repos as context
-  useEffect(() => {
-    if (!accessToken || !githubConnected || isDev) return;
-    async function loadGhContext() {
-      try {
-        const res = await fetch("/api/github/active", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setGhContext(data.filter((r) => r.tree.length > 0));
-        }
-      } catch {}
-    }
-    loadGhContext();
-  }, [accessToken, githubConnected, isDev]);
+  // ─── Pinned messages ──────────────────────────────────────
 
-  // Load Numbrly business context once per session
-  useEffect(() => {
-    if (!accessToken || isDev) return;
-    fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.connected) return;
-        return fetch("/api/numbrly/context", { headers: { Authorization: `Bearer ${accessToken}` } });
-      })
-      .then((r) => (r?.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.message) setNblContext(data.message);
-      })
-      .catch(() => setNblError(true));
-  }, [accessToken, isDev]);
-
-  // Fetch Numbrly alerts on mount + poll every 5 minutes
-  useEffect(() => {
-    if (!accessToken || isDev) return;
-    async function fetchAlerts() {
-      try {
-        const res = await fetch("/api/numbrly/alerts", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.alerts?.length) {
-            setAlerts((prev) => {
-              const fingerprint = data.alerts.map((a) => a.message).join("|");
-              const dismissed = localStorage.getItem("fulkit-alerts-dismissed") || "";
-              if (fingerprint !== dismissed) setAlertsDismissed("");
-              return data.alerts;
-            });
-          } else {
-            setAlerts([]);
-          }
-        }
-      } catch {}
-    }
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [accessToken, isDev]);
-
-  // Load conversation list
-  useEffect(() => {
-    if (!user || isDev) return;
-    loadConversations();
-  }, [user, isDev]);
-
-  async function loadConversations() {
-    const { data } = await supabase
-      .from("conversations")
-      .select("id, title, updated_at")
-      .or("type.eq.chat,type.is.null")
-      .order("updated_at", { ascending: false })
-      .limit(50);
-    if (data) setConversations(data);
-  }
-
-  // Load messages when switching conversations (skip if mid-stream — ensureConversation sets conversationId during send)
-  useEffect(() => {
-    if (!conversationId || isDev || streamingRef.current) return;
-    async function loadMessages() {
-      const { data } = await supabase
-        .from("messages")
-        .select("id, role, content, created_at, is_pinned")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-      if (data && !streamingRef.current) setMessages(data.map((m) => ({ id: m.id, role: m.role, content: m.content, is_pinned: m.is_pinned })));
-    }
-    loadMessages();
-  }, [conversationId, isDev]);
-
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-    if (nearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
-  }, [input]);
-
-  // Create conversation on first message
-  async function ensureConversation(firstMessage) {
-    if (conversationId) return conversationId;
-    if (isDev) return null;
-
-    const title = firstMessage.length > 60
-      ? firstMessage.slice(0, 57) + "..."
-      : firstMessage;
-
-    const { data } = await supabase
-      .from("conversations")
-      .insert({ user_id: user.id, title })
-      .select("id")
-      .single();
-
-    if (data) {
-      setConversationId(data.id);
-      loadConversations();
-      return data.id;
-    }
-    return null;
-  }
-
-  // Save a single message to DB, returns the inserted row id
-  // Uses AbortSignal timeout to prevent hanging — conversation flow must never block on DB
-  async function saveMessage(convId, role, content) {
-    if (!convId || isDev) return null;
-    try {
-      const { data } = await supabase
-        .from("messages")
-        .insert({ conversation_id: convId, role, content })
-        .select("id")
-        .single()
-        .abortSignal(AbortSignal.timeout(8000));
-      // Touch updated_at (fire and forget — don't block on this)
-      supabase
-        .from("conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", convId)
-        .then(() => {})
-        .catch(() => {});
-      return data?.id || null;
-    } catch (err) {
-      console.error("[saveMessage] failed:", err.message);
-      return null;
-    }
-  }
-
-  async function handleChatFiles(files) {
-    const results = [];
-    for (const file of files) {
-      if (!file.name.match(/\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv)$/i)) continue;
-      try {
-        const content = await file.text();
-        results.push({ name: file.name, content });
-      } catch {
-        // skip unreadable files
-      }
-    }
-    if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
-  }
-
-  // Load pinned messages across all conversations
   useEffect(() => {
     if (!user || isDev) return;
     loadPinnedMessages();
@@ -247,6 +72,10 @@ export default function Chat() {
 
   async function togglePin(msg) {
     const newPinned = !msg.is_pinned;
+    // Optimistic update
+    chat.setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, is_pinned: newPinned } : m))
+    );
     await supabase
       .from("messages")
       .update({
@@ -254,23 +83,19 @@ export default function Chat() {
         pinned_at: newPinned ? new Date().toISOString() : null,
       })
       .eq("id", msg.id);
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msg.id ? { ...m, is_pinned: newPinned } : m))
-    );
     loadPinnedMessages();
   }
 
   function exportMessage(msg) {
-    const idx = messages.indexOf(msg);
-    // Walk backward to find the user message that prompted this response
+    const idx = chat.messages.indexOf(msg);
     let prompt = null;
     for (let j = idx - 1; j >= 0; j--) {
-      if (messages[j].role === "user") {
-        prompt = messages[j].content;
+      if (chat.messages[j].role === "user") {
+        prompt = chat.messages[j].content;
         break;
       }
     }
-    const convTitle = conversations.find((c) => c.id === conversationId)?.title || "Chat";
+    const convTitle = chat.conversations.find((c) => c.id === chat.conversationId)?.title || "Chat";
     const exported = {
       source: "fulkit",
       conversation: convTitle,
@@ -287,290 +112,57 @@ export default function Chat() {
     URL.revokeObjectURL(url);
   }
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || streaming) return;
+  // ─── Auto-scroll ──────────────────────────────────────────
 
-    // Handle /recall command
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (nearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chat.messages]);
+
+  // ─── Textarea auto-resize ─────────────────────────────────
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, [chat.input]);
+
+  // ─── Send wrapper ─────────────────────────────────────────
+
+  const handleSend = useCallback(async () => {
+    const text = chat.input.trim();
+    if (!text) return;
+
+    // Handle /recall command locally
     const recallMatch = text.match(/^\/recall\s+(.+)/i);
     if (recallMatch) {
-      setInput("");
-      setRecallResults(null);
-      const query = recallMatch[1].trim();
-      const results = await recallNotes(query);
-      setRecallResults({ query, results });
+      chat.setInput("");
+      ctx.handleRecall(recallMatch[1].trim());
       return;
     }
 
-    const userMsg = { role: "user", content: text };
-    let updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput("");
-    setStreaming(true);
-    streamingRef.current = true;
-    setRecallResults(null);
-
-    let convId = null;
-    let fullResponse = "";
-    let firstChunkReceived = false;
-
-    try {
-      // Ensure conversation exists (must await — need convId for saves)
-      convId = await ensureConversation(text);
-
-      // Save user message in background — don't block the send flow
-      saveMessage(convId, "user", text).then((userMsgId) => {
-        if (userMsgId) {
-          setMessages((prev) =>
-            prev.map((m) => (m.role === "user" && m.content === text && !m.id ? { ...m, id: userMsgId } : m))
-          );
-        }
-      }).catch(() => {});
-
-      // Add empty assistant message that we'll stream into
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-      // Assemble vault context from user's chosen source + recalled notes
-      let context = [];
-      if (isReady) {
-        const result = await getContextWithMeta(text);
-        context = result.selected;
-        setContextMeta(result.metadata);
-      }
-      // Append recalled notes (deduplicated by title)
-      for (const rn of recalledNotes) {
-        if (!context.find((c) => c.title === rn.title)) {
-          context.push({ title: rn.title, content: rn.content });
-        }
-      }
-      // Append attached files as ephemeral context + auto-save as notes
-      for (const af of attachedFiles) {
-        context.push({ title: `[Uploaded] ${af.name}`, content: af.content });
-      }
-      // Annotate the API message so Claude knows files were attached to this message
-      if (attachedFiles.length > 0) {
-        const fileNames = attachedFiles.map((af) => af.name).join(", ");
-        updated = updated.map((m, i) =>
-          i === updated.length - 1
-            ? { ...m, content: `${m.content}\n\n[Attached files: ${fileNames}]` }
-            : m
-        );
-      }
-      if (attachedFiles.length > 0 && user) {
-        for (const af of attachedFiles) {
-          const noteTitle = af.name.replace(/\.[^.]+$/, "");
-          // Dedup: check if a note with same title + source already exists
-          const { data: existing } = await supabase
-            .from("notes")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("title", noteTitle)
-            .eq("source", "chat-upload")
-            .maybeSingle();
-          if (existing) {
-            // Update existing note content instead of creating a duplicate
-            supabase.from("notes").update({
-              content: af.content,
-              updated_at: new Date().toISOString(),
-            }).eq("id", existing.id);
-          } else {
-            supabase.from("notes").insert({
-              user_id: user.id,
-              title: noteTitle,
-              content: af.content,
-              source: "chat-upload",
-              folder: "00-INBOX",
-              encrypted: false,
-              context_mode: "available",
-            });
-          }
-        }
-      }
-      setAttachedFiles([]);
-      // Append active GitHub repos as context (full recursive tree)
-      for (const repo of ghContext) {
-        const treeStr = repo.tree
-          .filter((f) => f.type === "file")
-          .map((f) => f.path)
-          .join("\n");
-        context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
-      }
-      // Append Numbrly business context (fetched once on mount)
-      if (nblContext) {
-        context.push({ title: "Numbrly (Business Data)", content: nblContext });
-      }
-
-      // Use auth token from context (set during login)
-      const authToken = accessToken;
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      // Safety timeout — abort if no response chunks arrive within 90 seconds
-      const safetyTimeout = setTimeout(() => {
-        if (!firstChunkReceived) controller.abort();
-      }, 90000);
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({ messages: updated, context, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        clearTimeout(safetyTimeout);
-        const err = await res.json();
-        const errMsg = err.error || "Something went wrong.";
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { role: "assistant", content: errMsg };
-          return copy;
-        });
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      let streamDone = false;
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        if (!firstChunkReceived) {
-          firstChunkReceived = true;
-          clearTimeout(safetyTimeout);
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const payload = line.slice(6);
-          if (payload === "[DONE]") { streamDone = true; break; }
-
-          try {
-            const { text: chunk, error } = JSON.parse(payload);
-            if (error) {
-              setMessages((prev) => {
-                const copy = [...prev];
-                copy[copy.length - 1] = { role: "assistant", content: error };
-                return copy;
-              });
-              fullResponse = error;
-              streamDone = true;
-              break;
-            }
-            if (chunk) {
-              fullResponse += chunk;
-              setMessages((prev) => {
-                const copy = [...prev];
-                const last = copy[copy.length - 1];
-                copy[copy.length - 1] = {
-                  ...last,
-                  content: last.content + chunk,
-                };
-                return copy;
-              });
-            }
-          } catch {
-            // skip malformed JSON
-          }
-        }
-      }
-    } catch (err) {
-      if (err.name === "AbortError" && !firstChunkReceived) {
-        // Safety timeout fired — no response arrived
-        fullResponse = "Took too long to respond. Try again or rephrase.";
-        setMessages((prev) => {
-          const copy = [...prev];
-          const last = copy[copy.length - 1];
-          if (last?.role === "assistant") {
-            copy[copy.length - 1] = { ...last, content: fullResponse };
-          } else {
-            copy.push({ role: "assistant", content: fullResponse });
-          }
-          return copy;
-        });
-      } else if (err.name !== "AbortError") {
-        fullResponse = "Connection error. Try again.";
-        setMessages((prev) => {
-          const copy = [...prev];
-          const last = copy[copy.length - 1];
-          if (last?.role === "assistant") {
-            copy[copy.length - 1] = { ...last, content: fullResponse };
-          } else {
-            copy.push({ role: "assistant", content: fullResponse });
-          }
-          return copy;
-        });
-      }
-    } finally {
-      setStreaming(false);
-      streamingRef.current = false;
-      abortRef.current = null;
-    }
-
-    // Save assistant response in background — never block conversation flow
-    if (fullResponse && convId) {
-      saveMessage(convId, "assistant", fullResponse).then((asstMsgId) => {
-        if (asstMsgId) {
-          setMessages((prev) =>
-            prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: asstMsgId } : m))
-          );
-        }
-        loadConversations();
-      }).catch((err) => console.error("[Chat] Failed to save response:", err));
-
-      // Write-back loop — extract artifacts and file them
-      if (!isDev) {
-        try {
-          const artifacts = extractArtifacts(fullResponse);
-          if (artifacts.actionItems.length > 0) {
-            const title = messages[0]?.content?.slice(0, 60) || "Chat";
-            if (storageMode === "local" && directoryHandle) {
-              writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
-            } else {
-              writeBackSupabase(user.id, artifacts, title).catch(() => {});
-            }
-          }
-        } catch {}
-      }
-    }
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, ghContext, nblContext]);
+    await chat.sendMessage(ctx.assembleContext);
+  }, [chat.input, chat.sendMessage, ctx.assembleContext, ctx.handleRecall]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSend();
     }
   };
 
-  const startNewChat = () => {
-    if (abortRef.current) abortRef.current.abort();
-    setMessages([]);
-    setConversationId(null);
-    setStreaming(false);
-    streamingRef.current = false;
-    setContextMeta(null);
-    setRecalledNotes([]);
-    setRecallResults(null);
-    setAttachedFiles([]);
+  const handleStartNewChat = () => {
+    chat.startNewChat();
+    ctx.resetContext();
   };
 
-  const openConversation = (conv) => {
-    if (abortRef.current) abortRef.current.abort();
-    setStreaming(false);
-    setConversationId(conv.id);
-  };
+  // ─── Drag-to-resize history panel ─────────────────────────
 
-  // Drag-to-resize history panel
   const startResize = useCallback((e) => {
     e.preventDefault();
     draggingRef.current = true;
@@ -579,7 +171,6 @@ export default function Chat() {
 
     const onMouseMove = (e) => {
       if (!draggingRef.current) return;
-      // Dragging left edge — moving left = wider, moving right = narrower
       const delta = startX - e.clientX;
       const newWidth = Math.max(160, Math.min(400, startWidth + delta));
       setHistoryWidth(newWidth);
@@ -594,6 +185,8 @@ export default function Chat() {
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
   }, [historyWidth]);
+
+  // ─── Render ───────────────────────────────────────────────
 
   return (
     <AuthGuard>
@@ -640,7 +233,7 @@ export default function Chat() {
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Context indicator */}
-              {contextMeta && contextMeta.includedCount > 0 && !compactMode && (
+              {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
                 <span
                   style={{
                     display: "flex",
@@ -652,10 +245,10 @@ export default function Chat() {
                   }}
                 >
                   <FileText size={11} strokeWidth={1.8} />
-                  {!compactMode && (<>{contextMeta.includedCount} note{contextMeta.includedCount !== 1 ? "s" : ""} &middot; {contextMeta.totalTokens >= 1000 ? `${(contextMeta.totalTokens / 1000).toFixed(1)}K` : contextMeta.totalTokens} tokens</>)}
+                  {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
                 </span>
               )}
-              {recalledNotes.length > 0 && !compactMode && (
+              {ctx.recalledNotes.length > 0 && !compactMode && (
                 <span
                   style={{
                     display: "flex",
@@ -669,7 +262,7 @@ export default function Chat() {
                   }}
                 >
                   <Search size={10} strokeWidth={2} />
-                  {!compactMode && `${recalledNotes.length} recalled`}
+                  {`${ctx.recalledNotes.length} recalled`}
                 </span>
               )}
 
@@ -697,7 +290,7 @@ export default function Chat() {
               )}
 
               {/* History toggle */}
-              {!isDev && conversations.length > 0 && (
+              {!isDev && chat.conversations.length > 0 && (
                 <button
                   onClick={() => setShowHistory(!showHistory)}
                   style={{
@@ -720,9 +313,9 @@ export default function Chat() {
               )}
 
               {/* New chat */}
-              {(messages.length > 0 || conversationId) && (
+              {(chat.messages.length > 0 || chat.conversationId) && (
                 <button
-                  onClick={startNewChat}
+                  onClick={handleStartNewChat}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -751,7 +344,7 @@ export default function Chat() {
               style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative" }}
               onDragOver={(e) => { e.preventDefault(); setChatDragOver(true); }}
               onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget)) return; setChatDragOver(false); }}
-              onDrop={(e) => { e.preventDefault(); setChatDragOver(false); if (e.dataTransfer.files?.length) handleChatFiles(Array.from(e.dataTransfer.files)); }}
+              onDrop={(e) => { e.preventDefault(); setChatDragOver(false); if (e.dataTransfer.files?.length) ctx.handleChatFiles(Array.from(e.dataTransfer.files)); }}
             >
               {chatDragOver && (
                 <div
@@ -783,7 +376,7 @@ export default function Chat() {
                   gap: "var(--space-4)",
                 }}
               >
-                {messages.length === 0 && (
+                {chat.messages.length === 0 && (
                   <div
                     style={{
                       flex: 1,
@@ -816,7 +409,7 @@ export default function Chat() {
                       </span>
                     </p>
 
-                    {/* Context nudge — when user has no onboarding or notes */}
+                    {/* Context nudge */}
                     {!isDev && !hasContext && (
                       <div style={{
                         display: "flex", alignItems: "center", gap: "var(--space-3)",
@@ -836,8 +429,8 @@ export default function Chat() {
                       </div>
                     )}
 
-                    {/* Proactive alerts — below welcome, above input */}
-                    {alerts.length > 0 && alertsDismissed !== alerts.map((a) => a.message).join("|") && (
+                    {/* Proactive alerts */}
+                    {ctx.alerts.length > 0 && ctx.alertsDismissed !== ctx.alerts.map((a) => a.message).join("|") && (
                       <div
                         style={{
                           maxWidth: 640,
@@ -861,15 +454,11 @@ export default function Chat() {
                             borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
                           }}
                         >
-                          {`Hey — ${alerts.length} thing${alerts.length > 1 ? "s" : ""} flagged:\n\n${alerts.map((a) => `• ${a.message}`).join("\n")}`}
+                          {`Hey — ${ctx.alerts.length} thing${ctx.alerts.length > 1 ? "s" : ""} flagged:\n\n${ctx.alerts.map((a) => `• ${a.message}`).join("\n")}`}
                         </div>
                         <div style={{ display: "flex", gap: "var(--space-1)", alignSelf: "flex-end", marginTop: 2 }}>
                           <button
-                            onClick={() => {
-                              const fp = alerts.map((a) => a.message).join("|");
-                              setAlertsDismissed(fp);
-                              try { localStorage.setItem("fulkit-alerts-dismissed", fp); } catch {}
-                            }}
+                            onClick={ctx.dismissAlerts}
                             title="Got it"
                             style={{
                               background: "none",
@@ -888,7 +477,7 @@ export default function Chat() {
                   </div>
                 )}
 
-                {messages.map((msg, i) => (
+                {chat.messages.map((msg, i) => (
                   <div
                     key={msg.id || i}
                     onMouseEnter={() => setHoveredMsg(i)}
@@ -923,7 +512,7 @@ export default function Chat() {
                             }),
                       }}
                     >
-                      {streaming && i === messages.length - 1 && msg.role === "assistant" && !msg.content ? (
+                      {chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                           {[0, 1, 2].map((dot) => (
                             <span
@@ -941,12 +530,12 @@ export default function Chat() {
                         </span>
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
-                          ? <MessageRenderer content={msg.content.trim()} isStreaming={streaming && i === messages.length - 1} />
+                          ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} />
                           : (typeof msg.content === "string" ? msg.content.trim() : msg.content)
                       )}
                     </div>
-                    {/* Pin + Copy + Export actions — assistant messages, on hover or if pinned */}
-                    {msg.role === "assistant" && (hoveredMsg === i || msg.is_pinned) && !streaming && (
+                    {/* Pin + Copy + Export actions */}
+                    {msg.role === "assistant" && (hoveredMsg === i || msg.is_pinned) && !chat.streaming && (
                       <div
                         style={{
                           display: "flex",
@@ -1015,7 +604,7 @@ export default function Chat() {
               </div>
 
               {/* Recall results */}
-              {recallResults && (
+              {ctx.recallResults && (
                 <div
                   style={{
                     maxWidth: 640,
@@ -1043,31 +632,31 @@ export default function Chat() {
                       }}
                     >
                       <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        Recall: &ldquo;{recallResults.query}&rdquo; — {recallResults.results.length} match{recallResults.results.length !== 1 ? "es" : ""}
+                        Recall: &ldquo;{ctx.recallResults.query}&rdquo; — {ctx.recallResults.results.length} match{ctx.recallResults.results.length !== 1 ? "es" : ""}
                       </span>
                       <button
-                        onClick={() => setRecallResults(null)}
+                        onClick={() => ctx.setRecallResults(null)}
                         style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", display: "flex" }}
                       >
                         <X size={12} strokeWidth={2} />
                       </button>
                     </div>
-                    {recallResults.results.length === 0 && (
+                    {ctx.recallResults.results.length === 0 && (
                       <p style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", textAlign: "center" }}>
                         No notes found.
                       </p>
                     )}
                     <div style={{ maxHeight: 200, overflowY: "auto" }}>
-                      {recallResults.results.map((note) => {
-                        const isAdded = recalledNotes.some((rn) => rn.id === note.id);
+                      {ctx.recallResults.results.map((note) => {
+                        const isAdded = ctx.recalledNotes.some((rn) => rn.id === note.id);
                         return (
                           <button
                             key={note.id}
                             onClick={() => {
                               if (isAdded) {
-                                setRecalledNotes((prev) => prev.filter((rn) => rn.id !== note.id));
+                                ctx.setRecalledNotes((prev) => prev.filter((rn) => rn.id !== note.id));
                               } else {
-                                setRecalledNotes((prev) => [...prev, note]);
+                                ctx.setRecalledNotes((prev) => [...prev, note]);
                               }
                             }}
                             style={{
@@ -1103,7 +692,7 @@ export default function Chat() {
               )}
 
               {/* Recalled notes chips */}
-              {recalledNotes.length > 0 && !recallResults && (
+              {ctx.recalledNotes.length > 0 && !ctx.recallResults && (
                 <div
                   style={{
                     maxWidth: 640,
@@ -1115,10 +704,10 @@ export default function Chat() {
                     gap: 4,
                   }}
                 >
-                  {recalledNotes.map((rn) => (
+                  {ctx.recalledNotes.map((rn) => (
                     <button
                       key={rn.id}
-                      onClick={() => setRecalledNotes((prev) => prev.filter((n) => n.id !== rn.id))}
+                      onClick={() => ctx.setRecalledNotes((prev) => prev.filter((n) => n.id !== rn.id))}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -1142,7 +731,7 @@ export default function Chat() {
               )}
 
               {/* Attached files chips */}
-              {attachedFiles.length > 0 && (
+              {ctx.attachedFiles.length > 0 && (
                 <div
                   style={{
                     maxWidth: 640,
@@ -1154,10 +743,10 @@ export default function Chat() {
                     gap: 4,
                   }}
                 >
-                  {attachedFiles.map((af, i) => (
+                  {ctx.attachedFiles.map((af, i) => (
                     <button
                       key={i}
-                      onClick={() => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={() => ctx.setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -1181,7 +770,7 @@ export default function Chat() {
               )}
 
               {/* Numbrly error */}
-              {nblError && (
+              {ctx.nblError && (
                 <div
                   style={{
                     maxWidth: 640,
@@ -1261,13 +850,13 @@ export default function Chat() {
                     type="file"
                     accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv"
                     multiple
-                    onChange={(e) => { if (e.target.files?.length) handleChatFiles(Array.from(e.target.files)); e.target.value = ""; }}
+                    onChange={(e) => { if (e.target.files?.length) ctx.handleChatFiles(Array.from(e.target.files)); e.target.value = ""; }}
                     style={{ display: "none" }}
                   />
                   <textarea
                     ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    value={chat.input}
+                    onChange={(e) => chat.setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Talk to your bestie..."
                     rows={1}
@@ -1287,20 +876,20 @@ export default function Chat() {
                     }}
                   />
                   <button
-                    onClick={sendMessage}
-                    disabled={!input.trim() || streaming}
+                    onClick={handleSend}
+                    disabled={!chat.input.trim() || chat.streaming}
                     style={{
                       width: 32,
                       height: 32,
                       borderRadius: "var(--radius-md)",
                       flexShrink: 0,
-                      background: input.trim()
+                      background: chat.input.trim()
                         ? "var(--color-accent)"
                         : "var(--color-border-light)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      cursor: input.trim() ? "pointer" : "default",
+                      cursor: chat.input.trim() ? "pointer" : "default",
                       border: "none",
                       transition: "background var(--duration-fast) var(--ease-default)",
                     }}
@@ -1341,7 +930,7 @@ export default function Chat() {
                     <button
                       key={pin.id}
                       onClick={() => {
-                        openConversation({ id: pin.conversation_id });
+                        chat.openConversation({ id: pin.conversation_id });
                         setShowPins(false);
                       }}
                       style={{
@@ -1385,10 +974,9 @@ export default function Chat() {
               </>
             )}
 
-            {/* History panel — right side, resizable */}
+            {/* History panel */}
             {showHistory && (
               <>
-                {/* Drag handle */}
                 <div
                   onMouseDown={startResize}
                   style={{
@@ -1423,10 +1011,10 @@ export default function Chat() {
                     userSelect: draggingRef.current ? "none" : "auto",
                   }}
                 >
-                  {conversations.map((conv) => (
+                  {chat.conversations.map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => openConversation(conv)}
+                      onClick={() => chat.openConversation(conv)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -1435,7 +1023,7 @@ export default function Chat() {
                         padding: "var(--space-2) var(--space-2-5)",
                         borderRadius: "var(--radius-sm)",
                         border: "none",
-                        background: conv.id === conversationId ? "var(--color-bg-alt)" : "transparent",
+                        background: conv.id === chat.conversationId ? "var(--color-bg-alt)" : "transparent",
                         cursor: "pointer",
                         textAlign: "left",
                         width: "100%",
@@ -1445,8 +1033,8 @@ export default function Chat() {
                       <span
                         style={{
                           fontSize: "var(--font-size-xs)",
-                          color: conv.id === conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
-                          fontWeight: conv.id === conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                          color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
+                          fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",

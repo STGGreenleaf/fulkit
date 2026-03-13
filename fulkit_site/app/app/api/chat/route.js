@@ -1455,13 +1455,14 @@ export async function POST(request) {
     let stripeToken = null;
     let toastToken = null;
     if (userId) {
+      const safeGet = (fn) => fn(userId).catch(() => null);
       [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken] = await Promise.all([
-        getNumbrlyToken(userId),
-        getTrueGaugeToken(userId),
-        getSquareToken(userId),
-        getShopifyToken(userId),
-        getStripeToken(userId),
-        getToastToken(userId),
+        safeGet(getNumbrlyToken),
+        safeGet(getTrueGaugeToken),
+        safeGet(getSquareToken),
+        safeGet(getShopifyToken),
+        safeGet(getStripeToken),
+        safeGet(getToastToken),
       ]);
     }
 
@@ -1530,6 +1531,17 @@ export async function POST(request) {
     }
 
     const MAX_TOOL_ROUNDS = 5;
+    const TOOL_TIMEOUT_MS = 15000; // 15s per tool call
+
+    // Run a tool function with a timeout
+    function withTimeout(fn, ms = TOOL_TIMEOUT_MS) {
+      return Promise.race([
+        fn(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Tool execution timed out")), ms)
+        ),
+      ]);
+    }
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
       ...(userId ? MEMORY_TOOLS : []),
@@ -1576,10 +1588,24 @@ export async function POST(request) {
               }
             }
 
-            const finalMessage = await stream.finalMessage();
+            let finalMessage;
+            try {
+              finalMessage = await stream.finalMessage();
+            } catch (err) {
+              // Claude API disconnected mid-stream
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)
+              );
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              return;
+            }
 
             // If Claude didn't request tools, we're done
             if (finalMessage.stop_reason !== "tool_use") break;
+
+            // Send keep-alive ping before tool execution
+            controller.enqueue(encoder.encode(":ping\n\n"));
 
             // Execute each tool call
             const toolResults = [];
@@ -1589,7 +1615,7 @@ export async function POST(request) {
               // Actions tools (actions_create, actions_list, actions_update)
               if (block.name.startsWith("actions_") && userId) {
                 try {
-                  const result = await executeActionTool(block.name, block.input || {}, userId);
+                  const result = await withTimeout(() => executeActionTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1600,7 +1626,7 @@ export async function POST(request) {
               // Memory tools (memory_save, memory_list, memory_forget)
               if (block.name.startsWith("memory_") && userId) {
                 try {
-                  const result = await executeMemoryTool(block.name, block.input || {}, userId);
+                  const result = await withTimeout(() => executeMemoryTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1611,7 +1637,7 @@ export async function POST(request) {
               // Notes tools (notes_search, notes_create, notes_update)
               if (block.name === "notes_search" && userId) {
                 try {
-                  const result = await executeNoteSearch(block.input || {}, userId);
+                  const result = await withTimeout(() => executeNoteSearch(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1620,7 +1646,7 @@ export async function POST(request) {
               }
               if (block.name === "notes_read" && userId) {
                 try {
-                  const result = await executeNoteRead(block.input || {}, userId);
+                  const result = await withTimeout(() => executeNoteRead(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1629,7 +1655,7 @@ export async function POST(request) {
               }
               if (block.name === "notes_create" && userId) {
                 try {
-                  const result = await executeNoteCreate(block.input || {}, userId);
+                  const result = await withTimeout(() => executeNoteCreate(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1638,7 +1664,7 @@ export async function POST(request) {
               }
               if (block.name === "notes_update" && userId) {
                 try {
-                  const result = await executeNoteUpdate(block.input || {}, userId);
+                  const result = await withTimeout(() => executeNoteUpdate(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1651,7 +1677,7 @@ export async function POST(request) {
               if (tgAction && tgKey) {
                 try {
                   const opts = TG_WRITE_ACTIONS.has(tgAction) ? { method: "POST" } : {};
-                  const result = await truegaugeFetch(tgKey, tgAction, block.input || {}, opts);
+                  const result = await withTimeout(() => truegaugeFetch(tgKey, tgAction, block.input || {}, opts));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1662,7 +1688,7 @@ export async function POST(request) {
               // Square tools
               if (block.name.startsWith("square_") && sqToken) {
                 try {
-                  const result = await executeSquareTool(block.name, block.input || {}, userId, userToday);
+                  const result = await withTimeout(() => executeSquareTool(block.name, block.input || {}, userId, userToday));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1673,7 +1699,7 @@ export async function POST(request) {
               // Shopify tools
               if (block.name.startsWith("shopify_") && shopifyToken) {
                 try {
-                  const result = await executeShopifyTool(block.name, block.input || {}, userId, userToday);
+                  const result = await withTimeout(() => executeShopifyTool(block.name, block.input || {}, userId, userToday));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1684,7 +1710,7 @@ export async function POST(request) {
               // Stripe tools
               if (block.name.startsWith("stripe_") && stripeToken) {
                 try {
-                  const result = await executeStripeTool(block.name, block.input || {}, userId, userToday);
+                  const result = await withTimeout(() => executeStripeTool(block.name, block.input || {}, userId, userToday));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1695,7 +1721,7 @@ export async function POST(request) {
               // Toast tools
               if (block.name.startsWith("toast_") && toastToken) {
                 try {
-                  const result = await executeToastTool(block.name, block.input || {}, userId, userToday);
+                  const result = await withTimeout(() => executeToastTool(block.name, block.input || {}, userId, userToday));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1710,7 +1736,7 @@ export async function POST(request) {
                 continue;
               }
               try {
-                const result = await numbrlyFetch(nblKey, action, block.input || {});
+                const result = await withTimeout(() => numbrlyFetch(nblKey, action, block.input || {}));
                 toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
               } catch (err) {
                 toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1730,21 +1756,27 @@ export async function POST(request) {
 
           // If tool loop exhausted, make one final call without tools so Claude responds
           if (needsFinalResponse) {
-            const finalStream = anthropic.messages.stream({
-              model: config.model,
-              max_tokens: config.maxTokens,
-              system,
-              messages: loopMessages,
-            });
-            for await (const event of finalStream) {
-              if (
-                event.type === "content_block_delta" &&
-                event.delta.type === "text_delta"
-              ) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-                );
+            try {
+              const finalStream = anthropic.messages.stream({
+                model: config.model,
+                max_tokens: config.maxTokens,
+                system,
+                messages: loopMessages,
+              });
+              for await (const event of finalStream) {
+                if (
+                  event.type === "content_block_delta" &&
+                  event.delta.type === "text_delta"
+                ) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                  );
+                }
               }
+            } catch (err) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)
+              );
             }
           }
 
