@@ -195,7 +195,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
       abortRef.current = controller;
 
       // Safety timeout — abort if no chunks arrive within 90 seconds
-      let safetyTimeout = setTimeout(() => {
+      safetyTimeout = setTimeout(() => {
         controller.abort();
       }, 90000);
 
@@ -269,10 +269,10 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
                 fullResponse += chunkBufferRef.current;
                 chunkBufferRef.current = "";
               }
-              fullResponse = error;
+              fullResponse += "\n\n" + error;
               setMessages((prev) => {
                 const copy = [...prev];
-                copy[copy.length - 1] = { role: "assistant", content: error };
+                copy[copy.length - 1] = { role: "assistant", content: fullResponse };
                 return copy;
               });
               streamDone = true;
@@ -360,7 +360,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         try {
           const artifacts = extractArtifacts(fullResponse);
           if (artifacts.actionItems.length > 0) {
-            const title = messages[0]?.content?.slice(0, 60) || "Chat";
+            const title = text.slice(0, 60) || "Chat";
             if (storageMode === "local" && directoryHandle) {
               writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
             } else if (user) {

@@ -71,7 +71,10 @@ export default function Chat() {
         .limit(50)
         .abortSignal(AbortSignal.timeout(5000));
       if (data) setPinnedMessages(data);
-    } catch { /* proceed without pins */ }
+    } catch (err) {
+      console.error("[loadPinnedMessages] failed:", err.message);
+      setPinnedMessages([]);
+    }
   }
 
   async function togglePin(msg) {
@@ -80,18 +83,27 @@ export default function Chat() {
     chat.setMessages((prev) =>
       prev.map((m) => (m.id === msg.id ? { ...m, is_pinned: newPinned } : m))
     );
-    await supabase
-      .from("messages")
-      .update({
-        is_pinned: newPinned,
-        pinned_at: newPinned ? new Date().toISOString() : null,
-      })
-      .eq("id", msg.id);
-    loadPinnedMessages();
+    try {
+      await supabase
+        .from("messages")
+        .update({
+          is_pinned: newPinned,
+          pinned_at: newPinned ? new Date().toISOString() : null,
+        })
+        .eq("id", msg.id);
+      loadPinnedMessages();
+    } catch {
+      // Rollback on failure
+      chat.setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, is_pinned: !newPinned } : m))
+      );
+    }
   }
 
   function exportMessage(msg) {
+    if (!chat.messages || chat.messages.length === 0) return;
     const idx = chat.messages.indexOf(msg);
+    if (idx < 0) return;
     let prompt = null;
     for (let j = idx - 1; j >= 0; j--) {
       if (chat.messages[j].role === "user") {
@@ -126,6 +138,14 @@ export default function Chat() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [chat.messages]);
+
+  // ─── Cleanup timers on unmount ──────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   // ─── Textarea auto-resize ─────────────────────────────────
 
@@ -535,7 +555,7 @@ export default function Chat() {
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
                           ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} />
-                          : (typeof msg.content === "string" ? msg.content.trim() : msg.content)
+                          : (typeof msg.content === "string" ? msg.content.trim() : Array.isArray(msg.content) ? msg.content.filter((b) => b.type === "text").map((b) => b.text).join("") : "")
                       )}
                     </div>
                     {/* Pin + Copy + Export actions */}
@@ -993,7 +1013,7 @@ export default function Chat() {
                           color: "var(--color-text-dim)",
                         }}
                       >
-                        {pin.conversations?.title || "Chat"} &middot; {timeAgo(pin.pinned_at)}
+                        {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
                       </span>
                     </button>
                   ))}

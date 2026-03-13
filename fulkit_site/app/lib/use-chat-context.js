@@ -50,7 +50,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data?.connected) return;
+        if (!data?.connected) return null;
         return fetch("/api/numbrly/context", { headers: { Authorization: `Bearer ${accessToken}` } });
       })
       .then((r) => (r?.ok ? r.json() : null))
@@ -167,8 +167,10 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     if (isReady && getContextWithMeta) {
       try {
         const result = await getContextWithMeta(text);
-        context = result.selected;
-        setContextMeta(result.metadata);
+        if (result?.selected) {
+          context = result.selected;
+          setContextMeta(result.metadata);
+        }
       } catch (err) {
         console.error("[assembleContext] vault context failed:", err.message);
       }
@@ -204,7 +206,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
             source: { type: "base64", media_type: img.media_type, data: img.data },
           });
         }
-        return { ...m, content: imageFiles.length > 0 ? parts : parts[0].text };
+        return { ...m, content: imageFiles.length > 0 ? parts : (parts[0]?.text ?? m.content) };
       });
     }
 
