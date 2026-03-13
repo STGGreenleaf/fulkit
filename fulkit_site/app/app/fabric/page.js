@@ -2548,12 +2548,13 @@ export default function FabricPage() {
                               // Pre-scan: collect all songs in the message for the mixtape header button
                               const allMsgSongs = [];
                               lines.forEach((line) => {
-                                const sm = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
+                                const sm = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/);
                                 if (sm && /\d+\s*BPM|\[\+\]|♪/.test(line)) {
+                                  const cleanTitle = sm[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").trim();
                                   allMsgSongs.push({
                                     artist: sm[1].trim(),
-                                    title: sm[2].replace(/\s+\d+\s*$/, "").trim(),
-                                    trackId: `btc-${sm[1].trim()}-${sm[2].replace(/\s+\d+\s*$/, "").trim()}`.toLowerCase().replace(/\s+/g, "-"),
+                                    title: cleanTitle,
+                                    trackId: `btc-${sm[1].trim()}-${cleanTitle}`.toLowerCase().replace(/\s+/g, "-"),
                                   });
                                 }
                               });
@@ -2561,12 +2562,13 @@ export default function FabricPage() {
 
                               lines.forEach((line, li) => {
                                 // Song recommendation: Artist - Title BPM [+] (or ♪, or just BPM suffix)
-                                const songMatch = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
+                                const songMatch = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/);
                                 const hasSongSignal = /\d+\s*BPM|\[\+\]|♪/.test(line);
                                 if (songMatch && hasSongSignal) {
+                                  const cleanTitle = songMatch[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").trim();
                                   songBlock.push({
                                     artist: songMatch[1].trim(),
-                                    title: songMatch[2].replace(/\s+\d+\s*$/, "").trim(),
+                                    title: cleanTitle,
                                     bpm: songMatch[3] ? `${songMatch[3]} BPM` : null,
                                   });
                                   return;
