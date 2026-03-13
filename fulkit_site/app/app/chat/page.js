@@ -472,28 +472,32 @@ export default function Chat() {
       abortRef.current = null;
     }
 
-    // Save assistant response
-    if (fullResponse && convId) {
-      const asstMsgId = await saveMessage(convId, "assistant", fullResponse);
-      if (asstMsgId) {
-        setMessages((prev) =>
-          prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: asstMsgId } : m))
-        );
-      }
-      loadConversations();
+    // Save assistant response (wrapped in try/catch so failures don't kill the conversation)
+    try {
+      if (fullResponse && convId) {
+        const asstMsgId = await saveMessage(convId, "assistant", fullResponse);
+        if (asstMsgId) {
+          setMessages((prev) =>
+            prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: asstMsgId } : m))
+          );
+        }
+        loadConversations();
 
-      // Write-back loop — extract artifacts and file them
-      if (!isDev) {
-        const artifacts = extractArtifacts(fullResponse);
-        if (artifacts.actionItems.length > 0) {
-          const title = messages[0]?.content?.slice(0, 60) || "Chat";
-          if (storageMode === "local" && directoryHandle) {
-            writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
-          } else {
-            writeBackSupabase(user.id, artifacts, title).catch(() => {});
+        // Write-back loop — extract artifacts and file them
+        if (!isDev) {
+          const artifacts = extractArtifacts(fullResponse);
+          if (artifacts.actionItems.length > 0) {
+            const title = messages[0]?.content?.slice(0, 60) || "Chat";
+            if (storageMode === "local" && directoryHandle) {
+              writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
+            } else {
+              writeBackSupabase(user.id, artifacts, title).catch(() => {});
+            }
           }
         }
       }
+    } catch (saveErr) {
+      console.error("[Chat] Failed to save response:", saveErr);
     }
   }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, ghContext, nblContext]);
 
