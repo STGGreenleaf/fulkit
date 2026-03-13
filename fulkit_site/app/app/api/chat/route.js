@@ -489,8 +489,8 @@ const SQUARE_TOOLS = [
 ];
 
 // Execute a Square tool call
-async function executeSquareTool(toolName, input, userId) {
-  const today = new Date().toISOString().split("T")[0];
+async function executeSquareTool(toolName, input, userId, userToday) {
+  const today = userToday || new Date().toISOString().split("T")[0];
 
   switch (toolName) {
     case "square_daily_summary": {
@@ -733,10 +733,10 @@ const SHOPIFY_TOOLS = [
   },
 ];
 
-async function executeShopifyTool(toolName, input, userId) {
+async function executeShopifyTool(toolName, input, userId, userToday) {
   switch (toolName) {
     case "shopify_daily_summary": {
-      const date = input.date || new Date().toISOString().split("T")[0];
+      const date = input.date || userToday || new Date().toISOString().split("T")[0];
       const data = await shopifyFetch(userId, `/orders.json?status=any&created_at_min=${date}T00:00:00Z&created_at_max=${date}T23:59:59Z&limit=250`);
       const orders = data?.orders || [];
       const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.total_price || "0"), 0);
@@ -872,10 +872,10 @@ const STRIPE_TOOLS = [
   },
 ];
 
-async function executeStripeTool(toolName, input, userId) {
+async function executeStripeTool(toolName, input, userId, userToday) {
   switch (toolName) {
     case "stripe_daily_summary": {
-      const date = input.date || new Date().toISOString().split("T")[0];
+      const date = input.date || userToday || new Date().toISOString().split("T")[0];
       const startTs = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);
       const endTs = Math.floor(new Date(`${date}T23:59:59Z`).getTime() / 1000);
       const [charges, refunds] = await Promise.all([
@@ -987,8 +987,8 @@ const TOAST_TOOLS = [
   },
 ];
 
-async function executeToastTool(toolName, input, userId) {
-  const today = new Date().toISOString().split("T")[0];
+async function executeToastTool(toolName, input, userId, userToday) {
+  const today = userToday || new Date().toISOString().split("T")[0];
   switch (toolName) {
     case "toast_daily_summary": {
       const date = input.date || today;
@@ -1349,7 +1349,13 @@ export async function POST(request) {
     }
     const config = getModelConfig(profile?.role, profile?.seat_type);
 
-    const { messages, context = [] } = await request.json();
+    const { messages, context = [], timezone } = await request.json();
+    // Compute "today" in the user's local timezone (falls back to UTC)
+    const userToday = (() => {
+      try {
+        return new Date().toLocaleDateString("en-CA", { timeZone: timezone || "UTC" }); // YYYY-MM-DD
+      } catch { return new Date().toISOString().split("T")[0]; }
+    })();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return Response.json({ error: "Messages required" }, { status: 400 });
@@ -1461,6 +1467,7 @@ export async function POST(request) {
 
     // Build system prompt
     let system = BASE_PROMPT;
+    system += `\n\nToday is ${userToday}. The user's timezone is ${timezone || "UTC"}.`;
 
     // Inject preferences
     if (prefs && prefs.length > 0) {
@@ -1655,7 +1662,7 @@ export async function POST(request) {
               // Square tools
               if (block.name.startsWith("square_") && sqToken) {
                 try {
-                  const result = await executeSquareTool(block.name, block.input || {}, userId);
+                  const result = await executeSquareTool(block.name, block.input || {}, userId, userToday);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1666,7 +1673,7 @@ export async function POST(request) {
               // Shopify tools
               if (block.name.startsWith("shopify_") && shopifyToken) {
                 try {
-                  const result = await executeShopifyTool(block.name, block.input || {}, userId);
+                  const result = await executeShopifyTool(block.name, block.input || {}, userId, userToday);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1677,7 +1684,7 @@ export async function POST(request) {
               // Stripe tools
               if (block.name.startsWith("stripe_") && stripeToken) {
                 try {
-                  const result = await executeStripeTool(block.name, block.input || {}, userId);
+                  const result = await executeStripeTool(block.name, block.input || {}, userId, userToday);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
@@ -1688,7 +1695,7 @@ export async function POST(request) {
               // Toast tools
               if (block.name.startsWith("toast_") && toastToken) {
                 try {
-                  const result = await executeToastTool(block.name, block.input || {}, userId);
+                  const result = await executeToastTool(block.name, block.input || {}, userId, userToday);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

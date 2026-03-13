@@ -388,7 +388,7 @@ export default function Chat() {
           "Content-Type": "application/json",
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify({ messages: updated, context }),
+        body: JSON.stringify({ messages: updated, context, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
         signal: controller.signal,
       });
 
