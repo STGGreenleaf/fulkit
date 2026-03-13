@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -12,6 +12,7 @@ import { supabase } from "../../lib/supabase";
 import MessageRenderer from "../../components/MessageRenderer";
 import { useChat } from "../../lib/use-chat";
 import { useChatContext } from "../../lib/use-chat-context";
+import { useSandbox } from "../../lib/sandbox";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -29,13 +30,16 @@ export default function Chat() {
   const isDev = user?.isDev;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
 
+  // ─── Sandbox hook ────────────────────────────────────────
+  const sandbox = useSandbox();
+
   // ─── Core chat hook ───────────────────────────────────────
-  const chat = useChat({ user, isDev, accessToken, storageMode, directoryHandle });
+  const chat = useChat({ user, isDev, accessToken, storageMode, directoryHandle, sandbox });
 
   // ─── Context hook ─────────────────────────────────────────
   const ctx = useChatContext({
     user, isDev, accessToken, githubConnected,
-    getContextWithMeta, recallNotes, isReady,
+    getContextWithMeta, recallNotes, isReady, sandbox,
   });
 
   // ─── UI-only state ────────────────────────────────────────
@@ -46,6 +50,7 @@ export default function Chat() {
   const [copiedMsg, setCopiedMsg] = useState(null);
   const [showPins, setShowPins] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [showChapters, setShowChapters] = useState(false);
 
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
@@ -256,6 +261,69 @@ export default function Chat() {
             )}
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {/* Sandbox toggle + chapter indicator */}
+              {!isDev && (
+                <>
+                  {sandbox.sandboxActive ? (
+                    <>
+                      <span style={{
+                        fontSize: "var(--font-size-2xs)",
+                        color: "var(--color-text-dim)",
+                        fontFamily: "var(--font-mono)",
+                        padding: "var(--space-1) var(--space-2)",
+                        background: "var(--color-bg-alt)",
+                        borderRadius: "var(--radius-sm)",
+                        letterSpacing: "0.02em",
+                      }}>
+                        Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
+                      </span>
+                      {sandbox.chapters.length > 0 && (
+                        <button
+                          onClick={() => setShowChapters(!showChapters)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            fontSize: "var(--font-size-xs)", color: showChapters ? "var(--color-text)" : "var(--color-text-muted)",
+                            background: showChapters ? "var(--color-bg-alt)" : "none",
+                            border: "none", cursor: "pointer", fontFamily: "var(--font-primary)",
+                            padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+                          }}
+                        >
+                          <ChevronDown size={12} strokeWidth={2} style={{ transform: showChapters ? "rotate(180deg)" : "none" }} />
+                          {!compactMode && "Chapters"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => sandbox.dumpSandbox()}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)",
+                          background: "none", border: "none", cursor: "pointer",
+                          fontFamily: "var(--font-primary)",
+                          padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+                        }}
+                      >
+                        <X size={12} strokeWidth={2} />
+                        {!compactMode && "End & Save"}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={sandbox.startSandbox}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-1)",
+                        fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)",
+                        background: "none", border: "none", cursor: "pointer",
+                        fontFamily: "var(--font-primary)",
+                        padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+                      }}
+                    >
+                      <Box size={12} strokeWidth={2} />
+                      {!compactMode && "Sandbox"}
+                    </button>
+                  )}
+                </>
+              )}
+
               {/* Context indicator */}
               {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
                 <span
@@ -1021,6 +1089,73 @@ export default function Chat() {
               </>
             )}
 
+            {/* Chapter browser panel */}
+            {showChapters && sandbox.sandboxActive && sandbox.chapters.length > 0 && (
+              <>
+                <div style={{ width: 1, background: "var(--color-border-light)", flexShrink: 0 }} />
+                <div
+                  style={{
+                    width: 260,
+                    overflowY: "auto",
+                    padding: "var(--space-3)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--space-2)",
+                  }}
+                >
+                  <span style={{
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    padding: "var(--space-1) 0",
+                  }}>
+                    Chapters ({sandbox.chapters.length})
+                  </span>
+                  {sandbox.chapters.map((ch, i) => (
+                    <div
+                      key={ch.id}
+                      style={{
+                        padding: "var(--space-2) var(--space-2-5)",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--color-border-light)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                      }}
+                    >
+                      <span style={{
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        color: "var(--color-text)",
+                      }}>
+                        Chapter {i + 1}
+                      </span>
+                      <span style={{
+                        fontSize: "var(--font-size-2xs)",
+                        color: "var(--color-text-dim)",
+                      }}>
+                        {ch.turnCount} turns &middot; {(ch.extractedNotes?.length || 0)} notes
+                      </span>
+                      {ch.userIntents?.length > 0 && (
+                        <span style={{
+                          fontSize: "var(--font-size-2xs)",
+                          color: "var(--color-text-muted)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}>
+                          {ch.userIntents[0]}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* History panel */}
             {showHistory && (
               <>
@@ -1106,6 +1241,26 @@ export default function Chat() {
             )}
           </div>
         </div>
+
+        {/* Sandbox chapter toast */}
+        {sandbox.chapterToast && (
+          <div style={{
+            position: "fixed",
+            bottom: "var(--space-5)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "var(--space-2) var(--space-4)",
+            background: "var(--color-accent)",
+            color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-xs)",
+            fontFamily: "var(--font-primary)",
+            zIndex: 100,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}>
+            {sandbox.chapterToast}
+          </div>
+        )}
 
         <style>{`
           @keyframes blink {

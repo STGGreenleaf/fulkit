@@ -10,7 +10,7 @@ import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-wri
  * Owns: messages, streaming, conversations, send flow, DB persistence.
  * Does NOT own: context assembly, file attachments, UI state.
  */
-export function useChat({ user, isDev, accessToken, storageMode, directoryHandle }) {
+export function useChat({ user, isDev, accessToken, storageMode, directoryHandle, sandbox }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -143,7 +143,16 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     const msgTimestamp = Date.now();
     const userMsg = { role: "user", content: text, _ts: msgTimestamp };
     let apiMessages = [...messages, userMsg];
-    setMessages(apiMessages);
+    // In sandbox mode, only send current chapter messages (bounded window)
+    const sandboxMode = sandbox?.sandboxActive && sandbox?.currentChapter;
+    if (sandboxMode) {
+      const chapterMsgs = sandbox.currentChapter.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      apiMessages = [...chapterMsgs, userMsg];
+    }
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setStreaming(true);
     streamingRef.current = true;
@@ -217,6 +226,9 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
           messages: apiMessages,
           context,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...(sandboxMode && sandbox.chapters?.length > 0
+            ? { chapterSummaries: sandbox.chapters }
+            : {}),
         }),
         signal: controller.signal,
       });
@@ -369,9 +381,19 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
           }
         } catch {}
       }
+
+      // Sandbox: track turn in current chapter
+      if (sandboxMode && sandbox.addTurnToChapter) {
+        try {
+          sandbox.addTurnToChapter(
+            { role: "user", content: text, _ts: msgTimestamp },
+            { role: "assistant", content: fullResponse, _ts: assistantTs }
+          );
+        } catch {}
+      }
     }
   }, [input, streaming, messages, conversationId, user, isDev, accessToken,
-    loadConversations, storageMode, directoryHandle]);
+    loadConversations, storageMode, directoryHandle, sandbox]);
 
   // ─── Actions ──────────────────────────────────────────────
 

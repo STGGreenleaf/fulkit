@@ -5,10 +5,13 @@
 import { supabase } from "./supabase";
 
 // Extract structured artifacts from Claude's response
-// Looks for action items, summaries, and key insights
+// Looks for action items, decisions, key facts, plans, and insights
 export function extractArtifacts(response) {
   const artifacts = {
     actionItems: [],
+    decisions: [],
+    keyFacts: [],
+    plans: [],
     insights: [],
     summary: null,
   };
@@ -25,6 +28,28 @@ export function extractArtifacts(response) {
       trimmed.match(/^(TODO|Action|Follow.up|Reminder):/i)
     ) {
       artifacts.actionItems.push(trimmed.replace(/^-\s*\[\s*\]\s*/, "").replace(/^(TODO|Action|Follow.up|Reminder):\s*/i, ""));
+    }
+    // Decisions: lines with decision-indicating language
+    else if (
+      trimmed.match(/\b(decided|conclusion|we'll go with|the plan is|going with|settled on|agreed|chosen|final answer)\b/i) &&
+      trimmed.length > 15 && trimmed.length < 300
+    ) {
+      artifacts.decisions.push(trimmed.replace(/^[-*]\s*/, ""));
+    }
+    // Plans: lines with planning language
+    else if (
+      trimmed.match(/\b(next step|plan:|approach:|strategy:|phase \d|step \d|roadmap|timeline)\b/i) &&
+      trimmed.length > 10 && trimmed.length < 300
+    ) {
+      artifacts.plans.push(trimmed.replace(/^[-*]\s*/, ""));
+    }
+    // Key facts: lines with specific data (numbers, dates, names in context)
+    else if (
+      trimmed.match(/\b(\d{4}-\d{2}-\d{2}|\$[\d,.]+|\d+%|[A-Z][a-z]+ [A-Z][a-z]+)\b/) &&
+      trimmed.match(/^[-*•]\s/) &&
+      trimmed.length > 10 && trimmed.length < 200
+    ) {
+      artifacts.keyFacts.push(trimmed.replace(/^[-*•]\s*/, ""));
     }
   }
 

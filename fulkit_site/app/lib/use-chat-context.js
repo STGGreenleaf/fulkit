@@ -9,7 +9,7 @@ import { supabase } from "./supabase";
  * Owns: GitHub context, Numbrly context, attached files, recalled notes.
  * Provides assembleContext() for useChat's sendMessage.
  */
-export function useChatContext({ user, isDev, accessToken, githubConnected, getContextWithMeta, recallNotes, isReady }) {
+export function useChatContext({ user, isDev, accessToken, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
   const [ghContext, setGhContext] = useState([]);
   const [nblContext, setNblContext] = useState(null);
   const [nblError, setNblError] = useState(false);
@@ -176,6 +176,18 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
       }
     }
 
+    // Sandbox context (chapter summaries + extracted notes)
+    if (sandbox?.sandboxActive && sandbox?.getSandboxContext) {
+      try {
+        const sandboxCtx = sandbox.getSandboxContext();
+        if (sandboxCtx?.length > 0) {
+          context.push(...sandboxCtx);
+        }
+      } catch (err) {
+        console.error("[assembleContext] sandbox context failed:", err.message);
+      }
+    }
+
     // Recalled notes (deduplicated by title)
     for (const rn of recalledNotes) {
       if (!context.find((c) => c.title === rn.title)) {
@@ -259,7 +271,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     }
 
     return { context, annotatedMessages };
-  }, [isReady, getContextWithMeta, recalledNotes, attachedFiles, user, ghContext, nblContext]);
+  }, [isReady, getContextWithMeta, recalledNotes, attachedFiles, user, ghContext, nblContext, sandbox]);
 
   // ─── Dismiss alerts ───────────────────────────────────────
 

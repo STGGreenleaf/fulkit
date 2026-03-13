@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "../lib/auth";
 import { VaultProvider } from "../lib/vault";
+import { SandboxProvider } from "../lib/sandbox";
 import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
 
@@ -39,10 +40,12 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <VaultProvider>
+            <SandboxProvider>
             <FabricProvider>
               {children}
               <DevInspector />
             </FabricProvider>
+            </SandboxProvider>
           </VaultProvider>
         </AuthProvider>
       </body>

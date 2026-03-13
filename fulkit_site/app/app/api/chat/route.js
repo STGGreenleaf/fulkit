@@ -8,16 +8,27 @@ import { getShopifyToken, shopifyFetch } from "../../../lib/shopify-server";
 import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
 import { getToastToken, toastFetch } from "../../../lib/toast-server";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-function getModelConfig(role, seatType) {
+function getModelConfig(role, seatType, hasByok) {
+  // BYOK+Owner → best tier
+  if (hasByok && role === "owner") {
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: true };
+  }
+  // BYOK → great tier (Opus, same limits)
+  if (hasByok) {
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: true };
+  }
+  // Owner without BYOK → still gets Opus (Fulkit pays)
   if (role === "owner") {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000 };
+    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: false };
   }
+  // Pro → good tier
   if (seatType === "pro") {
-    return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000 };
+    return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000, isByok: false };
   }
-  return { model: "claude-sonnet-4-6", maxTokens: 2048, compressAt: 80000 };
+  // Standard → decent tier
+  return { model: "claude-sonnet-4-6", maxTokens: 2048, compressAt: 80000, isByok: false };
 }
 
 const BASE_PROMPT = `You are Fülkit — a thinking partner, not an assistant. You're warm, direct, and useful. You have bestie energy — you care, you push back when needed, and you remember what matters.
@@ -52,13 +63,40 @@ function estimateTokens(content) {
   return 0;
 }
 
-// Compress old messages when conversation gets too long
-// Keeps recent messages verbatim, summarizes older ones
-function compressConversation(messages, maxTokens = 80000) {
+// Compress conversation — supports chapter summaries from sandbox mode
+function compressConversation(messages, maxTokens = 80000, chapterSummaries = null) {
+  // If chapter summaries provided (sandbox mode), prepend as structured context
+  if (chapterSummaries && chapterSummaries.length > 0) {
+    const chapterBlock = chapterSummaries.map((ch, i) => {
+      const parts = [`Chapter ${i + 1} (${ch.turnCount} turns):`];
+      if (ch.userIntents?.length) parts.push("  Topics: " + ch.userIntents.join(" | "));
+      if (ch.assistantDecisions?.length) parts.push("  Key points: " + ch.assistantDecisions.slice(0, 5).join("; "));
+      if (ch.extractedNotes?.length) {
+        const grouped = {};
+        for (const n of ch.extractedNotes) {
+          if (!grouped[n.type]) grouped[n.type] = [];
+          grouped[n.type].push(n.text);
+        }
+        for (const [type, items] of Object.entries(grouped)) {
+          parts.push(`  ${type}s: ${items.join("; ")}`);
+        }
+      }
+      return parts.join("\n");
+    }).join("\n\n");
+
+    return [
+      {
+        role: "user",
+        content: `[Previous chapters in this planning session:\n${chapterBlock}\n\nContinuing in a new chapter:]`,
+      },
+      ...messages.slice(1),
+    ];
+  }
+
+  // Standard compression (no sandbox)
   let total = messages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
   if (total <= maxTokens) return messages;
 
-  // Keep the most recent messages verbatim — always keep at least the last message
   const keep = [];
   let keepTokens = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -68,25 +106,43 @@ function compressConversation(messages, maxTokens = 80000) {
     keepTokens += msgTokens;
   }
 
-  // Summarize older messages into a compressed block
   const older = messages.slice(0, messages.length - keep.length);
   if (older.length === 0) return keep;
 
-  const summary = older
-    .map((m) => {
-      const text = typeof m.content === "string"
-        ? m.content
-        : Array.isArray(m.content)
-          ? m.content.filter((b) => b.type === "text").map((b) => b.text).join(" ")
-          : "";
-      return `${m.role}: ${text.slice(0, 200)}${text.length > 200 ? "..." : ""}`;
-    })
-    .join("\n");
+  // Improved structured summary — extract topics and key points instead of 200-char truncation
+  const userTopics = [];
+  const assistantPoints = [];
+  for (const m of older) {
+    const text = typeof m.content === "string"
+      ? m.content
+      : Array.isArray(m.content)
+        ? m.content.filter((b) => b.type === "text").map((b) => b.text).join(" ")
+        : "";
+    if (m.role === "user") {
+      userTopics.push(text.slice(0, 150));
+    } else {
+      const lines = text.split("\n");
+      for (const line of lines) {
+        const t = line.trim();
+        if ((t.startsWith("- ") || t.startsWith("* ") || t.match(/^\d+\./)) && t.length > 10 && t.length < 200) {
+          if (assistantPoints.length < 15) assistantPoints.push(t);
+        }
+      }
+      if (assistantPoints.length === 0 && text.length > 0) {
+        const firstSentence = text.split(/[.!?]\s/)[0];
+        if (firstSentence) assistantPoints.push(firstSentence.slice(0, 200));
+      }
+    }
+  }
+
+  const summaryParts = [];
+  if (userTopics.length > 0) summaryParts.push("Topics discussed:\n" + userTopics.map((t) => `- ${t}`).join("\n"));
+  if (assistantPoints.length > 0) summaryParts.push("Key points:\n" + assistantPoints.join("\n"));
 
   return [
     {
       role: "user",
-      content: `[Earlier in this conversation, we discussed:\n${summary}\n\nContinuing from there:]`,
+      content: `[Earlier in this conversation (${older.length} messages):\n${summaryParts.join("\n\n")}\n\nContinuing from there:]`,
     },
     ...keep,
   ];
@@ -1365,9 +1421,31 @@ export async function POST(request) {
         profile = data;
       } catch { /* proceed with defaults */ }
     }
-    const config = getModelConfig(profile?.role, profile?.seat_type);
+    // Check for BYOK key
+    let byokKey = null;
+    if (userId) {
+      try {
+        const { data: byokPref } = await getSupabaseAdmin()
+          .from("preferences")
+          .select("value")
+          .eq("user_id", userId)
+          .eq("key", "byok:anthropic_api_key")
+          .maybeSingle()
+          .abortSignal(AbortSignal.timeout(3000));
+        if (byokPref?.value) {
+          byokKey = Buffer.from(byokPref.value, "base64").toString("utf-8");
+        }
+      } catch { /* proceed without BYOK */ }
+    }
 
-    const { messages, context = [], timezone } = await request.json();
+    const config = getModelConfig(profile?.role, profile?.seat_type, !!byokKey);
+
+    // Use BYOK client if available, otherwise default
+    const anthropic = byokKey
+      ? new Anthropic({ apiKey: byokKey })
+      : defaultAnthropic;
+
+    const { messages, context = [], timezone, chapterSummaries } = await request.json();
     // Compute "today" in the user's local timezone (falls back to UTC)
     const userToday = (() => {
       try {
@@ -1384,8 +1462,8 @@ export async function POST(request) {
       return Response.json({ error: "Message cannot be empty" }, { status: 400 });
     }
 
-    // Compress conversation if it's getting long
-    const compressed = compressConversation(messages, config.compressAt);
+    // Compress conversation if it's getting long (pass chapter summaries for sandbox mode)
+    const compressed = compressConversation(messages, config.compressAt, chapterSummaries);
 
     // Load user preferences + learned memories
     let prefs = null;
@@ -1548,8 +1626,8 @@ export async function POST(request) {
       system += `\n\n## User's Notes & Context\n${contextIntro}\n\n${contextBlock}`;
     }
 
-    // Increment message count (Fül cap)
-    if (userId) {
+    // Increment message count (Fül cap) — skip for BYOK users (they pay their own tokens)
+    if (userId && !config.isByok) {
       getSupabaseAdmin()
         .from("profiles")
         .select("messages_this_month")

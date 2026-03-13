@@ -1819,9 +1819,60 @@ function SourcesTab() {
 }
 
 function AITab() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
   const prefs = isDev ? PREFERENCES : [];
+
+  // ─── BYOK state ──────────────────────────────────────────
+  const [byokKey, setByokKey] = useState("");
+  const [byokStatus, setByokStatus] = useState(null); // null | "loading" | "connected" | "error"
+  const [byokError, setByokError] = useState(null);
+  const [byokVerifying, setByokVerifying] = useState(false);
+
+  useEffect(() => {
+    if (!accessToken || isDev) return;
+    fetch("/api/byok", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.connected) setByokStatus("connected");
+      })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  async function handleByokConnect() {
+    if (!byokKey.trim() || !accessToken) return;
+    setByokVerifying(true);
+    setByokError(null);
+    try {
+      const res = await fetch("/api/byok", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ key: byokKey.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.connected) {
+        setByokStatus("connected");
+        setByokKey("");
+      } else {
+        setByokError(data.error || "Failed to connect");
+      }
+    } catch {
+      setByokError("Connection failed");
+    } finally {
+      setByokVerifying(false);
+    }
+  }
+
+  async function handleByokDisconnect() {
+    if (!accessToken) return;
+    try {
+      await fetch("/api/byok", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setByokStatus(null);
+    } catch {}
+  }
 
   return (
     <div>
@@ -1935,6 +1986,98 @@ function AITab() {
               Clear all
             </button>
           </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: "var(--space-8)" }}>
+        <SectionTitle>Bring Your Own Key</SectionTitle>
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+            <Key size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+              {byokStatus === "connected"
+                ? "Connected. Burning your own Fül."
+                : "Paste your Anthropic API key to unlock Opus and unlimited messages."}
+            </div>
+          </div>
+
+          {byokStatus === "connected" ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <Check size={14} strokeWidth={2.5} style={{ color: "var(--color-text)" }} />
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                  Claude Opus 4.6
+                </span>
+                <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
+                  128K output
+                </span>
+              </div>
+              <button
+                onClick={handleByokDisconnect}
+                style={{
+                  padding: "var(--space-1-5) var(--space-3)",
+                  background: "transparent",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--color-text-muted)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: "pointer",
+                }}
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end" }}>
+                <input
+                  type="password"
+                  value={byokKey}
+                  onChange={(e) => setByokKey(e.target.value)}
+                  placeholder="sk-ant-..."
+                  onKeyDown={(e) => { if (e.key === "Enter") handleByokConnect(); }}
+                  style={{
+                    flex: 1,
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "var(--color-bg)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--color-text)",
+                    fontSize: "var(--font-size-sm)",
+                    fontFamily: "var(--font-mono)",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={handleByokConnect}
+                  disabled={!byokKey.trim() || byokVerifying}
+                  style={{
+                    padding: "var(--space-2) var(--space-4)",
+                    background: byokKey.trim() ? "var(--color-accent)" : "var(--color-border-light)",
+                    border: "none",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--color-text-inverse)",
+                    fontSize: "var(--font-size-sm)",
+                    fontWeight: "var(--font-weight-semibold)",
+                    fontFamily: "var(--font-primary)",
+                    cursor: byokKey.trim() ? "pointer" : "default",
+                    minWidth: 80,
+                  }}
+                >
+                  {byokVerifying ? "..." : "Connect"}
+                </button>
+              </div>
+              {byokError && (
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-error, #c44)", marginTop: "var(--space-2)" }}>
+                  {byokError}
+                </div>
+              )}
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: "var(--space-2)" }}>
+                Your key is stored encrypted and only used server-side. We never log it.
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
