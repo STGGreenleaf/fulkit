@@ -2158,8 +2158,8 @@ export default function FabricPage() {
                     color: "var(--color-text-dim)",
                   }}
                 >
-                  <span>{currentTrack ? formatTime(progress * currentTrack.duration) : "0:00"}</span>
-                  <span>{currentTrack ? formatTime(currentTrack.duration) : "0:00"}</span>
+                  <span>{currentTrack?.duration ? formatTime(progress * currentTrack.duration) : "0:00"}</span>
+                  <span>{currentTrack?.duration ? formatTime(currentTrack.duration) : "0:00"}</span>
                 </div>
               </div>
 
