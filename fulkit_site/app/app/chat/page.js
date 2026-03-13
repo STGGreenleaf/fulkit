@@ -417,24 +417,34 @@ export default function Chat() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let chunkCount = 0;
 
       let streamDone = false;
       while (!streamDone) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log("[stream] reader done, chunks received:", chunkCount, "fullResponse length:", fullResponse.length);
+          break;
+        }
 
-        buffer += decoder.decode(value, { stream: true });
+        const raw = decoder.decode(value, { stream: true });
+        buffer += raw;
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6);
-          if (payload === "[DONE]") { streamDone = true; break; }
+          if (payload === "[DONE]") {
+            console.log("[stream] [DONE] received, chunks:", chunkCount, "fullResponse length:", fullResponse.length);
+            streamDone = true;
+            break;
+          }
 
           try {
             const { text: chunk, error } = JSON.parse(payload);
             if (error) {
+              console.error("[stream] error from API:", error);
               setMessages((prev) => {
                 const copy = [...prev];
                 copy[copy.length - 1] = { role: "assistant", content: error };
@@ -445,6 +455,8 @@ export default function Chat() {
               break;
             }
             if (chunk) {
+              chunkCount++;
+              if (chunkCount <= 3) console.log("[stream] chunk", chunkCount, ":", JSON.stringify(chunk.slice(0, 60)));
               fullResponse += chunk;
               setMessages((prev) => {
                 const copy = [...prev];
