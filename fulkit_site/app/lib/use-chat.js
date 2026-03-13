@@ -19,6 +19,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
 
   const abortRef = useRef(null);
   const streamingRef = useRef(false);
+  const mountedRef = useRef(true);
   // Chunk buffer — accumulate SSE chunks, flush to state on rAF
   const chunkBufferRef = useRef("");
   const flushRafRef = useRef(null);
@@ -139,7 +140,8 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     const text = input.trim();
     if (!text || streamingRef.current) return;
 
-    const userMsg = { role: "user", content: text };
+    const msgTimestamp = Date.now();
+    const userMsg = { role: "user", content: text, _ts: msgTimestamp };
     let apiMessages = [...messages, userMsg];
     setMessages(apiMessages);
     setInput("");
@@ -149,28 +151,28 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     let convId = null;
     let fullResponse = "";
     let firstChunkReceived = false;
+    let safetyTimeout = null;
 
     try {
       // Create conversation — timeout after 5s, don't block if it fails
       convId = await ensureConversation(text);
 
-      // Save user message in background
+      // Save user message in background — match by timestamp to avoid duplicate text race
       saveMessage(convId, "user", text)
         .then((id) => {
           if (id) {
             setMessages((prev) =>
               prev.map((m) =>
-                m.role === "user" && m.content === text && !m.id
-                  ? { ...m, id }
-                  : m
+                m._ts === msgTimestamp && !m.id ? { ...m, id } : m
               )
             );
           }
         })
         .catch(() => {});
 
-      // Add empty assistant placeholder
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      // Add empty assistant placeholder with timestamp for safe ID assignment
+      const assistantTs = Date.now();
+      setMessages((prev) => [...prev, { role: "assistant", content: "", _ts: assistantTs }]);
 
       // Assemble context (provided by useChatContext) — 10s timeout
       let context = [];
@@ -232,6 +234,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
       }
 
       // Stream response — buffer chunks, flush on rAF
+      if (!res.body) throw new Error("No response body");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let sseBuffer = "";
@@ -341,16 +344,16 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     if (fullResponse && convId) {
       saveMessage(convId, "assistant", fullResponse)
         .then((id) => {
-          if (id) {
+          if (id && mountedRef.current) {
             setMessages((prev) =>
-              prev.map((m, idx) =>
-                idx === prev.length - 1 && !m.id ? { ...m, id } : m
+              prev.map((m) =>
+                m._ts === assistantTs && !m.id ? { ...m, id } : m
               )
             );
           }
-          loadConversations();
+          if (mountedRef.current) loadConversations();
         })
-        .catch((err) => console.error("[Chat] Failed to save response:", err));
+        .catch(() => {});
 
       // Write-back artifacts
       if (!isDev) {
@@ -390,6 +393,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       if (abortRef.current) abortRef.current.abort();
       if (flushRafRef.current) cancelAnimationFrame(flushRafRef.current);
     };

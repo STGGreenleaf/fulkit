@@ -50,12 +50,12 @@ function compressConversation(messages, maxTokens = 80000) {
   let total = messages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
   if (total <= maxTokens) return messages;
 
-  // Keep the most recent messages verbatim
+  // Keep the most recent messages verbatim — always keep at least the last message
   const keep = [];
   let keepTokens = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
     const msgTokens = estimateTokens(messages[i].content);
-    if (keepTokens + msgTokens > maxTokens * 0.6) break;
+    if (keep.length > 0 && keepTokens + msgTokens > maxTokens * 0.6) break;
     keep.unshift(messages[i]);
     keepTokens += msgTokens;
   }
@@ -1363,6 +1363,11 @@ export async function POST(request) {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return Response.json({ error: "Messages required" }, { status: 400 });
     }
+    // Strip empty content and ensure last message has content
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg?.content || (typeof lastMsg.content === "string" && !lastMsg.content.trim())) {
+      return Response.json({ error: "Message cannot be empty" }, { status: 400 });
+    }
 
     // Compress conversation if it's getting long
     const compressed = compressConversation(messages, config.compressAt);
@@ -1382,10 +1387,12 @@ export async function POST(request) {
       } catch { /* proceed without preferences */ }
     }
 
-    // Enrich GitHub tree context with actual file contents
+    // Enrich GitHub tree context with actual file contents (10s aggregate timeout)
     if (userId && Array.isArray(context)) {
       const ghToken = await getGitHubToken(userId).catch(() => null);
-      if (ghToken) {
+      if (ghToken) try {
+        await Promise.race([
+          (async () => {
         const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
         const words = lastMessage.split(/\W+/).filter((w) => w.length > 2);
 
@@ -1449,7 +1456,10 @@ export async function POST(request) {
             }
           }
         }
-      }
+          })(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("GitHub enrichment timed out")), 10000)),
+        ]);
+      } catch { /* GitHub enrichment timed out or failed — proceed without it */ }
     }
 
     // Fetch integration API keys (needed for tool execution)
@@ -1538,6 +1548,7 @@ export async function POST(request) {
 
     const MAX_TOOL_ROUNDS = 5;
     const TOOL_TIMEOUT_MS = 15000; // 15s per tool call
+    const MAX_TOOL_RESULT_CHARS = 50000; // ~12.5K tokens — prevent context overflow
 
     // Run a tool function with a timeout
     function withTimeout(fn, ms = TOOL_TIMEOUT_MS) {
@@ -1547,6 +1558,13 @@ export async function POST(request) {
           setTimeout(() => reject(new Error("Tool execution timed out")), ms)
         ),
       ]);
+    }
+
+    // Cap tool result size to prevent context window overflow
+    function capResult(result) {
+      const str = JSON.stringify(result);
+      if (str.length <= MAX_TOOL_RESULT_CHARS) return str;
+      return str.slice(0, MAX_TOOL_RESULT_CHARS) + '... [truncated — result too large]';
     }
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
@@ -1595,9 +1613,11 @@ export async function POST(request) {
                 event.type === "content_block_delta" &&
                 event.delta.type === "text_delta"
               ) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-                );
+                try {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                  );
+                } catch { break; /* client disconnected */ }
               }
             }
 
@@ -1617,8 +1637,11 @@ export async function POST(request) {
             // If Claude didn't request tools, we're done
             if (finalMessage.stop_reason !== "tool_use") break;
 
+            // Check if client disconnected before executing tools
+            if (request.signal?.aborted) break;
+
             // Send keep-alive ping before tool execution
-            controller.enqueue(encoder.encode(":ping\n\n"));
+            try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { break; }
 
             // Execute each tool call
             const toolResults = [];
@@ -1629,7 +1652,7 @@ export async function POST(request) {
               if (block.name.startsWith("actions_") && userId) {
                 try {
                   const result = await withTimeout(() => executeActionTool(block.name, block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1640,7 +1663,7 @@ export async function POST(request) {
               if (block.name.startsWith("memory_") && userId) {
                 try {
                   const result = await withTimeout(() => executeMemoryTool(block.name, block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1651,7 +1674,7 @@ export async function POST(request) {
               if (block.name === "notes_search" && userId) {
                 try {
                   const result = await withTimeout(() => executeNoteSearch(block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1660,7 +1683,7 @@ export async function POST(request) {
               if (block.name === "notes_read" && userId) {
                 try {
                   const result = await withTimeout(() => executeNoteRead(block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1669,7 +1692,7 @@ export async function POST(request) {
               if (block.name === "notes_create" && userId) {
                 try {
                   const result = await withTimeout(() => executeNoteCreate(block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1678,7 +1701,7 @@ export async function POST(request) {
               if (block.name === "notes_update" && userId) {
                 try {
                   const result = await withTimeout(() => executeNoteUpdate(block.input || {}, userId));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1691,7 +1714,7 @@ export async function POST(request) {
                 try {
                   const opts = TG_WRITE_ACTIONS.has(tgAction) ? { method: "POST" } : {};
                   const result = await withTimeout(() => truegaugeFetch(tgKey, tgAction, block.input || {}, opts));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1702,7 +1725,7 @@ export async function POST(request) {
               if (block.name.startsWith("square_") && sqToken) {
                 try {
                   const result = await withTimeout(() => executeSquareTool(block.name, block.input || {}, userId, userToday));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1713,7 +1736,7 @@ export async function POST(request) {
               if (block.name.startsWith("shopify_") && shopifyToken) {
                 try {
                   const result = await withTimeout(() => executeShopifyTool(block.name, block.input || {}, userId, userToday));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1724,7 +1747,7 @@ export async function POST(request) {
               if (block.name.startsWith("stripe_") && stripeToken) {
                 try {
                   const result = await withTimeout(() => executeStripeTool(block.name, block.input || {}, userId, userToday));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1735,7 +1758,7 @@ export async function POST(request) {
               if (block.name.startsWith("toast_") && toastToken) {
                 try {
                   const result = await withTimeout(() => executeToastTool(block.name, block.input || {}, userId, userToday));
-                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
                 }
@@ -1750,7 +1773,7 @@ export async function POST(request) {
               }
               try {
                 const result = await withTimeout(() => numbrlyFetch(nblKey, action, block.input || {}));
-                toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+                toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
               } catch (err) {
                 toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
               }
@@ -1781,9 +1804,11 @@ export async function POST(request) {
                   event.type === "content_block_delta" &&
                   event.delta.type === "text_delta"
                 ) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-                  );
+                  try {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                    );
+                  } catch { break; }
                 }
               }
             } catch (err) {
@@ -1793,13 +1818,16 @@ export async function POST(request) {
             }
           }
 
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
+          try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
+          try { controller.close(); } catch {}
         } catch (err) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: err.message })}\n\n`)
-          );
-          controller.close();
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong. Try again." })}\n\n`)
+            );
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          } catch { /* stream already closed by client disconnect */ }
+          try { controller.close(); } catch {}
         }
       },
     });
@@ -1813,6 +1841,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error("[api/chat] Error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }

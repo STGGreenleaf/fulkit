@@ -107,8 +107,13 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
 
   const handleRecall = useCallback(async (query) => {
     setRecallResults(null);
-    const results = await recallNotes(query);
-    setRecallResults({ query, results });
+    try {
+      const results = await recallNotes(query);
+      setRecallResults({ query, results });
+    } catch (err) {
+      console.error("[handleRecall] failed:", err.message);
+      setRecallResults({ query, results: [], error: "Recall failed. Try again." });
+    }
   }, [recallNotes]);
 
   // ─── Assemble context for a message ───────────────────────

@@ -48,6 +48,7 @@ export default function Chat() {
   const [pinnedMessages, setPinnedMessages] = useState([]);
 
   const chatFileRef = useRef(null);
+  const copiedTimerRef = useRef(null);
   const draggingRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -61,13 +62,16 @@ export default function Chat() {
   }, [user, isDev]);
 
   async function loadPinnedMessages() {
-    const { data } = await supabase
-      .from("messages")
-      .select("id, content, created_at, pinned_at, conversation_id, conversations(title)")
-      .eq("is_pinned", true)
-      .order("pinned_at", { ascending: false })
-      .limit(50);
-    if (data) setPinnedMessages(data);
+    try {
+      const { data } = await supabase
+        .from("messages")
+        .select("id, content, created_at, pinned_at, conversation_id, conversations(title)")
+        .eq("is_pinned", true)
+        .order("pinned_at", { ascending: false })
+        .limit(50)
+        .abortSignal(AbortSignal.timeout(5000));
+      if (data) setPinnedMessages(data);
+    } catch { /* proceed without pins */ }
   }
 
   async function togglePin(msg) {
@@ -565,7 +569,8 @@ export default function Chat() {
                               onClick={() => {
                                 navigator.clipboard.writeText(msg.content);
                                 setCopiedMsg(i);
-                                setTimeout(() => setCopiedMsg(null), 1500);
+                                clearTimeout(copiedTimerRef.current);
+                                copiedTimerRef.current = setTimeout(() => setCopiedMsg(null), 1500);
                               }}
                               title="Copy"
                               style={{
