@@ -152,6 +152,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     let fullResponse = "";
     let firstChunkReceived = false;
     let safetyTimeout = null;
+    const assistantTs = Date.now();
 
     try {
       // Create conversation — timeout after 5s, don't block if it fails
@@ -171,7 +172,6 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         .catch(() => {});
 
       // Add empty assistant placeholder with timestamp for safe ID assignment
-      const assistantTs = Date.now();
       setMessages((prev) => [...prev, { role: "assistant", content: "", _ts: assistantTs }]);
 
       // Assemble context (provided by useChatContext) — 10s timeout
