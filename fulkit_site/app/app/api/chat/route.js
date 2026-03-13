@@ -40,8 +40,16 @@ Guidelines:
 - Folder conventions for notes: 01-PERSONAL, 02-BUSINESS, 03-PROJECTS, 04-DEV, 05-IDEAS, 06-LEARNING, _CHAPPIE. Default to 00-INBOX if unsure.`;
 
 // Estimate tokens for conversation compression
-function estimateTokens(text) {
-  return Math.ceil((text || "").length / 4);
+function estimateTokens(content) {
+  if (typeof content === "string") return Math.ceil((content || "").length / 4);
+  if (Array.isArray(content)) {
+    return content.reduce((sum, block) => {
+      if (block.type === "text") return sum + Math.ceil((block.text || "").length / 4);
+      if (block.type === "image") return sum + 1000; // rough estimate for images
+      return sum;
+    }, 0);
+  }
+  return 0;
 }
 
 // Compress old messages when conversation gets too long
@@ -65,7 +73,14 @@ function compressConversation(messages, maxTokens = 80000) {
   if (older.length === 0) return keep;
 
   const summary = older
-    .map((m) => `${m.role}: ${m.content.slice(0, 200)}${m.content.length > 200 ? "..." : ""}`)
+    .map((m) => {
+      const text = typeof m.content === "string"
+        ? m.content
+        : Array.isArray(m.content)
+          ? m.content.filter((b) => b.type === "text").map((b) => b.text).join(" ")
+          : "";
+      return `${m.role}: ${text.slice(0, 200)}${text.length > 200 ? "..." : ""}`;
+    })
     .join("\n");
 
   return [

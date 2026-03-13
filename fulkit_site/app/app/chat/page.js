@@ -875,7 +875,7 @@ export default function Chat() {
                   <input
                     ref={chatFileRef}
                     type="file"
-                    accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv"
+                    accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv,.png,.jpg,.jpeg,.gif,.webp"
                     multiple
                     onChange={(e) => { if (e.target.files?.length) ctx.handleChatFiles(Array.from(e.target.files)); e.target.value = ""; }}
                     style={{ display: "none" }}

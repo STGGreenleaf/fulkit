@@ -93,28 +93,52 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
 
   const handleChatFiles = useCallback(async (files) => {
     setFileError(null);
-    const ALLOWED = /\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv|xml|rtf|log|ini|cfg|conf|tsv|tex)$/i;
+    const TEXT_EXTS = /\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv|xml|rtf|log|ini|cfg|conf|tsv|tex)$/i;
+    const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|webp)$/i;
+    const IMAGE_MEDIA = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
+    const MAX_TEXT = 500000;
+    const MAX_IMAGE = 5 * 1024 * 1024; // 5MB
     const results = [];
     const rejected = [];
     for (const file of files) {
-      if (!file.name.match(ALLOWED)) {
+      if (file.name.match(IMAGE_EXTS)) {
+        if (file.size > MAX_IMAGE) {
+          rejected.push(`${file.name} (over 5MB)`);
+          continue;
+        }
+        try {
+          const buf = await file.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let binary = "";
+          for (let j = 0; j < bytes.length; j += 8192) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(j, j + 8192));
+          }
+          const base64 = btoa(binary);
+          const ext = file.name.split(".").pop().toLowerCase();
+          results.push({ name: file.name, type: "image", media_type: IMAGE_MEDIA[ext] || "image/png", data: base64 });
+        } catch {
+          rejected.push(`${file.name} (unreadable)`);
+        }
+        continue;
+      }
+      if (!file.name.match(TEXT_EXTS)) {
         rejected.push(file.name);
         continue;
       }
       try {
         const content = await file.text();
-        if (content.length > 500000) {
+        if (content.length > MAX_TEXT) {
           rejected.push(`${file.name} (too large)`);
           continue;
         }
-        results.push({ name: file.name, content });
+        results.push({ name: file.name, type: "text", content });
       } catch {
         rejected.push(`${file.name} (unreadable)`);
       }
     }
     if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
     if (rejected.length > 0) {
-      setFileError(`Can't attach: ${rejected.join(", ")}. Only text-based files supported.`);
+      setFileError(`Can't attach: ${rejected.join(", ")}`);
       setTimeout(() => setFileError(null), 5000);
     }
   }, []);
@@ -157,25 +181,36 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
       }
     }
 
-    // Attached files
-    for (const af of attachedFiles) {
+    // Attached text files go into context
+    const textFiles = attachedFiles.filter((af) => af.type === "text");
+    const imageFiles = attachedFiles.filter((af) => af.type === "image");
+    for (const af of textFiles) {
       context.push({ title: `[Uploaded] ${af.name}`, content: af.content });
     }
 
-    // Annotate API message with file names
+    // Build annotated messages — images go as content blocks in the user message
     let annotatedMessages = null;
     if (attachedFiles.length > 0) {
       const fileNames = attachedFiles.map((af) => af.name).join(", ");
-      annotatedMessages = apiMessages.map((m, i) =>
-        i === apiMessages.length - 1
-          ? { ...m, content: `${m.content}\n\n[Attached files: ${fileNames}]` }
-          : m
-      );
+      annotatedMessages = apiMessages.map((m, i) => {
+        if (i !== apiMessages.length - 1) return m;
+        // Build multi-part content: text + images
+        const parts = [
+          { type: "text", text: `${m.content}\n\n[Attached files: ${fileNames}]` },
+        ];
+        for (const img of imageFiles) {
+          parts.push({
+            type: "image",
+            source: { type: "base64", media_type: img.media_type, data: img.data },
+          });
+        }
+        return { ...m, content: imageFiles.length > 0 ? parts : parts[0].text };
+      });
     }
 
-    // Save attached files as notes (background, non-blocking)
-    if (attachedFiles.length > 0 && user) {
-      for (const af of attachedFiles) {
+    // Save attached text files as notes (background, non-blocking)
+    if (textFiles.length > 0 && user) {
+      for (const af of textFiles) {
         const noteTitle = af.name.replace(/\.[^.]+$/, "");
         supabase
           .from("notes")
