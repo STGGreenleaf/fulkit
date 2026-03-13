@@ -195,30 +195,92 @@ function DashboardTab() {
   const { accessToken } = useAuth();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [mdFiles, setMdFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [discovered, setDiscovered] = useState(false);
 
-  const PROJECT_DOCS = [
-    { path: "md/buildnotes.md", title: "Build Notes", folder: "01-PROJECT" },
-    { path: "md/design.md", title: "Design System", folder: "01-PROJECT" },
-    { path: "md/trust-model.md", title: "Trust Model", folder: "01-PROJECT" },
-    { path: "md/Audio_Crate/audio-spec.md", title: "Audio Spec", folder: "02-FEATURES" },
-    { path: "md/Audio_Crate/audio-todo.md", title: "Audio TODO", folder: "02-FEATURES" },
-    { path: "md/Audio_Crate/crate-spec.md", title: "Crate Spec", folder: "02-FEATURES" },
-  ];
+  // Folder assignment based on path
+  const getFolder = (path) => {
+    if (path.includes("Audio_Crate")) return "02-AUDIO";
+    if (path.includes("numbrly") || path.includes("truegauge")) return "03-INTEGRATIONS";
+    return "01-PROJECT";
+  };
+
+  // Title from filename
+  const getTitle = (name) => name.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  // Discover all .md files from GitHub
+  const discoverDocs = useCallback(async () => {
+    setLoadingFiles(true);
+    setImportResult(null);
+    try {
+      const allFiles = [];
+      const fetchDir = async (dirPath) => {
+        const res = await fetch(`/api/github/tree?repo=STGGreenleaf/fulkit&path=${dirPath}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) return [];
+        return await res.json();
+      };
+
+      // Fetch md/ directory
+      const mdItems = await fetchDir("fulkit_site/md");
+      for (const item of mdItems) {
+        if (item.type === "dir") {
+          // Skip archive directory
+          if (item.name === "archive") continue;
+          const subItems = await fetchDir(item.path);
+          for (const sub of subItems) {
+            if (sub.name.endsWith(".md")) allFiles.push(sub);
+          }
+        } else if (item.name.endsWith(".md")) {
+          allFiles.push(item);
+        }
+      }
+
+      // Also include CLAUDE.md and TODO.md from fulkit_site/
+      const rootItems = await fetchDir("fulkit_site");
+      for (const item of rootItems) {
+        if (["CLAUDE.md", "TODO.md"].includes(item.name)) {
+          allFiles.push(item);
+        }
+      }
+
+      setMdFiles(allFiles);
+      setSelectedFiles(new Set(allFiles.map(f => f.path)));
+      setDiscovered(true);
+    } catch (err) {
+      setImportResult({ error: "Failed to discover docs: " + err.message });
+    } finally {
+      setLoadingFiles(false);
+    }
+  }, [accessToken]);
+
+  const toggleFile = (path) => {
+    setSelectedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
 
   const importDocs = async () => {
+    if (selectedFiles.size === 0) return;
     setImporting(true);
     setImportResult(null);
     try {
-      // Fetch files from GitHub
       const notes = [];
-      for (const doc of PROJECT_DOCS) {
+      for (const filePath of selectedFiles) {
         try {
-          const res = await fetch(`/api/github/file?repo=STGGreenleaf/fulkit&path=fulkit_site/${doc.path}`, {
+          const res = await fetch(`/api/github/file?repo=STGGreenleaf/fulkit&path=${filePath}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
           if (!res.ok) continue;
           const { content } = await res.json();
-          if (content) notes.push({ title: doc.title, content, source: "import", folder: doc.folder });
+          const name = filePath.split("/").pop();
+          if (content) notes.push({ title: getTitle(name), content, source: "import", folder: getFolder(filePath) });
         } catch { /* skip failed files */ }
       }
 
@@ -295,24 +357,119 @@ function DashboardTab() {
           </span>
         </div>
         <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
-          Import project docs (buildnotes, design, specs) as notes so Claude can reference them in chat.
+          Discover and import project docs from GitHub so B-Side can reference them in chat.
         </p>
-        <button
-          onClick={importDocs}
-          disabled={importing}
-          style={{
-            display: "flex", alignItems: "center", gap: "var(--space-2)",
-            padding: "var(--space-2) var(--space-4)",
-            background: importing ? "var(--color-bg-elevated)" : "var(--color-accent)",
-            color: importing ? "var(--color-text-muted)" : "var(--color-text-inverse)",
-            border: "none", borderRadius: "var(--radius-md)",
-            fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
-            cursor: importing ? "wait" : "pointer",
-          }}
-        >
-          <Upload size={14} strokeWidth={2} />
-          {importing ? "Importing..." : "Import project docs"}
-        </button>
+
+        {!discovered ? (
+          <button
+            onClick={discoverDocs}
+            disabled={loadingFiles}
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--space-2)",
+              padding: "var(--space-2) var(--space-4)",
+              background: loadingFiles ? "var(--color-bg-elevated)" : "var(--color-accent)",
+              color: loadingFiles ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+              border: "none", borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
+              cursor: loadingFiles ? "wait" : "pointer",
+            }}
+          >
+            <RefreshCw size={14} strokeWidth={2} style={loadingFiles ? { animation: "spin 1s linear infinite" } : {}} />
+            {loadingFiles ? "Discovering..." : "Discover docs from GitHub"}
+          </button>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
+              <button
+                onClick={() => setSelectedFiles(new Set(mdFiles.map(f => f.path)))}
+                style={{
+                  padding: "var(--space-1) var(--space-3)",
+                  background: "transparent", border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-secondary)", cursor: "pointer",
+                }}
+              >
+                Select all
+              </button>
+              <button
+                onClick={() => setSelectedFiles(new Set())}
+                style={{
+                  padding: "var(--space-1) var(--space-3)",
+                  background: "transparent", border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-secondary)", cursor: "pointer",
+                }}
+              >
+                Deselect all
+              </button>
+              <button
+                onClick={discoverDocs}
+                disabled={loadingFiles}
+                style={{
+                  padding: "var(--space-1) var(--space-3)",
+                  background: "transparent", border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-secondary)", cursor: "pointer",
+                  marginLeft: "auto",
+                }}
+              >
+                <RefreshCw size={10} strokeWidth={2} style={{ marginRight: 4, verticalAlign: "middle", ...(loadingFiles ? { animation: "spin 1s linear infinite" } : {}) }} />
+                Refresh
+              </button>
+            </div>
+
+            <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: "var(--space-3)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+              {mdFiles.map((file) => {
+                const name = file.path.split("/").pop();
+                const dir = file.path.includes("Audio_Crate") ? "Audio_Crate/" : file.path.includes("/md/") ? "md/" : "";
+                return (
+                  <label
+                    key={file.path}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-2)",
+                      padding: "var(--space-2) var(--space-3)",
+                      borderBottom: "1px solid var(--color-border-light)",
+                      cursor: "pointer",
+                      background: selectedFiles.has(file.path) ? "var(--color-bg-elevated)" : "transparent",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFiles.has(file.path)}
+                      onChange={() => toggleFile(file.path)}
+                      style={{ accentColor: "var(--color-text-primary)" }}
+                    />
+                    <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-primary)", flex: 1 }}>
+                      {dir && <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)" }}>{dir}</span>}
+                      {name}
+                    </span>
+                    <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
+                      {file.size > 1024 ? `${Math.round(file.size / 1024)}KB` : `${file.size}B`}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={importDocs}
+              disabled={importing || selectedFiles.size === 0}
+              style={{
+                display: "flex", alignItems: "center", gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-4)",
+                background: importing || selectedFiles.size === 0 ? "var(--color-bg-elevated)" : "var(--color-accent)",
+                color: importing || selectedFiles.size === 0 ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+                border: "none", borderRadius: "var(--radius-md)",
+                fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
+                cursor: importing || selectedFiles.size === 0 ? "default" : "pointer",
+              }}
+            >
+              <Upload size={14} strokeWidth={2} />
+              {importing ? "Importing..." : `Import ${selectedFiles.size} doc${selectedFiles.size !== 1 ? "s" : ""}`}
+            </button>
+          </>
+        )}
+
         {importResult?.success && (
           <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-success)" }}>{importResult.success}</div>
         )}

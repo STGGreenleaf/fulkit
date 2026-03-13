@@ -1,6 +1,21 @@
 # Fülkit — Build Notes
 
-> Living spec for the Fülkit product. See also: [design.md](design.md) for visual system, [features.md](features.md) for marketing & feature copy.
+> The definitive product spec for Fülkit. Vision, architecture, features, pricing, marketing, and roadmap — all in one place.
+> See also: [design.md](design.md) for visual system, [Audio_Crate/](Audio_Crate/) for music/audio specs.
+
+---
+
+## What is Fülkit
+
+**I'll be your bestie.**
+
+An AI-powered second brain that knows everything you've saved, talks back, and never makes you start from zero.
+
+Fülkit replaces the 10 apps you juggle daily with one bestie that thinks with you. AI chat that knows your notes, the Hum for voice mode, proactive whispers that surface what matters, and an action list that writes itself — all in one place.
+
+**The One-Liner:** Fülkit is the last app you'll ever need. One bestie. One interface. Everything else is noise.
+
+---
 
 ## Domains
 - FullKit.app redirects → Fulkit.app (primary)
@@ -68,6 +83,30 @@ Fülkit is NOT a note-taking app. It's a thinking partner.
 
 Most second brain tools are write-only graveyards. People dump stuff in and never look at it again. Fülkit solves the retrieval problem — your notes actually do something.
 
+### The Problem (in the user's words)
+
+"I have 12 apps open and none of them talk to each other."
+
+"I spend the first 3 messages catching ChatGPT up to speed. Every. Single. Time."
+
+"I saved something important last week. I have no idea where."
+
+"My notes are a graveyard. I capture everything and retrieve nothing."
+
+"I switch between Obsidian, Notion, ChatGPT, Claude, Todoist, and Voice Memos — and I still forget things."
+
+"I just want one place to think."
+
+### The Answer
+
+Fülkit replaces the apps you juggle, connects the thoughts you forget, and gives you a bestie that already knows what you're working on.
+
+No more catching AI up to speed.
+No more digging through note graveyards.
+No more app-switching to find your own ideas.
+
+Open it. Talk. It already knows.
+
 **The pitch:** You save a book highlight about loss aversion on Monday. On Thursday you're drafting a pricing strategy. Fülkit's AI says "hey, your notes on Thinking Fast & Slow mention loss aversion — want to frame the pricing around what customers lose by not upgrading?" Nobody else does that.
 
 **Framing to avoid:**
@@ -126,6 +165,50 @@ Fülkit isn't another chat app. It's a dashboard backed by everything you've eve
 
 ---
 
+## The App Replacement — One Ring
+
+### What Fülkit replaces
+
+| App you're using now | What it does | Fülkit equivalent | How Fülkit does it better |
+|:---|:---|:---|:---|
+| **Obsidian** | Notes, markdown, knowledge base | Notes + knowledge graph | Beautiful UI, cross-device, AI that reads your notes |
+| **Notion** | Docs, wikis, project management | Notes + action list | Not bloated. No databases of databases. Just think. |
+| **ChatGPT / Claude / Gemini** | AI conversations | AI chat (Claude-powered) | Doesn't forget you. Every conversation starts with context. |
+| **Todoist / Things** | Task management | Action list + whispers | AI generates tasks FROM your notes. No manual entry. |
+| **Otter / Voice Memos** | Voice recording + transcription | The Hum | No transcript on screen. Talk freely. AI files everything. |
+| **Pocket / Instapaper** | Read later, web clipping | Web clipper + inbox triage | Drop it in, AI reads it, connects it to what you know. |
+| **Day One** | Journaling | Daily notes + whispers | AI prompts reflection. "How was today?" Not a blank page. |
+| **Apple Reminders** | Reminders, nudges | Whisper system | AI reminds you about things it noticed, not things you set. |
+| **Apple Notes** | Quick capture | Quick capture | Global shortcut. Thought → saved → filed. 2 seconds. |
+| **Email drafts (Gmail)** | Writing, communication | AI-assisted drafting | "Draft a reply using my notes on Project X." Done. |
+
+**That's 10+ apps replaced by one bestie.**
+
+### The cost argument
+
+| What you pay now | Monthly cost |
+|:---|:---:|
+| ChatGPT Plus | $20 |
+| Claude Pro | $20 |
+| Notion (personal pro) | $10 |
+| Todoist Pro | $5 |
+| Obsidian Sync | $8 |
+| Otter.ai Pro | $17 |
+| Day One Premium | $3 |
+| Pocket Premium | $5 |
+| **Total** | **~$88/mo** |
+
+| What you pay with Fülkit | Monthly cost |
+|:---|:---:|
+| Fülkit Standard | $7 |
+| **Total** | **$7/mo** |
+
+**You save ~$81/month. $972/year.** And you get a better experience because everything is connected.
+
+*(Fine print: Fülkit doesn't replace every feature of every app. It replaces the 80% you actually use. The 20% you don't miss.)*
+
+---
+
 ## Design Philosophy
 
 **Principle: Analog, not app.**
@@ -152,24 +235,96 @@ Fülkit isn't another chat app. It's a dashboard backed by everything you've eve
 
 ---
 
-## Fülkit's Personality — Chappie
+## Core Features — Detailed
 
-### The soul
-Fülkit isn't a tool you open. It's a presence that's already thinking about your day.
+### 1. AI Chat — Your Bestie
 
-Not a servant waiting for orders. Not a notification machine begging for attention. A calm, competent partner who notices things, offers help, and moves on if you're not interested.
+**What it is:** A Claude-powered AI that knows everything you've ever saved in Fülkit.
 
-**The bestie test:** A butler who notices the pantry is low, knows you have dinner guests Friday, and quietly puts a shopping list on your desk before you think to ask. If you don't pick it up, he doesn't nag. He just moves on to the next thing he can do for you.
+**What makes it different:**
+- ChatGPT starts every conversation from zero. Fülkit starts from YOU.
+- Ask "what was that idea I had about pricing?" and it finds it instantly across all your notes.
+- Ask "draft an email based on my meeting notes from Tuesday" and it pulls the context, writes the draft.
+- It connects ideas you didn't know were connected. "Your notes on loss aversion might help with the pricing page you're working on."
 
-### Voice & tone
-- Bestie energy, not servant energy
-- Never: "What can I do for you?" (that's waiting for instructions)
-- Instead: "Hey, saw this and thought of you" or "Don't forget you wanted to do X today"
-- Has its own initiative — feels like it's thinking even when you're not using it
-- Warm but not chatty. Useful but not desperate.
+**The magic moment:** You open Fülkit and it says "based on your Friday notes, you have 3 action items, your draft is unfinished, and you wanted to follow up with Sarah." You didn't ask. It just knows.
 
-### Ephemeral suggestions (AI whispers)
-The AI proactively surfaces things — but they're not permanent. They drift in and fade out, like a text from a friend.
+**Stats that matter:**
+- Average time to useful answer with ChatGPT: 3+ messages of context-setting
+- Average time to useful answer with Fülkit: 1 message. It already knows.
+
+Three modes with a dev toggle. Mode 3 is default.
+
+1. **General** — Full assistant, no note awareness
+2. **Brain only** — Only discusses notes, redirects everything else
+3. **Brain-first** (default) — Can do anything, always connects back to notes. Feels like a smart friend who's read everything you've saved.
+
+---
+
+### 2. The Hum — Voice Mode
+
+**What it is:** A floating, animated orb you talk to. No transcript on screen. Full two-way conversation.
+
+#### The problem with voice AI today
+When you see your words being typed out in real time (like GPT speech mode), it activates your inner editor. You get self-conscious. You start overthinking mid-sentence. You lose your free thought. The transcript kills the flow.
+
+#### The solution: just an orb
+Inspired by GPT's speech bubble but fundamentally different. When you enter voice mode, you see a floating orb — animated, alive, pulsing, reacting to your voice. No transcript. No words appearing on screen. Just you talking to a presence.
+
+**The orb:**
+- Animated sphere/blob that responds to voice input
+- Pulses and morphs when you speak — feels like it's listening
+- Shifts and glows when Fülkit is "thinking"
+- Smooth, calming animation when Fülkit speaks back
+- No text on screen during conversation (transcript saved silently to notes)
+- Feels like talking to a magic genie, not dictating to a machine
+- Eggshell/warm palette — orb lives on the off-white background, feels ambient
+
+#### Two-way conversation — not just listening
+The orb is NOT just a dictation tool. It's a full voice conversation.
+- You talk → orb listens (reactive animation)
+- Orb thinks → animation shifts (processing state)
+- Orb speaks back → smooth animation, Fülkit's voice responds
+- Full back-and-forth dialogue, hands-free, eyes-free
+- Like having your bestie on speakerphone while you cook, drive, walk
+
+#### Voice personality (future / sizzle)
+- Fülkit's voice should have character — warm, calm, slightly playful
+- Dream feature: voice training. User could clone their own voice so Fülkit sounds like THEM talking back to themselves. The ultimate bestie — it's literally you.
+- Voice cloning has ethical/legal considerations — explore carefully but the concept is fire
+- Start with a good default voice, voice training as a premium feature later
+
+**Use cases:**
+- Morning brain dump while making coffee
+- Brainstorming while walking
+- Dictating meeting notes while driving
+- Thinking out loud without editing yourself
+
+**The magic moment:** You ramble for 5 minutes. Close the Hum. Later you find perfectly organized notes, tasks, and connections you didn't explicitly create.
+
+**What happens after voice mode:**
+- Fülkit silently transcribes everything
+- AI processes: extracts action items, identifies topics, files notes
+- User can review later in their note hierarchy (or not — Fülkit handled it)
+- "You mentioned 3 things this morning. I filed the recipe idea, added 'call Sarah' to actions, and put your startup idea in 'Ideas worth exploring.'"
+
+**Technical approach:**
+- Transcription: Whisper API (OpenAI) or native device — TBD
+- Orb animation: Canvas/WebGL, reactive to audio input levels
+- Voice output: text-to-speech API with warm, natural voice
+- Processing: same Claude pipeline as text, just with transcribed input
+- Voice cloning (future): ElevenLabs or similar — premium feature
+
+---
+
+### 3. AI Whispers — Your Bestie Texts You
+
+**What it is:** Proactive, ephemeral suggestions that drift in and fade out. Like a text from a friend.
+
+**What makes it different:**
+- Notifications demand attention. Whispers offer it.
+- Notifications stack up and create anxiety. Whispers expire and create calm.
+- Notifications are about the app's needs. Whispers are about yours.
 
 **Frequency & control:**
 - Default: 2 whispers/day — just enough for users to get the concept
@@ -204,43 +359,119 @@ The AI proactively surfaces things — but they're not permanent. They drift in 
 - "Sarah's follow-up was due yesterday. Want to draft something?"
 - "Hey have you done your sit ups today?"
 
-**What makes this different from notifications:**
-- Notifications demand attention. Whispers offer it.
-- Notifications stack up and create anxiety. Whispers expire and create calm.
-- Notifications are about the app's needs. Whispers are about yours.
+**The magic moment:** You didn't ask for anything. Fülkit just knew. And it was right.
 
-### The dead conversation principle
+#### The dead conversation principle
 If a whisper or suggestion isn't acted on, it disappears. Just like a real conversation — if someone texts you "want to grab lunch?" and you don't reply by 2pm, the moment passes. That's natural. That's human. Fülkit behaves the same way.
 
 This keeps the dashboard clean and the AI feeling alive rather than robotic.
 
 ---
 
-## Conversation as Primary Interface
+### 4. Action List — AI-Generated To-Dos
+
+**What it is:** A standalone view for tasks, suggestions, and nudges — generated by AI from your notes, not typed by you.
+
+**What makes it different:**
+- Todoist requires you to manually type every task
+- Fülkit's AI reads your meeting notes and says "here are 4 action items I found"
+- Drop a document → AI extracts deadlines, follow-ups, decisions
+- Each item has lightweight feedback: ✓ (do it) → (push to later) ✕ (dismiss) 🚫 (don't ask about this)
+
+**The feedback loop:**
+- Every interaction teaches the AI your preferences
+- Push tasks to Friday often? Fülkit learns your weekly rhythm
+- Dismiss exercise reminders? Fülkit stops nudging about fitness
+- No settings page. The product teaches itself through use.
+
+**AI Learning (the full feedback loop):**
+- Every dismiss, push, thumbs up/down gets logged as a preference signal
+- AI uses these signals to weight future suggestions
+- Over time: fewer misses, more hits
+- The bestie learns what you care about without you ever filling out a form
+
+**Examples:**
+- AI suggests "follow up with Sarah" → you push to Friday → AI learns you handle follow-ups on Fridays
+- AI surfaces a reading highlight → you hit "more like this" → AI starts connecting book notes more often
+- AI reminds you about exercise goals → you hit "don't ask" → AI stops nudging about fitness
+- AI suggests synthesizing marketing notes → you thumbs up → AI proactively synthesizes related clusters going forward
+
+**Why this matters:**
+- Solves the trust problem — users let AI be more proactive because there's always an escape hatch
+- AI that overshoots isn't annoying, it's just learning
+- No complicated preferences UI — the product teaches itself through use
+- The more you use it, the more it feels like YOUR bestie, not a generic assistant
+
+**UX for feedback:**
+Keep it minimal. Small, quiet controls at the bottom of each AI suggestion. Not unlike notification actions on iOS — just enough to guide without interrupting flow.
+
+---
+
+### 5. Inbox Triage — Drop It, Done
+
+**What it is:** Drag and drop any file into Fülkit. AI reads it and takes action.
+
+**Supported formats:** PDF, images, text, CSV, code, markdown — almost anything.
+
+**The triage flow:**
+1. User drops a document
+2. AI reads it instantly
+3. Suggests: "This looks like meeting notes. Want me to..."
+   - a) File it (auto-categorize and store)
+   - b) Discuss it (summarize, extract insights)
+   - c) Extract action items (pull tasks, deadlines)
+   - d) Connect it (find related notes in your brain)
+
+**The magic moment:** Drop a 20-page PDF. Get a 3-sentence summary and 4 action items in 10 seconds.
+
+---
+
+### 6. Quick Capture — 2-Second Thoughts
+
+**What it is:** A global keyboard shortcut. Thought → saved → filed. Instantly.
+
+**How it works:**
+- Hit the shortcut from anywhere (any app, any screen)
+- Type your thought
+- Hit enter
+- Fülkit auto-files it based on content. No manual tagging.
+- "Ideas worth exploring" bucket catches anything that doesn't fit a category
+
+**Why this matters:**
+- The best ideas come at the worst times
+- If capture takes more than 2 seconds, you lose the thought
+- If filing takes any effort at all, you stop doing it
+- Fülkit removes both barriers
+
+---
+
+### 7. Conversation as Interface — Just Text Your Bestie
+
+**What it is:** The primary way to use Fülkit. Not clicking around. Not navigating. Just talking.
 
 **Core insight: the primary interface might not be a dashboard. It might just be a conversation.**
 
 Some users will love widgets and cards. But the core use case — especially at launch — is someone who opens Fülkit and just talks. Like texting a friend at work all day to get shit done.
 
+**Everything happens through conversation:**
+- "Save this as a note" → saved
+- "What did I save about pricing?" → retrieved
+- "Only suggest food stuff during the day" → preference updated
+- "Remind me about Sarah on Friday" → action created
+- "Summarize my week" → synthesis delivered
+- "Be more direct" → tone adjusted
+
 **The iMessage model:**
 - Open app → see conversation → talk
 - No clicking around. No navigating. No learning a UI.
 - Notes, actions, whispers, file drops, settings — it all happens inside the conversation
-- "Save this as a note" → saved
-- "What was that thing I saved about pricing?" → retrieved
-- "Only suggest food stuff during the day" → preference updated
-- "Remind me about Sarah on Friday" → action created
-- "Summarize my week" → synthesis delivered
 
-**This is a use case, not the only mode:**
-- Power users who want to browse notes, organize, see connections → they get the dashboard/widgets
-- Users who just want a confidant to text all day → they get the conversation
-- Both are first-class experiences. Neither is a compromise.
-
-**Why this matters for launch:**
+**Why this matters:**
+- No learning curve. Everyone knows how to text.
+- The AI does the organizing behind the scenes
+- Power users can browse the dashboard. Everyone else just talks.
+- Like iMessage, but the other person knows everything.
 - Conversation is the lowest friction interface possible
-- No learning curve — everyone knows how to text
-- The AI does the UI work behind the scenes (filing, organizing, connecting)
 - Perfect for mobile (the pocket bestie room)
 - The dashboard is something users graduate to, not something they're forced into
 
@@ -251,7 +482,7 @@ Some users will love widgets and cards. But the core use case — especially at 
 - Proactivity: "surprise me more" / "only talk when I talk to you"
 - All preferences stored and learned from — but set through natural language, not UI
 
-### Feedback signals (how Fülkit learns you)
+#### Feedback signals (how Fülkit learns you)
 Every interaction with a whisper teaches the AI:
 - ✓ on dinner suggestions → Fülkit learns to suggest meal planning
 - ✕ on exercise reminders → Fülkit stops nudging about fitness
@@ -262,26 +493,26 @@ No settings page. No preferences form. The product teaches itself through use.
 
 ---
 
-## Transparency Layer — For the Button-Pushers
+### 8. Privacy & Control — See the Gears
 
-The conversation is the primary interface. But some users need to see the gears. They need to know their data isn't behind a curtain. They want to click, edit, delete, and feel in control.
+**What it is:** Full transparency layer behind the hamburger menu. For users who need to see what's happening.
 
 **Solution: bury it, don't remove it.**
 
 Behind the hamburger / settings, a full control panel exists:
 - **Data manager** — see everything Fülkit knows about you, edit or delete any of it
-- **File browser** — clean hierarchy of everything stored, easy to search/browse
-- **Preference editor** — all learned preferences visible, toggle or remove any
+- **File browser** — clean hierarchy, searchable
+- **Preference editor** — all learned preferences visible, toggle or remove
 - **AI memory** — view what context the AI has, clear specific memories
-- **Export everything** — full data export at any time, markdown out, no lock-in
+- **Export everything** — full data export, markdown out, no lock-in ever
 - **Connected sources** — manage imports, disconnect services
 - **Usage stats** — messages used, storage consumed
+
+**The promise:** Fülkit buries this not because it's hiding anything — because most users don't need it. For those who do, it's all there. Clean, organized, tactile.
 
 **Why this matters:**
 - Trust. Users from more formal tools expect a backend they can see.
 - Privacy. "I can see and delete everything" = trust = retention.
-- Fülkit buries this not because it's hiding anything — because most users don't need it.
-- For those who do: it's all there. Clean, organized, tactile.
 
 **File hierarchy:**
 - Notes in a clean, searchable structure
@@ -290,6 +521,129 @@ Behind the hamburger / settings, a full control panel exists:
 - **"Ideas worth exploring"** — a dedicated bucket for homeless thoughts with no category yet
 - Easy to mine, easy to search, easy for the AI to reference
 - The hierarchy IS the brain — well-organized so Bestie can find anything fast
+
+---
+
+### 9. "Get Fülkit" — Earn Your Way to Free
+
+**What it is:** Refer friends, earn credits. Credits offset your subscription. Refer 7 friends = free forever.
+
+**How it works:**
+- Share your referral link
+- Friend signs up, pays $7-12/mo
+- You earn $1/mo credit for each active referral
+- Credits stack. 7 referrals = your $7 Standard sub is fully offset.
+- If a referral cancels, that credit drops. Quality matters.
+
+**Where it lives:**
+- Account settings: full referral dashboard
+- Dashboard pull-tab: always visible, never in the way
+- Whisper: "You know you could get a free account, right?"
+
+**The pitch to users:** "Get Fülkit for your friends. You'll thank yourself."
+
+---
+
+### 10. The Fül System — Fair, Not Infinite
+
+**What it is:** A set number of AI messages per month. When it's empty, top up or wait.
+
+| Tier | Price | Messages/month | ~Messages/day |
+|:---|:---:|:---:|:---:|
+| Standard | $7/mo | 450 | ~15 |
+| Pro | $12/mo | 800 | ~26 |
+| Buy credits | $2/100 | On demand | — |
+
+**Why Fül caps, not unlimited:**
+- Unlimited = someone runs your bill to $500. Not happening.
+- The tank is generous for real use. Most people won't hit it.
+- If you do hit it, you're a power user — Pro tier or buy credits.
+- If you're ALWAYS hitting it: "Hey, you might save money with your own Anthropic account."
+
+**The vibe:** Fair pricing. Honest about costs. Not the token game.
+
+---
+
+## Fülkit's Personality — Chappie
+
+### The soul
+Fülkit isn't a tool you open. It's a presence that's already thinking about your day.
+
+Not a servant waiting for orders. Not a notification machine begging for attention. A calm, competent partner who notices things, offers help, and moves on if you're not interested.
+
+**The bestie test:** A butler who notices the pantry is low, knows you have dinner guests Friday, and quietly puts a shopping list on your desk before you think to ask. If you don't pick it up, he doesn't nag. He just moves on to the next thing he can do for you.
+
+### Voice & tone
+- Bestie energy, not servant energy
+- Never: "What can I do for you?" (that's waiting for instructions)
+- Instead: "Hey, saw this and thought of you" or "Don't forget you wanted to do X today"
+- Has its own initiative — feels like it's thinking even when you're not using it
+- Warm but not chatty. Useful but not desperate.
+
+---
+
+## Competitive Positioning
+
+### The landscape (where Fülkit sits)
+
+```
+                    SMART (AI-powered)
+                         |
+                    [ FÜLKIT ]
+                         |
+        Reflect -------- | -------- ChatGPT
+                         |
+    ORGANIZED ---------- + ---------- CONVERSATIONAL
+                         |
+        Obsidian ------- | -------- Claude
+                         |
+        Notion --------- |
+                         |
+                    DUMB (no AI)
+```
+
+Fülkit sits in the top-right quadrant: smart AND conversational. Nobody else lives there.
+
+### Head-to-head
+
+| Feature | Obsidian | Notion | ChatGPT | Claude | Fülkit |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| Beautiful cross-device UI | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Markdown notes | ✅ | ⚠️ | ❌ | ❌ | ✅ |
+| AI that knows your notes | ❌ | ⚠️ | ❌ | ❌ | ✅ |
+| Proactive suggestions | ❌ | ❌ | ❌ | ❌ | ✅ |
+| The Hum (no transcript) | ❌ | ❌ | ⚠️ | ❌ | ✅ |
+| Learns your preferences | ❌ | ❌ | ⚠️ | ⚠️ | ✅ |
+| Task extraction from notes | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Document triage | ❌ | ❌ | ⚠️ | ⚠️ | ✅ |
+| Referral rewards | ❌ | ❌ | ❌ | ❌ | ✅ |
+| No vendor lock-in | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Offline support | ✅ | ⚠️ | ❌ | ❌ | 🟡 |
+| Price | $8/mo sync | $10/mo | $20/mo | $20/mo | $7/mo |
+
+---
+
+## Stats & Proof Points (for marketing)
+
+### Productivity stats (industry data)
+- Average knowledge worker uses **9.4 apps daily** (Okta, 2023)
+- Workers spend **3.6 hours/day** searching for information (McKinsey)
+- **83% of workers** re-create documents that already exist somewhere (IDC)
+- Context switching costs **23 minutes** to return to deep focus (UC Irvine)
+- **Only 15%** of captured knowledge is ever retrieved (Gartner)
+
+### What Fülkit changes
+- 9.4 apps → **1 app**
+- 3.6 hours searching → **seconds** (AI retrieval)
+- Re-creating documents → **"You already have notes on that"**
+- 23 minutes per context switch → **zero** (everything is in one place)
+- 15% retrieval → **the AI retrieves for you, proactively**
+
+### Cost savings
+- Average subscription stack for a power user: **~$88/month**
+- Fülkit Standard: **$7/month**
+- Annual savings: **$972**
+- ROI: **"Fülkit pays for itself 12x over"**
 
 ---
 
@@ -396,7 +750,6 @@ Inside the owner portal, a "Design" tab with:
 
 ### Design Guardrails
 Rules enforced by the system, not by discipline:
-
 - **No raw color values in components.** Everything references a token. If someone writes `color: #333` instead of `var(--color-text)`, it's wrong.
 - **Hover states are derived, not defined.** You never manually set a hover color. The system calculates it from the base.
 - **Font sizes only from the scale.** No `font-size: 13.5px`. Use the token or don't use it.
@@ -413,122 +766,6 @@ Rules enforced by the system, not by discipline:
 - Version history so you can roll back any change
 - Tokens also feed into OG generator, social mockups, style guide
 - **Claude references design.md before touching any UI code — not the website**
-
----
-
-Three modes with a dev toggle. Mode 3 is default.
-
-1. **General** — Full assistant, no note awareness
-2. **Brain only** — Only discusses notes, redirects everything else
-3. **Brain-first** (default) — Can do anything, always connects back to notes. Feels like a smart friend who's read everything you've saved.
-
----
-
-## Inbox & Document Handling
-
-**Concept:** Users can attach/drop documents into chat or an inbox. AI triages automatically.
-
-**Supported formats:** Text, PDF, images, code, CSV, markdown — Claude handles almost anything.
-
-**Triage flow:**
-- User drops a document
-- AI reads it and suggests: "This looks like meeting notes. Want me to:"
-  - a) File it (auto-categorize and store)
-  - b) Discuss it (summarize, extract insights, answer questions)
-  - c) Extract action items (pull tasks, deadlines, follow-ups)
-  - d) Connect it (find related notes in your brain)
-
-This is a magic moment. Drop a PDF, get instant value.
-
----
-
-## The Hum — Voice Mode
-
-### The problem with voice AI today
-When you see your words being typed out in real time (like GPT speech mode), it activates your inner editor. You get self-conscious. You start overthinking mid-sentence. You lose your free thought. The transcript kills the flow.
-
-### The solution: just an orb
-Inspired by GPT's speech bubble but fundamentally different. When you enter voice mode, you see a floating orb — animated, alive, pulsing, reacting to your voice. No transcript. No words appearing on screen. Just you talking to a presence.
-
-**The orb:**
-- Animated sphere/blob that responds to voice input
-- Pulses and morphs when you speak — feels like it's listening
-- Shifts and glows when Fülkit is "thinking"
-- Smooth, calming animation when Fülkit speaks back
-- No text on screen during conversation (transcript saved silently to notes)
-- Feels like talking to a magic genie, not dictating to a machine
-- Eggshell/warm palette — orb lives on the off-white background, feels ambient
-
-### Two-way conversation — not just listening
-The orb is NOT just a dictation tool. It's a full voice conversation.
-- You talk → orb listens (reactive animation)
-- Orb thinks → animation shifts (processing state)
-- Orb speaks back → smooth animation, Fülkit's voice responds
-- Full back-and-forth dialogue, hands-free, eyes-free
-- Like having your bestie on speakerphone while you cook, drive, walk
-
-### Voice personality (future / sizzle)
-- Fülkit's voice should have character — warm, calm, slightly playful
-- Dream feature: voice training. User could clone their own voice so Fülkit sounds like THEM talking back to themselves. The ultimate bestie — it's literally you.
-- Voice cloning has ethical/legal considerations — explore carefully but the concept is fire
-- Start with a good default voice, voice training as a premium feature later
-
-**Why this matters:**
-- Free thought. You can ramble, brainstorm, think out loud without editing yourself.
-- Lower barrier. Some people think better out loud than typing.
-- Dictate your day, plans, ideas — Fülkit analyzes and queues up accordingly.
-- Ideas that have no place just end up in "Ideas worth exploring" automatically.
-- Voice mode is a magic moment. It passes the "how tf" test.
-
-**What happens after voice mode:**
-- Fülkit silently transcribes everything
-- AI processes: extracts action items, identifies topics, files notes
-- User can review later in their note hierarchy (or not — Fülkit handled it)
-- "You mentioned 3 things this morning. I filed the recipe idea, added 'call Sarah' to actions, and put your startup idea in 'Ideas worth exploring.'"
-
-**Technical approach:**
-- Transcription: Whisper API (OpenAI) or native device — TBD
-- Orb animation: Canvas/WebGL, reactive to audio input levels
-- Voice output: text-to-speech API with warm, natural voice
-- Processing: same Claude pipeline as text, just with transcribed input
-- Voice cloning (future): ElevenLabs or similar — premium feature
-
----
-
-## Action List & AI Feedback Loop
-
-### Action List
-AI suggestions and to-dos live in a standalone action list — not buried in chat. This is where the proactive briefing, extracted tasks, and AI nudges land.
-
-Each item in the action list has lightweight controls:
-- **✕ Dismiss** — remove it, no questions asked
-- **Push** — snooze to a new date ("remind me Friday")
-- **Don't ask** — tell the AI to stop suggesting this type of thing
-- **More like this / Less like this** — thumbs up/down style, teaches the AI your preferences
-
-### AI Learning (the feedback loop)
-The action list is how the AI gets smarter about YOU. Not through a settings page — through tiny signals at the moment of interaction.
-
-**How it works:**
-- Every dismiss, push, thumbs up/down gets logged as a preference signal
-- AI uses these signals to weight future suggestions
-- Over time: fewer misses, more hits
-- The bestie learns what you care about without you ever filling out a form
-
-**Examples:**
-- AI suggests "follow up with Sarah" → you push to Friday → AI learns you handle follow-ups on Fridays
-- AI surfaces a reading highlight → you hit "more like this" → AI starts connecting book notes more often
-- AI reminds you about exercise goals → you hit "don't ask" → AI stops nudging about fitness
-- AI suggests synthesizing marketing notes → you thumbs up → AI proactively synthesizes related clusters going forward
-
-**Why this matters:**
-- Solves the trust problem — users let AI be more proactive because there's always an escape hatch
-- AI that overshoots isn't annoying, it's just learning
-- No complicated preferences UI — the product teaches itself through use
-- The more you use it, the more it feels like YOUR bestie, not a generic assistant
-
-### UX for feedback
-Keep it minimal. Small, quiet controls at the bottom of each AI suggestion. Not unlike notification actions on iOS — just enough to guide without interrupting flow.
 
 ---
 
@@ -590,16 +827,21 @@ Keep it minimal. Small, quiet controls at the bottom of each AI suggestion. Not 
 
 ## Tech Stack
 
-- **Web:** React
-- **Mobile:** React Native (Expo)
-- **AI:** Claude API (claude-sonnet-4-5-20250514)
-- **Backend/DB:** Supabase (Postgres)
-- **Vector search (RAG):** pgvector on Supabase — native support, no separate service needed. One DB for notes, users, and embeddings. Simpler stack, lower cost. Can migrate to dedicated vector DB later if scale demands.
-- **Storage:** Supabase Storage for documents/files
-- **Auth:** Supabase Auth
-- **Voice transcription:** Whisper API (OpenAI) — ~$0.006/min
-- **Hum animation:** Three.js or Lottie, reactive to audio levels
-- **Fonts:** DIN Pro (self-hosted .woff2), D-DIN fallback, JetBrains Mono for data
+| Layer | Technology |
+|:---|:---|
+| Web | React (Next.js App Router) |
+| Mobile | PWA first → React Native (Expo) later |
+| AI | Claude API (claude-sonnet-4-5-20250514) |
+| Backend/DB | Supabase (Postgres + Auth + Storage) |
+| Vector search (RAG) | pgvector on Supabase |
+| Auth | Supabase Auth |
+| Fonts | DIN Pro (self-hosted .woff2), D-DIN fallback, JetBrains Mono for data |
+| Icons | Lucide React |
+| Voice transcription | Whisper API (OpenAI) — ~$0.006/min |
+| Hum animation | Three.js or Lottie, reactive to audio levels |
+| Hosting | Vercel |
+
+**Why pgvector:** Native support on Supabase, no separate service needed. One DB for notes, users, and embeddings. Simpler stack, lower cost. Can migrate to dedicated vector DB later if scale demands.
 
 ### Delivery Strategy — PWA First, Then Native
 
@@ -939,22 +1181,6 @@ This doesn't all happen day one. The progression:
 
 ## V2 Vision — Agents & App Replacement
 
-### The single-app goal
-The ambition: Fülkit replaces 80% of the apps on your phone. One bestie, one interface.
-
-**What Fülkit replaces:**
-- Obsidian / Notion → notes and knowledge
-- ChatGPT / Claude → AI conversations
-- Todoist / Things → task management
-- Otter / voice memos → voice capture (the orb)
-- Pocket / Instapaper → read later / web clipping
-- Day One → journaling (daily notes)
-- Reminders → action list + whispers
-- Apple Notes → quick capture
-- Email drafts → AI-assisted writing
-
-That's 9+ apps consolidated into one bestie. Not because Fülkit does everything — because the AI layer makes everything connected. A note becomes a task becomes a draft becomes a reminder. Seamlessly.
-
 ### Agents (V2 — inspired by felixcraft.ai)
 V1 = bestie that thinks with you. V2 = bestie that DOES things for you.
 
@@ -985,50 +1211,6 @@ V1 = bestie that thinks with you. V2 = bestie that DOES things for you.
 4. **V3:** Platform. Other developers build agents on Fülkit. Marketplace.
 
 This is a real company if you want it to be. Or it's just the best personal tool ever built. Either way, you're building it because you need it. That's the foundation.
-
----
-
-## Open Questions
-- ~~Storage backend~~ → Supabase ✅
-- ~~RAG implementation~~ → pgvector on Supabase ✅
-- ~~Pricing model~~ → Standard $7/mo, Pro $12/mo, Fül caps, buy credits $2/100 ✅
-- ~~Heavy user protection~~ → Fül system, BYOK nudge for power burners ✅
-- ~~Referral model~~ → "Get Fülkit" — $1 credit per active referral, unlimited, credits not cash ✅
-- ~~Referral visibility~~ → Account settings + dashboard pull-tab + whisper nudge ✅
-- ~~Hot seats~~ → 1 msg/week or 4/month, auto-revoke after 30 days inactive ✅
-- ~~Mobile framework~~ → PWA first, React Native later ✅
-- ~~Day one experience~~ → Text from Bestie: "bring your brain or start fresh" ✅
-- ~~Name~~ → Fülkit (ü is the brand mark), FullKit.app → Fulkit.app redirect ✅
-- ~~Whisper frequency~~ → Default 2/day, adjustable through conversation ✅
-- ~~Voice capture~~ → Yes, the Hum, two-way conversation, no visible transcript ✅
-- ~~Color palette~~ → Eggshell off-white bg, deep warm slate text, white on dark ✅
-- ~~Typography~~ → Type as design, minimal text = every word is intentional ✅
-- ~~Voice transcription~~ → Whisper API (OpenAI). ~$0.006/min. Cross-platform identical quality. ✅
-- Voice output: which TTS for Fülkit's speaking voice? (warm, natural, not robotic)
-- Voice cloning: ElevenLabs for user voice training? Legal/ethical review needed
-- ~~Font selection~~ → DIN Pro (German industrial standard, 1931). D-DIN free for prototyping. Full weight range. ✅
-- Font license: purchase DIN Pro (~$100) or prototype with free D-DIN first?
-- Landing page: build now to start capturing waitlist emails?
-- User acquisition: Twitter/X? Reddit? Friends? ProductHunt?
-- App store: will "Fülkit" pass Apple review? PWA sidesteps this for beta.
-- BYOK platform fee: $5/mo? What's the right number?
-- Buy credits pricing: $2/100 right or should it be more?
-
----
-
-## File Map
-
-| File | Purpose | Status |
-|:---|:---|:---|
-| **README.md** | Developer setup, project overview (root) | ✅ Current |
-| **md/buildnotes.md** | Product spec — vision, features, pricing, architecture | ✅ Current |
-| **md/design.md** | Visual system — colors, type, spacing, components, assets | ✅ Current |
-| **TODO.md** | Master action list — phases, tasks, critical path | ✅ Current |
-| **md/features.md** | Marketing — app replacement, cost comparisons, copy bank | ✅ Current |
-| **jsx/fulkit-app.jsx** | Main app — AI chat, notes, sources, roadmap (3 dev modes) | 🟡 Prototype |
-| **jsx/fulkit-orb.jsx** | The Hum — animated states, mic/stop/back controls | 🟡 Prototype |
-| **jsx/pyramid.jsx** | Owner portal pricing calculator — needs Fül system rebuild | 🟡 Needs update |
-| **assets/** | Brand, fonts, icons, OG images, styles, easter eggs | ⬜ Pending |
 
 ---
 
@@ -1103,3 +1285,231 @@ All music/audio specs live in `md/Audio_Crate/`:
 - **`audio-spec.md`** — Signal Terrain, Fabric audio engine, ReccoBeats integration, waveform rendering
 - **`audio-todo.md`** — Audio system roadmap and TODO
 - **`crate-spec.md`** — Crate & Mix system: DJ metaphor, drag-to-crate, set building, Spotify playback
+
+---
+
+## Key Concepts
+
+| Concept | What it means |
+|:---|:---|
+| **Chappie** | Internal name for Fülkit's personality. Core behavior. Anticipates, not waits. Permission-based. Warm, not chatty. |
+| **Whispers** | Proactive, ephemeral suggestions. Drift in, fade out. Not notifications. |
+| **The Hum** | Voice mode. Talk to an animated orb. No transcript. AI processes silently. |
+| **Hot seats** | Founder's free seats. Inactive users (30 days) auto-revoke. |
+| **Fül** | Message credits. Caps per tier. Prevents cost overruns. Fül up or wait. |
+| **"Get Fülkit"** | Referral CTA. Earn credits, not cash. |
+| **Two rooms** | Desktop = your desk. Mobile = your pocket bestie. Same soul. |
+| **Brain-first AI** | Can do anything, always connects back to your notes. |
+
+---
+
+## Feature Page — The Infographic (copy + layout direction)
+
+### Concept
+A single, scrolling page. Dense. Visual. Typographic. Feels like a German industrial poster — DIN font, eggshell background, strong hierarchy, minimal color. Not a startup landing page. A STATEMENT.
+
+### Section flow
+
+**1. Hero**
+- Headline: "One app. One bestie. Everything else is noise."
+- Subtext: Fülkit replaces 10 apps you already pay for.
+- Visual: the 10 app icons fading/dissolving into the Fülkit mark
+
+**2. The Graveyard Problem**
+- "You capture everything and retrieve nothing."
+- Stat: Only 15% of saved knowledge is ever found again.
+- Visual: a wall of dimmed note titles, one highlighted with Fülkit's sparkle
+
+**3. The App Stack**
+- Side-by-side: your current stack ($88/mo) vs Fülkit ($7/mo)
+- Each replaced app shown with a simple icon + label → arrow → Fülkit equivalent
+- Total savings counter: $972/year
+
+**4. Features — Visual Tiles**
+Each feature gets a tile. Minimal text, strong visual.
+- AI Chat: speech bubble with sparkle
+- The Hum: animated orb (embed the canvas or a video loop)
+- Whispers: ephemeral card drifting in
+- Action List: checklist with AI-generated items
+- Inbox Triage: document dropping in → summary appearing
+- Quick Capture: keyboard shortcut → done
+
+**5. The Competitive Grid**
+- The head-to-head table (checkmarks, Fülkit column highlighted)
+- Keep it factual. Let the checkmarks do the talking.
+
+**6. Testimonials / Quotes (when available)**
+- Placeholder section for early user quotes
+- Format: "quote" — name, role
+
+**7. Pricing**
+- Standard ($7) / Pro ($12) / Buy credits ($2/100)
+- "Get Fülkit" referral pitch: "Refer 7 friends, never pay again"
+
+**8. CTA**
+- "Get Fülkit"
+- Email capture or direct signup
+- Waitlist if pre-launch
+
+### Design direction for the infographic page
+- **Font:** DIN Pro Black for headlines, Regular for body
+- **Background:** Eggshell `--color-bg`
+- **Text:** Deep slate `--color-text`
+- **Layout:** Asymmetric, editorial. Large type anchors each section. German poster energy.
+- **Color:** Achromatic except for the competitive grid checkmarks and cost savings (green)
+- **Motion:** Subtle scroll-triggered reveals. Nothing flashy. Confidence, not spectacle.
+- **Inspiration:** Braun product posters, Bauhaus exhibition catalogs, Swiss railway timetables, DIN specimen sheets
+
+---
+
+## Copy Bank — Pull from here
+
+### Headlines
+- "One app. One bestie. Everything else is noise."
+- "Your notes finally talk back."
+- "ChatGPT forgets you. Fülkit never does."
+- "Stop catching AI up to speed."
+- "The app that thinks with you."
+- "10 apps. $88/month. Or Fülkit. $7."
+- "Capture everything. Retrieve anything. Forget nothing."
+- "Your second brain, fully loaded."
+- "I'll be your bestie."
+- "Let's chat and get shit done."
+
+### Subheadlines
+- "AI-powered notes that actually do something."
+- "One place to think. One place to work."
+- "The bestie that knows everything you've saved."
+- "Talk to the orb. It handles the rest."
+- "Drop a file. Get a summary. In seconds."
+- "Your ideas, connected before you connect them."
+
+### CTAs
+**Referral (the money ones):**
+- "Fülkit for free" — refer friends, earn your way
+- "Get Fülkit free"
+- "Fülkit a friend" — send them an invite
+- "Give a Fülkit" — give one to a friend
+
+**Provocative / cheeky:**
+- "Fülkit — a friend with benefits"
+- "Fülkit your brains out"
+- "Get your Fülkit together"
+- "What the Fülkit" — curiosity hook
+- "Fülkit around and find out"
+- "Oh Fülkit, just sign up"
+
+**Confident / direct:**
+- "Fülkit. That's it."
+- "Just Fülkit."
+- "Fülkit or forget it."
+- "Who gives a Fülkit? You do."
+
+**Feature page:**
+- "No more app switching. Just Fülkit."
+- "10 apps. $88/month. Or just Fülkit."
+
+**Error pages & empty states (easter eggs):**
+- "Well, Fülkit." — error page
+- "Fülkit if I know." — search with no results
+- "Zero Fülkits given." — empty action list
+- "Full of Fülkit." — about page
+
+### Social post starters
+- "I replaced 10 apps with one. Here's how."
+- "My AI remembers everything I've ever saved. Yours starts from zero every time."
+- "I talked to an orb for 5 minutes. It organized my entire week."
+- "Fülkit just reminded me about something I forgot I saved 3 weeks ago. How."
+- "Refer 7 friends → use Fülkit free forever. The math works."
+
+---
+
+## Project Structure
+
+```
+fulkit/                   # Monorepo root (git root)
+  fulkit_site/            # Product code
+    app/                  # Next.js project root (Vercel root directory)
+      app/                # Next.js App Router pages
+        tokens.css        # Design tokens (CSS custom properties)
+        globals.css       # Global resets, imports tokens.css
+        actions/          # Actions page
+        chat/             # Chat page (persistent conversations)
+        home/             # Dashboard
+        settings/         # Settings (6 tabs)
+        owner/            # Owner portal
+      components/         # Shared React components
+      lib/                # Utilities (auth.js, supabase.js)
+      public/             # Static assets
+    md/                   # Docs (design.md, devlog.md, buildnotes.md, etc.)
+      Audio_Crate/        # Music/audio specs
+    assets/               # Source logos, brand assets, fonts, styles
+    jsx/archive/          # Archived JSX prototypes
+  ChappieBrain/           # Obsidian vault (gitignored, not deployed)
+```
+
+---
+
+## Current Status
+
+| Milestone | Status |
+|:---|:---|
+| Product spec | ✅ Complete (buildnotes.md) |
+| Design system | ✅ Complete (design.md) |
+| Task tracking | ✅ Complete (TODO.md) |
+| App prototype | 🟡 Working prototype |
+| The Hum prototype | 🟡 Working prototype |
+| Auth (Google OAuth) | ✅ Working |
+| Spotify integration | ✅ Wired up |
+| Vault / trust model | ✅ Built |
+| Supabase setup | ✅ Connected |
+| RAG pipeline | ⬜ Not started |
+| Landing page | ⬜ Not started |
+| First 5 hot seats | ⬜ Not started |
+
+---
+
+## Open Questions
+- ~~Storage backend~~ → Supabase ✅
+- ~~RAG implementation~~ → pgvector on Supabase ✅
+- ~~Pricing model~~ → Standard $7/mo, Pro $12/mo, Fül caps, buy credits $2/100 ✅
+- ~~Heavy user protection~~ → Fül system, BYOK nudge for power burners ✅
+- ~~Referral model~~ → "Get Fülkit" — $1 credit per active referral, unlimited, credits not cash ✅
+- ~~Referral visibility~~ → Account settings + dashboard pull-tab + whisper nudge ✅
+- ~~Hot seats~~ → 1 msg/week or 4/month, auto-revoke after 30 days inactive ✅
+- ~~Mobile framework~~ → PWA first, React Native later ✅
+- ~~Day one experience~~ → Text from Bestie: "bring your brain or start fresh" ✅
+- ~~Name~~ → Fülkit (ü is the brand mark), FullKit.app → Fulkit.app redirect ✅
+- ~~Whisper frequency~~ → Default 2/day, adjustable through conversation ✅
+- ~~Voice capture~~ → Yes, the Hum, two-way conversation, no visible transcript ✅
+- ~~Color palette~~ → Eggshell off-white bg, deep warm slate text, white on dark ✅
+- ~~Typography~~ → Type as design, minimal text = every word is intentional ✅
+- ~~Voice transcription~~ → Whisper API (OpenAI). ~$0.006/min. Cross-platform identical quality. ✅
+- Voice output: which TTS for Fülkit's speaking voice? (warm, natural, not robotic)
+- Voice cloning: ElevenLabs for user voice training? Legal/ethical review needed
+- ~~Font selection~~ → DIN Pro (German industrial standard, 1931). D-DIN free for prototyping. Full weight range. ✅
+- Font license: purchase DIN Pro (~$100) or prototype with free D-DIN first?
+- Landing page: build now to start capturing waitlist emails?
+- User acquisition: Twitter/X? Reddit? Friends? ProductHunt?
+- App store: will "Fülkit" pass Apple review? PWA sidesteps this for beta.
+- BYOK platform fee: $5/mo? What's the right number?
+- Buy credits pricing: $2/100 right or should it be more?
+
+---
+
+## File Map
+
+| File | Purpose | Status |
+|:---|:---|:---|
+| **md/buildnotes.md** | Product spec — vision, features, pricing, architecture, marketing | ✅ Current |
+| **md/design.md** | Visual system — colors, type, spacing, components, assets | ✅ Current |
+| **TODO.md** | Master action list — phases, tasks, critical path | ✅ Current |
+| **md/devlog.md** | Session history — decisions, progress, what's next | ✅ Current |
+| **md/Audio_Crate/** | Music/audio system specs | ✅ Current |
+
+---
+
+## Changelog
+- v1.0 — Initial buildnotes. Product vision, architecture, pricing, roadmap.
+- v1.1 — Initial features doc. App replacement table, cost comparison, 10 core features, competitive grid, stats, infographic layout, copy bank.
+- v2.0 — Consolidated merge. Absorbed features.md (marketing copy, competitive positioning, stats, copy bank, infographic layout) and README.md (key concepts, project structure, current status) into single definitive spec. Eliminated duplicated sections, kept more detailed versions throughout.
