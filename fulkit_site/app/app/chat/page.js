@@ -312,6 +312,7 @@ export default function Chat() {
 
     let convId = null;
     let fullResponse = "";
+    let firstChunkReceived = false;
 
     try {
       // Ensure conversation exists (must await — need convId for saves)
@@ -405,6 +406,11 @@ export default function Chat() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Safety timeout — abort if no response chunks arrive within 90 seconds
+      const safetyTimeout = setTimeout(() => {
+        if (!firstChunkReceived) controller.abort();
+      }, 90000);
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -415,6 +421,7 @@ export default function Chat() {
         signal: controller.signal,
       });
       if (!res.ok) {
+        clearTimeout(safetyTimeout);
         const err = await res.json();
         const errMsg = err.error || "Something went wrong.";
         setMessages((prev) => {
@@ -433,6 +440,11 @@ export default function Chat() {
       while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
+
+        if (!firstChunkReceived) {
+          firstChunkReceived = true;
+          clearTimeout(safetyTimeout);
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -473,7 +485,20 @@ export default function Chat() {
         }
       }
     } catch (err) {
-      if (err.name !== "AbortError") {
+      if (err.name === "AbortError" && !firstChunkReceived) {
+        // Safety timeout fired — no response arrived
+        fullResponse = "Took too long to respond. Try again or rephrase.";
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant") {
+            copy[copy.length - 1] = { ...last, content: fullResponse };
+          } else {
+            copy.push({ role: "assistant", content: fullResponse });
+          }
+          return copy;
+        });
+      } else if (err.name !== "AbortError") {
         fullResponse = "Connection error. Try again.";
         setMessages((prev) => {
           const copy = [...prev];
