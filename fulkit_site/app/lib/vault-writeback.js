@@ -107,7 +107,7 @@ export async function writeBackLocal(directoryHandle, artifacts, conversationTit
 }
 
 // Write artifacts back to Supabase storage (Model B/C)
-export async function writeBackSupabase(userId, artifacts, conversationTitle, encryptFn) {
+export async function writeBackSupabase(userId, artifacts, conversationTitle, encryptFn, conversationId) {
   if (!userId) return [];
   const written = [];
 
@@ -121,6 +121,7 @@ export async function writeBackSupabase(userId, artifacts, conversationTitle, en
           source: "chat",
           status: "active",
           priority: 2,
+          ...(conversationId ? { conversation_id: conversationId } : {}),
         });
         written.push({ type: "action", title: item });
       } catch {

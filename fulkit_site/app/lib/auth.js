@@ -43,20 +43,21 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Dev mode overrides
+    // Dev mode overrides — only on localhost (never in production)
+    const isLocalDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const params = new URLSearchParams(window.location.search);
     const mode = params.get("auth");
-    if (mode === "none") {
+    if (mode === "none" && isLocalDev) {
       setUser(null);
       setLoading(false);
       return;
     }
-    if (mode === "new") {
+    if (mode === "new" && isLocalDev) {
       setUser(DEV_NEW_USER);
       setLoading(false);
       return;
     }
-    if (mode === "dev" || localStorage.getItem("fulkit-dev-mode") === "true") {
+    if (mode === "dev" && isLocalDev) {
       setUser(DEV_TEMPLATE_USER);
       setProfile({ role: "owner", onboarded: true, seat_type: "standard", messages_this_month: 138 });
       setHasContext(true);

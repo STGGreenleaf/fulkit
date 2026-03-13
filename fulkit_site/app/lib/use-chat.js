@@ -230,6 +230,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
           messages: apiMessages,
           context,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...(conversationId ? { conversationId } : {}),
           ...(sandboxMode && sandbox.chapters?.length > 0
             ? { chapterSummaries: sandbox.chapters }
             : {}),
@@ -380,7 +381,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
             if (storageMode === "local" && directoryHandle) {
               writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
             } else if (user) {
-              writeBackSupabase(user.id, artifacts, title).catch(() => {});
+              writeBackSupabase(user.id, artifacts, title, null, convId).catch(() => {});
             }
           }
         } catch {}

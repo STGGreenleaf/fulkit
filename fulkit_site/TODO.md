@@ -94,6 +94,9 @@
 - [x] Use Fulkit daily for 1 week (active — CSV reconciliation, file uploads, integrations)
 - [x] Build Fulkit features by chatting with Fulkit (active — using chat to drive dev)
 - [x] Iterate based on friction (ongoing — file attach fix, blank data fix, message rendering)
+- [x] Security hardening — dev mode bypass, BYOK encryption, prompt injection defense, memory caps, input validation
+- [x] Threads elevation — kanban board (5 status columns, drag-and-drop), ThreadCard/ThreadBoard/ThreadDetail components, due dates with urgency dots, monochrome labels, checklist items (actions linked via thread_id)
+- [x] Chat ↔ Threads ↔ Actions unification — threads_create tool, conversation_id plumbing through all tool executors, vault-writeback passes conversationId
 
 ## Phase 5: Context Engine
 

@@ -158,6 +158,13 @@ const SOURCE_LOGOS = {
       <path d="M4 4c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V4zm0 7c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-2zm2 7c-1.1 0-2 .9-2 2v0c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v0c0-1.1-.9-2-2-2H6z"/>
     </svg>
   ),
+  trello: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <rect x="1" y="1" width="22" height="22" rx="3" opacity="0.15"/>
+      <rect x="3.5" y="3.5" width="7" height="15" rx="1.5"/>
+      <rect x="13.5" y="3.5" width="7" height="9" rx="1.5"/>
+    </svg>
+  ),
 };
 
 // Mock connected state — will come from DB
@@ -165,7 +172,7 @@ const INITIAL_CONNECTED = [];
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -216,6 +223,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "spotify.com",
     linkHref: "https://spotify.com",
   },
+  trello: {
+    subtitle: "Your boards, connected.",
+    description: "Trello organizes your projects into boards, lists, and cards. Connecting it means F\u00FClkit sees your tasks, deadlines, and progress across all your boards.",
+    gives: "Board overview, card details, due dates, checklists, comments, and labels. Ask what\u2019s due this week or create a card from chat.",
+    tryPrompt: "What\u2019s on my board right now?",
+    linkLabel: "trello.com",
+    linkHref: "https://trello.com",
+  },
 };
 
 const ALL_SOURCES = [
@@ -223,6 +238,7 @@ const ALL_SOURCES = [
   { id: "shopify", name: "Shopify", cat: "E-Commerce" },
   { id: "stripe", name: "Stripe", cat: "Payments" },
   { id: "toast", name: "Toast", cat: "Restaurant POS" },
+  { id: "trello", name: "Trello", cat: "Project Management" },
   { id: "github", name: "GitHub", cat: "Dev" },
   { id: "fabric", name: "Spotify", cat: "Media" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
@@ -642,6 +658,11 @@ function SourcesTab() {
   const [toastLastSynced, setToastLastSynced] = useState(null);
   const [toastDisconnecting, setToastDisconnecting] = useState(false);
 
+  const [trelloConnected, setTrelloConnected] = useState(false);
+  const [trelloExpanded, setTrelloExpanded] = useState(false);
+  const [trelloLastSynced, setTrelloLastSynced] = useState(null);
+  const [trelloDisconnecting, setTrelloDisconnecting] = useState(false);
+
   // Fetch repos and active state on mount
   useEffect(() => {
     if (isDev || !accessToken || !githubConnected) return;
@@ -732,6 +753,15 @@ function SourcesTab() {
     fetch("/api/toast/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setToastConnected(data.connected); if (data.lastSynced) setToastLastSynced(data.lastSynced); } })
+      .catch(() => {});
+  }, [accessToken, isDev]);
+
+  // Check Trello connection status on mount
+  useEffect(() => {
+    if (isDev || !accessToken) return;
+    fetch("/api/trello/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) { setTrelloConnected(data.connected); if (data.lastSynced) setTrelloLastSynced(data.lastSynced); } })
       .catch(() => {});
   }, [accessToken, isDev]);
 
@@ -1000,6 +1030,32 @@ function SourcesTab() {
     setToastDisconnecting(false);
   }
 
+  function connectTrello() {
+    if (isDev) { setTrelloConnected(true); return; }
+    if (accessToken) {
+      window.open("/api/trello/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/trello/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectTrello() {
+    setTrelloDisconnecting(true);
+    try {
+      await fetch("/api/trello/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setTrelloConnected(false);
+    } catch {}
+    setTrelloDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -1010,8 +1066,9 @@ function SourcesTab() {
     ...(shopifyConnected ? ["shopify"] : []),
     ...(stripeConnected ? ["stripe"] : []),
     ...(toastConnected ? ["toast"] : []),
+    ...(trelloConnected ? ["trello"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1029,6 +1086,7 @@ function SourcesTab() {
     if (id === "shopify") { setShopifyExpanded(true); return; }
     if (id === "stripe") { connectStripe(); return; }
     if (id === "toast") { connectToast(); return; }
+    if (id === "trello") { connectTrello(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1040,6 +1098,7 @@ function SourcesTab() {
     if (id === "shopify") { disconnectShopify(); return; }
     if (id === "stripe") { disconnectStripe(); return; }
     if (id === "toast") { disconnectToast(); return; }
+    if (id === "trello") { disconnectTrello(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -1569,6 +1628,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: toastDisconnecting ? 0.5 : 1 }}
                         >
                           {toastDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Trello — connected */}
+            {trelloConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.trello}
+                  name="Trello"
+                  subtitle="Your boards, connected."
+                  isExpanded={trelloExpanded}
+                  onToggle={() => setTrelloExpanded(!trelloExpanded)}
+                />
+                <Drawer open={trelloExpanded}>
+                  {richDrawerContent({
+                    expanded: trelloExpanded,
+                    description: "Trello organizes your projects into boards, lists, and cards. Connecting it means F\u00FClkit sees your tasks, deadlines, and progress across all your boards.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Board overview, card details, due dates, checklists, comments, and labels. Ask what\u2019s due this week or create a card from chat.",
+                    tryPrompt: "What\u2019s on my board right now?",
+                    linkLabel: "trello.com",
+                    linkHref: "https://trello.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{trelloLastSynced ? ` \u00B7 Last synced ${timeAgo(trelloLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectTrello}
+                          disabled={trelloDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: trelloDisconnecting ? 0.5 : 1 }}
+                        >
+                          {trelloDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),

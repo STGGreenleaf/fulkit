@@ -1,16 +1,32 @@
 import Anthropic from "@anthropic-ai/sdk";
+import crypto from "crypto";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 
 const BYOK_PREF_KEY = "byok:anthropic_api_key";
+const ENC_KEY = process.env.BYOK_ENCRYPTION_KEY; // 32-byte hex string
 
-// Simple reversible obfuscation — not crypto-grade, but prevents plaintext storage.
-// The key is only ever used server-side and lives in the preferences table (RLS-protected).
-function obfuscate(str) {
-  return Buffer.from(str).toString("base64");
+// AES-256-GCM encryption — stored as iv:tag:ciphertext (all base64)
+function encrypt(plaintext) {
+  const key = Buffer.from(ENC_KEY, "hex");
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
 }
 
-function deobfuscate(str) {
-  return Buffer.from(str, "base64").toString("utf-8");
+// Decrypt — falls back to legacy base64 for migration
+export function decryptByokKey(stored) {
+  const parts = stored.split(":");
+  if (parts.length !== 3) {
+    // Legacy base64 format — decode directly
+    return Buffer.from(stored, "base64").toString("utf-8");
+  }
+  const [ivB64, tagB64, ctB64] = parts;
+  const key = Buffer.from(ENC_KEY, "hex");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
+  decipher.setAuthTag(Buffer.from(tagB64, "base64"));
+  return decipher.update(Buffer.from(ctB64, "base64"), null, "utf-8") + decipher.final("utf-8");
 }
 
 async function getUser(request) {
@@ -51,13 +67,13 @@ export async function POST(request) {
       // Other errors (rate limit, etc.) mean the key is valid
     }
 
-    // Store obfuscated key in preferences
+    // Store encrypted key in preferences
     const admin = getSupabaseAdmin();
     const { error } = await admin.from("preferences").upsert(
       {
         user_id: user.id,
         key: BYOK_PREF_KEY,
-        value: obfuscate(key),
+        value: encrypt(key),
       },
       { onConflict: "user_id,key" }
     );
