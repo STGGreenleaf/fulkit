@@ -191,19 +191,28 @@ export default function Chat() {
   }
 
   // Save a single message to DB, returns the inserted row id
+  // Uses AbortSignal timeout to prevent hanging — conversation flow must never block on DB
   async function saveMessage(convId, role, content) {
     if (!convId || isDev) return null;
-    const { data } = await supabase
-      .from("messages")
-      .insert({ conversation_id: convId, role, content })
-      .select("id")
-      .single();
-    // Touch updated_at
-    await supabase
-      .from("conversations")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", convId);
-    return data?.id || null;
+    try {
+      const { data } = await supabase
+        .from("messages")
+        .insert({ conversation_id: convId, role, content })
+        .select("id")
+        .single()
+        .abortSignal(AbortSignal.timeout(8000));
+      // Touch updated_at (fire and forget — don't block on this)
+      supabase
+        .from("conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", convId)
+        .then(() => {})
+        .catch(() => {});
+      return data?.id || null;
+    } catch (err) {
+      console.error("[saveMessage] failed:", err.message);
+      return null;
+    }
   }
 
   async function handleChatFiles(files) {
@@ -280,11 +289,7 @@ export default function Chat() {
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
-    console.log("[sendMessage] called", { text: text.slice(0, 50), streaming, inputEmpty: !text });
-    if (!text || streaming) {
-      console.log("[sendMessage] BLOCKED", { noText: !text, streaming });
-      return;
-    }
+    if (!text || streaming) return;
 
     // Handle /recall command
     const recallMatch = text.match(/^\/recall\s+(.+)/i);
@@ -304,37 +309,33 @@ export default function Chat() {
     setStreaming(true);
     streamingRef.current = true;
     setRecallResults(null);
-    console.log("[sendMessage] streaming=true, sending", updated.length, "messages");
 
     let convId = null;
     let fullResponse = "";
 
     try {
-      // Ensure conversation exists + save user message
+      // Ensure conversation exists (must await — need convId for saves)
       convId = await ensureConversation(text);
-      console.log("[sendMessage] convId:", convId);
-      const userMsgId = await saveMessage(convId, "user", text);
-      console.log("[sendMessage] userMsgId:", userMsgId);
-      if (userMsgId) {
-        setMessages((prev) =>
-          prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: userMsgId } : m))
-        );
-      }
+
+      // Save user message in background — don't block the send flow
+      saveMessage(convId, "user", text).then((userMsgId) => {
+        if (userMsgId) {
+          setMessages((prev) =>
+            prev.map((m) => (m.role === "user" && m.content === text && !m.id ? { ...m, id: userMsgId } : m))
+          );
+        }
+      }).catch(() => {});
 
       // Add empty assistant message that we'll stream into
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
       // Assemble vault context from user's chosen source + recalled notes
       let context = [];
-      console.log("[sendMessage] vault isReady:", isReady);
       if (isReady) {
-        console.log("[sendMessage] calling getContextWithMeta...");
         const result = await getContextWithMeta(text);
-        console.log("[sendMessage] vault context returned:", result?.selected?.length, "items");
         context = result.selected;
         setContextMeta(result.metadata);
       }
-      console.log("[sendMessage] context assembled, proceeding to fetch");
       // Append recalled notes (deduplicated by title)
       for (const rn of recalledNotes) {
         if (!context.find((c) => c.title === rn.title)) {
@@ -395,7 +396,6 @@ export default function Chat() {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      console.log("[sendMessage] fetching /api/chat with", updated.length, "messages");
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -405,12 +405,9 @@ export default function Chat() {
         body: JSON.stringify({ messages: updated, context, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
         signal: controller.signal,
       });
-      console.log("[sendMessage] fetch response:", res.status, res.ok);
-
       if (!res.ok) {
         const err = await res.json();
         const errMsg = err.error || "Something went wrong.";
-        console.error("[sendMessage] API error:", errMsg);
         setMessages((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { role: "assistant", content: errMsg };
@@ -422,34 +419,24 @@ export default function Chat() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let chunkCount = 0;
 
       let streamDone = false;
       while (!streamDone) {
         const { done, value } = await reader.read();
-        if (done) {
-          console.log("[stream] reader done, chunks received:", chunkCount, "fullResponse length:", fullResponse.length);
-          break;
-        }
+        if (done) break;
 
-        const raw = decoder.decode(value, { stream: true });
-        buffer += raw;
+        buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6);
-          if (payload === "[DONE]") {
-            console.log("[stream] [DONE] received, chunks:", chunkCount, "fullResponse length:", fullResponse.length);
-            streamDone = true;
-            break;
-          }
+          if (payload === "[DONE]") { streamDone = true; break; }
 
           try {
             const { text: chunk, error } = JSON.parse(payload);
             if (error) {
-              console.error("[stream] error from API:", error);
               setMessages((prev) => {
                 const copy = [...prev];
                 copy[copy.length - 1] = { role: "assistant", content: error };
@@ -460,8 +447,6 @@ export default function Chat() {
               break;
             }
             if (chunk) {
-              chunkCount++;
-              if (chunkCount <= 3) console.log("[stream] chunk", chunkCount, ":", JSON.stringify(chunk.slice(0, 60)));
               fullResponse += chunk;
               setMessages((prev) => {
                 const copy = [...prev];
@@ -479,7 +464,6 @@ export default function Chat() {
         }
       }
     } catch (err) {
-      console.error("[sendMessage] CATCH:", err.name, err.message);
       if (err.name !== "AbortError") {
         fullResponse = "Connection error. Try again.";
         setMessages((prev) => {
@@ -494,25 +478,25 @@ export default function Chat() {
         });
       }
     } finally {
-      console.log("[sendMessage] FINALLY — resetting streaming to false");
       setStreaming(false);
       streamingRef.current = false;
       abortRef.current = null;
     }
 
-    // Save assistant response (wrapped in try/catch so failures don't kill the conversation)
-    try {
-      if (fullResponse && convId) {
-        const asstMsgId = await saveMessage(convId, "assistant", fullResponse);
+    // Save assistant response in background — never block conversation flow
+    if (fullResponse && convId) {
+      saveMessage(convId, "assistant", fullResponse).then((asstMsgId) => {
         if (asstMsgId) {
           setMessages((prev) =>
             prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: asstMsgId } : m))
           );
         }
         loadConversations();
+      }).catch((err) => console.error("[Chat] Failed to save response:", err));
 
-        // Write-back loop — extract artifacts and file them
-        if (!isDev) {
+      // Write-back loop — extract artifacts and file them
+      if (!isDev) {
+        try {
           const artifacts = extractArtifacts(fullResponse);
           if (artifacts.actionItems.length > 0) {
             const title = messages[0]?.content?.slice(0, 60) || "Chat";
@@ -522,10 +506,8 @@ export default function Chat() {
               writeBackSupabase(user.id, artifacts, title).catch(() => {});
             }
           }
-        }
+        } catch {}
       }
-    } catch (saveErr) {
-      console.error("[Chat] Failed to save response:", saveErr);
     }
   }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, ghContext, nblContext]);
 
