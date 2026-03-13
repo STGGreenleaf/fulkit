@@ -58,6 +58,7 @@ export default function Chat() {
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const abortRef = useRef(null);
+  const streamingRef = useRef(false);
 
   // Load active GitHub repos as context
   useEffect(() => {
@@ -136,16 +137,16 @@ export default function Chat() {
     if (data) setConversations(data);
   }
 
-  // Load messages when switching conversations
+  // Load messages when switching conversations (skip if mid-stream — ensureConversation sets conversationId during send)
   useEffect(() => {
-    if (!conversationId || isDev) return;
+    if (!conversationId || isDev || streamingRef.current) return;
     async function loadMessages() {
       const { data } = await supabase
         .from("messages")
         .select("id, role, content, created_at, is_pinned")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
-      if (data) setMessages(data.map((m) => ({ id: m.id, role: m.role, content: m.content, is_pinned: m.is_pinned })));
+      if (data && !streamingRef.current) setMessages(data.map((m) => ({ id: m.id, role: m.role, content: m.content, is_pinned: m.is_pinned })));
     }
     loadMessages();
   }, [conversationId, isDev]);
@@ -297,6 +298,7 @@ export default function Chat() {
     setMessages(updated);
     setInput("");
     setStreaming(true);
+    streamingRef.current = true;
     setRecallResults(null);
 
     let convId = null;
@@ -466,6 +468,7 @@ export default function Chat() {
       }
     } finally {
       setStreaming(false);
+      streamingRef.current = false;
       abortRef.current = null;
     }
 
@@ -506,6 +509,7 @@ export default function Chat() {
     setMessages([]);
     setConversationId(null);
     setStreaming(false);
+    streamingRef.current = false;
     setContextMeta(null);
     setRecalledNotes([]);
     setRecallResults(null);
