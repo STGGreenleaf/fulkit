@@ -45,10 +45,17 @@ class MarkdownErrorBoundary extends Component {
 
 const ListContext = createContext("ul");
 
-// Detect if a string looks numeric (numbers, currency, percentages)
+// Detect if a cell value should right-align (numbers, currency, placeholders)
 function looksNumeric(text) {
   if (typeof text !== "string") return false;
-  return /^[\s$€£¥]?-?[\d,.]+%?\s*$/.test(text.trim());
+  const t = text.trim();
+  if (!t) return false;
+  // Placeholder dashes (—, –, -)
+  if (/^[—–\-]+$/.test(t)) return true;
+  // Number/currency: optional parens (accounting), optional +/- prefix,
+  // optional currency symbol, digits, optional trailing % or unit + status symbol
+  // Matches: "$1,234.56", "($15.00)", "+$4.35", "58 payments ▲", "$0 ✓", "59", "+2"
+  return /^\(?[\s$€£¥+]?-?[\d,.]+\)?(%|\s*[a-zA-Z]*\s*[✓✗▲▼△▽↑↓✔✕]?)?$/.test(t);
 }
 
 // Extract text content from React children (for numeric detection in table cells)
@@ -143,10 +150,43 @@ const components = {
     </div>
   ),
 
-  // Inline
-  strong: ({ children }) => (
-    <strong style={{ fontWeight: "var(--font-weight-semibold)" }}>{children}</strong>
-  ),
+  // Inline — bold text that acts as a section title (near end of paragraph,
+  // followed only by ":" or nothing) renders as block to sit above tables/lists.
+  strong: ({ children, node }) => {
+    let isTitle = false;
+    try {
+      const siblings = node?.parent?.children;
+      if (siblings) {
+        const idx = siblings.indexOf(node);
+        const after = siblings.slice(idx + 1);
+        const trailingText = after
+          .map((s) => (s.type === "text" ? s.value : ""))
+          .join("")
+          .trim();
+        // Title if bold is near end and only ":" or nothing follows
+        if (trailingText === "" || trailingText === ":") {
+          // But not if bold is the ONLY thing in the paragraph (already on its own line)
+          const before = siblings.slice(0, idx);
+          const hasLeadingContent = before.some(
+            (s) => (s.type === "text" && s.value.trim()) || s.type === "element"
+          );
+          isTitle = hasLeadingContent;
+        }
+      }
+    } catch {}
+    if (isTitle) {
+      return (
+        <strong style={{
+          display: "block",
+          fontWeight: "var(--font-weight-semibold)",
+          marginTop: "var(--space-2)",
+        }}>
+          {children}
+        </strong>
+      );
+    }
+    return <strong style={{ fontWeight: "var(--font-weight-semibold)" }}>{children}</strong>;
+  },
   em: ({ children }) => <em>{children}</em>,
 
   // Links — monochrome with subtle underline

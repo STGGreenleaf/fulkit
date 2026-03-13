@@ -20,6 +20,7 @@ import {
   Upload,
   FileText,
   Music,
+  GamepadDirectional,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
+import LoadingMark from "../../components/LoadingMark";
 
 const TAB_ICON_SIZE = 14;
 
@@ -39,6 +41,7 @@ const TABS = [
   { id: "socials", label: "Socials", icon: Share2 },
   { id: "og", label: "OG Creator", icon: Image },
   { id: "fabric", label: "Fabric", icon: Music },
+  { id: "playground", label: "Playground", icon: GamepadDirectional },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -165,6 +168,7 @@ export function OwnerPanel() {
         {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
         {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
         {tab === "fabric" && <FabricTab />}
+        {tab === "playground" && <PlaygroundTab />}
       </div>
     </div>
   );
@@ -1418,6 +1422,63 @@ function PlaceholderTab({ title, description }) {
       <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
         {description}
       </p>
+    </div>
+  );
+}
+
+function PlaygroundTab() {
+  return (
+    <div>
+      <h3 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", margin: "0 0 var(--space-4)" }}>
+        Loading Preview
+      </h3>
+      <div style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-md)",
+        padding: "var(--space-6)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "var(--space-4)",
+      }}>
+        <div style={{
+          width: 120,
+          height: 120,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--color-bg)",
+          borderRadius: "var(--radius-md)",
+        }}>
+          <LoadingMark size={50} />
+        </div>
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", margin: 0, textAlign: "center" }}>
+          Animated loading mark — rocks and winks. Plays on every auth-gated page load.
+        </p>
+        <a
+          href="/loading-preview"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "center",
+            padding: "var(--space-2-5) var(--space-4)",
+            background: "var(--color-text)",
+            color: "var(--color-bg)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-medium)",
+            fontFamily: "var(--font-primary)",
+            textDecoration: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Open Full Preview
+        </a>
+      </div>
     </div>
   );
 }

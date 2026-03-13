@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./supabase";
 
 /**
@@ -16,6 +16,9 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
   const [tgContext, setTgContext] = useState(null);
   const [tgError, setTgError] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const attachedFilesRef = useRef([]);
+  // Keep ref in sync with state (handles chip removal, resetContext, etc.)
+  useEffect(() => { attachedFilesRef.current = attachedFiles; }, [attachedFiles]);
   const [recalledNotes, setRecalledNotes] = useState([]);
   const [recallResults, setRecallResults] = useState(null);
   const [contextMeta, setContextMeta] = useState(null);
@@ -155,7 +158,13 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
         rejected.push(`${file.name} (unreadable)`);
       }
     }
-    if (results.length > 0) setAttachedFiles((prev) => [...prev, ...results]);
+    if (results.length > 0) {
+      setAttachedFiles((prev) => {
+        const next = [...prev, ...results];
+        attachedFilesRef.current = next;
+        return next;
+      });
+    }
     if (rejected.length > 0) {
       setFileError(`Can't attach: ${rejected.join(", ")}`);
       setTimeout(() => setFileError(null), 5000);
@@ -214,17 +223,20 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
       }
     }
 
+    // Read files from ref (avoids stale closure — ref always has latest)
+    const currentFiles = attachedFilesRef.current;
+    const textFiles = currentFiles.filter((af) => af.type === "text");
+    const imageFiles = currentFiles.filter((af) => af.type === "image");
+
     // Attached text files go into context
-    const textFiles = attachedFiles.filter((af) => af.type === "text");
-    const imageFiles = attachedFiles.filter((af) => af.type === "image");
     for (const af of textFiles) {
       context.push({ title: `[Uploaded] ${af.name}`, content: af.content });
     }
 
     // Build annotated messages — images go as content blocks in the user message
     let annotatedMessages = null;
-    if (attachedFiles.length > 0) {
-      const fileNames = attachedFiles.map((af) => af.name).join(", ");
+    if (currentFiles.length > 0) {
+      const fileNames = currentFiles.map((af) => af.name).join(", ");
       annotatedMessages = apiMessages.map((m, i) => {
         if (i !== apiMessages.length - 1) return m;
         // Build multi-part content: text + images
@@ -273,6 +285,8 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
           .catch(() => {});
       }
     }
+    // Clear files (both ref + state)
+    attachedFilesRef.current = [];
     setAttachedFiles([]);
 
     // GitHub repos
@@ -295,7 +309,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     }
 
     return { context, annotatedMessages };
-  }, [isReady, getContextWithMeta, recalledNotes, attachedFiles, user, ghContext, nblContext, tgContext, sandbox]);
+  }, [isReady, getContextWithMeta, recalledNotes, user, ghContext, nblContext, tgContext, sandbox]);
 
   // ─── Dismiss alerts ───────────────────────────────────────
 
@@ -311,6 +325,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     setContextMeta(null);
     setRecalledNotes([]);
     setRecallResults(null);
+    attachedFilesRef.current = [];
     setAttachedFiles([]);
   }, []);
 

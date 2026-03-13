@@ -2,21 +2,29 @@
 
 import { useAuth } from "../lib/auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import LogoMark from "./LogoMark";
+import { useState, useEffect } from "react";
+import LoadingMark from "./LoadingMark";
+
+const MIN_SPLASH_MS = 3600; // one full wink cycle
 
 export default function AuthGuard({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    const t = setTimeout(() => setSplashDone(true), MIN_SPLASH_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (loading || !splashDone) return;
     if (!user) {
       router.replace("/");
     }
-  }, [user, loading, router]);
+  }, [user, loading, splashDone, router]);
 
-  if (loading) {
+  if (loading || !splashDone) {
     return (
       <div
         style={{
@@ -27,7 +35,7 @@ export default function AuthGuard({ children }) {
           justifyContent: "center",
         }}
       >
-        <LogoMark size={24} />
+        <LoadingMark size={50} />
       </div>
     );
   }
