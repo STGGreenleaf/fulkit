@@ -280,7 +280,11 @@ export default function Chat() {
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    console.log("[sendMessage] called", { text: text.slice(0, 50), streaming, inputEmpty: !text });
+    if (!text || streaming) {
+      console.log("[sendMessage] BLOCKED", { noText: !text, streaming });
+      return;
+    }
 
     // Handle /recall command
     const recallMatch = text.match(/^\/recall\s+(.+)/i);
@@ -300,6 +304,7 @@ export default function Chat() {
     setStreaming(true);
     streamingRef.current = true;
     setRecallResults(null);
+    console.log("[sendMessage] streaming=true, sending", updated.length, "messages");
 
     let convId = null;
     let fullResponse = "";
@@ -307,6 +312,7 @@ export default function Chat() {
     try {
       // Ensure conversation exists + save user message
       convId = await ensureConversation(text);
+      console.log("[sendMessage] convId:", convId);
       const userMsgId = await saveMessage(convId, "user", text);
       if (userMsgId) {
         setMessages((prev) =>
@@ -384,6 +390,7 @@ export default function Chat() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      console.log("[sendMessage] fetching /api/chat with", updated.length, "messages");
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -393,10 +400,12 @@ export default function Chat() {
         body: JSON.stringify({ messages: updated, context, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
         signal: controller.signal,
       });
+      console.log("[sendMessage] fetch response:", res.status, res.ok);
 
       if (!res.ok) {
         const err = await res.json();
         const errMsg = err.error || "Something went wrong.";
+        console.error("[sendMessage] API error:", errMsg);
         setMessages((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { role: "assistant", content: errMsg };
@@ -453,6 +462,7 @@ export default function Chat() {
         }
       }
     } catch (err) {
+      console.error("[sendMessage] CATCH:", err.name, err.message);
       if (err.name !== "AbortError") {
         fullResponse = "Connection error. Try again.";
         setMessages((prev) => {
@@ -467,6 +477,7 @@ export default function Chat() {
         });
       }
     } finally {
+      console.log("[sendMessage] FINALLY — resetting streaming to false");
       setStreaming(false);
       streamingRef.current = false;
       abortRef.current = null;
