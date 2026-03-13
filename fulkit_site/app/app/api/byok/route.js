@@ -58,7 +58,6 @@ export async function POST(request) {
         user_id: user.id,
         key: BYOK_PREF_KEY,
         value: obfuscate(key),
-        updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,key" }
     );

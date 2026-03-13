@@ -6,13 +6,15 @@ import { supabase } from "./supabase";
 /**
  * useChatContext — context assembly hook for Fulkit chat.
  *
- * Owns: GitHub context, Numbrly context, attached files, recalled notes.
+ * Owns: GitHub context, Numbrly context, TrueGauge context, attached files, recalled notes.
  * Provides assembleContext() for useChat's sendMessage.
  */
 export function useChatContext({ user, isDev, accessToken, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
   const [ghContext, setGhContext] = useState([]);
   const [nblContext, setNblContext] = useState(null);
   const [nblError, setNblError] = useState(false);
+  const [tgContext, setTgContext] = useState(null);
+  const [tgError, setTgError] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [recalledNotes, setRecalledNotes] = useState([]);
   const [recallResults, setRecallResults] = useState(null);
@@ -58,6 +60,23 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
         if (data?.message) setNblContext(data.message);
       })
       .catch(() => setNblError(true));
+  }, [accessToken, isDev]);
+
+  // ─── Load TrueGauge context ───────────────────────────────
+
+  useEffect(() => {
+    if (!accessToken || isDev) return;
+    fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.connected) return null;
+        return fetch("/api/truegauge/context", { headers: { Authorization: `Bearer ${accessToken}` } });
+      })
+      .then((r) => (r?.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.message) setTgContext(data.message);
+      })
+      .catch(() => setTgError(true));
   }, [accessToken, isDev]);
 
   // ─── Fetch alerts ─────────────────────────────────────────
@@ -270,8 +289,13 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
       context.push({ title: "Numbrly (Business Data)", content: nblContext });
     }
 
+    // TrueGauge
+    if (tgContext) {
+      context.push({ title: "TrueGauge (Profitability Analytics)", content: tgContext });
+    }
+
     return { context, annotatedMessages };
-  }, [isReady, getContextWithMeta, recalledNotes, attachedFiles, user, ghContext, nblContext, sandbox]);
+  }, [isReady, getContextWithMeta, recalledNotes, attachedFiles, user, ghContext, nblContext, tgContext, sandbox]);
 
   // ─── Dismiss alerts ───────────────────────────────────────
 
@@ -295,6 +319,8 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     ghContext,
     nblContext,
     nblError,
+    tgContext,
+    tgError,
     contextMeta,
     // Files
     attachedFiles,

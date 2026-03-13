@@ -42,9 +42,13 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
   }, [loadConversations]);
 
   // ─── Load messages on conversation switch ─────────────────
+  // Only fires when conversationId changes (switching conversations).
+  // Does NOT fire when streaming ends — avoids race condition where
+  // the DB load overwrites in-memory messages before the assistant
+  // response save completes.
 
   useEffect(() => {
-    if (!conversationId || isDev || streaming) return;
+    if (!conversationId || isDev || streamingRef.current) return;
     let cancelled = false;
     async function load() {
       const { data } = await supabase
@@ -60,7 +64,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
     }
     load();
     return () => { cancelled = true; };
-  }, [conversationId, isDev, streaming]);
+  }, [conversationId, isDev]);
 
   // ─── DB helpers ───────────────────────────────────────────
 

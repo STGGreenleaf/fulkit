@@ -1274,7 +1274,7 @@ async function executeMemoryTool(name, input, userId) {
   if (name === "memory_save") {
     const memKey = `memory:${input.key}`;
     const { error } = await admin.from("preferences").upsert(
-      { user_id: userId, key: memKey, value: input.value, updated_at: new Date().toISOString() },
+      { user_id: userId, key: memKey, value: input.value },
       { onConflict: "user_id,key" }
     );
     if (error) throw new Error(error.message);
@@ -1283,15 +1283,15 @@ async function executeMemoryTool(name, input, userId) {
 
   if (name === "memory_list") {
     const { data, error } = await admin.from("preferences")
-      .select("key, value, updated_at")
+      .select("key, value, created_at")
       .eq("user_id", userId)
       .like("key", "memory:%")
-      .order("updated_at", { ascending: false });
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const memories = (data || []).map(m => ({
       key: m.key.replace("memory:", ""),
       value: m.value,
-      since: m.updated_at,
+      since: m.created_at,
     }));
     return { count: memories.length, memories };
   }
@@ -1387,6 +1387,7 @@ async function executeNoteUpdate(input, userId) {
 }
 
 export async function POST(request) {
+  const t0 = Date.now();
   try {
     // Authenticate user via Supabase
     const authHeader = request.headers.get("authorization");
@@ -1435,9 +1436,10 @@ export async function POST(request) {
         if (byokPref?.value) {
           byokKey = Buffer.from(byokPref.value, "base64").toString("utf-8");
         }
-      } catch { /* proceed without BYOK */ }
+      } catch (err) { console.warn("[chat] BYOK lookup failed:", err.message); }
     }
 
+    console.log("[chat] +%dms user:%s role:%s byok:%s", Date.now() - t0, userId?.slice(0, 8), profile?.role, !!byokKey);
     const config = getModelConfig(profile?.role, profile?.seat_type, !!byokKey);
 
     // Use BYOK client if available, otherwise default
@@ -1555,6 +1557,7 @@ export async function POST(request) {
       } catch { /* GitHub enrichment timed out or failed — proceed without it */ }
     }
 
+    console.log("[chat] +%dms pre-stream setup (prefs+memories+github) done", Date.now() - t0);
     // Fetch integration API keys (needed for tool execution)
     let nblKey = null;
     let tgKey = null;
@@ -1682,6 +1685,7 @@ export async function POST(request) {
       ...(allTools.length > 0 ? { tools: allTools } : {}),
     };
 
+    console.log("[chat] +%dms tools:%d model:%s returning stream", Date.now() - t0, allTools.length, config.model);
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
@@ -1700,6 +1704,7 @@ export async function POST(request) {
               needsFinalResponse = true;
               break;
             }
+            console.log("[chat] starting stream round", round, "model:", config.model, "tools:", allTools.length);
             const stream = anthropic.messages.stream({
               ...baseOpts,
               messages: loopMessages,
@@ -1919,6 +1924,7 @@ export async function POST(request) {
           try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
           try { controller.close(); } catch {}
         } catch (err) {
+          console.error("[chat] STREAM FATAL:", err.message, err.stack?.split("\n")[1]);
           try {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong. Try again." })}\n\n`)
