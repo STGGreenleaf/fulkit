@@ -314,6 +314,7 @@ export default function Chat() {
       convId = await ensureConversation(text);
       console.log("[sendMessage] convId:", convId);
       const userMsgId = await saveMessage(convId, "user", text);
+      console.log("[sendMessage] userMsgId:", userMsgId);
       if (userMsgId) {
         setMessages((prev) =>
           prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: userMsgId } : m))
@@ -325,11 +326,15 @@ export default function Chat() {
 
       // Assemble vault context from user's chosen source + recalled notes
       let context = [];
+      console.log("[sendMessage] vault isReady:", isReady);
       if (isReady) {
+        console.log("[sendMessage] calling getContextWithMeta...");
         const result = await getContextWithMeta(text);
+        console.log("[sendMessage] vault context returned:", result?.selected?.length, "items");
         context = result.selected;
         setContextMeta(result.metadata);
       }
+      console.log("[sendMessage] context assembled, proceeding to fetch");
       // Append recalled notes (deduplicated by title)
       for (const rn of recalledNotes) {
         if (!context.find((c) => c.title === rn.title)) {
