@@ -111,6 +111,7 @@ export function FabricProvider({ children }) {
   const prevTrackRef = useRef(null); // track before manual playTrack jump
   const flagAdoptionRef = useRef(null); // deferred adoption signal from flag()
   const playbackContextRef = useRef(null); // { type, id, tracks, currentIndex }
+  const featuredCratesRef = useRef([]); // populated by page.js for autoAdvance fallback
   const autoAdvanceTriggered = useRef(false);
   const autoAdvanceRef = useRef(null); // ref to avoid temporal dead zone (skip defined before autoAdvance)
   const playTrackRef = useRef(null); // same — skip defined before playTrack
@@ -755,7 +756,7 @@ export function FabricProvider({ children }) {
       return;
     }
 
-    // Context exhausted — try next set
+    // Context exhausted — try next set in chain
     const userSets = setsData.sets.filter(s => s.source !== "guy" && s.tracks.length > 0);
     if (ctx.type === "set") {
       const setIdx = userSets.findIndex(s => s.id === ctx.id);
@@ -767,16 +768,42 @@ export function FabricProvider({ children }) {
       }
     }
 
-    // Fallback: first user set (if not already at it)
+    // After B-Sides or any context exhausts → try Bin Picks (featured crates)
+    const featured = featuredCratesRef.current || [];
+    if (featured.length > 0) {
+      // If we just finished a featured crate, try the next one
+      if (ctx.type === "featured") {
+        const crateIdx = featured.findIndex(c => c.id === ctx.id);
+        if (crateIdx >= 0 && crateIdx < featured.length - 1) {
+          const nextCrate = featured[crateIdx + 1];
+          if (nextCrate.tracks?.length) {
+            playbackContextRef.current = { type: "featured", id: nextCrate.id, tracks: nextCrate.tracks, currentIndex: 0 };
+            playTrack(nextCrate.tracks[0]);
+            return;
+          }
+        }
+      }
+      // Otherwise start from first featured crate with tracks
+      if (ctx.type !== "featured") {
+        const firstCrate = featured.find(c => c.tracks?.length > 0);
+        if (firstCrate) {
+          playbackContextRef.current = { type: "featured", id: firstCrate.id, tracks: firstCrate.tracks, currentIndex: 0 };
+          playTrack(firstCrate.tracks[0]);
+          return;
+        }
+      }
+    }
+
+    // Fallback: first user set
     if (userSets.length > 0 && (ctx.type !== "set" || ctx.id !== userSets[0].id)) {
       playbackContextRef.current = { type: "set", id: userSets[0].id, tracks: userSets[0].tracks, currentIndex: 0 };
       playTrack(userSets[0].tracks[0]);
       return;
     }
 
-    // Final fallback: B-Sides crate
+    // Final fallback: B-Sides crate (loop)
     const gc = setsData.sets.find(s => s.id === "guy-crate");
-    if (gc && gc.tracks.length > 0 && ctx.type !== "bsides") {
+    if (gc && gc.tracks.length > 0) {
       playbackContextRef.current = { type: "bsides", id: "guy-crate", tracks: gc.tracks, currentIndex: 0 };
       playTrack(gc.tracks[0]);
     }
@@ -1046,6 +1073,7 @@ export function FabricProvider({ children }) {
         publishedSets,
         publishSet,
         unpublishSet,
+        featuredCratesRef,
         musicMessages,
         musicChatOpen,
         musicStreaming,

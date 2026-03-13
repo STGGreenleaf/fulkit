@@ -7,6 +7,7 @@ import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 // LogoMark removed — using text wordmark to match other pages
 import Tooltip from "../../components/Tooltip";
+import MessageRenderer from "../../components/MessageRenderer";
 import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
 
@@ -1466,6 +1467,7 @@ export default function FabricPage() {
     publishedSets,
     publishSet,
     unpublishSet,
+    featuredCratesRef,
     musicMessages,
     musicChatOpen,
     musicStreaming,
@@ -1709,6 +1711,19 @@ export default function FabricPage() {
   }, [accessToken]);
 
   useEffect(() => { loadCrates(); }, [loadCrates]);
+
+  // Keep featured crates ref in sync for autoAdvance fallback
+  useEffect(() => {
+    if (featuredCratesRef) {
+      featuredCratesRef.current = crates.map(c => ({
+        ...c,
+        tracks: (c.tracks || []).map(t => ({
+          id: t.spotify_id, title: t.title, artist: t.artist,
+          duration: Math.round((t.duration_ms || 0) / 1000),
+        })),
+      }));
+    }
+  }, [crates, featuredCratesRef]);
 
   // Import a Spotify playlist as a crate
   const importPlaylist = useCallback(async (pl) => {
@@ -2403,12 +2418,28 @@ export default function FabricPage() {
                             color: msg.role === "user" ? "var(--color-text-muted)" : "var(--color-text)",
                             fontStyle: msg.role === "user" ? "italic" : "normal",
                             lineHeight: msg.role === "assistant" ? "var(--line-height-relaxed)" : 1.4,
-                            whiteSpace: "pre-wrap",
+                            whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
                           }}>
                             {msg.role === "assistant" ? (() => {
                               const lines = msg.content.split("\n");
                               const elements = [];
                               let songBlock = [];
+
+                              let textBuffer = "";
+                              let textBufferStart = null;
+
+                              const flushText = () => {
+                                if (!textBuffer.trim()) { textBuffer = ""; textBufferStart = null; return; }
+                                elements.push(
+                                  <MessageRenderer
+                                    key={`text-${textBufferStart}`}
+                                    content={textBuffer.trim()}
+                                    compact
+                                  />
+                                );
+                                textBuffer = "";
+                                textBufferStart = null;
+                              };
 
                               const flushSongs = () => {
                                 if (songBlock.length === 0) return;
@@ -2529,22 +2560,6 @@ export default function FabricPage() {
                                 songBlock = [];
                               };
 
-                              // Helper: parse **bold** and *italic* in a text string
-                              const parseInline = (text, keyPrefix) => {
-                                const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
-                                const parts = [];
-                                let last = 0;
-                                let m;
-                                while ((m = regex.exec(text)) !== null) {
-                                  if (m.index > last) parts.push(text.slice(last, m.index));
-                                  if (m[1]) parts.push(<strong key={`${keyPrefix}-b-${m.index}`} style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{m[1]}</strong>);
-                                  else if (m[2]) parts.push(<em key={`${keyPrefix}-i-${m.index}`}>{m[2]}</em>);
-                                  last = m.index + m[0].length;
-                                }
-                                if (last < text.length) parts.push(text.slice(last));
-                                return parts.length > 0 ? parts : text;
-                              };
-
                               // Pre-scan: collect all songs in the message for the mixtape header button
                               const allMsgSongs = [];
                               lines.forEach((line) => {
@@ -2565,6 +2580,7 @@ export default function FabricPage() {
                                 const songMatch = line.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/);
                                 const hasSongSignal = /\d+\s*BPM|\[\+\]|♪/.test(line);
                                 if (songMatch && hasSongSignal) {
+                                  if (songBlock.length === 0) flushText(); // flush prose before first song
                                   const cleanTitle = songMatch[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").trim();
                                   songBlock.push({
                                     artist: songMatch[1].trim(),
@@ -2577,6 +2593,7 @@ export default function FabricPage() {
 
                                 // Separator line (--- or ═══ etc.)
                                 if (/^[-–—═]{3,}\s*$/.test(line.trim())) {
+                                  flushText();
                                   elements.push(<div key={li} style={{ borderTop: "1px solid var(--color-border-light)", margin: "var(--space-1-5) 0" }} />);
                                   return;
                                 }
@@ -2584,6 +2601,7 @@ export default function FabricPage() {
                                 // Mixtape title: ALL CAPS line with — (e.g. "STILL WATER — a mixtape")
                                 const titleMatch = line.match(/^([A-Z][A-Z\s]+)\s*[—–-]\s*(.+)$/);
                                 if (titleMatch && allMsgSongs.length > 1) {
+                                  flushText();
                                   elements.push(
                                     <div key={li} style={{
                                       display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -2630,21 +2648,22 @@ export default function FabricPage() {
                                   return;
                                 }
 
-                                // Empty line → paragraph break
+                                // Empty line → accumulate in text buffer (react-markdown handles paragraph breaks)
                                 if (!line.trim()) {
-                                  elements.push(<div key={li} style={{ height: "var(--space-2)" }} />);
+                                  textBuffer += "\n";
                                   return;
                                 }
 
                                 // Album/artist links: {Display}[album: query] or {Display}[artist: query]
                                 const linkRegex = /\{(.+?)\}\[(album|artist):\s*(.+?)\]/g;
                                 if (linkRegex.test(line)) {
+                                  flushText();
                                   linkRegex.lastIndex = 0;
                                   const parts = [];
                                   let lastIndex = 0;
                                   let match;
                                   while ((match = linkRegex.exec(line)) !== null) {
-                                    if (match.index > lastIndex) parts.push(parseInline(line.slice(lastIndex, match.index), `${li}-t`));
+                                    if (match.index > lastIndex) parts.push(line.slice(lastIndex, match.index));
                                     parts.push(
                                       <button
                                         key={`${li}-${match.index}`}
@@ -2669,59 +2688,18 @@ export default function FabricPage() {
                                     );
                                     lastIndex = match.index + match[0].length;
                                   }
-                                  if (lastIndex < line.length) parts.push(parseInline(line.slice(lastIndex), `${li}-e`));
+                                  if (lastIndex < line.length) parts.push(line.slice(lastIndex));
                                   elements.push(<div key={li}>{parts}</div>);
                                   return;
                                 }
 
-                                // List items (- or •)
-                                const listMatch = line.match(/^[\s]*[-•]\s+(.+)/);
-                                if (listMatch) {
-                                  elements.push(
-                                    <div key={li} style={{
-                                      paddingLeft: "var(--space-3)",
-                                      textIndent: "-var(--space-2)",
-                                      lineHeight: "var(--line-height-relaxed)",
-                                      marginBottom: "var(--space-1)",
-                                    }}>
-                                      <span style={{ color: "var(--color-text-dim)", marginRight: "var(--space-1)" }}>·</span>
-                                      {parseInline(listMatch[1], li)}
-                                    </div>
-                                  );
-                                  return;
-                                }
-
-                                // Numbered items (1. 2. 3.)
-                                const numMatch = line.match(/^(\d+)[.)]\s+(.+)/);
-                                if (numMatch) {
-                                  elements.push(
-                                    <div key={li} style={{
-                                      display: "flex",
-                                      gap: "var(--space-1-5)",
-                                      lineHeight: "var(--line-height-relaxed)",
-                                      marginBottom: "var(--space-1)",
-                                    }}>
-                                      <span style={{
-                                        fontFamily: "var(--font-mono)",
-                                        fontSize: "var(--font-size-2xs)",
-                                        color: "var(--color-text-dim)",
-                                        flexShrink: 0,
-                                        marginTop: 1,
-                                      }}>{numMatch[1]}.</span>
-                                      <span style={{ textWrap: "pretty" }}>{parseInline(numMatch[2], li)}</span>
-                                    </div>
-                                  );
-                                  return;
-                                }
-
-                                // Regular text — with inline parsing and orphan control
-                                elements.push(
-                                  <div key={li} style={{ textWrap: "pretty", marginBottom: "var(--space-1-5)" }}>
-                                    {parseInline(line, li)}
-                                  </div>
-                                );
+                                // List items, numbered items, and regular text → accumulate in buffer
+                                // react-markdown handles lists, bold, italic, tables, headers natively
+                                textBuffer += line + "\n";
+                                if (textBufferStart === null) textBufferStart = li;
                               });
                               flushSongs();
+                              flushText();
                               return elements;
                             })() : msg.content}
                           </div>

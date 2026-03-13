@@ -10,6 +10,7 @@ import { useAuth } from "../../lib/auth";
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 import { extractArtifacts, writeBackLocal, writeBackSupabase } from "../../lib/vault-writeback";
+import MessageRenderer from "../../components/MessageRenderer";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -298,88 +299,89 @@ export default function Chat() {
     setStreaming(true);
     setRecallResults(null);
 
-    // Ensure conversation exists + save user message
-    const convId = await ensureConversation(text);
-    const userMsgId = await saveMessage(convId, "user", text);
-    if (userMsgId) {
-      setMessages((prev) =>
-        prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: userMsgId } : m))
-      );
-    }
-
-    // Add empty assistant message that we'll stream into
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-    // Assemble vault context from user's chosen source + recalled notes
-    let context = [];
-    if (isReady) {
-      const result = await getContextWithMeta(text);
-      context = result.selected;
-      setContextMeta(result.metadata);
-    }
-    // Append recalled notes (deduplicated by title)
-    for (const rn of recalledNotes) {
-      if (!context.find((c) => c.title === rn.title)) {
-        context.push({ title: rn.title, content: rn.content });
-      }
-    }
-    // Append attached files as ephemeral context + auto-save as notes
-    for (const af of attachedFiles) {
-      context.push({ title: af.name, content: af.content });
-    }
-    if (attachedFiles.length > 0 && user) {
-      for (const af of attachedFiles) {
-        const noteTitle = af.name.replace(/\.[^.]+$/, "");
-        // Dedup: check if a note with same title + source already exists
-        const { data: existing } = await supabase
-          .from("notes")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("title", noteTitle)
-          .eq("source", "chat-upload")
-          .maybeSingle();
-        if (existing) {
-          // Update existing note content instead of creating a duplicate
-          supabase.from("notes").update({
-            content: af.content,
-            updated_at: new Date().toISOString(),
-          }).eq("id", existing.id);
-        } else {
-          supabase.from("notes").insert({
-            user_id: user.id,
-            title: noteTitle,
-            content: af.content,
-            source: "chat-upload",
-            folder: "00-INBOX",
-            encrypted: false,
-            context_mode: "available",
-          });
-        }
-      }
-    }
-    setAttachedFiles([]);
-    // Append active GitHub repos as context (full recursive tree)
-    for (const repo of ghContext) {
-      const treeStr = repo.tree
-        .filter((f) => f.type === "file")
-        .map((f) => f.path)
-        .join("\n");
-      context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
-    }
-    // Append Numbrly business context (fetched once on mount)
-    if (nblContext) {
-      context.push({ title: "Numbrly (Business Data)", content: nblContext });
-    }
-
-    // Use auth token from context (set during login)
-    const authToken = accessToken;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+    let convId = null;
     let fullResponse = "";
 
     try {
+      // Ensure conversation exists + save user message
+      convId = await ensureConversation(text);
+      const userMsgId = await saveMessage(convId, "user", text);
+      if (userMsgId) {
+        setMessages((prev) =>
+          prev.map((m, idx) => (idx === prev.length - 1 && !m.id ? { ...m, id: userMsgId } : m))
+        );
+      }
+
+      // Add empty assistant message that we'll stream into
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      // Assemble vault context from user's chosen source + recalled notes
+      let context = [];
+      if (isReady) {
+        const result = await getContextWithMeta(text);
+        context = result.selected;
+        setContextMeta(result.metadata);
+      }
+      // Append recalled notes (deduplicated by title)
+      for (const rn of recalledNotes) {
+        if (!context.find((c) => c.title === rn.title)) {
+          context.push({ title: rn.title, content: rn.content });
+        }
+      }
+      // Append attached files as ephemeral context + auto-save as notes
+      for (const af of attachedFiles) {
+        context.push({ title: af.name, content: af.content });
+      }
+      if (attachedFiles.length > 0 && user) {
+        for (const af of attachedFiles) {
+          const noteTitle = af.name.replace(/\.[^.]+$/, "");
+          // Dedup: check if a note with same title + source already exists
+          const { data: existing } = await supabase
+            .from("notes")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("title", noteTitle)
+            .eq("source", "chat-upload")
+            .maybeSingle();
+          if (existing) {
+            // Update existing note content instead of creating a duplicate
+            supabase.from("notes").update({
+              content: af.content,
+              updated_at: new Date().toISOString(),
+            }).eq("id", existing.id);
+          } else {
+            supabase.from("notes").insert({
+              user_id: user.id,
+              title: noteTitle,
+              content: af.content,
+              source: "chat-upload",
+              folder: "00-INBOX",
+              encrypted: false,
+              context_mode: "available",
+            });
+          }
+        }
+      }
+      setAttachedFiles([]);
+      // Append active GitHub repos as context (full recursive tree)
+      for (const repo of ghContext) {
+        const treeStr = repo.tree
+          .filter((f) => f.type === "file")
+          .map((f) => f.path)
+          .join("\n");
+        context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
+      }
+      // Append Numbrly business context (fetched once on mount)
+      if (nblContext) {
+        context.push({ title: "Numbrly (Business Data)", content: nblContext });
+      }
+
+      // Use auth token from context (set during login)
+      const authToken = accessToken;
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -398,7 +400,6 @@ export default function Chat() {
           copy[copy.length - 1] = { role: "assistant", content: errMsg };
           return copy;
         });
-        setStreaming(false);
         return;
       }
 
@@ -454,10 +455,18 @@ export default function Chat() {
         fullResponse = "Connection error. Try again.";
         setMessages((prev) => {
           const copy = [...prev];
-          copy[copy.length - 1] = { role: "assistant", content: fullResponse };
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant") {
+            copy[copy.length - 1] = { ...last, content: fullResponse };
+          } else {
+            copy.push({ role: "assistant", content: fullResponse });
+          }
           return copy;
         });
       }
+    } finally {
+      setStreaming(false);
+      abortRef.current = null;
     }
 
     // Save assistant response
@@ -483,10 +492,7 @@ export default function Chat() {
         }
       }
     }
-
-    setStreaming(false);
-    abortRef.current = null;
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, nblContext]);
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, getContextWithMeta, recallNotes, recalledNotes, isReady, attachedFiles, ghContext, nblContext]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -849,7 +855,7 @@ export default function Chat() {
                         padding: "var(--space-2-5) var(--space-3-5)",
                         fontSize: "var(--font-size-base)",
                         lineHeight: "var(--line-height-relaxed)",
-                        whiteSpace: "pre-wrap",
+                        whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
                         wordBreak: "break-word",
                         ...(msg.role === "user"
                           ? {
@@ -882,7 +888,9 @@ export default function Chat() {
                           ))}
                         </span>
                       ) : (
-                        typeof msg.content === "string" ? msg.content.trim() : msg.content
+                        msg.role === "assistant" && typeof msg.content === "string"
+                          ? <MessageRenderer content={msg.content.trim()} isStreaming={streaming && i === messages.length - 1} />
+                          : (typeof msg.content === "string" ? msg.content.trim() : msg.content)
                       )}
                     </div>
                     {/* Pin + Copy + Export actions — assistant messages, on hover or if pinned */}
