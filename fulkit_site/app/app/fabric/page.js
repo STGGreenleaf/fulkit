@@ -2983,6 +2983,8 @@ export default function FabricPage() {
                   <div style={{
                     borderBottom: "1px solid var(--color-border-light)",
                     padding: "var(--space-2) var(--space-3)",
+                    maxHeight: "40vh",
+                    overflowY: "auto",
                   }}>
                     {searchLoading && (
                       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
@@ -3115,7 +3117,7 @@ export default function FabricPage() {
 
                 {/* ── Discovery Tray — album tracks from BTC links ── */}
                 {(discoveryAlbum || discoveryLoading) && (
-                  <div style={{ marginBottom: "var(--space-3)" }}>
+                  <div style={{ marginBottom: "var(--space-3)", maxHeight: "40vh", overflowY: "auto" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
                       <Label>{discoveryAlbum ? discoveryAlbum.name : "Loading..."}</Label>
                       <button
