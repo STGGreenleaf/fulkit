@@ -3560,9 +3560,8 @@ export default function FabricPage() {
               {crates.filter(c => c.source !== "set").length > 0 && (
                 <div className="thin-scroll-x" style={{
                   display: "flex",
-                  gap: "var(--space-2)",
+                  gap: 0,
                   overflowX: "auto",
-                  paddingBottom: "var(--space-1)",
                 }}>
                   {crates.filter(c => c.source !== "set").map((crate, crateIdx) => {
                     const isOpen = expandedCrate === crate.id;
@@ -3580,7 +3579,7 @@ export default function FabricPage() {
                         style={{
                           position: "relative",
                           flexShrink: 0,
-                          borderLeft: isCrateDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
+                          borderLeft: isCrateDragTarget ? "2px solid var(--color-text)" : "none",
                           cursor: "grab",
                         }}
                       >
@@ -3599,8 +3598,10 @@ export default function FabricPage() {
                           style={{
                             padding: "var(--space-1-5) var(--space-2)",
                             minWidth: 80,
+                            width: 90,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                            border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
+                            border: "none",
+                            borderRight: "1px solid var(--color-border-light)",
                             borderRadius: 0,
                             cursor: "pointer",
                             fontFamily: "var(--font-primary)",
@@ -3680,7 +3681,7 @@ export default function FabricPage() {
                 <div style={{
                   borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
-                  marginBottom: guyCrateCollapsed ? 0 : "var(--space-2)",
+                  marginBottom: 0,
                   flex: guyCrateCollapsed ? "none" : 1,
                   minHeight: 0,
                   display: "flex",
