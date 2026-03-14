@@ -2521,7 +2521,7 @@ export default function FabricPage() {
                   {/* RSG chat drawer */}
                   {musicChatOpen && (
                     <div style={{ borderTop: "1px solid var(--color-border-light)", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", minHeight: 0, maxHeight: "60vh", overflowY: "auto" }}>
+                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", minHeight: 0, maxHeight: "45vh", overflowY: "auto" }}>
                         {musicMessages.length === 0 && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
                             {tickerFact || "Ask me anything about music..."}
