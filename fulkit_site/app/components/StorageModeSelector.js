@@ -8,24 +8,24 @@ const MODES = [
   {
     id: "local",
     icon: HardDrive,
-    title: "The Phone Call",
-    subtitle: "Local-first",
-    description: "Your vault stays on your machine. Fulkit reads it, responds, and forgets. Nothing stored on our servers.",
+    title: "Burn After Reading",
+    subtitle: "Zero trust required",
+    description: "Your stuff stays on your machine. We read it, help out, and forget we were ever there.",
     requiresFSA: true,
   },
   {
     id: "encrypted",
     icon: Lock,
     title: "The Locked Safe",
-    subtitle: "Encrypted sync",
-    description: "Notes encrypted in your browser with a passphrase only you know. We hold ciphertext we can't read.",
+    subtitle: "Trust, but verify",
+    description: "We hold an encrypted box we can\u2019t open. You keep the only key. Sleep well.",
   },
   {
     id: "fulkit",
     icon: Cloud,
     title: "Your Shelf",
-    subtitle: "Fulkit storage",
-    description: "Notes stored in Fulkit, encrypted at rest. Simplest setup. Full control — view, edit, delete, export anytime.",
+    subtitle: "Full trust",
+    description: "Your shelf at our place. Encrypted, organized, yours. Walk in and grab anything, anytime.",
   },
 ];
 
@@ -43,7 +43,7 @@ export default function StorageModeSelector() {
             marginBottom: "var(--space-1)",
           }}
         >
-          Where does your brain live?
+          How much do you trust us?
         </h3>
         <p
           style={{
@@ -52,7 +52,7 @@ export default function StorageModeSelector() {
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          Choose how Fulkit accesses your notes. You can switch anytime.
+          Honest question. Pick what feels right — you can always change it.
         </p>
       </div>
 
