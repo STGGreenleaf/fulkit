@@ -2712,7 +2712,7 @@ function BillingTab() {
   const isDev = user?.isDev;
 
   const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
-  const seatType = isDev ? "standard" : (profile?.seat_type || "standard");
+  const seatType = isDev ? "standard" : (profile?.seat_type || "free");
   const seatLimit = SEAT_LIMITS[seatType] || 450;
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
   const remaining = seatLimit - messagesUsed;

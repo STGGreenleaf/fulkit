@@ -116,7 +116,7 @@
 
 - [ ] Set up Stripe integration (subscriptions + one-time purchases)
 - [x] Fül counting — message tracking + dashboard gauge (Standard 450/mo, Pro 800/mo)
-- [ ] Fül cap enforcement — reject chat when limit exceeded (counting done, gate missing)
+- [x] Fül cap enforcement — monthly reset, client gate, low-fuel warning, gauge colors, Bestie voice
 - [ ] "Fül up" prompt when empty — buy credits ($2/100 messages)
 - [ ] Hot seat mechanic — 4 msgs/month threshold, 30-day auto-revoke
 - [ ] Referral credit system — $1/mo per active referral (credits not cash)
@@ -156,7 +156,11 @@
 
 ## Prelaunch
 
-- [x] Fabric auto-analyze (dev) — Mac launchd cron, every 5 min, processes pending tracks
+- [x] Fül cap enforcement — monthly reset, client gate, gauge colors, Bestie voice copy
+- [ ] Stripe integration — subscriptions (Standard $7/mo, Pro $15/mo), webhook → flip seat_type, checkout/portal flow
+- [ ] Free trial flow — 30 days free (100 msgs/mo, all features), auto-prompt to subscribe at expiry
+- [ ] handle_new_user trigger — set seat_type='free' explicitly on signup (currently NULL → defaults to free via code)
+- [ ] Fabric auto-analyze (dev) — Mac launchd cron, every 5 min, processes pending tracks
 - [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg, daemon watches for pending tracks. Shared DB = analyze once, serve all users.
 - [ ] Public mixes — ensure all tracks in a crate are analyzed before it can be published
 - [ ] Spotify App — request Extended Quota Mode (currently Development Mode, only Collin's account)

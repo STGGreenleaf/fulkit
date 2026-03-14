@@ -95,7 +95,7 @@ export default function Dashboard() {
   }, [accessToken, isDev]);
 
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
-  const seatLimit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+  const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
   const gaugeRemaining = seatLimit - messagesUsed;
   const gaugeLow = gaugeRemaining <= Math.ceil(seatLimit * 0.1);
   const gaugeCapped = gaugeRemaining <= 0;

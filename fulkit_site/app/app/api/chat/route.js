@@ -1915,11 +1915,11 @@ export async function POST(request) {
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
       const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
-      const limit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+      const limit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
         return Response.json({
-          error: `You've used all ${limit} messages this month. Upgrade your plan or add a BYOK key to keep chatting.`,
+          error: `You burned through all ${limit} messages this month. Drop in your own API key to keep going — unlimited, no cap.`,
         }, { status: 429 });
       }
     }
