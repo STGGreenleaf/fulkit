@@ -2587,19 +2587,18 @@ export default function FabricPage() {
                                         onDragStart={() => { crossDragTrack.current = { id: s.trackId, title: s.title, artist: s.artist }; }}
                                         onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                                         style={{
-                                        fontFamily: "var(--font-mono)",
-                                        fontSize: "var(--font-size-2xs)",
-                                        letterSpacing: "var(--letter-spacing-wide)",
+                                        fontFamily: "var(--font-primary)",
+                                        fontSize: "var(--font-size-xs)",
                                         lineHeight: "var(--line-height-snug)",
                                         padding: "var(--space-1) 0",
                                         cursor: "grab",
                                       }}>
                                         {/* Line 1: Artist */}
-                                        <div style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
+                                        <div style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                                           {s.artist}
                                         </div>
                                         {/* Line 2: - Song title */}
-                                        <div style={{ color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                                        <div style={{ fontWeight: "var(--font-weight-normal)", color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
                                           - {s.title}
                                         </div>
                                         {/* Line 3: BPM left, Play + Save right */}
