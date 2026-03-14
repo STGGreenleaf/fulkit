@@ -452,19 +452,9 @@ export function FabricProvider({ children }) {
       persistSets(next);
       // Mark adoption via ref (history state declared below, accessed via flagAdoptionRef)
       if (!wasInSet && activeSet) flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
-      // Save to Spotify Liked Songs (fire-and-forget)
-      if (!wasInSet && !isDev) {
-        const spotifyId = track.spotifyId || (track.id && !track.id.startsWith("btc-") ? track.id : null);
-        if (spotifyId) {
-          apiFetch("/api/fabric/controls", {
-            method: "POST",
-            body: JSON.stringify({ action: "save_track", value: { id: spotifyId } }),
-          }).catch(() => {});
-        }
-      }
       return next;
     });
-  }, [persistSets, isDev, apiFetch]);
+  }, [persistSets]);
 
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),

@@ -2286,13 +2286,25 @@ export default function FabricPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 {/* Flag — circled */}
                 <button
-                  onClick={() => currentTrack && flag(currentTrack)}
+                  onClick={() => {
+                    if (!currentTrack) return;
+                    flag(currentTrack);
+                    // Save to Spotify Liked Songs
+                    const spotifyId = currentTrack.spotifyId || (currentTrack.id && !currentTrack.id.startsWith("btc-") ? currentTrack.id : null);
+                    if (spotifyId && !isFlagged(currentTrack.id)) {
+                      fetch("/api/fabric/controls", {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${accessToken}` },
+                        body: JSON.stringify({ action: "save_track", value: { id: spotifyId } }),
+                      }).catch(() => {});
+                    }
+                  }}
                   style={{
                     width: 32,
                     height: 32,
                     borderRadius: "var(--radius-full)",
-                    background: currentTrack && isFlagged(currentTrack?.id) ? "var(--color-text)" : "transparent",
-                    border: currentTrack && isFlagged(currentTrack?.id) ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
+                    background: "transparent",
+                    border: "1px solid var(--color-border)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -2302,11 +2314,10 @@ export default function FabricPage() {
                     transition: "all 150ms",
                   }}
                 >
-                  {currentTrack && isFlagged(currentTrack?.id) ? (
-                    <ThumbsUp size={14} strokeWidth={2.2} fill="var(--color-text-inverse)" color="var(--color-text-inverse)" />
-                  ) : (
-                    <ThumbsUp size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
-                  )}
+                  <ThumbsUp size={14} strokeWidth={2.2}
+                    fill={currentTrack && isFlagged(currentTrack?.id) ? "var(--color-text)" : "none"}
+                    color={currentTrack && isFlagged(currentTrack?.id) ? "var(--color-text)" : "var(--color-text-muted)"}
+                  />
                 </button>
 
                 {/* Prev — bare */}
@@ -3192,18 +3203,19 @@ export default function FabricPage() {
                               }); }}
                               style={{
                                 background: "none",
-                                border: "none",
+                                border: `1px solid ${isActive ? "rgba(255,255,255,0.25)" : "var(--color-border)"}`,
+                                borderRadius: "var(--radius-sm)",
                                 cursor: "pointer",
-                                padding: "0 2px",
+                                padding: "0 3px",
+                                fontSize: 8,
+                                fontFamily: "var(--font-mono)",
                                 color: isActive
                                   ? "var(--color-text-inverse)"
                                   : isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
                                 flexShrink: 0,
-                                display: "flex",
-                                alignItems: "center",
                               }}
                             >
-                              <ThumbsUp size={10} strokeWidth={2} fill={isFlagged(track.spotify_id) ? "currentColor" : "none"} />
+                              {isFlagged(track.spotify_id) ? "✓" : "+"}
                             </button>
                           </div>
                           );
@@ -3735,7 +3747,7 @@ export default function FabricPage() {
                               onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-muted)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
-                              <ThumbsUp size={12} strokeWidth={2} fill={inSet ? "currentColor" : "none"} />
+                              {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); removeFromGuyCrate(track.id); }}
@@ -4005,7 +4017,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            <ThumbsUp size={12} strokeWidth={2} fill={trackFlagged ? "currentColor" : "none"} />
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                           </button>
                         </div>
                       );
@@ -4130,7 +4142,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            <ThumbsUp size={12} strokeWidth={2} fill={trackFlagged ? "currentColor" : "none"} />
+                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
                           </button>
                         </div>
                       );
@@ -4400,7 +4412,7 @@ export default function FabricPage() {
                                     color: "var(--color-text-dim)", display: "flex", flexShrink: 0, opacity: 0.5,
                                   }}
                                 >
-                                  <ThumbsUp size={10} strokeWidth={1.8} fill={isFlagged(track.id) ? "currentColor" : "none"} />
+                                  <ListX size={10} strokeWidth={1.8} />
                                 </button>
                               </div>
                             );

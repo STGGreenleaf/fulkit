@@ -136,7 +136,10 @@ export default function MiniPlayer({ compact }) {
               transition: "all 150ms",
             }}
           >
-            <ThumbsUp size={IC_SM} strokeWidth={STROKE} fill={flaggedNow ? "var(--color-text-inverse)" : "none"} color={flaggedNow ? "var(--color-text-inverse)" : "var(--color-text-muted)"} />
+            {flaggedNow
+              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
+              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+            }
           </button>
 
           {/* Prev — bare */}
@@ -222,7 +225,10 @@ export default function MiniPlayer({ compact }) {
               transition: "all 150ms",
             }}
           >
-            <ThumbsUp size={IC_SM} strokeWidth={STROKE} fill={flaggedNow ? "var(--color-text-inverse)" : "none"} color={flaggedNow ? "var(--color-text-inverse)" : "var(--color-text-muted)"} />
+            {flaggedNow
+              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
+              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+            }
           </button>
 
           {/* Prev — bare */}
