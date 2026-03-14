@@ -64,11 +64,23 @@ function makeHistoryDefaults() {
   return { addedAt: Date.now(), kept: true, removedAt: null, adopted: false, adoptedTo: null, playCount: 0, totalListenPct: 0, lastPlayedAt: null, skipCount: 0, score: 0 };
 }
 
+// URI helpers — build provider-specific URIs from track data
+function makeTrackUri(id, provider = "spotify") {
+  if (provider === "spotify") return `spotify:track:${id}`;
+  return null;
+}
+
+function makePlaylistUri(id, provider = "spotify") {
+  if (provider === "spotify") return `spotify:playlist:${id}`;
+  return null;
+}
+
 export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
 
   const [connected, setConnected] = useState(isDev ? true : false);
+  const [connectedProviders, setConnectedProviders] = useState(isDev ? { spotify: true } : {});
   const [statusChecked, setStatusChecked] = useState(isDev ? true : false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
@@ -202,17 +214,22 @@ export function FabricProvider({ children }) {
   const pollSuppressedUntil = useRef(0);
   const playInFlightRef = useRef(null);
 
-  // Reconnect: redirect to Spotify OAuth
-  const reconnectSpotify = useCallback(() => {
+  // Reconnect: redirect to provider OAuth
+  const reconnect = useCallback((providerName = "spotify") => {
     if (!accessToken) return;
-    window.location.href = `/api/fabric/connect?token=${accessToken}`;
+    window.location.href = `/api/fabric/connect?token=${accessToken}&provider=${providerName}`;
   }, [accessToken]);
+  // Backward compat alias
+  const reconnectSpotify = reconnect;
 
   // Check connection status
   useEffect(() => {
     if (isDev || !accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
-      if (data) setConnected(data.connected);
+      if (data) {
+        setConnected(data.connected);
+        if (data.providers) setConnectedProviders(data.providers);
+      }
       setStatusChecked(true);
     }).catch(() => setStatusChecked(true));
   }, [accessToken, isDev, apiFetch]);
@@ -263,7 +280,7 @@ export function FabricProvider({ children }) {
               const nextIdx = ctx.currentIndex + 1;
               if (nextIdx < ctx.tracks.length) {
                 const nextTrack = ctx.tracks[nextIdx];
-                if (nextTrack.id === data.track.id || nextTrack.uri === `spotify:track:${data.track.id}`) {
+                if (nextTrack.id === data.track.id || nextTrack.uri === makeTrackUri(data.track.id, data.track.provider)) {
                   ctx.currentIndex = nextIdx;
                   queuedNextRef.current = null;
                   autoAdvanceTriggered.current = false;
@@ -408,7 +425,7 @@ export function FabricProvider({ children }) {
       setIsPlaying(true);
       apiFetch("/api/fabric/controls", {
         method: "POST",
-        body: JSON.stringify({ action: "play_track", value: { uri: saved.uri || `spotify:track:${saved.id}` } }),
+        body: JSON.stringify({ action: "play_track", value: { uri: saved.uri || makeTrackUri(saved.id, saved.provider) } }),
       });
       return;
     }
@@ -791,7 +808,7 @@ export function FabricProvider({ children }) {
     if (isDev) return;
 
     // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
-    let uri = track.uri || (track.id.startsWith("btc-") ? null : `spotify:track:${track.id}`);
+    let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
     if (!uri && track.artist && track.title) {
       try {
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
@@ -801,7 +818,7 @@ export function FabricProvider({ children }) {
           uri = match.uri;
           // Cache so we don't search again
           track.uri = uri;
-          if (match.spotify_id) track.id = match.spotify_id;
+          if (match.source_id) track.id = match.source_id;
           if (match.image) track.art = match.image;
           // Update currentTrack state so player shows resolved art + ID
           setCurrentTrack((cur) => (cur && cur.uri === uri) ? cur : { ...track });
@@ -867,7 +884,7 @@ export function FabricProvider({ children }) {
     if (nextIdx >= ctx.tracks.length) return;
 
     const nextTrack = ctx.tracks[nextIdx];
-    let uri = nextTrack.uri || (nextTrack.id.startsWith("btc-") ? null : `spotify:track:${nextTrack.id}`);
+    let uri = nextTrack.uri || (nextTrack.id.startsWith("btc-") ? null : makeTrackUri(nextTrack.id, nextTrack.provider));
 
     // Resolve btc-* tracks via search
     if (!uri && nextTrack.artist && nextTrack.title) {
@@ -876,7 +893,7 @@ export function FabricProvider({ children }) {
         if (data?.tracks?.[0]) {
           uri = data.tracks[0].uri;
           nextTrack.uri = uri;
-          if (data.tracks[0].spotify_id) nextTrack.id = data.tracks[0].spotify_id;
+          if (data.tracks[0].source_id) nextTrack.id = data.tracks[0].source_id;
         }
       } catch {}
     }
@@ -966,7 +983,7 @@ export function FabricProvider({ children }) {
       body: JSON.stringify({
         action: "play_context",
         value: {
-          context_uri: `spotify:playlist:${playlistId}`,
+          context_uri: makePlaylistUri(playlistId),
           ...(startTrackUri ? { offset: { uri: startTrackUri } } : {}),
         },
       }),
@@ -1010,7 +1027,7 @@ export function FabricProvider({ children }) {
       body: JSON.stringify({
         name: set.name,
         tracks: set.tracks.map((t, i) => ({
-          spotify_id: t.id,
+          source_id: t.id,
           title: t.title,
           artist: t.artist,
           duration_ms: t.duration_ms || (t.duration ? t.duration * 1000 : 0),
@@ -1231,7 +1248,9 @@ export function FabricProvider({ children }) {
         tickerFact,
         sendMusicMessage,
         toggleMusicChat,
+        reconnect,
         reconnectSpotify,
+        connectedProviders,
       }}
     >
       {children}

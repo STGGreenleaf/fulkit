@@ -44,7 +44,7 @@ export async function POST(request) {
     // Insert tracks with positions
     const crateTracksData = tracks.map((t, i) => ({
       crate_id: crate.id,
-      spotify_id: t.spotify_id,
+      source_id: t.source_id,
       position: t.position ?? i,
       title: t.title || "Unknown",
       artist: t.artist || "Unknown",

@@ -12,11 +12,11 @@ export async function GET(request) {
 
     const db = getSupabaseAdmin();
 
-    // Look up track by spotify_id
+    // Look up track by source_id
     const { data: track, error: trackErr } = await db
       .from("fabric_tracks")
       .select("id, status, bpm, key, energy, valence, danceability, loudness, acousticness")
-      .eq("spotify_id", spotifyId)
+      .eq("source_id", spotifyId)
       .maybeSingle();
 
     if (trackErr) {

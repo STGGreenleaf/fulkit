@@ -1,10 +1,13 @@
-// Server-side Fabric helpers — token management + API wrapper (Spotify backend)
+// Server-side Fabric helpers — provider dispatcher + auth
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { SpotifyProvider } from "./providers/spotify";
 
-const SPOTIFY_API = "https://api.spotify.com/v1";
-const TOKEN_URL = "https://accounts.spotify.com/api/token";
+// Provider registry — add new providers here
+const PROVIDERS = {
+  spotify: SpotifyProvider,
+};
 
 // Authenticate user from Bearer token
 export async function authenticateUser(request) {
@@ -16,90 +19,44 @@ export async function authenticateUser(request) {
   return user.id;
 }
 
-// Get Spotify tokens from integrations table
+// Get a specific provider instance by name
+export function getProvider(userId, providerName = "spotify") {
+  const Provider = PROVIDERS[providerName];
+  if (!Provider) return null;
+  return new Provider(userId);
+}
+
+// Get ALL connected providers for this user
+export async function getConnectedProviders(userId) {
+  const { data: integrations } = await getSupabaseAdmin()
+    .from("integrations")
+    .select("provider")
+    .eq("user_id", userId)
+    .in("provider", Object.keys(PROVIDERS));
+
+  const connected = {};
+  for (const row of (integrations || [])) {
+    const Provider = PROVIDERS[row.provider];
+    if (Provider) connected[row.provider] = new Provider(userId);
+  }
+  return connected;
+}
+
+// Get the provider for a specific track (by its provider field)
+export function getTrackProvider(userId, track) {
+  return getProvider(userId, track?.provider || "spotify");
+}
+
+// ═══ Backward compatibility ═══
+// These wrap the Spotify provider for routes that haven't been updated yet.
+// Will be removed once all routes use provider methods directly.
+
 export async function getFabricToken(userId) {
-  const { data } = await getSupabaseAdmin()
-    .from("integrations")
-    .select("access_token, metadata")
-    .eq("user_id", userId)
-    .eq("provider", "spotify")
-    .single();
-  return data || null;
+  const provider = getProvider(userId, "spotify");
+  return provider._getIntegration();
 }
 
-// Refresh expired access token
-async function refreshToken(userId, refreshTokenStr) {
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${Buffer.from(
-        `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-      ).toString("base64")}`,
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshTokenStr,
-    }),
-  });
-
-  const data = await res.json();
-  if (data.error || !data.access_token) {
-    console.error("[spotify] Token refresh failed:", data.error);
-    return null;
-  }
-
-  // Update DB
-  await getSupabaseAdmin()
-    .from("integrations")
-    .update({
-      access_token: data.access_token,
-      metadata: { refresh_token: data.refresh_token || refreshTokenStr, expires_at: Date.now() + data.expires_in * 1000 },
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId)
-    .eq("provider", "spotify");
-
-  return data.access_token;
-}
-
-// Fetch from Spotify API with auto-refresh
 export async function fabricFetch(userId, endpoint, options = {}) {
-  const integration = await getFabricToken(userId);
-  if (!integration) return { error: "Not connected", status: 401 };
-
-  let token = integration.access_token;
-
-  // Check if token is expired (with 60s buffer)
-  const expiresAt = integration.metadata?.expires_at || 0;
-  if (Date.now() > expiresAt - 60000) {
-    token = await refreshToken(userId, integration.metadata?.refresh_token);
-    if (!token) return { error: "Token refresh failed", status: 401 };
-  }
-
-  const res = await fetch(`${SPOTIFY_API}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-  // If 401, try one more refresh
-  if (res.status === 401) {
-    token = await refreshToken(userId, integration.metadata?.refresh_token);
-    if (!token) return { error: "Token expired", status: 401 };
-    const retry = await fetch(`${SPOTIFY_API}${endpoint}`, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-    return retry;
-  }
-
-  return res;
+  const provider = getProvider(userId, "spotify");
+  return provider._fetch(endpoint, options);
 }

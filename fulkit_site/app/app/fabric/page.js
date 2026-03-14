@@ -1664,14 +1664,14 @@ export default function FabricPage() {
   const filteredPlaylists = useMemo(() => {
     if (!visiblePlaylistIds) {
       // Default: only show playlists already imported as crates
-      return playlists.filter(pl => crates.some(c => c.source_spotify_id === pl.id));
+      return playlists.filter(pl => crates.some(c => c.source_playlist_id === pl.id));
     }
     return playlists.filter(pl => visiblePlaylistIds.includes(pl.id));
   }, [playlists, visiblePlaylistIds, crates]);
 
   const togglePlaylistVisibility = useCallback((playlistId) => {
     setVisiblePlaylistIds(prev => {
-      const current = prev || playlists.filter(pl => crates.some(c => c.source_spotify_id === pl.id)).map(pl => pl.id);
+      const current = prev || playlists.filter(pl => crates.some(c => c.source_playlist_id === pl.id)).map(pl => pl.id);
       const next = current.includes(playlistId)
         ? current.filter(id => id !== playlistId)
         : [...current, playlistId];
@@ -1853,7 +1853,7 @@ export default function FabricPage() {
       featuredCratesRef.current = crates.map(c => ({
         ...c,
         tracks: (c.tracks || []).map(t => ({
-          id: t.spotify_id, title: t.title, artist: t.artist,
+          id: t.source_id, title: t.title, artist: t.artist,
           duration: Math.round((t.duration_ms || 0) / 1000),
         })),
       }));
@@ -3076,11 +3076,11 @@ export default function FabricPage() {
                           <div style={{ marginBottom: "var(--space-2)" }}>
                             <Label style={{ marginBottom: "var(--space-1)" }}>Top Tracks</Label>
                             {searchResults.topTracks.slice(0, 10).map((track, ti) => {
-                              const isActive = currentTrack?.id === track.spotify_id;
+                              const isActive = currentTrack?.id === track.source_id;
                               const mins = Math.floor((track.duration_ms || 0) / 60000);
                               const secs = String(Math.floor(((track.duration_ms || 0) % 60000) / 1000)).padStart(2, "0");
                               return (
-                                <div key={track.spotify_id || ti} style={{
+                                <div key={track.source_id || ti} style={{
                                   display: "flex", alignItems: "center", gap: "var(--space-2)",
                                   padding: "var(--space-1-5) var(--space-1)",
                                   borderBottom: "1px solid var(--color-border-light)",
@@ -3089,8 +3089,8 @@ export default function FabricPage() {
                                   cursor: "pointer",
                                 }}
                                   onClick={() => {
-                                    if (track.spotify_id) {
-                                      playTrack({ id: track.spotify_id, title: track.title, artist: track.artist });
+                                    if (track.source_id) {
+                                      playTrack({ id: track.source_id, title: track.title, artist: track.artist });
                                     }
                                   }}
                                 >
@@ -3278,22 +3278,22 @@ export default function FabricPage() {
                     {discoveryTracks.length > 0 && (
                       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
                         {discoveryTracks.map((track, i) => {
-                          const isActive = currentTrack?.id === track.spotify_id;
+                          const isActive = currentTrack?.id === track.source_id;
                           return (
                           <div
-                            key={track.spotify_id || i}
+                            key={track.source_id || i}
                             draggable
-                            onDragStart={() => { crossDragTrack.current = { id: track.spotify_id, title: track.title, artist: track.artist, album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null, duration: Math.round((track.duration_ms || 0) / 1000) }; }}
+                            onDragStart={() => { crossDragTrack.current = { id: track.source_id, title: track.title, artist: track.artist, album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null, duration: Math.round((track.duration_ms || 0) / 1000) }; }}
                             onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                             onClick={() => playTrackInContext({
-                              id: track.spotify_id,
+                              id: track.source_id,
                               title: track.title,
                               artist: track.artist,
                               album: discoveryAlbum?.name || "",
                               art: discoveryAlbum?.image || null,
                               duration: Math.round((track.duration_ms || 0) / 1000),
                             }, "discovery", discoveryAlbum?.id || null, discoveryTracks.map(t => ({
-                              id: t.spotify_id, title: t.title, artist: t.artist,
+                              id: t.source_id, title: t.title, artist: t.artist,
                               album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null,
                               duration: Math.round((t.duration_ms || 0) / 1000),
                             })), i)}
@@ -3338,7 +3338,7 @@ export default function FabricPage() {
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); flag({
-                                id: track.spotify_id,
+                                id: track.source_id,
                                 title: track.title,
                                 artist: track.artist,
                                 album: discoveryAlbum?.name || "",
@@ -3353,11 +3353,11 @@ export default function FabricPage() {
                                 padding: "0 3px",
                                 fontSize: 8,
                                 fontFamily: "var(--font-mono)",
-                                color: isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
+                                color: isFlagged(track.source_id) ? "var(--color-text)" : "var(--color-text-muted)",
                                 flexShrink: 0,
                               }}
                             >
-                              {isFlagged(track.spotify_id) ? "✓" : "+"}
+                              {isFlagged(track.source_id) ? "✓" : "+"}
                             </button>
                           </div>
                           );
@@ -3424,12 +3424,12 @@ export default function FabricPage() {
                               const first = mix.tracks?.[0];
                               if (first) {
                                 playTrackInContext({
-                                  id: first.spotify_id,
+                                  id: first.source_id,
                                   title: first.title,
                                   artist: first.artist,
                                   duration: Math.round((first.duration_ms || 0) / 1000),
                                 }, "featured", mix.id, (mix.tracks || []).map(t => ({
-                                  id: t.spotify_id, title: t.title, artist: t.artist,
+                                  id: t.source_id, title: t.title, artist: t.artist,
                                   duration: Math.round((t.duration_ms || 0) / 1000),
                                 })), 0);
                               }
@@ -3577,7 +3577,7 @@ export default function FabricPage() {
                 {playlistsOpen && (
                   <div>
                     {filteredPlaylists.map((pl) => {
-                      const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
+                      const alreadyImported = crates.some(c => c.source_playlist_id === pl.id);
                       return (
                         <div
                           key={pl.id}
@@ -4001,7 +4001,7 @@ export default function FabricPage() {
                   </div>
                   <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {playlists.map(pl => {
-                      const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
+                      const alreadyImported = crates.some(c => c.source_playlist_id === pl.id);
                       const isImporting = importing === pl.id;
                       return (
                         <div key={pl.id} style={{
@@ -4110,7 +4110,7 @@ export default function FabricPage() {
                       <button
                         onClick={() => {
                           const crate = crates.find(c => c.id === expandedCrate);
-                          if (crate?.source_spotify_id) playPlaylist(crate.source_spotify_id);
+                          if (crate?.source_playlist_id) playPlaylist(crate.source_playlist_id);
                         }}
                         style={{
                           background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex",
@@ -4127,10 +4127,10 @@ export default function FabricPage() {
 
                   <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {crateTracks.map((track, i) => {
-                      const isActive = currentTrack?.id === track.spotify_id;
+                      const isActive = currentTrack?.id === track.source_id;
                       const hasFabric = track.fabric_status === "complete";
-                      const trackFlagged = isFlagged(track.spotify_id);
-                      const trackObj = { id: track.spotify_id, title: track.title, artist: track.artist, duration: Math.round((track.duration_ms || 0) / 1000) };
+                      const trackFlagged = isFlagged(track.source_id);
+                      const trackObj = { id: track.source_id, title: track.title, artist: track.artist, duration: Math.round((track.duration_ms || 0) / 1000) };
                       return (
                         <div
                           key={track.id}
@@ -4138,7 +4138,7 @@ export default function FabricPage() {
                           onDragStart={() => { crossDragTrack.current = trackObj; }}
                           onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                           onClick={() => playTrackInContext(trackObj, "crate", expandedCrate, crateTracks.map(t => ({
-                            id: t.spotify_id, title: t.title, artist: t.artist,
+                            id: t.source_id, title: t.title, artist: t.artist,
                             duration: Math.round((t.duration_ms || 0) / 1000),
                           })), i)}
                           style={{
@@ -4203,7 +4203,7 @@ export default function FabricPage() {
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); flag({
-                              id: track.spotify_id,
+                              id: track.source_id,
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),
@@ -4261,18 +4261,18 @@ export default function FabricPage() {
                   </div>
                   <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {featuredTracks.map((track, i) => {
-                      const isActive = currentTrack?.id === track.spotify_id;
-                      const trackFlagged = isFlagged(track.spotify_id);
+                      const isActive = currentTrack?.id === track.source_id;
+                      const trackFlagged = isFlagged(track.source_id);
                       return (
                         <div
                           key={track.id || i}
                           onClick={() => playTrackInContext({
-                            id: track.spotify_id,
+                            id: track.source_id,
                             title: track.title,
                             artist: track.artist,
                             duration: Math.round((track.duration_ms || 0) / 1000),
                           }, "featured", expandedFeatured, featuredTracks.map(t => ({
-                            id: t.spotify_id, title: t.title, artist: t.artist,
+                            id: t.source_id, title: t.title, artist: t.artist,
                             duration: Math.round((t.duration_ms || 0) / 1000),
                           })), i)}
                           style={{
@@ -4329,7 +4329,7 @@ export default function FabricPage() {
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); flag({
-                              id: track.spotify_id,
+                              id: track.source_id,
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),

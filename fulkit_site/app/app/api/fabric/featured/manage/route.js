@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "../../../../../lib/supabase-server";
-import { authenticateUser, fabricFetch } from "../../../../../lib/fabric-server";
+import { authenticateUser, getProvider } from "../../../../../lib/fabric-server";
 
 // POST — Create a featured crate from a Spotify playlist
 export async function POST(request) {
@@ -26,12 +26,12 @@ export async function POST(request) {
       return Response.json({ error: "playlistId required" }, { status: 400 });
     }
 
-    // Fetch playlist from Spotify
-    const playlistRes = await fabricFetch(userId, `/playlists/${playlistId}`);
-    if (!playlistRes.ok) {
-      return Response.json({ error: "Failed to fetch playlist from Spotify" }, { status: 400 });
+    // Fetch playlist via provider
+    const provider = getProvider(userId, "spotify");
+    const playlist = await provider.getPlaylistRaw(playlistId);
+    if (!playlist) {
+      return Response.json({ error: "Failed to fetch playlist" }, { status: 400 });
     }
-    const playlist = await playlistRes.json();
 
     // Create crate
     const { data: crate, error: crateErr } = await db
@@ -41,7 +41,7 @@ export async function POST(request) {
         name: name || playlist.name || "Featured",
         description: description || playlist.description || null,
         source: "spotify",
-        source_spotify_id: playlistId,
+        source_playlist_id: playlistId,
         status: "active",
         visibility: "featured",
       })
@@ -61,7 +61,7 @@ export async function POST(request) {
         if (!t || !t.id) return null;
         return {
           crate_id: crate.id,
-          spotify_id: t.id,
+          source_id: t.id,
           position: i,
           title: t.name || "Unknown",
           artist: t.artists?.map(a => a.name).join(", ") || "Unknown",
@@ -80,7 +80,7 @@ export async function POST(request) {
 
       // Also queue tracks for Fabric analysis
       const fabricInserts = crateTracks.map(t => ({
-        spotify_id: t.spotify_id,
+        source_id: t.source_id,
         title: t.title,
         artist: t.artist,
         duration_ms: t.duration_ms,
@@ -93,7 +93,7 @@ export async function POST(request) {
       for (const row of fabricInserts) {
         await db
           .from("fabric_tracks")
-          .upsert(row, { onConflict: "spotify_id", ignoreDuplicates: true });
+          .upsert({ ...row, provider: "spotify" }, { onConflict: "source_id,provider", ignoreDuplicates: true });
       }
     }
 

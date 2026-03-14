@@ -1,17 +1,18 @@
-import { authenticateUser, getFabricToken, fabricFetch } from "../../../../lib/fabric-server";
+import { authenticateUser, getConnectedProviders } from "../../../../lib/fabric-server";
 
 export async function GET(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const token = await getFabricToken(userId);
-  if (!token) return Response.json({ connected: false });
+  const providers = await getConnectedProviders(userId);
+  const results = {};
 
-  // Validate token by hitting Spotify — triggers auto-refresh if expired
-  const res = await fabricFetch(userId, "/me");
-  if (res.error || res.status === 401) {
-    return Response.json({ connected: false });
+  for (const [name, provider] of Object.entries(providers)) {
+    results[name] = await provider.validateConnection();
   }
 
-  return Response.json({ connected: true });
+  // Backward compatible: connected = true if any provider is connected
+  const connected = Object.values(results).some(v => v);
+
+  return Response.json({ connected, providers: results });
 }

@@ -28,7 +28,7 @@ export async function GET(request) {
     // Build spotify ID → reccobeats UUID map
     const idMap = {};
     for (const t of tracks) {
-      // ReccoBeats href format: https://open.spotify.com/track/<spotify_id>
+      // ReccoBeats href format: https://open.spotify.com/track/<source_id>
       const spotifyId = t.href?.split("/").pop() || spotifyIds.find((sid) => t.id);
       if (spotifyId && t.id) idMap[spotifyId] = t.id;
     }

@@ -6,7 +6,7 @@ export async function GET() {
 
     const { data: crates, error } = await db
       .from("crates")
-      .select("id, name, description, source, source_spotify_id, created_at")
+      .select("id, name, description, source, source_playlist_id, created_at")
       .eq("visibility", "featured")
       .eq("status", "active")
       .order("created_at", { ascending: false });
@@ -22,7 +22,7 @@ export async function GET() {
     if (crateIds.length > 0) {
       const { data: trackData, error: trackErr } = await db
         .from("crate_tracks")
-        .select("id, crate_id, spotify_id, position, title, artist, duration_ms, bpm, key, energy, valence")
+        .select("id, crate_id, source_id, position, title, artist, duration_ms, bpm, key, energy, valence")
         .in("crate_id", crateIds)
         .order("position", { ascending: true });
 
@@ -34,16 +34,16 @@ export async function GET() {
     }
 
     // Check which tracks have Fabric analysis
-    const spotifyIds = [...new Set(tracks.map(t => t.spotify_id))];
+    const spotifyIds = [...new Set(tracks.map(t => t.source_id))];
     let analyzedMap = {};
     if (spotifyIds.length > 0) {
       const { data: analyzed } = await db
         .from("fabric_tracks")
-        .select("spotify_id, status")
-        .in("spotify_id", spotifyIds);
+        .select("source_id, status")
+        .in("source_id", spotifyIds);
 
       for (const t of (analyzed || [])) {
-        analyzedMap[t.spotify_id] = t.status;
+        analyzedMap[t.source_id] = t.status;
       }
     }
 
@@ -54,7 +54,7 @@ export async function GET() {
         .filter(t => t.crate_id === crate.id)
         .map(t => ({
           ...t,
-          fabric_status: analyzedMap[t.spotify_id] || "unknown",
+          fabric_status: analyzedMap[t.source_id] || "unknown",
         })),
     }));
 

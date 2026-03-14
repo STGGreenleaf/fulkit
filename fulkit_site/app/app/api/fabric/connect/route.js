@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { getProvider } from "../../../../lib/fabric-server";
 import crypto from "crypto";
-
-const SCOPES = [
-  "streaming",
-  "user-read-playback-state",
-  "user-modify-playback-state",
-  "user-read-currently-playing",
-  "user-library-read",
-  "user-top-read",
-  "user-read-recently-played",
-  "playlist-read-private",
-  "playlist-modify-public",
-  "playlist-modify-private",
-].join(" ");
 
 export async function GET(request) {
   try {
@@ -35,7 +23,6 @@ export async function GET(request) {
     if (!error && data?.user) {
       user = data.user;
     } else {
-      // Token likely expired — decode JWT payload to get user ID, verify via admin
       try {
         const payloadB64 = token.split(".")[1];
         const claims = JSON.parse(Buffer.from(payloadB64, "base64").toString());
@@ -49,8 +36,9 @@ export async function GET(request) {
       }
     }
 
-    // HMAC-signed state
-    const payload = JSON.stringify({ userId: user.id, nonce: crypto.randomUUID() });
+    // HMAC-signed state (includes provider name for callback to know which provider)
+    const providerName = url.searchParams.get("provider") || "spotify";
+    const payload = JSON.stringify({ userId: user.id, provider: providerName, nonce: crypto.randomUUID() });
     const hmac = crypto.createHmac("sha256", process.env.SPOTIFY_CLIENT_SECRET);
     hmac.update(payload);
     const signature = hmac.digest("hex");
@@ -58,15 +46,13 @@ export async function GET(request) {
 
     const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/fabric/callback`;
 
-    const params = new URLSearchParams({
-      client_id: process.env.SPOTIFY_CLIENT_ID,
-      response_type: "code",
-      redirect_uri: redirectUri,
-      scope: SCOPES,
-      state,
-    });
+    const provider = getProvider(user.id, providerName);
+    if (!provider) {
+      return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=unknown_provider`, request.url));
+    }
 
-    return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
+    const authUrl = provider.getConnectUrl(redirectUri, state);
+    return NextResponse.redirect(authUrl);
   } catch (err) {
     console.error("[fabric/connect]", err.message);
     return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=server", request.url));

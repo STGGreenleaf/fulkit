@@ -1,69 +1,49 @@
-import { authenticateUser, fabricFetch } from "../../../../lib/fabric-server";
+import { authenticateUser, getProvider } from "../../../../lib/fabric-server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
 export async function GET(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const res = await fabricFetch(userId, "/me/player");
+  const provider = getProvider(userId, "spotify");
+  const result = await provider.getNowPlaying();
 
-  // No active device or nothing playing
-  if (res.status === 204 || res.status === 202) {
-    return Response.json({ isPlaying: false, track: null });
+  if (result.error) {
+    return Response.json({ error: result.error }, { status: result.status });
   }
 
-  if (res.error) {
-    return Response.json({ error: res.error }, { status: res.status });
+  if (!result.track) {
+    return Response.json({ isPlaying: result.isPlaying || false, track: null });
   }
-
-  if (!res.ok) {
-    return Response.json({ isPlaying: false, track: null });
-  }
-
-  const data = await res.json();
-
-  if (!data.item) {
-    return Response.json({ isPlaying: data.is_playing || false, track: null });
-  }
-
-  const track = {
-    id: data.item.id,
-    title: data.item.name,
-    artist: data.item.artists?.map((a) => a.name).join(", ") || "",
-    album: data.item.album?.name || "",
-    duration: Math.round((data.item.duration_ms || 0) / 1000),
-    art: data.item.album?.images?.[0]?.url || null,
-    progress: (data.progress_ms || 0) / (data.item.duration_ms || 1),
-    progressMs: data.progress_ms || 0,
-  };
 
   // Fire-and-forget: queue untracked songs + bump priority for played tracks
+  const raw = result._raw;
   const db = getSupabaseAdmin();
   db.from("fabric_tracks")
     .upsert({
-      spotify_id: data.item.id,
-      title: data.item.name,
-      artist: data.item.artists?.map(a => a.name).join(", ") || "",
-      duration_ms: data.item.duration_ms || 0,
-      isrc: data.item.external_ids?.isrc || null,
-      composite_key: `${(data.item.artists?.map(a => a.name).join(", ") || "").toLowerCase().trim()}|${(data.item.name || "").toLowerCase().trim()}|${Math.round((data.item.duration_ms || 0) / 5000) * 5}`,
+      source_id: raw.id,
+      provider: "spotify",
+      title: raw.name,
+      artist: raw.artists?.map(a => a.name).join(", ") || "",
+      duration_ms: raw.duration_ms || 0,
+      isrc: raw.isrc,
+      composite_key: `${(raw.artists?.map(a => a.name).join(", ") || "").toLowerCase().trim()}|${(raw.name || "").toLowerCase().trim()}|${Math.round((raw.duration_ms || 0) / 5000) * 5}`,
       status: "pending",
       priority: 1,
-    }, { onConflict: "spotify_id", ignoreDuplicates: true })
+    }, { onConflict: "source_id,provider", ignoreDuplicates: true })
     .then(() => {})
     .catch(() => {});
-  // Also bump priority if track exists but is still pending
   db.from("fabric_tracks")
     .update({ priority: 1 })
-    .eq("spotify_id", data.item.id)
+    .eq("source_id", raw.id)
     .eq("status", "pending")
     .then(() => {})
     .catch(() => {});
 
   return Response.json({
-    isPlaying: data.is_playing,
-    track,
-    volume: data.device?.volume_percent ?? null,
-    device: data.device ? { name: data.device.name, type: data.device.type } : null,
+    isPlaying: result.isPlaying,
+    track: result.track,
+    volume: result.volume,
+    device: result.device,
   });
 }
