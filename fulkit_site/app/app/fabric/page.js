@@ -2593,10 +2593,17 @@ export default function FabricPage() {
                                         padding: "var(--space-1) 0",
                                         cursor: "grab",
                                       }}>
-                                        {/* Line 1: Artist */}
-                                        <div style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                                        {/* Line 1: Artist — clickable → opens search */}
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); runSearch(s.artist); }}
+                                          style={{
+                                            background: "none", border: "none", padding: 0, cursor: "pointer",
+                                            fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)",
+                                            fontFamily: "inherit", fontSize: "inherit", textAlign: "left",
+                                          }}
+                                        >
                                           {s.artist}
-                                        </div>
+                                        </button>
                                         {/* Line 2: - Song title */}
                                         <div style={{ fontWeight: "var(--font-weight-normal)", color: isPlaying ? "var(--color-text)" : "var(--color-text-secondary)" }}>
                                           - {s.title}
@@ -2709,6 +2716,17 @@ export default function FabricPage() {
                                     artist: songMatch[1].trim(),
                                     title: cleanTitle,
                                     bpm: songMatch[3] ? `${songMatch[3]} BPM` : null,
+                                  });
+                                  return;
+                                }
+                                // Fallback: detect **Artist** - Title (bold markdown songs)
+                                const boldMatch = line.match(/^\*\*(.+?)\*\*\s*[-–—]\s*(.+?)$/);
+                                if (boldMatch) {
+                                  if (songBlock.length === 0) flushText();
+                                  songBlock.push({
+                                    artist: boldMatch[1].trim(),
+                                    title: boldMatch[2].replace(/\*\*/g, "").trim(),
+                                    bpm: null,
                                   });
                                   return;
                                 }
