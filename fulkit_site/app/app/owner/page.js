@@ -368,7 +368,7 @@ function DashboardTab() {
           </span>
         </div>
         <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
-          Discover and import project docs from GitHub so B-Side can reference them in chat.
+          Discover and import project docs from GitHub so F\u00FClkit can reference them in chat.
         </p>
 
         {!discovered ? (

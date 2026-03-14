@@ -166,7 +166,10 @@ export function AuthProvider({ children }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) token = session.access_token;
-    } catch {}
+    } catch (e) {
+      console.warn("[authFetch] getSession failed:", e.message);
+    }
+    if (!token) console.warn("[authFetch] no token for", url);
     return fetch(url, {
       ...opts,
       headers: {

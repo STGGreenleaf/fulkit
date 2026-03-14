@@ -11,7 +11,7 @@
 - Brand name is **Fulkit** (with umlaut). Code identifiers and URLs use fulkit (no umlaut).
 - Never write "FulKit", "FULKIT", "FullKit", or "Ful-kit".
 - Sub-features use their proper names: **The Hum**, **Whispers**, **Ful Gauge**.
-- The chat persona is called **B-Side** — never "the guy", "Barry", or "record store dude".
+- **B-Side is the music persona on /fabric ONLY.** It is NOT the main chat persona. B-Side = record store guy = BTC (Behind the Counter). It lives exclusively on `/fabric` and `/api/fabric/`. The main Fülkit chat has no persona name — it's just "Fülkit". Never reference B-Side when discussing the main chat, business tools, or general features.
 - Inline styles only — no CSS modules, no Tailwind, no styled-components.
 - CTAs are always full-width block `<Link>` buttons — `display: "block"`, `width: "100%"`, `textAlign: "center"`. No email inputs, no forms. One solid bar.
 - The Fulkit logo/wordmark in any nav always links to `/`.
@@ -164,7 +164,7 @@ These have caused production bugs. Always follow these patterns:
 | `md/buildnotes.md` | Product spec, features, architecture, pricing, file map |
 | `md/design.md` | Visual system, tokens, brand identity, about-page copy |
 | `md/trust-model.md` | Vault architecture, storage models A/B/C, security spec |
-| `md/b-side.md` | B-Side persona, voice, response engine, formatting rules |
+| `md/b-side.md` | B-Side persona (**fabric/music only** — not the main chat) |
 | `md/numbrly-spec.md` | Numbrly API reference + display/formatting rules |
 | `md/truegauge-spec.md` | TrueGauge API reference + integration guide |
 | `md/bestie-test.md` | Onboarding test script |

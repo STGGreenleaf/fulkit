@@ -24,6 +24,7 @@ import {
   Paperclip,
   Search,
   Crown,
+  BookOpen,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -39,6 +40,7 @@ import { supabase } from "../../lib/supabase";
 const TABS = [
   { id: "account", label: "Account", icon: User },
   { id: "sources", label: "Sources", icon: Quote },
+  { id: "manual", label: "Manual", icon: BookOpen },
   { id: "vault", label: "Vault", icon: FolderOpen },
   { id: "ai", label: "AI & Memory", icon: Brain },
   { id: "referrals", label: "Get Fülkit", icon: Gift },
@@ -368,6 +370,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         <div style={{ flex: 1, overflowY: "auto", padding: tab === "owner" ? 0 : "var(--space-4) var(--space-6) var(--space-6)" }}>
             {tab === "account" && <AccountTab />}
             {tab === "sources" && <SourcesTab />}
+            {tab === "manual" && <ManualTab />}
             {tab === "vault" && <VaultTab />}
             {tab === "ai" && <AITab />}
             {tab === "referrals" && <ReferralsTab />}
@@ -1976,6 +1979,285 @@ function SourcesTab() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ── Operator's Manual ─────────────────────────────────
+
+const MANUAL_SECTIONS = {
+  square: {
+    name: "Square",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "How did we do today?", description: "Daily sales summary — revenue, orders, top items, payment breakdown" },
+          { example: "What's our inventory?", description: "Current stock levels for all items" },
+          { example: "Show me this week's orders", description: "Order history with date range filters" },
+          { example: "Who are our top customers?", description: "Customer search and spend history" },
+          { example: "Any open invoices?", description: "Invoice status and details" },
+          { example: "Who's working today?", description: "Team members and shift schedules" },
+          { example: "Any refunds this week?", description: "Refund history with amounts" },
+          { example: "What's our card vs cash split?", description: "Payment breakdown by type" },
+        ],
+      },
+      {
+        label: "What you can do",
+        commands: [
+          { example: "3 Acg, 12 Aloha, 0 Sunrise", description: "Update inventory counts — preview before confirm" },
+          { example: "86 Sunrise", description: "Mark an item sold out (coming soon)" },
+          { example: "Bump Kahapuhi to $14", description: "Change item pricing (coming soon)" },
+          { example: "Invoice Matt $150 for catering", description: "Create an invoice (coming soon)" },
+        ],
+      },
+    ],
+  },
+  truegauge: {
+    name: "TrueGauge",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "Am I on pace for the month?", description: "Survival goal progress and daily target" },
+          { example: "What's my cash position?", description: "Current cash balance and runway" },
+          { example: "Show me this month's expenses", description: "Expense breakdown by vendor and category" },
+          { example: "Any alerts?", description: "Business warnings — behind pace, high COGS, low cash" },
+        ],
+      },
+      {
+        label: "What you can do",
+        commands: [
+          { example: "Log $450 to Sysco for COGS", description: "Record an expense with preview/confirm" },
+          { example: "We did $1,200 today", description: "Update daily sales entry" },
+        ],
+      },
+    ],
+  },
+  github: {
+    name: "GitHub",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What changed in the API this week?", description: "Recent commits and code changes" },
+          { example: "Show me open issues", description: "Issue tracker across repos" },
+          { example: "What's the project structure?", description: "Repository file tree" },
+        ],
+      },
+    ],
+  },
+  fabric: {
+    name: "Spotify",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's playing?", description: "Current track and playback status" },
+          { example: "Show me my playlists", description: "Your Spotify playlists" },
+        ],
+      },
+    ],
+  },
+  numbrly: {
+    name: "Numbrly",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's my margin on acai bowls?", description: "Cost breakdown for any product" },
+          { example: "Show me vendor costs", description: "Vendor and component pricing" },
+        ],
+      },
+    ],
+  },
+  shopify: {
+    name: "Shopify",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What sold the most this week?", description: "Top products and order volume" },
+          { example: "Show me recent orders", description: "Order history and fulfillment status" },
+        ],
+      },
+    ],
+  },
+  stripe: {
+    name: "Stripe",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's my revenue this month?", description: "Payment totals, refunds, and net" },
+          { example: "Any failed payments?", description: "Disputes and failure tracking" },
+        ],
+      },
+    ],
+  },
+  toast: {
+    name: "Toast",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "How was lunch today?", description: "Service period breakdown" },
+          { example: "Show me the menu", description: "Menu items and pricing" },
+        ],
+      },
+    ],
+  },
+  trello: {
+    name: "Trello",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's on my board?", description: "Board overview with lists and cards" },
+          { example: "What's due this week?", description: "Upcoming deadlines" },
+        ],
+      },
+      {
+        label: "What you can do",
+        commands: [
+          { example: "Create a card for new menu items", description: "Add cards to boards" },
+          { example: "Move that to Done", description: "Update card status" },
+        ],
+      },
+    ],
+  },
+};
+
+function ManualTab() {
+  const { accessToken, githubConnected } = useAuth();
+  const [expanded, setExpanded] = useState({});
+  const [connections, setConnections] = useState({});
+
+  useEffect(() => {
+    if (!accessToken) return;
+    const checks = [
+      { id: "square", url: "/api/square/status" },
+      { id: "shopify", url: "/api/shopify/status" },
+      { id: "stripe", url: "/api/stripe/status" },
+      { id: "toast", url: "/api/toast/status" },
+      { id: "trello", url: "/api/trello/status" },
+      { id: "fabric", url: "/api/fabric/status" },
+      { id: "numbrly", url: "/api/numbrly/status" },
+      { id: "truegauge", url: "/api/truegauge/status" },
+    ];
+    const results = {};
+    Promise.all(
+      checks.map(c =>
+        fetch(c.url, { headers: { Authorization: `Bearer ${accessToken}` } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { results[c.id] = data?.connected || false; })
+          .catch(() => { results[c.id] = false; })
+      )
+    ).then(() => {
+      results.github = githubConnected || false;
+      setConnections(results);
+    });
+  }, [accessToken, githubConnected]);
+
+  const connectedSections = Object.entries(MANUAL_SECTIONS)
+    .filter(([id]) => connections[id]);
+
+  if (connectedSections.length === 0) {
+    return (
+      <div>
+        <SectionTitle>Operator&apos;s Manual</SectionTitle>
+        <Card>
+          <div style={{
+            padding: "var(--space-6)",
+            textAlign: "center",
+            color: "var(--color-text-muted)",
+            fontSize: "var(--font-size-sm)",
+          }}>
+            Connect an integration in Sources to see what it can do.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionTitle>Operator&apos;s Manual</SectionTitle>
+      <div style={{
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-muted)",
+        marginBottom: "var(--space-4)",
+        lineHeight: "var(--line-height-relaxed)",
+      }}>
+        Everything your connected tools can do — with example commands.
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        {connectedSections.map(([id, section]) => {
+          const isExpanded = expanded[id] || false;
+          const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
+          return (
+            <Card key={id} style={{ padding: 0, overflow: "hidden" }}>
+              <CardHeader
+                logo={SOURCE_LOGOS[id]}
+                name={section.name}
+                subtitle={`${cmdCount} command${cmdCount !== 1 ? "s" : ""}`}
+                isExpanded={isExpanded}
+                onToggle={() => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))}
+              />
+              <Drawer open={isExpanded}>
+                <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                  {section.categories.map((cat, catIdx) => (
+                    <div key={catIdx}>
+                      <DrawerItem index={catIdx} visible={isExpanded}>
+                        <div style={{
+                          padding: "var(--space-2-5) var(--space-4)",
+                          borderBottom: "1px solid var(--color-border-light)",
+                        }}>
+                          <span style={{
+                            fontSize: "var(--font-size-2xs)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            textTransform: "uppercase",
+                            letterSpacing: "var(--letter-spacing-wider)",
+                            color: "var(--color-text-dim)",
+                          }}>
+                            {cat.label}
+                          </span>
+                        </div>
+                      </DrawerItem>
+                      {cat.commands.map((cmd, cmdIdx) => (
+                        <DrawerItem key={cmdIdx} index={catIdx + cmdIdx + 1} visible={isExpanded}>
+                          <div style={{
+                            padding: "var(--space-2) var(--space-4)",
+                            borderBottom: cmdIdx < cat.commands.length - 1 || catIdx < section.categories.length - 1
+                              ? "1px solid var(--color-border-light)" : "none",
+                          }}>
+                            <div style={{
+                              fontSize: "var(--font-size-xs)",
+                              color: "var(--color-text-dim)",
+                              fontStyle: "italic",
+                              lineHeight: "var(--line-height-relaxed)",
+                            }}>
+                              {`\u201C${cmd.example}\u201D`}
+                            </div>
+                            <div style={{
+                              fontSize: "var(--font-size-2xs)",
+                              color: "var(--color-text-muted)",
+                              marginTop: 2,
+                            }}>
+                              {cmd.description}
+                            </div>
+                          </div>
+                        </DrawerItem>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </Drawer>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

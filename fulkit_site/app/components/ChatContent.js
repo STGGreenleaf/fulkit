@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown, ExternalLink } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
 import { useAuth } from "../lib/auth";
@@ -21,6 +21,63 @@ function timeAgo(dateStr) {
   if (hrs < 24) return `${hrs}h`;
   const days = Math.floor(hrs / 24);
   return `${days}d`;
+}
+
+function ThinkingIndicator({ phase, startedAt, onStop }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!startedAt) return;
+    const tick = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(tick);
+  }, [startedAt]);
+
+  const label = phase === "preparing" ? "Preparing" : phase === "connecting" ? "Connecting" : "Thinking";
+  const showTime = elapsed >= 4;
+
+  return (
+    <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+        {[0, 1, 2].map((dot) => (
+          <span
+            key={dot}
+            style={{
+              display: "inline-block",
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "var(--color-text-muted)",
+              animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
+            }}
+          />
+        ))}
+      </span>
+      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", userSelect: "none" }}>
+        {label}{showTime ? ` · ${elapsed}s` : ""}
+      </span>
+      {onStop && (
+        <button
+          onClick={onStop}
+          title="Stop"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 18,
+            height: 18,
+            padding: 0,
+            background: "none",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--color-text-muted)",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <Square size={8} fill="currentColor" strokeWidth={0} />
+        </button>
+      )}
+    </span>
+  );
 }
 
 export default function ChatContent({ isPopout = false }) {
@@ -163,6 +220,7 @@ export default function ChatContent({ isPopout = false }) {
 
   const handleSend = useCallback(async () => {
     const text = chat.input.trim();
+    console.log("[handleSend] fired", { text: text?.slice(0, 30), streaming: chat.streaming });
     if (!text) return;
 
     // Handle /recall command locally
@@ -174,7 +232,11 @@ export default function ChatContent({ isPopout = false }) {
     }
 
     await chat.sendMessage(ctx.assembleContext);
-  }, [chat.input, chat.sendMessage, ctx.assembleContext, ctx.handleRecall]);
+  }, [chat.input, chat.streaming, chat.sendMessage, ctx.assembleContext, ctx.handleRecall]);
+
+  const handleRetry = useCallback((userText) => {
+    chat.sendMessage(ctx.assembleContext, userText);
+  }, [chat.sendMessage, ctx.assembleContext]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -423,7 +485,7 @@ export default function ChatContent({ isPopout = false }) {
                 <>
                   <button
                     onClick={() => window.open("/chat", "_blank")}
-                    title="Open full chat"
+                    title="Expand"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -436,7 +498,7 @@ export default function ChatContent({ isPopout = false }) {
                       borderRadius: "var(--radius-sm)",
                     }}
                   >
-                    <ExternalLink size={12} strokeWidth={2} />
+                    <Maximize2 size={12} strokeWidth={2} />
                   </button>
                   <button
                     onClick={() => window.close()}
@@ -636,27 +698,43 @@ export default function ChatContent({ isPopout = false }) {
                       }}
                     >
                       {chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                          {[0, 1, 2].map((dot) => (
-                            <span
-                              key={dot}
-                              style={{
-                                display: "inline-block",
-                                width: 5,
-                                height: 5,
-                                borderRadius: "50%",
-                                background: "var(--color-text-muted)",
-                                animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
-                              }}
-                            />
-                          ))}
-                        </span>
+                        <ThinkingIndicator
+                          phase={chat.streamPhase}
+                          startedAt={chat.streamStartedAt}
+                          onStop={chat.stopStreaming}
+                        />
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
                           ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} />
                           : (typeof msg.content === "string" ? msg.content.trim() : Array.isArray(msg.content) ? msg.content.filter((b) => b.type === "text").map((b) => b.text).join("") : "")
                       )}
                     </div>
+                    {/* Retry button for failed responses */}
+                    {msg._failed && !chat.streaming && (
+                      <button
+                        onClick={() => handleRetry(msg._failedUserText)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          alignSelf: "flex-start",
+                          marginTop: "var(--space-1)",
+                          padding: "var(--space-1) var(--space-3)",
+                          background: "none",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-md)",
+                          color: "var(--color-text-muted)",
+                          fontSize: "var(--font-size-xs)",
+                          cursor: "pointer",
+                          transition: "border-color var(--duration-fast) var(--ease-default)",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--color-text-secondary)"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--color-border)"}
+                      >
+                        <RefreshCw size={12} strokeWidth={2} />
+                        Try again
+                      </button>
+                    )}
                     {/* Pin + Copy + Export actions */}
                     {msg.role === "assistant" && (hoveredMsg === i || msg.is_pinned) && !chat.streaming && (
                       <div

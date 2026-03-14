@@ -14,6 +14,8 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [streamPhase, setStreamPhase] = useState(null); // "preparing" | "connecting" | "streaming"
+  const [streamStartedAt, setStreamStartedAt] = useState(null);
   const [conversationId, setConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
 
@@ -140,13 +142,27 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
 
   // ─── Send message ─────────────────────────────────────────
 
-  const sendMessage = useCallback(async (assembleContext) => {
-    const text = input.trim();
-    if (!text || streamingRef.current) return;
+  const sendMessage = useCallback(async (assembleContext, retryText) => {
+    const isRetry = typeof retryText === "string";
+    const text = isRetry ? retryText.trim() : input.trim();
+    console.log("[sendMessage] entry", { text: text?.slice(0, 30), isRetry, streamingRef: streamingRef.current, hasAuthFetch: !!authFetch });
+    if (!text || streamingRef.current) {
+      console.warn("[sendMessage] blocked —", !text ? "empty text" : "already streaming");
+      return;
+    }
+
+    // On retry, remove the failed assistant message before re-sending
+    if (isRetry) {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.role === "assistant" && last._failed ? prev.slice(0, -1) : prev;
+      });
+    }
 
     const msgTimestamp = Date.now();
-    const userMsg = { role: "user", content: text, _ts: msgTimestamp };
-    let apiMessages = [...messages, userMsg];
+    const userMsg = isRetry ? null : { role: "user", content: text, _ts: msgTimestamp };
+    // For retry, reuse existing messages (user msg is already there); for new, append user msg
+    let apiMessages = isRetry ? [...messages.filter((m) => !m._failed)] : [...messages, userMsg];
     // In sandbox mode, only send current chapter messages (bounded window)
     const sandboxMode = sandbox?.sandboxActive && sandbox?.currentChapter;
     if (sandboxMode) {
@@ -154,11 +170,15 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         role: m.role,
         content: m.content,
       }));
-      apiMessages = [...chapterMsgs, userMsg];
+      apiMessages = isRetry ? [...chapterMsgs] : [...chapterMsgs, userMsg];
     }
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+    if (!isRetry) {
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+    }
     setStreaming(true);
+    setStreamPhase("preparing");
+    setStreamStartedAt(Date.now());
     streamingRef.current = true;
 
     let convId = null;
@@ -171,18 +191,20 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       // Create conversation — timeout after 5s, don't block if it fails
       convId = await ensureConversation(text);
 
-      // Save user message in background — match by timestamp to avoid duplicate text race
-      saveMessage(convId, "user", text)
-        .then((id) => {
-          if (id) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m._ts === msgTimestamp && !m.id ? { ...m, id } : m
-              )
-            );
-          }
-        })
-        .catch(() => {});
+      // Save user message in background (skip on retry — already saved)
+      if (!isRetry) {
+        saveMessage(convId, "user", text)
+          .then((id) => {
+            if (id) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m._ts === msgTimestamp && !m.id ? { ...m, id } : m
+                )
+              );
+            }
+          })
+          .catch(() => {});
+      }
 
       // Add empty assistant placeholder with timestamp for safe ID assignment
       setMessages((prev) => [...prev, { role: "assistant", content: "", _ts: assistantTs }]);
@@ -204,13 +226,15 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       }
       if (annotatedMessages) apiMessages = annotatedMessages;
 
+      setStreamPhase("connecting");
+
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Safety timeout — abort if no chunks arrive within 90 seconds
+      // Safety timeout — abort if no chunks arrive within 45 seconds
       safetyTimeout = setTimeout(() => {
         controller.abort();
-      }, 90000);
+      }, 45000);
 
       // Rolling inactivity watchdog — resets on each chunk
       function resetWatchdog() {
@@ -220,6 +244,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         }, 30000);
       }
 
+      console.log("[sendMessage] firing authFetch →", "/api/chat");
       const res = await authFetch("/api/chat", {
         method: "POST",
         headers: {
@@ -237,13 +262,21 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         signal: controller.signal,
       });
 
+      console.log("[sendMessage] response status:", res.status);
       if (!res.ok) {
         clearTimeout(safetyTimeout); // kill watchdog
         const err = await res.json().catch(() => ({}));
         const errMsg = err.error || "Something went wrong.";
+        console.error("[sendMessage] API error:", res.status, errMsg);
+        // Don't mark rate-limit messages as retryable
+        const isRetryable = res.status !== 429 && !errMsg.includes("used all");
         setMessages((prev) => {
           const copy = [...prev];
-          copy[copy.length - 1] = { role: "assistant", content: errMsg };
+          copy[copy.length - 1] = {
+            role: "assistant",
+            content: errMsg,
+            ...(isRetryable ? { _failed: true, _failedUserText: text } : {}),
+          };
           return copy;
         });
         return;
@@ -262,6 +295,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
 
         if (!firstChunkReceived) {
           firstChunkReceived = true;
+          setStreamPhase("streaming");
         }
         resetWatchdog();
 
@@ -288,7 +322,12 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
               fullResponse += "\n\n" + error;
               setMessages((prev) => {
                 const copy = [...prev];
-                copy[copy.length - 1] = { role: "assistant", content: fullResponse };
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: fullResponse,
+                  _failed: true,
+                  _failedUserText: text,
+                };
                 return copy;
               });
               streamDone = true;
@@ -324,29 +363,40 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       }
     } catch (err) {
       clearTimeout(safetyTimeout);
+      let isFailed = false;
       if (err.name === "AbortError" && !firstChunkReceived) {
-        fullResponse = "Took too long to respond. Try again or rephrase.";
+        fullResponse = "Took too long to respond.";
+        isFailed = true;
       } else if (err.name === "AbortError" && firstChunkReceived) {
         // Mid-stream inactivity timeout — show what we have + error
-        fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent. Try again.)*";
+        fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent.)*";
+        isFailed = true;
       } else if (err.name !== "AbortError") {
-        fullResponse = "Connection error. Try again.";
+        fullResponse = "Connection error.";
+        isFailed = true;
       }
 
       if (fullResponse) {
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
+          const failedMsg = {
+            role: "assistant",
+            content: fullResponse,
+            ...(isFailed ? { _failed: true, _failedUserText: text } : {}),
+          };
           if (last?.role === "assistant") {
-            copy[copy.length - 1] = { ...last, content: fullResponse };
+            copy[copy.length - 1] = { ...last, ...failedMsg };
           } else {
-            copy.push({ role: "assistant", content: fullResponse });
+            copy.push(failedMsg);
           }
           return copy;
         });
       }
     } finally {
       setStreaming(false);
+      setStreamPhase(null);
+      setStreamStartedAt(null);
       streamingRef.current = false;
       abortRef.current = null;
       // Clean up any pending rAF
@@ -401,17 +451,25 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
 
   // ─── Actions ──────────────────────────────────────────────
 
+  const stopStreaming = useCallback(() => {
+    if (abortRef.current) abortRef.current.abort();
+  }, []);
+
   const startNewChat = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
     setMessages([]);
     setConversationId(null);
     setStreaming(false);
+    setStreamPhase(null);
+    setStreamStartedAt(null);
     streamingRef.current = false;
   }, []);
 
   const openConversation = useCallback((conv) => {
     if (abortRef.current) abortRef.current.abort();
     setStreaming(false);
+    setStreamPhase(null);
+    setStreamStartedAt(null);
     streamingRef.current = false;
     setConversationId(conv.id);
   }, []);
@@ -431,9 +489,12 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
     input,
     setInput,
     streaming,
+    streamPhase,
+    streamStartedAt,
     conversationId,
     conversations,
     sendMessage,
+    stopStreaming,
     startNewChat,
     openConversation,
     loadConversations,

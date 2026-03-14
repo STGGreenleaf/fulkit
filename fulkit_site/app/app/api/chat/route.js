@@ -1,3 +1,5 @@
+export const maxDuration = 120; // seconds — prevent Vercel from killing long chat streams
+
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import { getGitHubToken, githubFetch } from "../../../lib/github";
@@ -421,6 +423,32 @@ const TG_TOOL_ACTION_MAP = {
 // Write actions that need POST method
 const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", "undo"]);
 
+// In-memory preview store for Square write ops (5min TTL)
+const squarePreviewStore = new Map();
+const SQ_PREVIEW_TTL = 5 * 60 * 1000;
+
+function sqStorePreview(userId, data) {
+  const id = `sq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  squarePreviewStore.set(id, { userId, data, createdAt: Date.now() });
+  // Lazy cleanup of expired entries
+  for (const [k, v] of squarePreviewStore) {
+    if (Date.now() - v.createdAt > SQ_PREVIEW_TTL) squarePreviewStore.delete(k);
+  }
+  return id;
+}
+
+function sqGetPreview(previewId, userId) {
+  const entry = squarePreviewStore.get(previewId);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > SQ_PREVIEW_TTL) { squarePreviewStore.delete(previewId); return null; }
+  if (entry.userId !== userId) return null;
+  return entry.data;
+}
+
+function sqConsumePreview(previewId) {
+  squarePreviewStore.delete(previewId);
+}
+
 // Square tool schemas — POS, orders, inventory, customers, invoices, team
 const SQUARE_TOOLS = [
   {
@@ -558,6 +586,49 @@ const SQUARE_TOOLS = [
         limit: { type: "number", description: "Max results (default 20)" },
       },
       required: [],
+    },
+  },
+  // ── Write tools ──────────────────────────────────────────
+  {
+    name: "square_catalog_full",
+    description: "Get the FULL catalog with all item names, variation IDs, and current prices. Use this BEFORE square_inventory_update to resolve shorthand names (like 'Acg') to catalog_object_ids. Returns a simplified list.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "square_inventory_update",
+    description: "Update inventory counts for items. Accepts an array of {name, catalog_object_id, quantity} pairs. The quantity is the ABSOLUTE new count (SET operation), not a delta. You MUST first call square_catalog_full to get item IDs, match the user's shorthand names to catalog items, then call this with preview=true to show changes before confirming. Never skip the preview step.",
+    input_schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Item name as user said it" },
+              catalog_object_id: { type: "string", description: "Catalog variation ID from square_catalog_full" },
+              quantity: { type: "number", description: "New absolute count to set" },
+            },
+            required: ["name", "catalog_object_id", "quantity"],
+          },
+          description: "Items to update with catalog IDs and new quantities",
+        },
+        location_id: { type: "string", description: "Location ID (from square_locations). Uses first location if omitted." },
+        preview: { type: "boolean", description: "ALWAYS set true on first call. Shows impact without committing." },
+        preview_id: { type: "string", description: "Preview ID from a previous preview — pass to confirm and execute." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "square_confirm",
+    description: "Confirm a previously previewed Square write operation. Pass the preview_id from the preview response.",
+    input_schema: {
+      type: "object",
+      properties: {
+        preview_id: { type: "string", description: "The preview_id from a square_inventory_update preview" },
+      },
+      required: ["preview_id"],
     },
   },
 ];
@@ -732,6 +803,111 @@ async function executeSquareTool(toolName, input, userId, userToday) {
       const res = await squareFetch(userId, `/refunds${qs}`);
       if (res.error) return { error: res.error };
       return await res.json();
+    }
+    // ── Write tool executors ──────────────────────────────
+    case "square_catalog_full": {
+      const allItems = [];
+      let cursor = null;
+      for (let page = 0; page < 5; page++) {
+        const qs = cursor ? `?types=ITEM&cursor=${cursor}` : "?types=ITEM";
+        const res = await squareFetch(userId, `/catalog/list${qs}`);
+        if (res.error) return { error: res.error };
+        const data = await res.json();
+        for (const item of (data.objects || [])) {
+          const variations = (item.item_data?.variations || []).map(v => ({
+            variation_id: v.id,
+            variation_name: v.item_variation_data?.name || "Regular",
+            price: v.item_variation_data?.price_money ? v.item_variation_data.price_money.amount / 100 : null,
+          }));
+          allItems.push({ name: item.item_data?.name || "Unknown", item_id: item.id, variations });
+        }
+        cursor = data.cursor;
+        if (!cursor) break;
+      }
+      return { items: allItems, count: allItems.length };
+    }
+    case "square_inventory_update": {
+      // ── Confirm mode ──
+      if (input.preview_id) {
+        const preview = sqGetPreview(input.preview_id, userId);
+        if (!preview) return { error: "Preview expired or not found. Please preview again." };
+
+        const changes = preview.changes.map(ch => ({
+          type: "PHYSICAL_COUNT",
+          physical_count: {
+            catalog_object_id: ch.catalog_object_id,
+            location_id: preview.location_id,
+            quantity: String(ch.quantity),
+            occurred_at: new Date().toISOString(),
+          },
+        }));
+
+        const idempotencyKey = `fulkit_inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const res = await squareFetch(userId, "/inventory/changes/batch-create", {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: idempotencyKey, changes }),
+        });
+
+        sqConsumePreview(input.preview_id);
+
+        if (res.error) return { error: res.error };
+        const result = await res.json();
+        if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
+
+        return {
+          status: "confirmed",
+          updated: preview.changes.length,
+          items: preview.changes.map(ch => ({ name: ch.name, quantity: ch.quantity })),
+        };
+      }
+
+      // ── Preview mode ──
+      if (!input.items || !input.items.length) {
+        return { error: "No items provided. Use square_catalog_full first to look up item IDs." };
+      }
+
+      // Determine location
+      let locationId = input.location_id;
+      if (!locationId) {
+        const locRes = await squareFetch(userId, "/locations");
+        if (locRes.error) return { error: "Failed to fetch locations" };
+        const locData = await locRes.json();
+        locationId = locData.locations?.[0]?.id;
+        if (!locationId) return { error: "No locations found in Square account" };
+      }
+
+      // Fetch current counts for comparison
+      const catalogIds = input.items.map(i => i.catalog_object_id);
+      const currentRes = await squareFetch(userId, "/inventory/counts/batch-retrieve", {
+        method: "POST",
+        body: JSON.stringify({ catalog_object_ids: catalogIds, location_ids: [locationId] }),
+      });
+
+      const currentCounts = {};
+      if (!currentRes.error) {
+        const currentData = await currentRes.json();
+        for (const count of (currentData.counts || [])) {
+          currentCounts[count.catalog_object_id] = parseInt(count.quantity || "0", 10);
+        }
+      }
+
+      const previewChanges = input.items.map(item => ({
+        name: item.name,
+        catalog_object_id: item.catalog_object_id,
+        quantity: item.quantity,
+        current: currentCounts[item.catalog_object_id] ?? "unknown",
+        delta: currentCounts[item.catalog_object_id] != null
+          ? item.quantity - currentCounts[item.catalog_object_id]
+          : null,
+      }));
+
+      const previewId = sqStorePreview(userId, { changes: previewChanges, location_id: locationId });
+
+      return { status: "preview", preview_id: previewId, location_id: locationId, changes: previewChanges };
+    }
+    case "square_confirm": {
+      if (!input.preview_id) return { error: "No preview_id provided" };
+      return executeSquareTool("square_inventory_update", { preview_id: input.preview_id }, userId, userToday);
     }
     default:
       return { error: "Unknown Square tool" };
@@ -1932,6 +2108,18 @@ export async function POST(request) {
         ? "The following includes uploaded files and notes. Items marked [Uploaded] were just shared by the user — analyze them proactively when the user asks about them or references them. Other items are vault notes — use them naturally as background context."
         : "The following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.";
       system += `\n\n## User's Notes & Context\n${contextIntro}\n<user-documents>\n${contextBlock}\n</user-documents>`;
+    }
+
+    // Square inventory instructions
+    if (sqToken) {
+      system += `\n\n## Square Inventory Updates
+When the user asks to update inventory counts:
+1. Call square_catalog_full to get all item names and variation IDs
+2. Match the user's shorthand names to catalog items (e.g. "Acg" might match "Acai Green Bowl") — use your best judgment for fuzzy matching
+3. Call square_inventory_update with preview=true, including the matched catalog_object_ids and the user's quantities
+4. Show the user a clear table of changes: item name, current count → new count, delta
+5. Wait for the user to confirm (say "go", "yes", "confirm", etc.) before calling square_confirm with the preview_id
+Never skip the preview step. The user must see and approve changes before they go live in Square.`;
     }
 
     // Increment message count (Fül cap) — skip for BYOK users (they pay their own tokens)
