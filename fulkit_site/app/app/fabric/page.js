@@ -1602,10 +1602,14 @@ export default function FabricPage() {
   const toggleGuyCrateCollapsed = useCallback(() => {
     setGuyCrateCollapsed(prev => {
       const next = !prev;
+      if (!next) { // opening B-Sides → close expanded crate
+        setExpandedCrate(null);
+        setCrateTracks([]);
+      }
       try { localStorage.setItem("fulkit-guy-crate-collapsed", String(next)); } catch {}
       return next;
     });
-  }, []);
+  }, [setExpandedCrate]);
 
   // B-Sides: manual add only via arrow icon in chat
   // (auto-add removed — user clicks CornerDownRight to push songs to B-Sides)
@@ -3593,6 +3597,8 @@ export default function FabricPage() {
                               setCrateTracks(crate.tracks || []);
                               setExpandedFeatured(null);
                               setFeaturedTracks([]);
+                              setGuyCrateCollapsed(true);
+                              try { localStorage.setItem("fulkit-guy-crate-collapsed", "true"); } catch {}
                             }
                           }}
                           style={{
@@ -3601,6 +3607,7 @@ export default function FabricPage() {
                             width: 90,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: "none",
+                            borderLeft: isOpen ? "3px solid var(--color-text)" : "none",
                             borderRight: "1px solid var(--color-border-light)",
                             borderRadius: 0,
                             cursor: "pointer",
@@ -3944,7 +3951,7 @@ export default function FabricPage() {
                   flexDirection: "column",
                 }}>
                   <div style={{
-                    padding: "var(--space-3) var(--space-2)",
+                    padding: "var(--space-3) var(--space-2) var(--space-3) var(--space-3)",
                     borderBottom: "1px solid var(--color-border-light)",
                     display: "flex",
                     alignItems: "center",
