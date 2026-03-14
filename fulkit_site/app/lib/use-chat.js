@@ -10,7 +10,7 @@ import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-wri
  * Owns: messages, streaming, conversations, send flow, DB persistence.
  * Does NOT own: context assembly, file attachments, UI state.
  */
-export function useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox }) {
+export function useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox, onMessageSent }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -270,12 +270,14 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         console.error("[sendMessage] API error:", res.status, errMsg);
         // Don't mark rate-limit messages as retryable
         const isRetryable = res.status !== 429 && !errMsg.includes("used all");
+        const isCappedError = res.status === 429 && errMsg.includes("used all");
         setMessages((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = {
             role: "assistant",
             content: errMsg,
             ...(isRetryable ? { _failed: true, _failedUserText: text } : {}),
+            ...(isCappedError ? { _capped: true } : {}),
           };
           return copy;
         });
@@ -445,9 +447,14 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
           );
         } catch {}
       }
+
+      // Refresh profile so client-side Fül count stays current
+      if (onMessageSent) {
+        try { onMessageSent(); } catch {}
+      }
     }
   }, [input, streaming, messages, conversationId, user, isDev, accessToken, authFetch,
-    loadConversations, storageMode, directoryHandle, sandbox]);
+    loadConversations, storageMode, directoryHandle, sandbox, onMessageSent]);
 
   // ─── Actions ──────────────────────────────────────────────
 

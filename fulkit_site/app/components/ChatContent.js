@@ -81,15 +81,26 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 }
 
 export default function ChatContent({ isPopout = false }) {
-  const { user, accessToken, authFetch, githubConnected, compactMode, hasContext } = useAuth();
+  const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
   const isDev = user?.isDev;
+
+  // ─── Fül cap state ──────────────────────────────────────
+  const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
+  const seatLimit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+  const messagesUsed = profile?.messages_this_month || 0;
+  const remaining = Math.max(0, seatLimit - messagesUsed);
+  const isLow = !isOwner && !isDev && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);
+  const isCapped = !isOwner && !isDev && remaining <= 0;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
 
   // ─── Sandbox hook ────────────────────────────────────────
   const sandbox = useSandbox();
 
   // ─── Core chat hook ───────────────────────────────────────
-  const chat = useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox });
+  const chat = useChat({
+    user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox,
+    onMessageSent: () => { if (user?.id) fetchProfile(user.id); },
+  });
 
   // ─── Context hook ─────────────────────────────────────────
   const ctx = useChatContext({
@@ -697,7 +708,16 @@ export default function ChatContent({ isPopout = false }) {
                             }),
                       }}
                     >
-                      {chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
+                      {msg._capped ? (
+                        <div>
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                            {msg.content}
+                          </div>
+                          <Link href="/settings?tab=ai" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
+                            Add API key to keep chatting
+                          </Link>
+                        </div>
+                      ) : chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
                         <ThinkingIndicator
                           phase={chat.streamPhase}
                           startedAt={chat.streamStartedAt}
@@ -1014,7 +1034,31 @@ export default function ChatContent({ isPopout = false }) {
                 </div>
               )}
 
-              {/* Input */}
+              {/* Low-fuel warning */}
+              {isLow && !isCapped && (
+                <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
+                    {remaining} message{remaining !== 1 ? "s" : ""} left this month
+                  </span>
+                </div>
+              )}
+
+              {/* Input — or capped state */}
+              {isCapped ? (
+                <div style={{ padding: "var(--space-3) var(--space-6) var(--space-5)", maxWidth: 640, width: "100%", margin: "0 auto" }}>
+                  <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", textAlign: "center" }}>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                      You're out of Fül this month.
+                    </div>
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                      Add your own API key for unlimited messages, or wait for your monthly reset.
+                    </div>
+                    <Link href="/settings?tab=ai" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
+                      Add API key
+                    </Link>
+                  </div>
+                </div>
+              ) : (
               <div
                 style={{
                   padding: "var(--space-3) var(--space-6) var(--space-5)",
@@ -1149,6 +1193,7 @@ export default function ChatContent({ isPopout = false }) {
                   )}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Pins panel */}

@@ -2716,6 +2716,9 @@ function BillingTab() {
   const seatLimit = SEAT_LIMITS[seatType] || 450;
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
   const remaining = seatLimit - messagesUsed;
+  const gaugeLow = remaining <= Math.ceil(seatLimit * 0.1);
+  const gaugeCapped = remaining <= 0;
+  const gaugeColor = gaugeCapped ? "var(--color-error)" : gaugeLow ? "var(--color-warning)" : "var(--color-accent)";
   const PLAN_LABELS = { standard: "Standard", pro: "Pro", free: "Free" };
   const PLAN_PRICES = { standard: "$7/mo", pro: "$15/mo", free: "Free" };
 
@@ -2783,7 +2786,7 @@ function BillingTab() {
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
               Fül remaining
             </span>
-            <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>
+            <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: gaugeCapped ? "var(--color-error)" : undefined }}>
               {remaining} / {seatLimit}
             </span>
           </div>
@@ -2800,7 +2803,7 @@ function BillingTab() {
                 height: "100%",
                 width: `${Math.max(0, (remaining / seatLimit) * 100)}%`,
                 borderRadius: "var(--radius-full)",
-                background: "var(--color-accent)",
+                background: gaugeColor,
                 transition: `width var(--duration-slow) var(--ease-default)`,
               }}
             />

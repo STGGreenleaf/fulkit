@@ -1873,12 +1873,25 @@ export async function POST(request) {
       try {
         const { data } = await getSupabaseAdmin()
           .from("profiles")
-          .select("role, seat_type, messages_this_month")
+          .select("role, seat_type, messages_this_month, message_count_reset_at")
           .eq("id", userId)
           .single()
           .abortSignal(AbortSignal.timeout(5000));
         profile = data;
       } catch { /* proceed with defaults */ }
+    }
+    // Check-on-read monthly reset — if we've crossed a UTC month boundary, zero the counter
+    if (userId && profile?.message_count_reset_at) {
+      const resetDate = new Date(profile.message_count_reset_at);
+      const now = new Date();
+      if (resetDate.getUTCMonth() !== now.getUTCMonth() || resetDate.getUTCFullYear() !== now.getUTCFullYear()) {
+        profile.messages_this_month = 0;
+        getSupabaseAdmin()
+          .from("profiles")
+          .update({ messages_this_month: 0, message_count_reset_at: now.toISOString() })
+          .eq("id", userId)
+          .then(() => {}).catch(() => {});
+      }
     }
     // Check for BYOK key
     let byokKey = null;
@@ -2122,22 +2135,11 @@ When the user asks to update inventory counts:
 Never skip the preview step. The user must see and approve changes before they go live in Square.`;
     }
 
-    // Increment message count (Fül cap) — skip for BYOK users (they pay their own tokens)
+    // Increment message count (Fül cap) — atomic, skip for BYOK users (they pay their own tokens)
     if (userId && !config.isByok) {
       getSupabaseAdmin()
-        .from("profiles")
-        .select("messages_this_month")
-        .eq("id", userId)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            getSupabaseAdmin()
-              .from("profiles")
-              .update({ messages_this_month: (data.messages_this_month || 0) + 1 })
-              .eq("id", userId)
-              .then(() => {});
-          }
-        });
+        .rpc("increment_message_count", { user_id_arg: userId })
+        .then(() => {}).catch(() => {});
     }
 
     const MAX_TOOL_ROUNDS = 5;

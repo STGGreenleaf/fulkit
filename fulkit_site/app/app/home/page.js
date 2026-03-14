@@ -96,6 +96,10 @@ export default function Dashboard() {
 
   const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "standard"] || 450;
+  const gaugeRemaining = seatLimit - messagesUsed;
+  const gaugeLow = gaugeRemaining <= Math.ceil(seatLimit * 0.1);
+  const gaugeCapped = gaugeRemaining <= 0;
+  const gaugeColor = gaugeCapped ? "var(--color-error)" : gaugeLow ? "var(--color-warning)" : "var(--color-accent)";
   const completeAction = async (id) => {
     setActions((prev) => prev.filter((a) => a.id !== id));
     await supabase
@@ -171,7 +175,7 @@ export default function Dashboard() {
                       fontSize: 9,
                       fontFamily: "var(--font-mono)",
                       fontWeight: "var(--font-weight-bold)",
-                      color: "var(--color-text-dim)",
+                      color: gaugeCapped ? "var(--color-error)" : "var(--color-text-dim)",
                     }}>
                       {seatLimit - messagesUsed} | {seatLimit}
                     </span>
@@ -186,7 +190,7 @@ export default function Dashboard() {
                       height: "100%",
                       width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
                       borderRadius: "var(--radius-full)",
-                      background: "var(--color-accent)",
+                      background: gaugeColor,
                       transition: "width var(--duration-slow) var(--ease-default)",
                     }} />
                   </div>
