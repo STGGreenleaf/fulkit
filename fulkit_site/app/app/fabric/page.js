@@ -2486,8 +2486,6 @@ export default function FabricPage() {
                   marginBottom: 0,
                   borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
-                  maxHeight: (musicChatOpen || searchResults) ? "85%" : undefined,
-                  minHeight: (musicChatOpen || searchResults) ? 0 : undefined,
                   display: "flex",
                   flexDirection: "column",
                 }}>
@@ -2523,7 +2521,7 @@ export default function FabricPage() {
                   {/* RSG chat drawer */}
                   {musicChatOpen && (
                     <div style={{ borderTop: "1px solid var(--color-border-light)", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", minHeight: 0, overflowY: "auto" }}>
+                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", minHeight: 0, maxHeight: "60vh", overflowY: "auto" }}>
                         {musicMessages.length === 0 && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
                             {tickerFact || "Ask me anything about music..."}
@@ -2978,141 +2976,142 @@ export default function FabricPage() {
                     </button>
                   </div>
 
-                  {/* Search results — flows naturally, scrolls with outer container */}
-                  {(searchResults || searchLoading) && (
-                    <div style={{
-                      borderTop: "1px solid var(--color-border-light)",
-                      padding: "var(--space-2) var(--space-3)",
-                    }}>
-                      {searchLoading && (
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
-                          Searching...
-                        </div>
-                      )}
+                </div>
 
-                      {searchResults && (
-                        <div>
-                          {/* Artist header — name left, dismiss right, one line */}
-                          {searchResults.artist && (
-                            <div style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              marginBottom: "var(--space-2)",
-                              paddingBottom: "var(--space-2)",
-                              borderBottom: "1px solid var(--color-border-light)",
-                            }}>
-                              <div style={{ minWidth: 0 }}>
+                {/* ── Search Results — sibling below BTC panel, scrolls with outer container ── */}
+                {(searchResults || searchLoading) && (
+                  <div style={{
+                    borderBottom: "1px solid var(--color-border-light)",
+                    padding: "var(--space-2) var(--space-3)",
+                  }}>
+                    {searchLoading && (
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
+                        Searching...
+                      </div>
+                    )}
+
+                    {searchResults && (
+                      <div>
+                        {/* Artist header — name left, dismiss right, one line */}
+                        {searchResults.artist && (
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: "var(--space-2)",
+                            paddingBottom: "var(--space-2)",
+                            borderBottom: "1px solid var(--color-border-light)",
+                          }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: "var(--font-weight-bold)",
+                                color: "var(--color-text)",
+                              }}>
+                                {searchResults.artist.name}
+                              </div>
+                              {searchResults.artist.genres?.length > 0 && (
                                 <div style={{
-                                  fontSize: "var(--font-size-xs)",
-                                  fontWeight: "var(--font-weight-bold)",
-                                  color: "var(--color-text)",
+                                  fontSize: 9,
+                                  fontFamily: "var(--font-mono)",
+                                  color: "var(--color-text-muted)",
+                                  marginTop: 2,
                                 }}>
-                                  {searchResults.artist.name}
+                                  {searchResults.artist.genres.join(" · ")}
                                 </div>
-                                {searchResults.artist.genres?.length > 0 && (
+                              )}
+                            </div>
+                            <button
+                              onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1, flexShrink: 0 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                        {/* Dismiss only (no artist) */}
+                        {!searchResults.artist && (
+                          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
+                            <button
+                              onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Albums list */}
+                        {searchResults.albums?.length > 0 && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <Label style={{ marginBottom: "var(--space-1)" }}>Albums</Label>
+                            {searchResults.albums.map((album) => (
+                              <button
+                                key={album.id}
+                                onClick={() => {
+                                  loadAlbumTracks(album.id);
+                                  setSearchResults(null);
+                                  setSearchQuery("");
+                                }}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "var(--space-2)",
+                                  padding: "var(--space-1-5) var(--space-1)",
+                                  background: "transparent",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  fontFamily: "var(--font-primary)",
+                                  width: "100%",
+                                  borderRadius: 0,
+                                  transition: "background var(--duration-fast) var(--ease-default)",
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--color-bg-alt)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                              >
+                                {album.image && (
+                                  <img
+                                    src={album.image}
+                                    width={28}
+                                    height={28}
+                                    alt=""
+                                    style={{ borderRadius: 2, objectFit: "cover", flexShrink: 0, filter: "grayscale(1)" }}
+                                  />
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: "var(--font-size-xs)",
+                                    color: "var(--color-text)",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}>
+                                    {album.name}
+                                  </div>
                                   <div style={{
                                     fontSize: 9,
                                     fontFamily: "var(--font-mono)",
-                                    color: "var(--color-text-muted)",
-                                    marginTop: 2,
+                                    color: "var(--color-text-dim)",
                                   }}>
-                                    {searchResults.artist.genres.join(" · ")}
+                                    {album.year}{album.trackCount ? ` · ${album.trackCount} tracks` : ""}
                                   </div>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
-                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1, flexShrink: 0 }}
-                              >
-                                ×
+                                </div>
                               </button>
-                            </div>
-                          )}
-                          {/* Dismiss only (no artist) */}
-                          {!searchResults.artist && (
-                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
-                              <button
-                                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
-                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1 }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          )}
+                            ))}
+                          </div>
+                        )}
 
-                          {/* Albums list */}
-                          {searchResults.albums?.length > 0 && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                              <Label style={{ marginBottom: "var(--space-1)" }}>Albums</Label>
-                              {searchResults.albums.map((album) => (
-                                <button
-                                  key={album.id}
-                                  onClick={() => {
-                                    loadAlbumTracks(album.id);
-                                    setSearchResults(null);
-                                    setSearchQuery("");
-                                  }}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "var(--space-2)",
-                                    padding: "var(--space-1-5) var(--space-1)",
-                                    background: "transparent",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                    fontFamily: "var(--font-primary)",
-                                    width: "100%",
-                                    borderRadius: 0,
-                                    transition: "background var(--duration-fast) var(--ease-default)",
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--color-bg-alt)"; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                >
-                                  {album.image && (
-                                    <img
-                                      src={album.image}
-                                      width={28}
-                                      height={28}
-                                      alt=""
-                                      style={{ borderRadius: 2, objectFit: "cover", flexShrink: 0, filter: "grayscale(1)" }}
-                                    />
-                                  )}
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                      fontSize: "var(--font-size-xs)",
-                                      color: "var(--color-text)",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                    }}>
-                                      {album.name}
-                                    </div>
-                                    <div style={{
-                                      fontSize: 9,
-                                      fontFamily: "var(--font-mono)",
-                                      color: "var(--color-text-dim)",
-                                    }}>
-                                      {album.year}{album.trackCount ? ` · ${album.trackCount} tracks` : ""}
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* No results */}
-                          {!searchResults.artist && searchResults.albums?.length === 0 && (
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
-                              Nothing found.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        {/* No results */}
+                        {!searchResults.artist && searchResults.albums?.length === 0 && (
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
+                            Nothing found.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Discovery Tray — album tracks from BTC links ── */}
                 {(discoveryAlbum || discoveryLoading) && (
