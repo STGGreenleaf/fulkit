@@ -73,20 +73,73 @@ export function FabricProvider({ children }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
   const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
-  // Multi-set state (migrates from old single-set format)
+  // Seed data — pre-populated sets for fresh installs
+  const SEED_SETS = {
+    activeId: "set-1",
+    sets: [
+      {
+        id: "guy-crate",
+        name: "Guy\u2019s Crate",
+        source: "guy",
+        tracks: [
+          { id: "3n3Ppam7vgaVa1iaRUc9Lp", title: "Midnight City", artist: "M83", album: "Hurry Up, We\u2019re Dreaming", duration: 243 },
+          { id: "7GhIk7Il098yCjg4BQjzvb", title: "Young Folks", artist: "Peter Bjorn and John", album: "Writer\u2019s Block", duration: 276 },
+          { id: "60nZcImufyMA1MKQY3dcCH", title: "Intro", artist: "The xx", album: "xx", duration: 128 },
+        ],
+      },
+      {
+        id: "set-1",
+        name: "Late Night",
+        tracks: [
+          { id: "6nek1Nin9q48AVZcWs9e9D", title: "Tadow", artist: "Masego, FKJ", album: "Tadow", duration: 295 },
+          { id: "2nLtzopw4rPReszdYBJU6h", title: "Skinny Love", artist: "Bon Iver", album: "For Emma, Forever Ago", duration: 227 },
+          { id: "3JOVTQ5h8HGFnDdp4VT3MP", title: "Breathe", artist: "Telepopmusik", album: "Genetic World", duration: 258 },
+          { id: "5CMjjywI0eZMixPeqNd75R", title: "Holocene", artist: "Bon Iver", album: "Bon Iver", duration: 337 },
+        ],
+      },
+      {
+        id: "set-2",
+        name: "Drive",
+        tracks: [
+          { id: "2tpWsVSb9UEmDRxAl1zhX1", title: "Bohemian Rhapsody", artist: "Queen", album: "A Night at the Opera", duration: 355 },
+          { id: "4cOdK2wGLETKBW3PvgPWqT", title: "Lose Yourself", artist: "Eminem", album: "8 Mile", duration: 326 },
+          { id: "7lQ8MOhq6IN2w8EYcFNSUk", title: "Strobe", artist: "Deadmau5", album: "For Lack of a Better Name", duration: 637 },
+          { id: "0VjIjW4GlUZAMYd2vXMi3b", title: "Blinding Lights", artist: "The Weeknd", album: "After Hours", duration: 200 },
+          { id: "3AJwUDP919kvQ9QcozQPxg", title: "Heart-Shaped Box", artist: "Nirvana", album: "In Utero", duration: 281 },
+        ],
+      },
+    ],
+  };
+
+  // Multi-set state (migrates from old single-set format, seeds if empty)
   const [setsData, setSetsData] = useState(() => {
-    if (typeof window === "undefined") return { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] };
+    if (typeof window === "undefined") return SEED_SETS;
     try {
       const newFormat = localStorage.getItem("fulkit-sets");
-      if (newFormat) return JSON.parse(newFormat);
+      if (newFormat) {
+        const parsed = JSON.parse(newFormat);
+        // Ensure guy-crate has source:"guy" (migration fix)
+        const gc = (parsed.sets || []).find(s => s.id === "guy-crate");
+        if (gc && !gc.source) { gc.source = "guy"; localStorage.setItem("fulkit-sets", JSON.stringify(parsed)); }
+        // If all sets are empty, replace with seed data
+        const totalTracks = (parsed.sets || []).reduce((n, s) => n + (s.tracks?.length || 0), 0);
+        if (totalTracks > 0) return parsed;
+        localStorage.setItem("fulkit-sets", JSON.stringify(SEED_SETS));
+        return SEED_SETS;
+      }
       // Migrate old format
       const oldTracks = localStorage.getItem("fulkit-flagged-tracks");
-      const tracks = oldTracks ? JSON.parse(oldTracks) : [];
-      const migrated = { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks }] };
-      localStorage.setItem("fulkit-sets", JSON.stringify(migrated));
-      localStorage.removeItem("fulkit-flagged-tracks");
-      return migrated;
-    } catch { return { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] }; }
+      if (oldTracks) {
+        const tracks = JSON.parse(oldTracks);
+        const migrated = { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks }] };
+        localStorage.setItem("fulkit-sets", JSON.stringify(migrated));
+        localStorage.removeItem("fulkit-flagged-tracks");
+        return migrated;
+      }
+      // Fresh install — seed with starter sets
+      localStorage.setItem("fulkit-sets", JSON.stringify(SEED_SETS));
+      return SEED_SETS;
+    } catch { return SEED_SETS; }
   });
 
   // Persist sets to localStorage
@@ -113,7 +166,10 @@ export function FabricProvider({ children }) {
   const playbackContextRef = useRef(null); // { type, id, tracks, currentIndex }
   const featuredCratesRef = useRef([]); // populated by page.js for autoAdvance fallback
   const autoAdvanceTriggered = useRef(false);
+  const autoAdvanceTriggeredAt = useRef(0);
   const autoAdvanceRef = useRef(null); // ref to avoid temporal dead zone (skip defined before autoAdvance)
+  const lastPollState = useRef({ isPlaying: false, trackId: null, progress: 0 });
+  const queuedNextRef = useRef(null); // URI of pre-queued next track
   const playTrackRef = useRef(null); // same — skip defined before playTrack
   // Refs for taste signal functions (used by skip/poller which are declared before the history block)
   const findHistoryMatchRef = useRef(null);
@@ -200,6 +256,21 @@ export function FabricProvider({ children }) {
               });
             }
             playSessionRef.current = { trackId: data.track.id, maxProgress: data.track.progress || 0 };
+
+            // Detect Spotify auto-advancing to our pre-queued track
+            const ctx = playbackContextRef.current;
+            if (ctx && ctx.tracks) {
+              const nextIdx = ctx.currentIndex + 1;
+              if (nextIdx < ctx.tracks.length) {
+                const nextTrack = ctx.tracks[nextIdx];
+                if (nextTrack.id === data.track.id || nextTrack.uri === `spotify:track:${data.track.id}`) {
+                  ctx.currentIndex = nextIdx;
+                  queuedNextRef.current = null;
+                  autoAdvanceTriggered.current = false;
+                }
+              }
+            }
+
             return data.track;
           }
           // Same track — update max progress
@@ -207,20 +278,40 @@ export function FabricProvider({ children }) {
           return { ...prev, progress: data.track.progress, progressMs: data.track.progressMs };
         });
         setProgress(data.track.progress);
+
+        // Pre-queue next track for smooth transition when past 75%
+        if (data.isPlaying && data.track.progress > 0.75 && playbackContextRef.current && !queuedNextRef.current) {
+          queueNextTrackRef.current?.();
+        }
       } else {
         setCurrentTrack(null);
         setProgress(0);
       }
 
-      // Auto-advance: when Spotify stops after track finishes, play next in context
-      if (!data.isPlaying && data.track && data.track.progress > 0.95 && playbackContextRef.current) {
+      // Auto-advance: detect track completion (handles 204/no-track, stalled-at-end, and vanished)
+      const prevPoll = lastPollState.current;
+      const trackGone = prevPoll.isPlaying && prevPoll.progress > 0.8 && (!data.isPlaying || !data.track || data.track.id !== prevPoll.trackId);
+      const trackEnded = !data.isPlaying && data.track && data.track.progress > 0.95;
+      const trackVanished = prevPoll.isPlaying && prevPoll.trackId && !data.track;
+
+      if ((trackGone || trackEnded || trackVanished) && playbackContextRef.current) {
         if (!autoAdvanceTriggered.current) {
           autoAdvanceTriggered.current = true;
+          autoAdvanceTriggeredAt.current = Date.now();
           autoAdvanceRef.current?.();
+        } else if (Date.now() - autoAdvanceTriggeredAt.current > 10000) {
+          // Guard stuck — playTrack likely failed silently. Reset and retry.
+          autoAdvanceTriggered.current = false;
         }
       } else if (data.isPlaying) {
         autoAdvanceTriggered.current = false;
       }
+
+      lastPollState.current = {
+        isPlaying: data.isPlaying,
+        trackId: data.track?.id || null,
+        progress: data.track?.progress || 0,
+      };
     };
 
     fetchNowPlaying();
@@ -291,6 +382,7 @@ export function FabricProvider({ children }) {
       playSessionRef.current = { trackId: null, maxProgress: 0 };
     }
     // Context-aware skip: advance within current context instead of Spotify's queue
+    queuedNextRef.current = null; // reset pre-queue on skip
     const ctx = playbackContextRef.current;
     if (ctx?.tracks && ctx.currentIndex < ctx.tracks.length - 1) {
       ctx.currentIndex++;
@@ -336,6 +428,15 @@ export function FabricProvider({ children }) {
         body: JSON.stringify({ action: "volume", value: v }),
       });
     }, 300);
+  }, [isDev, apiFetch]);
+
+  // Save track to Spotify Liked Songs (fire-and-forget)
+  const likeTrack = useCallback((track) => {
+    if (!track?.id || isDev) return;
+    apiFetch("/api/fabric/controls", {
+      method: "POST",
+      body: JSON.stringify({ action: "save_track", value: { id: track.id } }),
+    }).catch(() => {});
   }, [isDev, apiFetch]);
 
   // Seek to position (fraction 0-1)
@@ -685,6 +786,8 @@ export function FabricProvider({ children }) {
     setProgress(0);
     setIsPlaying(true);
     pollSuppressedUntil.current = Date.now() + 5000;
+    // Reset lastPollState so first non-suppressed poll starts fresh (avoids stale trackGone)
+    lastPollState.current = { isPlaying: true, trackId: track.id, progress: 0 };
     if (isDev) return;
 
     // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
@@ -752,8 +855,41 @@ export function FabricProvider({ children }) {
       tracks: trackList,
       currentIndex: trackIndex,
     };
+    queuedNextRef.current = null; // reset pre-queue on context change
     await playTrack(track);
   }, [playTrack]);
+
+  // Pre-queue next track in Spotify for gapless transition
+  const queueNextTrack = useCallback(async () => {
+    const ctx = playbackContextRef.current;
+    if (!ctx?.tracks?.length) return;
+    const nextIdx = ctx.currentIndex + 1;
+    if (nextIdx >= ctx.tracks.length) return;
+
+    const nextTrack = ctx.tracks[nextIdx];
+    let uri = nextTrack.uri || (nextTrack.id.startsWith("btc-") ? null : `spotify:track:${nextTrack.id}`);
+
+    // Resolve btc-* tracks via search
+    if (!uri && nextTrack.artist && nextTrack.title) {
+      try {
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${nextTrack.artist} ${nextTrack.title}`)}&type=track`);
+        if (data?.tracks?.[0]) {
+          uri = data.tracks[0].uri;
+          nextTrack.uri = uri;
+          if (data.tracks[0].spotify_id) nextTrack.id = data.tracks[0].spotify_id;
+        }
+      } catch {}
+    }
+    if (!uri || uri === queuedNextRef.current) return;
+
+    await apiFetch("/api/fabric/controls", {
+      method: "POST",
+      body: JSON.stringify({ action: "add_to_queue", value: { uri } }),
+    }).catch(() => {});
+    queuedNextRef.current = uri;
+  }, [apiFetch]);
+  const queueNextTrackRef = useRef(null);
+  queueNextTrackRef.current = queueNextTrack;
 
   // Auto-advance to next track when current finishes
   const autoAdvance = useCallback(() => {
@@ -1079,6 +1215,7 @@ export function FabricProvider({ children }) {
         fetchPlaylistTracks,
         setProgress,
         seekTo,
+        likeTrack,
         volume,
         setVolume,
         formatTime,

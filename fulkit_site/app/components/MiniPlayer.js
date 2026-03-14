@@ -28,7 +28,7 @@ const STROKE = 2.2;
 const STROKE_BOLD = 2.8;
 
 export default function MiniPlayer({ compact }) {
-  const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, volume, setVolume } =
+  const { connected, isPlaying, currentTrack, toggle, skip, prev, flag, isFlagged, likeTrack, volume, setVolume } =
     useFabric();
   const [enabled, setEnabled] = useState(true);
 
@@ -126,19 +126,17 @@ export default function MiniPlayer({ compact }) {
             gap: "var(--space-2)",
           }}
         >
-          {/* Flag — circled */}
+          {/* Like — circled, ThumbsUp */}
           <button
-            onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
+            onClick={(e) => { e.preventDefault(); flag(currentTrack); likeTrack(currentTrack); }}
             style={{
               ...circleBtn,
-              background: flaggedNow ? "var(--color-text)" : "transparent",
-              border: flaggedNow ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
               transition: "all 150ms",
             }}
           >
             {flaggedNow
-              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
-              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+              ? <ThumbsUp size={IC_SM} strokeWidth={STROKE_BOLD} fill="var(--color-text)" color="var(--color-text)" />
+              : <ThumbsUp size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
             }
           </button>
 
@@ -214,20 +212,18 @@ export default function MiniPlayer({ compact }) {
             justifyContent: "space-between",
           }}
         >
-          {/* Flag — circled */}
+          {/* Like — circled, ThumbsUp */}
           <button
-            onClick={(e) => { e.preventDefault(); flag(currentTrack); }}
-            title={flaggedNow ? "Flagged" : "Flag this track"}
+            onClick={(e) => { e.preventDefault(); flag(currentTrack); likeTrack(currentTrack); }}
+            title={flaggedNow ? "Liked" : "Like this track"}
             style={{
               ...circleBtn,
-              background: flaggedNow ? "var(--color-text)" : "transparent",
-              border: flaggedNow ? "1px solid var(--color-text)" : "1px solid var(--color-border)",
               transition: "all 150ms",
             }}
           >
             {flaggedNow
-              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
-              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
+              ? <ThumbsUp size={IC_SM} strokeWidth={STROKE_BOLD} fill="var(--color-text)" color="var(--color-text)" />
+              : <ThumbsUp size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
             }
           </button>
 

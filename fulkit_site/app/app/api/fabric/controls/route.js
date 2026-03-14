@@ -43,6 +43,14 @@ export async function POST(request) {
     return Response.json({ error: "Save error" }, { status: res.status });
   }
 
+  // Add track to queue (for gapless transitions)
+  if (action === "add_to_queue" && value?.uri) {
+    const res = await fabricFetch(userId, `/me/player/queue?uri=${encodeURIComponent(value.uri)}`, { method: "POST" });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Queue error" }, { status: res.status });
+  }
+
   // Play a specific track by URI
   if (action === "play_track" && value?.uri) {
     const res = await fabricFetch(userId, "/me/player/play", {

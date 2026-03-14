@@ -1521,6 +1521,7 @@ export default function FabricPage() {
     formatTime,
     setProgress,
     seekTo,
+    likeTrack,
     timeline,
     getSnapshot,
     publishedSets,
@@ -2022,7 +2023,7 @@ export default function FabricPage() {
               position: "absolute", top: 8, right: 34,
               background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)",
               fontSize: 9, fontFamily: "var(--font-mono)",
-              padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
+              padding: "var(--space-1) var(--space-2)", borderRadius: 0,
               cursor: "pointer", whiteSpace: "nowrap", zIndex: 10,
             }}>
               Press D to {deckExpanded ? "collapse" : "expand"}
@@ -2048,7 +2049,7 @@ export default function FabricPage() {
               <div style={{
                 width: 36, height: 36, flexShrink: 0,
                 background: "var(--color-bg-inverse)",
-                borderRadius: "var(--radius-sm)",
+                borderRadius: 0,
                 overflow: "hidden",
                 filter: "grayscale(1)",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -2138,7 +2139,7 @@ export default function FabricPage() {
                 height: 180,
                 flexShrink: 0,
                 background: "var(--color-bg-inverse)",
-                borderRadius: "var(--radius-sm)",
+                borderRadius: 0,
                 overflow: "hidden",
                 display: "flex",
                 alignItems: "center",
@@ -2190,7 +2191,7 @@ export default function FabricPage() {
                     {currentTrack
                       ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}`
                       : statusChecked && !connected
-                        ? <button onClick={reconnectSpotify} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", cursor: "pointer" }}>Reconnect</button>
+                        ? <button onClick={reconnectSpotify} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: 0, padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", cursor: "pointer" }}>Reconnect</button>
                         : ""}
                   </div>
                 </div>
@@ -2289,15 +2290,7 @@ export default function FabricPage() {
                   onClick={() => {
                     if (!currentTrack) return;
                     flag(currentTrack);
-                    // Save to Spotify Liked Songs
-                    const spotifyId = currentTrack.spotifyId || (currentTrack.id && !currentTrack.id.startsWith("btc-") ? currentTrack.id : null);
-                    if (spotifyId && !isFlagged(currentTrack.id)) {
-                      fetch("/api/fabric/controls", {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${accessToken}` },
-                        body: JSON.stringify({ action: "save_track", value: { id: spotifyId } }),
-                      }).catch(() => {});
-                    }
+                    likeTrack(currentTrack);
                   }}
                   style={{
                     width: 32,
@@ -2437,7 +2430,7 @@ export default function FabricPage() {
                     padding: "var(--space-2-5) var(--space-3)",
                     border: "none",
                     background: col.active ? "var(--color-bg-alt)" : "transparent",
-                    borderRadius: "var(--radius-md)",
+                    borderRadius: 0,
                     color: col.active ? "var(--color-text)" : "var(--color-text-muted)",
                     fontWeight: col.active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                     fontSize: "var(--font-size-xs)",
@@ -2470,20 +2463,31 @@ export default function FabricPage() {
                 flexDirection: "column",
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-1)", flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", marginBottom: "var(--space-3)" }}>
+              {/* Sticky column header */}
+              <div style={{
+                padding: "var(--space-2-5) var(--space-3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: "1px solid var(--color-border-light)",
+                background: "var(--color-bg)",
+                flexShrink: 0,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <Disc3 size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Dig</Label>
                 </div>
+              </div>
+
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
                 {/* ── Record Store Guy — Behind the Counter ── */}
                 <div style={{
-                  marginBottom: "var(--space-3)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)",
+                  marginBottom: 0,
+                  borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
-                  flex: musicChatOpen ? 1 : undefined,
-                  minHeight: musicChatOpen ? 0 : undefined,
+                  flex: (musicChatOpen || searchResults) ? 1 : undefined,
+                  minHeight: (musicChatOpen || searchResults) ? 0 : undefined,
                   display: "flex",
                   flexDirection: "column",
                 }}>
@@ -2874,7 +2878,7 @@ export default function FabricPage() {
                         padding: "var(--space-1-5) var(--space-2)",
                         background: "var(--color-bg)",
                         border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
+                        borderRadius: 0,
                         fontSize: "var(--font-size-xs)",
                         color: "var(--color-text)",
                         fontFamily: "var(--font-primary)",
@@ -2906,19 +2910,13 @@ export default function FabricPage() {
                       <Send size={12} strokeWidth={1.8} />
                     </button>
                   </div>
-                </div>
 
-                {/* ── Search — direct Spotify search ── */}
-                <div style={{
-                  marginBottom: "var(--space-3)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)",
-                  overflow: "hidden",
-                }}>
+                  {/* Search input — always visible, inside B-Side panel */}
                   <div style={{
                     display: "flex",
                     gap: "var(--space-2)",
                     padding: "var(--space-2) var(--space-3)",
+                    borderTop: "1px solid var(--color-border-light)",
                     background: "var(--color-bg-elevated)",
                   }}>
                     <input
@@ -2930,13 +2928,13 @@ export default function FabricPage() {
                           runSearch(searchQuery);
                         }
                       }}
-                      placeholder="Search Spotify..."
+                      placeholder="Search..."
                       style={{
                         flex: 1,
                         padding: "var(--space-1-5) var(--space-2)",
                         background: "var(--color-bg)",
                         border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
+                        borderRadius: 0,
                         fontSize: "var(--font-size-xs)",
                         color: "var(--color-text)",
                         fontFamily: "var(--font-primary)",
@@ -2963,12 +2961,13 @@ export default function FabricPage() {
                     </button>
                   </div>
 
-                  {/* Search results */}
+                  {/* Search results — expands downward, shares space with chat */}
                   {(searchResults || searchLoading) && (
                     <div style={{
                       borderTop: "1px solid var(--color-border-light)",
                       padding: "var(--space-2) var(--space-3)",
-                      maxHeight: 300,
+                      flex: 1,
+                      minHeight: 0,
                       overflowY: "auto",
                     }}>
                       {searchLoading && (
@@ -2989,44 +2988,30 @@ export default function FabricPage() {
                             </button>
                           </div>
 
-                          {/* Artist card */}
+                          {/* Artist info — text only, no image */}
                           {searchResults.artist && (
                             <div style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "var(--space-2)",
                               marginBottom: "var(--space-2)",
                               paddingBottom: "var(--space-2)",
                               borderBottom: "1px solid var(--color-border-light)",
                             }}>
-                              {searchResults.artist.image && (
-                                <img
-                                  src={searchResults.artist.image}
-                                  width={36}
-                                  height={36}
-                                  alt=""
-                                  style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-                                />
-                              )}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{
-                                  fontSize: "var(--font-size-xs)",
-                                  fontWeight: "var(--font-weight-semibold)",
-                                  color: "var(--color-text)",
-                                }}>
-                                  {searchResults.artist.name}
-                                </div>
-                                {searchResults.artist.genres?.length > 0 && (
-                                  <div style={{
-                                    fontSize: 9,
-                                    fontFamily: "var(--font-mono)",
-                                    color: "var(--color-text-muted)",
-                                    marginTop: 2,
-                                  }}>
-                                    {searchResults.artist.genres.join(" · ")}
-                                  </div>
-                                )}
+                              <div style={{
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: "var(--font-weight-semibold)",
+                                color: "var(--color-text)",
+                              }}>
+                                {searchResults.artist.name}
                               </div>
+                              {searchResults.artist.genres?.length > 0 && (
+                                <div style={{
+                                  fontSize: 9,
+                                  fontFamily: "var(--font-mono)",
+                                  color: "var(--color-text-muted)",
+                                  marginTop: 2,
+                                }}>
+                                  {searchResults.artist.genres.join(" · ")}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -3053,7 +3038,7 @@ export default function FabricPage() {
                                     textAlign: "left",
                                     fontFamily: "var(--font-primary)",
                                     width: "100%",
-                                    borderRadius: "var(--radius-sm)",
+                                    borderRadius: 0,
                                     transition: "background var(--duration-fast) var(--ease-default)",
                                   }}
                                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--color-bg-alt)"; }}
@@ -3065,7 +3050,7 @@ export default function FabricPage() {
                                       width={28}
                                       height={28}
                                       alt=""
-                                      style={{ borderRadius: 2, objectFit: "cover", flexShrink: 0 }}
+                                      style={{ borderRadius: 2, objectFit: "cover", flexShrink: 0, filter: "grayscale(1)" }}
                                     />
                                   )}
                                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3162,11 +3147,12 @@ export default function FabricPage() {
                               padding: "var(--space-1) var(--space-2)",
                               cursor: "grab",
                               borderBottom: "1px solid var(--color-border-light)",
-                              background: isActive ? "var(--color-bg-inverse)" : "transparent",
-                              borderRadius: isActive ? "var(--radius-sm)" : 0,
+                              borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                              background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                              transition: "background var(--duration-fast) var(--ease-default)",
                             }}
                           >
-                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", width: 18, flexShrink: 0, textAlign: "right" }}>
                               {String(track.track_number || i + 1).padStart(2, "0")}
                             </div>
                             <div
@@ -3181,7 +3167,8 @@ export default function FabricPage() {
                               <div style={{
                                 fontSize: "var(--font-size-xs)",
                                 fontWeight: "var(--font-weight-medium)",
-                                color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                                color: "var(--color-text)",
+                                fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
@@ -3189,7 +3176,7 @@ export default function FabricPage() {
                                 {track.title}
                               </div>
                             </div>
-                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)", flexShrink: 0 }}>
+                            <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
                               {formatTime(Math.round((track.duration_ms || 0) / 1000))}
                             </div>
                             <button
@@ -3203,15 +3190,13 @@ export default function FabricPage() {
                               }); }}
                               style={{
                                 background: "none",
-                                border: `1px solid ${isActive ? "rgba(255,255,255,0.25)" : "var(--color-border)"}`,
-                                borderRadius: "var(--radius-sm)",
+                                border: "1px solid var(--color-border)",
+                                borderRadius: 0,
                                 cursor: "pointer",
                                 padding: "0 3px",
                                 fontSize: 8,
                                 fontFamily: "var(--font-mono)",
-                                color: isActive
-                                  ? "var(--color-text-inverse)"
-                                  : isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
+                                color: isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
                                 flexShrink: 0,
                               }}
                             >
@@ -3255,7 +3240,7 @@ export default function FabricPage() {
                             justifyContent: "space-between",
                             padding: "var(--space-2) var(--space-3)",
                             background: "var(--color-bg-elevated)",
-                            borderRadius: "var(--radius-sm)",
+                            borderRadius: 0,
                             cursor: "pointer",
                           }}
                           onClick={() => {
@@ -3317,7 +3302,7 @@ export default function FabricPage() {
                         height: 20,
                         background: playlistPickerOpen ? "var(--color-bg-alt)" : "transparent",
                         border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-sm)",
+                        borderRadius: 0,
                         cursor: "pointer",
                         color: "var(--color-text-muted)",
                         padding: 0,
@@ -3338,7 +3323,7 @@ export default function FabricPage() {
                   <div style={{
                     marginBottom: "var(--space-2)",
                     border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: 0,
                     maxHeight: 200,
                     overflowY: "auto",
                     background: "var(--color-bg-elevated)",
@@ -3409,7 +3394,7 @@ export default function FabricPage() {
                           justifyContent: "space-between",
                           padding: "var(--space-2) var(--space-3)",
                           background: "var(--color-bg-elevated)",
-                          borderRadius: "var(--radius-sm)",
+                          borderRadius: 0,
                           cursor: "pointer",
                         }}
                         onClick={() => {
@@ -3465,39 +3450,42 @@ export default function FabricPage() {
                 minHeight: 0,
               }}
             >
-              {/* ── YOUR CRATES ── */}
-              <div style={{ flexShrink: 0, padding: "var(--space-3) var(--space-1) 0", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {/* Sticky column header */}
+              <div style={{
+                padding: "var(--space-2-5) var(--space-3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: "1px solid var(--color-border-light)",
+                background: "var(--color-bg)",
+                flexShrink: 0,
+              }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <PackageOpen size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Crates</Label>
                 </div>
-                {playlists.length > 0 && (
-                  <button
-                    onClick={() => setShowSpotifyBrowser(!showSpotifyBrowser)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 20,
-                      height: 20,
-                      background: showSpotifyBrowser ? "var(--color-bg-alt)" : "transparent",
-                      border: "1px solid var(--color-border-light)",
-                      borderRadius: "var(--radius-sm)",
-                      cursor: "pointer",
-                      color: "var(--color-text-muted)",
-                      padding: 0,
-                      transition: "all 120ms",
-                    }}
-                    title="Import playlist"
-                  >
-                    <Plus size={10} strokeWidth={2} style={{
-                      transform: showSpotifyBrowser ? "rotate(45deg)" : "none",
-                      transition: "transform 120ms",
-                    }} />
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowSpotifyBrowser(!showSpotifyBrowser)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-dim)",
+                    padding: 2,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Import playlist"
+                >
+                  <Plus size={10} strokeWidth={2} style={{
+                    transform: showSpotifyBrowser ? "rotate(45deg)" : "none",
+                    transition: "transform 120ms",
+                  }} />
+                </button>
               </div>
+
+              {/* Scrollable crate content */}
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
               {/* Imported crate shelf (exclude published sets) */}
               {crates.filter(c => c.source !== "set").length > 0 && (
@@ -3544,7 +3532,7 @@ export default function FabricPage() {
                             minWidth: 80,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: isOpen ? "1px solid var(--color-border-focus)" : "1px solid var(--color-border-light)",
-                            borderRadius: "var(--radius-sm)",
+                            borderRadius: 0,
                             cursor: "pointer",
                             fontFamily: "var(--font-primary)",
                             textAlign: "left",
@@ -3583,7 +3571,7 @@ export default function FabricPage() {
                   padding: "var(--space-4) var(--space-2)",
                   textAlign: "center",
                   border: "1px dashed var(--color-border-light)",
-                  borderRadius: "var(--radius-lg)",
+                  borderRadius: 0,
                 }}>
                   <Package size={20} strokeWidth={1.2} style={{ color: "var(--color-text-dim)", marginBottom: "var(--space-2)" }} />
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
@@ -3604,7 +3592,7 @@ export default function FabricPage() {
                         background: "var(--color-bg)",
                         color: "var(--color-text)",
                         border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
+                        borderRadius: 0,
                         fontSize: "var(--font-size-xs)",
                         fontWeight: "var(--font-weight-semibold)",
                         fontFamily: "var(--font-primary)",
@@ -3618,16 +3606,10 @@ export default function FabricPage() {
                 </div>
               )}
 
-              </div>{/* end crate shelf wrapper */}
-
-              {/* ── Scrollable content below shelf ── */}
-              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 var(--space-1) var(--space-1)", overflow: "hidden" }}>
-
               {/* ── B-SIDES ── */}
               {guyCrate && (
                 <div style={{
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
+                  borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
                   marginBottom: guyCrateCollapsed ? 0 : "var(--space-2)",
                   flex: guyCrateCollapsed ? "none" : 1,
@@ -3720,11 +3702,27 @@ export default function FabricPage() {
                               display: "flex", alignItems: "center", gap: "var(--space-2)",
                               padding: "var(--space-2)", cursor: "grab",
                               borderBottom: "1px solid var(--color-border-light)",
-                              background: isActive ? "var(--color-bg-alt)" : "transparent",
+                              borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                              background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                              transition: "background var(--duration-fast) var(--ease-default)",
                             }}>
+                            <div style={{
+                              width: 16, fontSize: 9, fontFamily: "var(--font-mono)",
+                              color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
+                              textAlign: "center", flexShrink: 0,
+                            }}>
+                              {isActive ? (
+                                <div style={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "flex-end", height: 10 }}>
+                                  {[0, 1, 2].map((j) => (
+                                    <div key={j} style={{ width: 1.5, height: 3 + Math.random() * 7, background: "var(--color-text)" }} />
+                                  ))}
+                                </div>
+                              ) : String(i + 1).padStart(2, "0")}
+                            </div>
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
-                                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)",
+                                fontSize: "var(--font-size-xs)",
+                                fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                                 color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                               }}>
                                 {track.title}
@@ -3772,8 +3770,7 @@ export default function FabricPage() {
               {/* ── SPOTIFY BROWSER — pick playlists to import ── */}
               {showSpotifyBrowser && (
                 <div style={{
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
+                  borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
                   flex: 1,
                   minHeight: 0,
@@ -3845,7 +3842,7 @@ export default function FabricPage() {
                                 padding: "var(--space-1) var(--space-2)",
                                 background: "transparent",
                                 border: "1px solid var(--color-border)",
-                                borderRadius: "var(--radius-sm)",
+                                borderRadius: 0,
                                 cursor: isImporting ? "wait" : "pointer",
                                 fontSize: 9,
                                 fontFamily: "var(--font-mono)",
@@ -3869,8 +3866,7 @@ export default function FabricPage() {
               {/* ── EXPANDED CRATE — track list ── */}
               {expandedCrate && crateTracks.length > 0 && (
                 <div style={{
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
+                  borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
                   flex: 1,
                   minHeight: 0,
@@ -3946,15 +3942,16 @@ export default function FabricPage() {
                             gap: "var(--space-3)",
                             padding: "var(--space-2) var(--space-2)",
                             borderBottom: "1px solid var(--color-border-light)",
-                            background: isActive ? "var(--color-bg-inverse)" : "transparent",
-                            transition: "background 120ms",
+                            borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                            background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                            transition: "background var(--duration-fast) var(--ease-default)",
                             cursor: "pointer",
                           }}
                         >
                           <div style={{
                             fontSize: 8,
                             fontFamily: "var(--font-mono)",
-                            color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                            color: "var(--color-text-dim)",
                             width: 18,
                             flexShrink: 0,
                             textAlign: "right",
@@ -3981,7 +3978,8 @@ export default function FabricPage() {
                             <div style={{
                               fontSize: "var(--font-size-xs)",
                               fontWeight: "var(--font-weight-medium)",
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                              color: "var(--color-text)",
+                              fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -3990,7 +3988,7 @@ export default function FabricPage() {
                             </div>
                             <div style={{
                               fontSize: 9,
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                              color: "var(--color-text-secondary)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -4028,8 +4026,7 @@ export default function FabricPage() {
               {/* ── EXPANDED FEATURED MIX — track list ── */}
               {expandedFeatured && featuredTracks.length > 0 && (
                 <div style={{
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
+                  borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
                   marginTop: "var(--space-1)",
                   flex: 1,
@@ -4079,15 +4076,16 @@ export default function FabricPage() {
                             gap: "var(--space-3)",
                             padding: "var(--space-2) var(--space-2)",
                             borderBottom: "1px solid var(--color-border-light)",
-                            background: isActive ? "var(--color-bg-inverse)" : "transparent",
-                            transition: "background 120ms",
+                            borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                            background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                            transition: "background var(--duration-fast) var(--ease-default)",
                             cursor: "pointer",
                           }}
                         >
                           <div style={{
                             fontSize: 8,
                             fontFamily: "var(--font-mono)",
-                            color: isActive ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                            color: "var(--color-text-dim)",
                             width: 18,
                             flexShrink: 0,
                             textAlign: "right",
@@ -4106,7 +4104,8 @@ export default function FabricPage() {
                             <div style={{
                               fontSize: "var(--font-size-xs)",
                               fontWeight: "var(--font-weight-medium)",
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text)",
+                              color: "var(--color-text)",
+                              fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -4115,7 +4114,7 @@ export default function FabricPage() {
                             </div>
                             <div style={{
                               fontSize: 9,
-                              color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                              color: "var(--color-text-secondary)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -4176,7 +4175,16 @@ export default function FabricPage() {
                 background: dragOverCol === "sets" ? "var(--color-bg-alt)" : undefined,
               }}
             >
-              <div style={{ padding: "var(--space-3) var(--space-1) 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              {/* Sticky column header */}
+              <div style={{
+                padding: "var(--space-2-5) var(--space-3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderBottom: "1px solid var(--color-border-light)",
+                background: "var(--color-bg)",
+                flexShrink: 0,
+              }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)" }}>
                   <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Sets</Label>
@@ -4184,18 +4192,13 @@ export default function FabricPage() {
                 <button
                   onClick={() => createSet()}
                   style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-dim)",
+                    padding: 2,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    width: 20,
-                    height: 20,
-                    background: "transparent",
-                    border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-sm)",
-                    cursor: "pointer",
-                    color: "var(--color-text-muted)",
-                    padding: 0,
-                    transition: "all 120ms",
                   }}
                   title="New set"
                 >
@@ -4208,13 +4211,12 @@ export default function FabricPage() {
                 {allSets.map((set) => {
                   const isExpanded = expandedSetIds.includes(set.id);
                   const isActiveSet = set.id === activeSetId;
+                  const isPlayingFromThisSet = isActiveSet && currentTrack && set.tracks.some(t => t.id === currentTrack.id);
                   const setPublished = publishedSets[set.name] || null;
                   return (
                     <div key={set.id} style={{
-                      border: "1px solid var(--color-border-light)",
-                      borderRadius: "var(--radius-md)",
+                      borderBottom: "1px solid var(--color-border-light)",
                       overflow: "hidden",
-                      margin: "var(--space-1) var(--space-2)",
                       background: "var(--color-bg-elevated)",
                     }}>
                       {/* Set header row */}
@@ -4223,11 +4225,13 @@ export default function FabricPage() {
                         style={{
                           padding: "var(--space-2) var(--space-3)",
                           borderBottom: isExpanded ? "1px solid var(--color-border-light)" : "none",
+                          borderLeft: isPlayingFromThisSet ? "3px solid var(--color-accent)" : "3px solid transparent",
                           display: "flex",
                           alignItems: "center",
                           gap: "var(--space-2)",
                           cursor: "pointer",
-                          background: isActiveSet ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                          background: isPlayingFromThisSet ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                          transition: "background var(--duration-fast) var(--ease-default)",
                           position: "relative",
                         }}
                       >
@@ -4268,7 +4272,7 @@ export default function FabricPage() {
                             style={{
                               fontFamily: "var(--font-mono)", fontSize: 9,
                               fontWeight: "var(--font-weight-bold)",
-                              color: isActiveSet ? "var(--color-text)" : "var(--color-text-muted)",
+                              color: isPlayingFromThisSet ? "var(--color-text)" : "var(--color-text-muted)",
                               textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
                               cursor: "pointer", whiteSpace: "nowrap",
                               overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
@@ -4359,15 +4363,16 @@ export default function FabricPage() {
                                 onDragOver={isActiveSet ? (e) => handleDragOver(e, i) : undefined}
                                 onDrop={isActiveSet ? (e) => handleDrop(e, i) : undefined}
                                 onDragEnd={isActiveSet ? handleDragEnd : undefined}
-                                onClick={() => playTrackInContext(track, "set", set.id, set.tracks, i)}
+                                onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: "var(--space-2)",
                                   padding: "var(--space-2) var(--space-2)",
                                   borderBottom: "1px solid var(--color-border-light)",
                                   borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
-                                  background: isActive ? "var(--color-bg-alt)" : "transparent",
+                                  borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                                  background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                                   cursor: isActiveSet ? "grab" : "pointer",
-                                  transition: "background 100ms", userSelect: "none",
+                                  transition: "background var(--duration-fast) var(--ease-default)", userSelect: "none",
                                 }}
                               >
                                 <div style={{
@@ -4435,7 +4440,7 @@ export default function FabricPage() {
                 <div style={{
                   position: "absolute", bottom: "var(--space-2)", right: "var(--space-3)",
                   zIndex: 20, background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-border-light)", borderRadius: 0,
                   padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-xs)",
                   color: "var(--color-text-muted)", whiteSpace: "nowrap",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
