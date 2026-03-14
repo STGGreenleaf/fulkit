@@ -5,6 +5,36 @@
 
 ---
 
+## Session 15 — 2026-03-14: Fabric search enrichment + Dig column scroll + Crate polish
+
+### What was built
+- **Enriched search results** — Artist search now returns top tracks (playable rows with track number, title, duration, play/add buttons), up to 20 albums (was 5) with "See all X albums" toggle, and playlists. Three parallel API calls + follow-up top-tracks fetch.
+- **BTC song card font** — Switched song recommendation cards from mono to primary font. Kept bump-out design, grouped cards, play/add buttons.
+- **Bold markdown fallback parser** — Song cards now render from `**Artist** - Title` format (bold markdown) in addition to `Artist - Title BPM [+]`. Catches LLM format drift.
+- **Prompt strengthening** — RECOMMENDATION FORMAT in prompts.js now says "Every time you mention a specific track" (not just "When recommending") and requires BPM + [+] always.
+- **Dig column scroll architecture** — Removed flex column from scroll container, removed all per-section maxHeight caps (chat 45vh, search 40vh, discovery 40vh). One long scrollable column where each section takes natural height.
+- **Search results moved outside BTC panel** — Search results are now a sibling to the BTC panel in the scroll container, not nested inside it.
+- **Crate card polish** — Flush cards (gap: 0), consistent 110px width, black left border on selected crate, mutual exclusivity between B-Sides and personal crates, title padding alignment.
+- **Crate auto-sort** — Last accessed crate bumps to front of list. Persisted in localStorage crate-order.
+- **Top tracks API** — New `type=top-tracks` handler in search route using `/artists/{id}/top-tracks?market=US`.
+- **Playlist search API** — New `type=playlist` handler in search route.
+
+### Design decisions
+- One scroll container > per-section scroll — user wanted to see everything in one long column
+- Crate mutual exclusivity — B-Sides and personal crates can't both be expanded simultaneously
+- "Last accessed = first" for crates — no separate sort toggle, just automatic reordering on click
+
+### Files changed
+- `app/app/fabric/page.js` — scroll architecture, search UI enrichment, crate polish, auto-sort, font change, bold parser
+- `app/app/api/fabric/search/route.js` — top-tracks, playlist type, album limit 5→20
+- `app/lib/btc/prompts.js` — recommendation format strengthening
+
+### What's next
+- Future: Isolate Fabric music player as standalone feature for multi-API support (Spotify, SoundCloud, Apple Music)
+- Phase 5: Context engine (pgvector embeddings, RAG)
+
+---
+
 ## Session 14 — 2026-03-13: Threads polish + Integration resilience audit + Silent lifecycle features
 
 ### What was built

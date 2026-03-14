@@ -318,6 +318,16 @@ function ThreadsContent({ initialFolder, initialView }) {
     }
   }, [isDev]);
 
+  const deleteNote = useCallback(async (id) => {
+    setNotes((prev) => prev.filter((n) => String(n.id) !== String(id)));
+    if (String(selectedId) === String(id)) setSelectedId(null);
+    if (!isDev) {
+      // Delete linked actions first, then the note
+      await supabase.from("actions").delete().eq("thread_id", id);
+      await supabase.from("notes").delete().eq("id", id);
+    }
+  }, [isDev, selectedId]);
+
   // Move a note to a column at a specific position (handles both cross-column and within-column reorder)
   const moveNote = useCallback((noteId, toStatus, toPosition) => {
     setNotes((prev) => {
@@ -916,6 +926,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                       note={selectedNote}
                       isDev={isDev}
                       onUpdate={updateNote}
+                      onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
                       allLabels={allLabels}
                       columns={allColumns}
@@ -1028,6 +1039,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                       note={selectedNote}
                       isDev={isDev}
                       onUpdate={updateNote}
+                      onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
                       allLabels={allLabels}
                       columns={allColumns}
@@ -1081,6 +1093,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                       note={selectedNote}
                       isDev={isDev}
                       onUpdate={updateNote}
+                      onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
                       allLabels={allLabels}
                       columns={allColumns}
@@ -1124,6 +1137,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                       note={selectedNote}
                       isDev={isDev}
                       onUpdate={updateNote}
+                      onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
                       allLabels={allLabels}
                       columns={allColumns}

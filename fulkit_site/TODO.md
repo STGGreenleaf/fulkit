@@ -144,6 +144,16 @@
 
 ---
 
+## Fabric Isolation (Multi-API Music Player)
+
+- [ ] Abstract Spotify-specific calls behind a provider interface
+- [ ] Isolate Fabric as standalone feature (like Threads) — own routes, own lib, own components
+- [ ] SoundCloud API integration
+- [ ] Apple Music API integration
+- [ ] Unified player that works across all music APIs
+
+---
+
 ## Prelaunch
 
 - [x] Fabric auto-analyze (dev) — Mac launchd cron, every 5 min, processes pending tracks

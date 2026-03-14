@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Plus, Check, Calendar, Tag, ArrowRightFromLine, ArrowLeftFromLine } from "lucide-react";
+import { X, Plus, Check, Calendar, Tag, ArrowRightFromLine, ArrowLeftFromLine, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 const DEFAULT_STATUSES = [
@@ -22,11 +22,12 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels, columns, detailMode, onToggleDetailMode }) {
+export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose, allLabels, columns, detailMode, onToggleDetailMode }) {
   const [checklistItems, setChecklistItems] = useState([]);
   const [newItemText, setNewItemText] = useState("");
   const [labelInput, setLabelInput] = useState("");
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const saveTimer = useRef(null);
   const labelRef = useRef(null);
 
@@ -133,6 +134,22 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
           alignItems: "center",
           gap: "var(--space-1)",
         }}>
+          {onDelete && !confirmDelete && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              title="Delete thread"
+              style={{
+                display: "flex",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-dim)",
+                padding: "var(--space-1)",
+              }}
+            >
+              <Trash2 size={13} strokeWidth={1.8} />
+            </button>
+          )}
           {onToggleDetailMode && (
             <button
               onClick={onToggleDetailMode}
@@ -164,6 +181,49 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
             }}
           >
             <X size={16} strokeWidth={1.8} />
+          </button>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          padding: "var(--space-2) 0",
+          marginBottom: "var(--space-2)",
+        }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Delete?</span>
+          <button
+            onClick={() => { onDelete(note.id); setConfirmDelete(false); }}
+            style={{
+              fontSize: "var(--font-size-xs)",
+              fontFamily: "var(--font-primary)",
+              fontWeight: "var(--font-weight-semibold)",
+              color: "var(--color-error)",
+              background: "none",
+              border: "1px solid var(--color-error)",
+              borderRadius: "var(--radius-sm)",
+              padding: "var(--space-1) var(--space-3)",
+              cursor: "pointer",
+            }}
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            style={{
+              fontSize: "var(--font-size-xs)",
+              fontFamily: "var(--font-primary)",
+              color: "var(--color-text-muted)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "var(--space-1)",
+            }}
+          >
+            Cancel
           </button>
         </div>
       )}
@@ -585,6 +645,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
           />
         </div>
       </div>
+
     </div>
   );
 }

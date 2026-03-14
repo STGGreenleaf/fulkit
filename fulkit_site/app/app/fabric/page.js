@@ -1558,6 +1558,18 @@ export default function FabricPage() {
   const setExpandedCrate = useCallback((id) => {
     setExpandedCrateRaw(id);
     try { if (id) localStorage.setItem("fulkit-expanded-crate", id); else localStorage.removeItem("fulkit-expanded-crate"); } catch {}
+    // Bump accessed crate to front of list
+    if (id) {
+      setCrates(prev => {
+        const idx = prev.findIndex(c => c.id === id);
+        if (idx <= 0) return prev; // already first or not found
+        const next = [...prev];
+        const [moved] = next.splice(idx, 1);
+        next.unshift(moved);
+        try { localStorage.setItem("fulkit-crate-order", JSON.stringify(next.map(c => c.id))); } catch {}
+        return next;
+      });
+    }
   }, []);
   const [crateTracks, setCrateTracks] = useState([]);
   const [publishing, setPublishing] = useState(false);
