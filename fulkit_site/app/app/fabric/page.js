@@ -2479,14 +2479,14 @@ export default function FabricPage() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", paddingBottom: 50 }}>
 
                 {/* ── Record Store Guy — Behind the Counter ── */}
                 <div style={{
                   marginBottom: 0,
                   borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
-                  flex: (musicChatOpen || searchResults) ? 1 : undefined,
+                  maxHeight: (musicChatOpen || searchResults) ? "75%" : undefined,
                   minHeight: (musicChatOpen || searchResults) ? 0 : undefined,
                   display: "flex",
                   flexDirection: "column",
@@ -2522,8 +2522,8 @@ export default function FabricPage() {
 
                   {/* RSG chat drawer */}
                   {musicChatOpen && (
-                    <div style={{ borderTop: "1px solid var(--color-border-light)", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", flex: 1, minHeight: 0, overflowY: "auto" }}>
+                    <div style={{ borderTop: "1px solid var(--color-border-light)", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                      <div ref={musicChatScrollRef} style={{ padding: "var(--space-3)", minHeight: 0, overflowY: "auto" }}>
                         {musicMessages.length === 0 && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", fontStyle: "italic", lineHeight: 1.4 }}>
                             {tickerFact || "Ask me anything about music..."}
@@ -2961,14 +2961,11 @@ export default function FabricPage() {
                     </button>
                   </div>
 
-                  {/* Search results — expands downward, shares space with chat */}
+                  {/* Search results — flows naturally, scrolls with outer container */}
                   {(searchResults || searchLoading) && (
                     <div style={{
                       borderTop: "1px solid var(--color-border-light)",
                       padding: "var(--space-2) var(--space-3)",
-                      flex: 1,
-                      minHeight: 0,
-                      overflowY: "auto",
                     }}>
                       {searchLoading && (
                         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
@@ -2978,40 +2975,52 @@ export default function FabricPage() {
 
                       {searchResults && (
                         <div>
-                          {/* Dismiss */}
-                          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
-                            <button
-                              onClick={() => { setSearchResults(null); setSearchQuery(""); }}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1 }}
-                            >
-                              ×
-                            </button>
-                          </div>
-
-                          {/* Artist info — text only, no image */}
+                          {/* Artist header — name left, dismiss right, one line */}
                           {searchResults.artist && (
                             <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
                               marginBottom: "var(--space-2)",
                               paddingBottom: "var(--space-2)",
                               borderBottom: "1px solid var(--color-border-light)",
                             }}>
-                              <div style={{
-                                fontSize: "var(--font-size-xs)",
-                                fontWeight: "var(--font-weight-semibold)",
-                                color: "var(--color-text)",
-                              }}>
-                                {searchResults.artist.name}
-                              </div>
-                              {searchResults.artist.genres?.length > 0 && (
+                              <div style={{ minWidth: 0 }}>
                                 <div style={{
-                                  fontSize: 9,
-                                  fontFamily: "var(--font-mono)",
-                                  color: "var(--color-text-muted)",
-                                  marginTop: 2,
+                                  fontSize: "var(--font-size-xs)",
+                                  fontWeight: "var(--font-weight-bold)",
+                                  color: "var(--color-text)",
                                 }}>
-                                  {searchResults.artist.genres.join(" · ")}
+                                  {searchResults.artist.name}
                                 </div>
-                              )}
+                                {searchResults.artist.genres?.length > 0 && (
+                                  <div style={{
+                                    fontSize: 9,
+                                    fontFamily: "var(--font-mono)",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: 2,
+                                  }}>
+                                    {searchResults.artist.genres.join(" · ")}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1, flexShrink: 0 }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )}
+                          {/* Dismiss only (no artist) */}
+                          {!searchResults.artist && (
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
+                              <button
+                                onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1 }}
+                              >
+                                ×
+                              </button>
                             </div>
                           )}
 
