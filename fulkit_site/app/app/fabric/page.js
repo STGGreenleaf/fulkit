@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1510,6 +1510,9 @@ export default function FabricPage() {
   const [discoveryAlbum, setDiscoveryAlbum] = useState(null);
   const [discoveryTracks, setDiscoveryTracks] = useState([]);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   // Per-set expand/collapse — default closed, persisted in localStorage
   const [expandedSetIds, setExpandedSetIds] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -1679,6 +1682,48 @@ export default function FabricPage() {
     }
     setDiscoveryLoading(false);
   }, [accessToken, discoveryLoading]);
+
+  // Search — direct Spotify search (artist + albums)
+  const runSearch = useCallback(async (query) => {
+    if (!accessToken || searchLoading || !query.trim()) return;
+    setSearchLoading(true);
+    setSearchResults(null);
+    try {
+      const [artistRes, albumRes] = await Promise.all([
+        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=artist`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=album`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ]);
+      const [artistData, albumData] = await Promise.all([artistRes.json(), albumRes.json()]);
+      setSearchResults({
+        artist: artistData.artists?.[0] || null,
+        albums: albumData.albums || [],
+      });
+    } catch (e) {
+      console.warn("[search]", e.message);
+    }
+    setSearchLoading(false);
+  }, [accessToken, searchLoading]);
+
+  // Load album tracks into discovery tray (reused by search + BTC)
+  const loadAlbumTracks = useCallback(async (albumId) => {
+    if (!accessToken) return;
+    setDiscoveryLoading(true);
+    try {
+      const res = await fetch(`/api/fabric/search?album=${albumId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      setDiscoveryAlbum(data.album || null);
+      setDiscoveryTracks(data.tracks || []);
+    } catch (e) {
+      console.warn("[discovery]", e.message);
+    }
+    setDiscoveryLoading(false);
+  }, [accessToken]);
 
   // Load imported crates
   const loadCrates = useCallback(async () => {
@@ -2786,6 +2831,201 @@ export default function FabricPage() {
                       <Send size={12} strokeWidth={1.8} />
                     </button>
                   </div>
+                </div>
+
+                {/* ── Search — direct Spotify search ── */}
+                <div style={{
+                  marginBottom: "var(--space-3)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    display: "flex",
+                    gap: "var(--space-2)",
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "var(--color-bg-elevated)",
+                  }}>
+                    <input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && searchQuery.trim()) {
+                          e.preventDefault();
+                          runSearch(searchQuery);
+                        }
+                      }}
+                      placeholder="Search Spotify..."
+                      style={{
+                        flex: 1,
+                        padding: "var(--space-1-5) var(--space-2)",
+                        background: "var(--color-bg)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text)",
+                        fontFamily: "var(--font-primary)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        opacity: searchLoading ? 0.5 : 1,
+                      }}
+                    />
+                    <button
+                      onClick={() => searchQuery.trim() && runSearch(searchQuery)}
+                      disabled={searchLoading || !searchQuery.trim()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: searchLoading ? "default" : "pointer",
+                        padding: 2,
+                        color: "var(--color-text-dim)",
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: searchLoading || !searchQuery.trim() ? 0.3 : 1,
+                      }}
+                    >
+                      <Search size={12} strokeWidth={1.8} />
+                    </button>
+                  </div>
+
+                  {/* Search results */}
+                  {(searchResults || searchLoading) && (
+                    <div style={{
+                      borderTop: "1px solid var(--color-border-light)",
+                      padding: "var(--space-2) var(--space-3)",
+                      maxHeight: 300,
+                      overflowY: "auto",
+                    }}>
+                      {searchLoading && (
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
+                          Searching...
+                        </div>
+                      )}
+
+                      {searchResults && (
+                        <div>
+                          {/* Dismiss */}
+                          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
+                            <button
+                              onClick={() => { setSearchResults(null); setSearchQuery(""); }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, fontSize: 14, lineHeight: 1 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+
+                          {/* Artist card */}
+                          {searchResults.artist && (
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "var(--space-2)",
+                              marginBottom: "var(--space-2)",
+                              paddingBottom: "var(--space-2)",
+                              borderBottom: "1px solid var(--color-border-light)",
+                            }}>
+                              {searchResults.artist.image && (
+                                <img
+                                  src={searchResults.artist.image}
+                                  width={36}
+                                  height={36}
+                                  alt=""
+                                  style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+                                />
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                  fontSize: "var(--font-size-xs)",
+                                  fontWeight: "var(--font-weight-semibold)",
+                                  color: "var(--color-text)",
+                                }}>
+                                  {searchResults.artist.name}
+                                </div>
+                                {searchResults.artist.genres?.length > 0 && (
+                                  <div style={{
+                                    fontSize: 9,
+                                    fontFamily: "var(--font-mono)",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: 2,
+                                  }}>
+                                    {searchResults.artist.genres.join(" · ")}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Albums list */}
+                          {searchResults.albums?.length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <Label style={{ marginBottom: "var(--space-1)" }}>Albums</Label>
+                              {searchResults.albums.map((album) => (
+                                <button
+                                  key={album.id}
+                                  onClick={() => {
+                                    loadAlbumTracks(album.id);
+                                    setSearchResults(null);
+                                    setSearchQuery("");
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "var(--space-2)",
+                                    padding: "var(--space-1-5) var(--space-1)",
+                                    background: "transparent",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                    fontFamily: "var(--font-primary)",
+                                    width: "100%",
+                                    borderRadius: "var(--radius-sm)",
+                                    transition: "background var(--duration-fast) var(--ease-default)",
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--color-bg-alt)"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                >
+                                  {album.image && (
+                                    <img
+                                      src={album.image}
+                                      width={28}
+                                      height={28}
+                                      alt=""
+                                      style={{ borderRadius: 2, objectFit: "cover", flexShrink: 0 }}
+                                    />
+                                  )}
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                      fontSize: "var(--font-size-xs)",
+                                      color: "var(--color-text)",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}>
+                                      {album.name}
+                                    </div>
+                                    <div style={{
+                                      fontSize: 9,
+                                      fontFamily: "var(--font-mono)",
+                                      color: "var(--color-text-dim)",
+                                    }}>
+                                      {album.year}{album.trackCount ? ` · ${album.trackCount} tracks` : ""}
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* No results */}
+                          {!searchResults.artist && searchResults.albums?.length === 0 && (
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
+                              Nothing found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Discovery Tray — album tracks from BTC links ── */}
