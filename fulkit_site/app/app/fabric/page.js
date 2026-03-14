@@ -3718,9 +3718,9 @@ export default function FabricPage() {
                             }
                           }}
                           style={{
-                            padding: "var(--space-1-5) var(--space-2)",
-                            minWidth: 80,
-                            width: 90,
+                            padding: "var(--space-2) var(--space-2-5)",
+                            minWidth: 100,
+                            width: 110,
                             background: isOpen ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
                             border: "none",
                             borderLeft: isOpen ? "3px solid var(--color-text)" : "none",
