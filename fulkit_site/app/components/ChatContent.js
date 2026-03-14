@@ -1031,16 +1031,18 @@ export default function ChatContent({ isPopout = false }) {
                       flexShrink: 0,
                       background: chat.input.trim()
                         ? "var(--color-accent)"
-                        : "var(--color-border-light)",
+                        : "transparent",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       cursor: chat.input.trim() ? "pointer" : "default",
-                      border: "none",
+                      border: chat.input.trim()
+                        ? "none"
+                        : "1px solid var(--color-border)",
                       transition: "background var(--duration-fast) var(--ease-default)",
                     }}
                   >
-                    <ArrowRight size={14} strokeWidth={2.5} color="var(--color-text-inverse)" />
+                    <ArrowRight size={14} strokeWidth={2.5} color={chat.input.trim() ? "var(--color-text-inverse)" : "var(--color-text-secondary)"} />
                   </button>
                   {!isPopout && (
                     <button
