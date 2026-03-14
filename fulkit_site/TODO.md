@@ -60,7 +60,7 @@
   - Learned preferences: key/value with toggle to forget
   - Onboarding answers: view/edit what you told Fulkit
 - [ ] Real storage used (Supabase query)
-- [ ] Export wires to real data (markdown dump)
+- [x] Export wires to real data (JSON vault export via /api/export)
 - [ ] Delete wires to real data (cascade with confirmation)
 
 ## Phase 2.6: Chat Persistence + Recall Rail
@@ -97,6 +97,9 @@
 - [x] Security hardening — dev mode bypass, BYOK encryption, prompt injection defense, memory caps, input validation
 - [x] Threads elevation — kanban board (5 status columns, drag-and-drop), ThreadCard/ThreadBoard/ThreadDetail components, due dates with urgency dots, monochrome labels, checklist items (actions linked via thread_id)
 - [x] Chat ↔ Threads ↔ Actions unification — threads_create tool, conversation_id plumbing through all tool executors, vault-writeback passes conversationId
+- [x] Threads polish — monochrome urgency meter (stacked dots), /slash labels, overdue items dim + sink, quick-pick label chips, calendar timezone fix, proper URL slugs (/threads/work/calendar, /settings/owner/design)
+- [x] Integration resilience audit — confirmed zero FK dependencies, graceful degradation via safeGet(), data persists through connect/disconnect cycles
+- [x] Silent lifecycle features — overdue dimming, vault inventory in settings, vault export (GET /api/export + download button)
 
 ## Phase 5: Context Engine
 

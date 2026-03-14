@@ -1,5 +1,9 @@
 import Owner from "../page";
 
-export default function OwnerTabPage() {
-  return <Owner />;
+const VALID_TABS = ["dashboard", "questions", "design", "users", "socials", "og", "fabric", "playground"];
+
+export default async function OwnerTabPage({ params }) {
+  const { tab } = await params;
+  const validTab = VALID_TABS.includes(tab) ? tab : undefined;
+  return <Owner initialTab={validTab} />;
 }

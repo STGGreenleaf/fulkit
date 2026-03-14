@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Plus, Check, Calendar, Tag } from "lucide-react";
+import { X, Plus, Check, Calendar, Tag, ArrowRightFromLine, ArrowLeftFromLine } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
-const STATUSES = [
+const DEFAULT_STATUSES = [
   { key: "inbox", label: "Inbox" },
   { key: "active", label: "Active" },
   { key: "in-progress", label: "In Progress" },
@@ -22,7 +22,7 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels }) {
+export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels, columns, detailMode, onToggleDetailMode }) {
   const [checklistItems, setChecklistItems] = useState([]);
   const [newItemText, setNewItemText] = useState("");
   const [labelInput, setLabelInput] = useState("");
@@ -123,23 +123,49 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
       padding: "var(--space-6)",
       position: "relative",
     }}>
-      {/* Close button */}
+      {/* Panel controls */}
       {onClose && (
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "var(--space-4)",
-            right: "var(--space-4)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-text-muted)",
-            padding: "var(--space-1)",
-          }}
-        >
-          <X size={16} strokeWidth={1.8} />
-        </button>
+        <div style={{
+          position: "absolute",
+          top: "var(--space-4)",
+          right: "var(--space-4)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-1)",
+        }}>
+          {onToggleDetailMode && (
+            <button
+              onClick={onToggleDetailMode}
+              title={detailMode === "overlap" ? "Pop out to column" : "Overlap mode"}
+              style={{
+                display: "flex",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-dim)",
+                padding: "var(--space-1)",
+              }}
+            >
+              {detailMode === "overlap"
+                ? <ArrowRightFromLine size={14} strokeWidth={1.8} />
+                : <ArrowLeftFromLine size={14} strokeWidth={1.8} />
+              }
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              display: "flex",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+              padding: "var(--space-1)",
+            }}
+          >
+            <X size={16} strokeWidth={1.8} />
+          </button>
+        </div>
       )}
 
       {/* Title */}
@@ -167,7 +193,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
           fontSize: "var(--font-size-2xs)",
           fontWeight: "var(--font-weight-semibold)",
           textTransform: "uppercase",
-          letterSpacing: "0.05em",
+          letterSpacing: "var(--letter-spacing-wider)",
           color: "var(--color-text-muted)",
           marginBottom: "var(--space-1)",
         }}>
@@ -179,7 +205,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
           border: "1px solid var(--color-border-light)",
           overflow: "hidden",
         }}>
-          {STATUSES.map((s) => (
+          {(columns || DEFAULT_STATUSES).map((s) => (
             <button
               key={s.key}
               onClick={() => updateField("status", s.key)}
@@ -205,12 +231,12 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
       </div>
 
       {/* Due date */}
-      <div style={{ marginBottom: "var(--space-3)" }}>
+      <div style={{ marginBottom: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>
         <div style={{
           fontSize: "var(--font-size-2xs)",
           fontWeight: "var(--font-weight-semibold)",
           textTransform: "uppercase",
-          letterSpacing: "0.05em",
+          letterSpacing: "var(--letter-spacing-wider)",
           color: "var(--color-text-muted)",
           marginBottom: "var(--space-1)",
         }}>
@@ -220,8 +246,8 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
           <Calendar size={14} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
           <input
             type="date"
-            value={note.due_date ? new Date(note.due_date).toISOString().split("T")[0] : ""}
-            onChange={(e) => updateField("due_date", e.target.value ? new Date(e.target.value).toISOString() : null)}
+            value={note.due_date ? (note.due_date.length === 10 ? note.due_date : new Date(note.due_date).toISOString().split("T")[0]) : ""}
+            onChange={(e) => updateField("due_date", e.target.value || null)}
             style={{
               fontSize: "var(--font-size-sm)",
               fontFamily: "var(--font-primary)",
@@ -251,12 +277,12 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
       </div>
 
       {/* Labels */}
-      <div style={{ marginBottom: "var(--space-3)" }}>
+      <div style={{ marginBottom: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>
         <div style={{
           fontSize: "var(--font-size-2xs)",
           fontWeight: "var(--font-weight-semibold)",
           textTransform: "uppercase",
-          letterSpacing: "0.05em",
+          letterSpacing: "var(--letter-spacing-wider)",
           color: "var(--color-text-muted)",
           marginBottom: "var(--space-1)",
         }}>
@@ -271,16 +297,16 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
                 alignItems: "center",
                 gap: 3,
                 fontSize: "var(--font-size-2xs)",
-                fontWeight: "var(--font-weight-semibold)",
+                fontWeight: "var(--font-weight-medium)",
                 color: "var(--color-text-muted)",
-                background: "var(--color-bg-alt)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-xs)",
-                padding: "1px var(--space-1-5)",
+                background: "transparent",
+                border: "none",
+                borderRadius: 0,
+                padding: "1px var(--space-1)",
                 lineHeight: "18px",
               }}
             >
-              {label}
+              /{label}
               <button
                 onClick={() => removeLabel(label)}
                 style={{
@@ -383,6 +409,37 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
             </button>
           )}
         </div>
+        {/* Quick picks — top used labels when picker is open and input is empty */}
+        {showLabelPicker && !labelInput && allLabels && allLabels.length > 0 && (() => {
+          const picks = allLabels.filter((l) => !labels.includes(l)).slice(0, 5);
+          if (picks.length === 0) return null;
+          return (
+            <div style={{
+              display: "flex",
+              gap: "var(--space-2)",
+              marginTop: "var(--space-1-5)",
+            }}>
+              {picks.map((l) => (
+                <button
+                  key={l}
+                  onMouseDown={(e) => { e.preventDefault(); addLabel(l); }}
+                  style={{
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)",
+                    color: "var(--color-text-dim)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  /{l}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Source + timestamp */}
@@ -438,7 +495,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onClose, allLabels
             fontSize: "var(--font-size-2xs)",
             fontWeight: "var(--font-weight-semibold)",
             textTransform: "uppercase",
-            letterSpacing: "0.05em",
+            letterSpacing: "var(--letter-spacing-wider)",
             color: "var(--color-text-muted)",
           }}>
             Checklist {totalCount > 0 && `(${doneCount}/${totalCount})`}

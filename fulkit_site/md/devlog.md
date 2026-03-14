@@ -5,6 +5,38 @@
 
 ---
 
+## Session 14 — 2026-03-13: Threads polish + Integration resilience audit + Silent lifecycle features
+
+### What was built
+- **Frequently used labels (quick picks)** — When label picker opens and input is empty, top 5 most-used labels appear as clickable `/label` chips below the input. `allLabels` sorted by frequency descending in page.js, chips rendered in ThreadDetail.js. Clicking adds the label instantly.
+- **Integration architecture audit** — Confirmed all core features (threads, labels, actions, chat, vault) work independently with zero foreign keys to integrations table. `source` field is a plain string, not a constraint. Disconnect deletes only the token row — no cascade, no data loss. `safeGet()` + conditional tool registration ensures graceful degradation.
+- **Auto-archive overdue items** — Overdue threads dim to 55% opacity across all views (Board, List, Table, Calendar). Board view sorts overdue items to bottom within each column. No status change — user owns status, we just visually deprioritize.
+- **Integration inventory** — Single line under Sources "Connected" header: "12 notes · 8 actions in your vault". Fetches counts via Supabase head queries. Shows nothing if counts are 0.
+- **Vault export** — `GET /api/export` returns all notes + actions as JSON. "Download my data" button in Settings > Account tab. Downloads `fulkit-vault-YYYY-MM-DD.json`. No wizard, no dialog — one click.
+- **Monochrome fixes** — List view status dot changed from `--color-success` to `--color-text` (was last colored element in threads).
+
+### Design decisions
+- Overdue items dim but don't auto-change status — some overdue items are still actively worked on
+- Vault inventory is global (total counts), not per-integration — `source` field values ("Chat", "Obsidian") don't reliably map to integration names ("github", "trello")
+- Export is silent — no confirmation dialog, just downloads
+
+### Files changed
+- `components/ThreadDetail.js` — quick-pick label chips
+- `components/ThreadCard.js` — overdue opacity dimming
+- `components/ThreadBoard.js` — overdue items sort to bottom
+- `components/ThreadTable.js` — overdue row dimming
+- `components/ThreadCalendar.js` — overdue entry dimming
+- `app/threads/page.js` — list view overdue dimming, monochrome status dot, label frequency sort
+- `app/settings/page.js` — vault inventory line, export download button
+- `app/api/export/route.js` — NEW vault export endpoint
+
+### What's next
+- Push to production
+- Backfill SQL (notes table extensions) before production push
+- Phase 5: Context engine (pgvector embeddings, RAG)
+
+---
+
 ## Session 13 — 2026-03-13: Threads elevation — Kanban board + Chat ↔ Threads ↔ Actions
 
 ### What was built

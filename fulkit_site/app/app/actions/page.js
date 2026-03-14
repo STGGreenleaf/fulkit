@@ -25,11 +25,32 @@ const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
 const BUCKET_LABELS = { build: "Build", life: "Life" };
 
 const DEV_ACTIONS = [
+  // Active — Build
   { id: "1", title: "Review Q1 budget draft", source: "Obsidian", status: "active", priority: 1, parent_id: null, created_at: "2026-02-28T10:00:00Z", description: "Compare against last quarter's actual spend. Mike needs this by Friday.", bucket: "build" },
   { id: "2", title: "Send Mike the revised proposal", source: "Chat", status: "active", priority: 2, parent_id: null, created_at: "2026-03-01T14:00:00Z", description: null, bucket: "build" },
+  { id: "6", title: "Wire up Numbrly cost dashboard", source: "Chat", status: "active", priority: 1, parent_id: null, created_at: "2026-03-05T08:30:00Z", description: "Connect vendor data to the composite view. Test with at least 3 vendors.", bucket: "build" },
+  { id: "7", title: "Draft investor update email", source: "Obsidian", status: "active", priority: 2, parent_id: null, created_at: "2026-03-06T11:00:00Z", description: "Q1 numbers, product milestones, runway projection. Keep it under 500 words.", bucket: "build" },
+  { id: "8", title: "Fix auth redirect on expired session", source: "GitHub", status: "active", priority: 1, parent_id: null, created_at: "2026-03-08T16:45:00Z", description: "Users hitting a blank screen when token expires mid-session. Should redirect to /login gracefully.", bucket: "build" },
+  { id: "9", title: "Set up staging environment", source: "Chat", status: "active", priority: 3, parent_id: null, created_at: "2026-03-09T09:00:00Z", description: null, bucket: "build" },
+  // Active — Life
   { id: "3", title: "Book dentist appointment", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-02T09:00:00Z", description: null, bucket: "life" },
+  { id: "10", title: "Renew passport", source: "Whisper", status: "active", priority: 2, parent_id: null, created_at: "2026-03-03T07:00:00Z", description: "Expires in 4 months. Need photos first.", bucket: "life" },
+  { id: "11", title: "Plan birthday dinner for Jess", source: "Manual", status: "active", priority: 1, parent_id: null, created_at: "2026-03-07T13:00:00Z", description: "She likes Italian. Check if Osteria has availability for the 22nd, party of 8.", bucket: "life" },
+  { id: "12", title: "Order new running shoes", source: "Whisper", status: "active", priority: 3, parent_id: null, created_at: "2026-03-10T10:00:00Z", description: null, bucket: "life" },
+  // Done
   { id: "4", title: "Follow up with Sarah", source: "Chat", status: "done", priority: null, parent_id: null, created_at: "2026-02-25T11:00:00Z", completed_at: "2026-03-01T16:00:00Z", description: "She confirmed the budget numbers look good.", bucket: null },
+  { id: "13", title: "Ship onboarding flow v2", source: "GitHub", status: "done", priority: 1, parent_id: null, created_at: "2026-02-22T09:00:00Z", completed_at: "2026-03-04T14:30:00Z", description: "New 3-step flow with vault selection. Deployed to production.", bucket: "build" },
+  { id: "14", title: "File quarterly taxes", source: "Obsidian", status: "done", priority: 1, parent_id: null, created_at: "2026-02-15T10:00:00Z", completed_at: "2026-02-28T17:00:00Z", description: "Filed federal + state. Refund expected ~$2,400.", bucket: "life" },
+  { id: "15", title: "Set up Spotify integration", source: "Chat", status: "done", priority: 2, parent_id: null, created_at: "2026-02-20T14:00:00Z", completed_at: "2026-03-02T11:00:00Z", description: "OAuth flow + now-playing + controls all working.", bucket: "build" },
+  { id: "16", title: "Cancel gym membership", source: "Whisper", status: "done", priority: 3, parent_id: null, created_at: "2026-02-18T08:00:00Z", completed_at: "2026-02-26T09:00:00Z", description: null, bucket: "life" },
+  // Deferred
+  { id: "17", title: "Research DIN Pro licensing", source: "Obsidian", status: "deferred", priority: 2, parent_id: null, created_at: "2026-02-10T10:00:00Z", description: "Need commercial license for production. Compare FF DIN vs DIN Pro pricing.", bucket: "build" },
+  { id: "18", title: "Write API documentation", source: "Chat", status: "deferred", priority: 3, parent_id: null, created_at: "2026-02-14T15:00:00Z", description: "Cover auth, notes, chat, and integration endpoints. Low priority until public API.", bucket: "build" },
+  { id: "19", title: "Plan weekend trip to Joshua Tree", source: "Whisper", status: "deferred", priority: 3, parent_id: null, created_at: "2026-03-01T19:00:00Z", description: "April or May. Need to book Airbnb early.", bucket: "life" },
+  // Dismissed
   { id: "5", title: "Cancel old subscription", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-20T08:00:00Z", description: null, bucket: "life" },
+  { id: "20", title: "Migrate to Tailwind", source: "Chat", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-12T11:00:00Z", description: "Decided against it. Inline styles + tokens is the pattern.", bucket: "build" },
+  { id: "21", title: "Add dark mode toggle", source: "Whisper", status: "dismissed", priority: null, parent_id: null, created_at: "2026-02-16T14:00:00Z", description: "Not aligned with warm monochrome philosophy. Revisit later if needed.", bucket: "build" },
 ];
 
 function timeAgo(dateStr) {

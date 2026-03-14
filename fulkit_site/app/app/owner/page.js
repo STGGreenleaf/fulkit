@@ -110,9 +110,13 @@ function DevToggle({ compact }) {
 }
 
 /* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
-export function OwnerPanel() {
+export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
   const { compactMode } = useAuth();
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(initialTab && VALID_TAB_IDS.includes(initialTab) ? initialTab : "dashboard");
+
+  useEffect(() => {
+    if (initialTab && VALID_TAB_IDS.includes(initialTab)) setTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
@@ -130,7 +134,10 @@ export function OwnerPanel() {
           return (
             <Tooltip key={t.id} label={null}>
               <button
-                onClick={() => setTab(t.id)}
+                onClick={() => {
+                  setTab(t.id);
+                  window.history.replaceState({}, "", `${urlPrefix}/${t.id}`);
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -175,7 +182,7 @@ export function OwnerPanel() {
 }
 
 /* ─── Standalone /owner page ─── */
-export default function Owner() {
+export default function Owner({ initialTab }) {
   const { isOwner, loading } = useAuth();
   const router = useRouter();
 
@@ -188,7 +195,7 @@ export default function Owner() {
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <OwnerPanel />
+          <OwnerPanel initialTab={initialTab} urlPrefix="/owner" />
         </div>
       </div>
     </AuthGuard>

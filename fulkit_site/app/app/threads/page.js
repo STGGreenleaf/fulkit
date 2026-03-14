@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DynamicIcon, iconNames } from "lucide-react/dynamic";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, X, LayoutGrid, List, CalendarDays, Table2, MoreVertical } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
+import ThreadBoard from "../../components/ThreadBoard";
+import ThreadCalendar from "../../components/ThreadCalendar";
+import ThreadTable from "../../components/ThreadTable";
+import ThreadDetail from "../../components/ThreadDetail";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
@@ -20,23 +24,34 @@ const DEFAULT_FOLDERS = [
   { key: "reference", label: "Reference", icon: "book-open" },
 ];
 
+const DEFAULT_COLUMNS = [
+  { key: "inbox", label: "Inbox" },
+  { key: "active", label: "Active" },
+  { key: "in-progress", label: "In Progress" },
+  { key: "review", label: "Review" },
+  { key: "done", label: "Done" },
+];
+
+const VIEWS = [
+  { key: "board", label: "Board", Icon: LayoutGrid },
+  { key: "list", label: "List", Icon: List },
+  { key: "calendar", label: "Calendar", Icon: CalendarDays },
+  { key: "table", label: "Table", Icon: Table2 },
+];
+
 const DEV_NOTES = [
-  // Work
-  { id: "1", title: "Meeting notes — product roadmap", content: "Discussed Q2 priorities:\n\n- Ship vault sync by end of month\n- Numbrly integration blocked on API key provisioning\n- Whispers MVP ready for internal testing\n- Need to finalize pricing tiers before launch\n\nAction items assigned in separate thread.", source: "Obsidian", folder: "work", created_at: "2024-01-15T10:00:00Z" },
-  { id: "5", title: "Standup recap — March 10", content: "What shipped:\n- Compact mode toggle across all tabs\n- Spotify OAuth flow wired up\n- Drag-and-drop on Fabric sets\n\nBlocked:\n- Numbrly API key provisioning still pending\n- Need design review on Threads folder tabs\n\nUp next:\n- Vault Model B encryption layer\n- Chat context injection from vault", source: "Chat", folder: "work", created_at: "2024-01-14T09:00:00Z" },
-  { id: "6", title: "Pricing tier notes", content: "Free: 25 messages/day, local vault only\nPro ($12/mo): unlimited messages, encrypted sync, BYOK\nTeam ($29/seat): shared vaults, admin panel, audit log\n\nStill debating whether BYOK should be Pro-only or available on Free with rate limits. Leaning Pro-only — simplifies the pitch.", source: "Obsidian", folder: "work", created_at: "2024-01-11T16:00:00Z" },
-  // Personal
-  { id: "2", title: "Voice capture: meal planning ideas", content: "Try the lemon chicken recipe from that conversation last week. Marinade: lemon juice, garlic, olive oil, oregano, salt. 400°F for 25 min.\n\nAlso want to try:\n- Thai basil stir fry\n- Homemade pizza dough (the no-knead version)\n- That mushroom risotto technique", source: "Hum", folder: "personal", created_at: "2024-01-14T15:30:00Z" },
-  { id: "7", title: "Weekend trip packing list", content: "Clothes:\n- 2 shirts, 1 hoodie, jeans\n- Running shoes + flip flops\n\nGear:\n- Laptop + charger\n- AirPods\n- Kindle\n- Sunglasses\n\nDon't forget:\n- Water bottle\n- Snacks for the drive\n- Playlist queued up", source: "Hum", folder: "personal", created_at: "2024-01-13T20:00:00Z" },
-  { id: "8", title: "Gift ideas — Mom's birthday", content: "She mentioned wanting:\n- A nice candle (not vanilla — she's over vanilla)\n- That cookbook from the farmer's market guy\n- New garden gloves\n\nBackup: a framed photo from the lake trip last summer. Check Google Photos for the good ones.", source: "Chat", folder: "personal", created_at: "2024-01-10T11:00:00Z" },
-  // Ideas
-  { id: "4", title: "API key rotation checklist", content: "Steps:\n1. Generate new key in Anthropic console\n2. Update .env.local locally\n3. Update Vercel env vars (Settings → Environment Variables)\n4. Restart local dev server\n5. Verify chat works on localhost\n6. Push to trigger Vercel redeploy\n7. Verify production chat works\n8. Revoke old key in Anthropic console\n\nDo NOT revoke old key until new one is confirmed working in prod.", source: "Chat", folder: "ideas", created_at: "2024-01-12T14:00:00Z" },
-  { id: "9", title: "Hats — context profiles concept", content: "What if users could switch 'hats' in chat?\n\nEach hat = a filtered vault context. Examples:\n- Work hat: only pulls from /work folder\n- Creative hat: pulls from /ideas + /reference\n- Personal hat: pulls from /personal, excludes work\n\nUI: dropdown in chat header, icon changes per hat. Vault folders map 1:1 to hat filters. Could reuse the same folder system from Threads.", source: "Obsidian", folder: "ideas", created_at: "2024-01-11T22:00:00Z" },
-  { id: "10", title: "Whispers — ambient capture UX", content: "Core loop: phone mic picks up ambient conversation → transcribes → extracts actionable items → saves to vault as a thread.\n\nKey questions:\n- Always listening vs. tap to start?\n- How to handle multi-speaker?\n- Privacy indicator — must be obvious when recording\n- Battery impact on mobile\n\nMVP: tap to start, single speaker, 5 min max, auto-stop on silence.", source: "Hum", folder: "ideas", created_at: "2024-01-09T18:00:00Z" },
-  // Reference
-  { id: "3", title: "Startup reading list", content: "1. Zero to One — Peter Thiel\n2. The Mom Test — Rob Fitzpatrick\n3. Inspired — Marty Cagan\n4. Shape Up — Ryan Singer (free online)\n5. Obviously Awesome — April Dunford\n\nStart with The Mom Test — shortest and most immediately useful.", source: "Google Drive", folder: "reference", created_at: "2024-01-13T09:00:00Z" },
-  { id: "11", title: "Supabase RLS cheat sheet", content: "Row Level Security patterns:\n\nRead own rows:\n  USING (auth.uid() = user_id)\n\nInsert own rows:\n  WITH CHECK (auth.uid() = user_id)\n\nService role bypasses RLS — never expose in client.\n\nCommon gotcha: forgetting to enable RLS on new tables. Always run:\n  ALTER TABLE tablename ENABLE ROW LEVEL SECURITY;", source: "Google Drive", folder: "reference", created_at: "2024-01-08T13:00:00Z" },
-  { id: "12", title: "Design tokens reference", content: "Warm monochrome palette:\n- bg: #EFEDE8\n- bg-elevated: #F5F3EE\n- bg-alt: #E7E4DF\n- text: #2A2826\n- text-muted: #6B6560\n- text-dim: #9B958E\n- border-light: #D6D3CC\n\nSpacing scale: 2/4/6/8/12/16/20/24/32/40/48/64\nFont sizes: 10/11/12/13/14/16/18/20/24/32\nRadius: 4/6/8/12/16", source: "Obsidian", folder: "reference", created_at: "2024-01-07T10:00:00Z" },
+  { id: "1", title: "Meeting notes — product roadmap", content: "Discussed Q2 priorities:\n\n- Ship vault sync by end of month\n- Numbrly integration blocked on API key provisioning\n- Whispers MVP ready for internal testing\n- Need to finalize pricing tiers before launch", source: "Obsidian", folder: "work", status: "active", labels: ["roadmap"], due_date: new Date(Date.now() - 2 * 86400000).toISOString(), position: 0, created_at: "2024-01-15T10:00:00Z", actions: [] },
+  { id: "5", title: "Standup recap — March 10", content: "What shipped:\n- Compact mode toggle across all tabs\n- Spotify OAuth flow wired up\n- Drag-and-drop on Fabric sets\n\nBlocked:\n- Numbrly API key provisioning still pending", source: "Chat", folder: "work", status: "active", labels: ["standup"], due_date: new Date(Date.now() + 1 * 86400000).toISOString(), position: 1, created_at: "2024-01-14T09:00:00Z", actions: [{ id: "a1", title: "Fix Numbrly API key", status: "active" }] },
+  { id: "6", title: "Pricing tier notes", content: "Free: 25 messages/day, local vault only\nPro ($12/mo): unlimited messages, encrypted sync, BYOK\nTeam ($29/seat): shared vaults, admin panel, audit log", source: "Obsidian", folder: "work", status: "in-progress", labels: ["pricing", "launch"], due_date: new Date(Date.now() + 2 * 86400000).toISOString(), position: 0, created_at: "2024-01-11T16:00:00Z", actions: [{ id: "a2", title: "Finalize Pro tier", status: "done" }, { id: "a3", title: "Set up Stripe", status: "active" }] },
+  { id: "2", title: "Voice capture: meal planning ideas", content: "Try the lemon chicken recipe. Marinade: lemon juice, garlic, olive oil, oregano, salt. 400°F for 25 min.", source: "Hum", folder: "personal", status: "inbox", labels: [], due_date: null, position: 0, created_at: "2024-01-14T15:30:00Z", actions: [] },
+  { id: "7", title: "Weekend trip packing list", content: "Clothes:\n- 2 shirts, 1 hoodie, jeans\n- Running shoes + flip flops\n\nGear:\n- Laptop + charger\n- AirPods\n- Kindle", source: "Hum", folder: "personal", status: "in-progress", labels: ["travel"], due_date: new Date(Date.now() + 4 * 86400000).toISOString(), position: 0, created_at: "2024-01-13T20:00:00Z", actions: [] },
+  { id: "8", title: "Gift ideas — Mom's birthday", content: "She mentioned wanting:\n- A nice candle (not vanilla)\n- That cookbook from the farmer's market guy\n- New garden gloves", source: "Chat", folder: "personal", status: "inbox", labels: ["gift"], due_date: new Date(Date.now() + 10 * 86400000).toISOString(), position: 1, created_at: "2024-01-10T11:00:00Z", actions: [] },
+  { id: "4", title: "API key rotation checklist", content: "Steps:\n1. Generate new key in Anthropic console\n2. Update .env.local locally\n3. Update Vercel env vars\n4. Restart local dev server\n5. Verify chat works\n6. Push to trigger Vercel redeploy\n7. Verify production\n8. Revoke old key", source: "Chat", folder: "ideas", status: "review", labels: ["ops"], due_date: new Date(Date.now() - 5 * 86400000).toISOString(), position: 0, created_at: "2024-01-12T14:00:00Z", actions: [] },
+  { id: "9", title: "Hats — context profiles concept", content: "What if users could switch 'hats' in chat?\n\nEach hat = a filtered vault context.\n- Work hat: only pulls from /work folder\n- Creative hat: pulls from /ideas + /reference\n- Personal hat: pulls from /personal, excludes work", source: "Obsidian", folder: "ideas", status: "inbox", labels: ["feature"], due_date: null, position: 0, created_at: "2024-01-11T22:00:00Z", actions: [] },
+  { id: "10", title: "Whispers — ambient capture UX", content: "Core loop: phone mic picks up ambient conversation → transcribes → extracts actionable items → saves to vault.\n\nMVP: tap to start, single speaker, 5 min max, auto-stop on silence.", source: "Hum", folder: "ideas", status: "active", labels: ["feature", "mvp"], due_date: new Date(Date.now() + 3 * 86400000).toISOString(), position: 1, created_at: "2024-01-09T18:00:00Z", actions: [] },
+  { id: "3", title: "Startup reading list", content: "1. Zero to One — Peter Thiel\n2. The Mom Test — Rob Fitzpatrick\n3. Inspired — Marty Cagan\n4. Shape Up — Ryan Singer (free online)\n5. Obviously Awesome — April Dunford", source: "Google Drive", folder: "reference", status: "done", labels: [], due_date: null, position: 0, created_at: "2024-01-13T09:00:00Z", actions: [] },
+  { id: "11", title: "Supabase RLS cheat sheet", content: "Read own rows:\n  USING (auth.uid() = user_id)\n\nInsert own rows:\n  WITH CHECK (auth.uid() = user_id)\n\nService role bypasses RLS — never expose in client.", source: "Google Drive", folder: "reference", status: "inbox", labels: ["security"], due_date: null, position: 0, created_at: "2024-01-08T13:00:00Z", actions: [] },
+  { id: "12", title: "Design tokens reference", content: "Warm monochrome palette:\n- bg: #EFEDE8\n- bg-elevated: #F5F3EE\n- bg-alt: #E7E4DF\n- text: #2A2826\n- text-muted: #6B6560\n- text-dim: #9B958E\n- border-light: #D6D3CC", source: "Obsidian", folder: "reference", status: "inbox", labels: ["design"], due_date: null, position: 1, created_at: "2024-01-07T10:00:00Z", actions: [] },
 ];
 
 function timeAgo(dateStr) {
@@ -49,59 +64,170 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function ThreadsPage() {
+export default function ThreadsPage({ initialFolder, initialView }) {
   return (
     <Suspense>
-      <ThreadsContent />
+      <ThreadsContent initialFolder={initialFolder} initialView={initialView} />
     </Suspense>
   );
 }
 
-function ThreadsContent() {
+function ThreadsContent({ initialFolder, initialView }) {
   const { user, compactMode } = useAuth();
   const searchParams = useSearchParams();
   const isDev = user?.isDev;
 
+  // --- Core state ---
   const [notes, setNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [folder, setFolder] = useState("all");
+  const [folder, setFolder] = useState(initialFolder || "all");
+  const [view, setView] = useState(initialView || "board");
   const [folders, setFolders] = useState(DEFAULT_FOLDERS);
+  const [customColumns, setCustomColumns] = useState([]);
+  const [customFolders, setCustomFolders] = useState([]);
+  const [addingFolder, setAddingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [menuFolder, setMenuFolder] = useState(null);
+  const [hoverFolder, setHoverFolder] = useState(null);
   const [editingFolder, setEditingFolder] = useState(null);
+  const [editLabelValue, setEditLabelValue] = useState("");
   const [editIconValue, setEditIconValue] = useState("");
+  const [detailMode, setDetailMode] = useState("overlap"); // "overlap" or "column"
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
   const saveTimer = useRef(null);
 
-  // Drag state — reorder within list + move to folder
-  const [dragIdx, setDragIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
+  // --- List view drag state ---
+  const [listDragIdx, setListDragIdx] = useState(null);
+  const [listDragOverIdx, setListDragOverIdx] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
-  const dragNode = useRef(null);
-  const dragNoteId = useRef(null);
+  const listDragNode = useRef(null);
+  const listDragNoteId = useRef(null);
+  const listDragGhost = useRef(null);
 
-  // Load custom folders from localStorage (keep default keys, only override icons)
+  // --- Columns ---
+  const allColumns = useMemo(() => {
+    return [...DEFAULT_COLUMNS, ...customColumns];
+  }, [customColumns]);
+
+  // --- All folders (defaults + custom) ---
+  const allFolders = useMemo(() => [...folders, ...customFolders], [folders, customFolders]);
+
+  // --- All labels (for autocomplete, sorted by frequency) ---
+  const allLabels = useMemo(() => {
+    const counts = {};
+    notes.forEach((n) => (n.labels || []).forEach((l) => {
+      counts[l] = (counts[l] || 0) + 1;
+    }));
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  }, [notes]);
+
+  // --- URL sync helper ---
+  const updateThreadsUrl = useCallback((f, v) => {
+    const slug = f === "all" ? `/threads` : `/threads/${f}`;
+    const full = v && v !== "board" ? `${slug}/${v}` : slug;
+    window.history.replaceState({}, "", full);
+  }, []);
+
+  // --- Load persisted state ---
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("fulkit-thread-folders");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Merge saved icon customizations onto default folders (preserves keys/labels)
+      if (!initialView) {
+        const savedView = localStorage.getItem("fulkit-threads-view");
+        if (savedView && VIEWS.some((v) => v.key === savedView)) setView(savedView);
+      }
+    } catch {}
+    try {
+      const savedDetailMode = localStorage.getItem("fulkit-threads-detail-mode");
+      if (savedDetailMode === "column" || savedDetailMode === "overlap") setDetailMode(savedDetailMode);
+    } catch {}
+    try {
+      const savedFolders = localStorage.getItem("fulkit-thread-folders");
+      if (savedFolders) {
+        const parsed = JSON.parse(savedFolders);
         const merged = DEFAULT_FOLDERS.map((df) => {
           const match = parsed.find((p) => p.key === df.key);
-          return match ? { ...df, icon: match.icon } : df;
+          return match ? { ...df, icon: match.icon || df.icon, label: match.label || df.label } : df;
         });
         setFolders(merged);
       }
     } catch {}
+    try {
+      const savedCols = localStorage.getItem("fulkit-thread-columns");
+      if (savedCols) setCustomColumns(JSON.parse(savedCols));
+    } catch {}
+    try {
+      const savedCustomFolders = localStorage.getItem("fulkit-thread-custom-folders");
+      if (savedCustomFolders) setCustomFolders(JSON.parse(savedCustomFolders));
+    } catch {}
   }, []);
 
-  // Persist folders to localStorage on change
+  // --- Persist view ---
+  const setViewPersist = useCallback((v) => {
+    setView(v);
+    localStorage.setItem("fulkit-threads-view", v);
+    updateThreadsUrl(folder, v);
+  }, [folder, updateThreadsUrl]);
+
+  const toggleDetailMode = useCallback(() => {
+    const next = detailMode === "overlap" ? "column" : "overlap";
+    setDetailMode(next);
+    localStorage.setItem("fulkit-threads-detail-mode", next);
+  }, [detailMode]);
+
+  // --- Persist folders ---
   const persistFolders = useCallback((next) => {
     setFolders(next);
     localStorage.setItem("fulkit-thread-folders", JSON.stringify(next));
   }, []);
 
+  // --- Persist custom folders ---
+  const persistCustomFolders = useCallback((next) => {
+    setCustomFolders(next);
+    localStorage.setItem("fulkit-thread-custom-folders", JSON.stringify(next));
+  }, []);
+
+  const addFolder = useCallback((label) => {
+    const key = label.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!key) return;
+    const allKeys = [...DEFAULT_FOLDERS.map((f) => f.key), ...customFolders.map((f) => f.key)];
+    if (allKeys.includes(key)) return;
+    persistCustomFolders([...customFolders, { key, label: label.trim(), icon: "pen-line" }]);
+  }, [customFolders, persistCustomFolders]);
+
+  const removeFolder = useCallback((key) => {
+    persistCustomFolders(customFolders.filter((f) => f.key !== key));
+    // Move notes in deleted folder to "work"
+    setNotes((prev) => prev.map((n) => n.folder === key ? { ...n, folder: "work" } : n));
+    if (!isDev) {
+      supabase.from("notes").update({ folder: "work" }).eq("folder", key);
+    }
+    if (folder === key) setFolder("all");
+  }, [customFolders, persistCustomFolders, isDev, folder]);
+
+  // --- Persist columns ---
+  const persistColumns = useCallback((next) => {
+    setCustomColumns(next);
+    localStorage.setItem("fulkit-thread-columns", JSON.stringify(next));
+  }, []);
+
+  const addColumn = useCallback((label) => {
+    const key = label.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!key || allColumns.some((c) => c.key === key)) return;
+    persistColumns([...customColumns, { key, label: label.trim() }]);
+  }, [customColumns, allColumns, persistColumns]);
+
+  const removeColumn = useCallback((key) => {
+    persistColumns(customColumns.filter((c) => c.key !== key));
+    // Move notes in deleted column back to inbox
+    setNotes((prev) => prev.map((n) => n.status === key ? { ...n, status: "inbox" } : n));
+    if (!isDev) {
+      supabase.from("notes").update({ status: "inbox" }).eq("status", key);
+    }
+  }, [customColumns, persistColumns, isDev]);
+
+  // --- Load notes ---
   useEffect(() => {
     if (isDev) {
       setNotes(DEV_NOTES);
@@ -119,45 +245,60 @@ function ThreadsContent() {
       });
   }, [user, isDev]);
 
-  // Select note from URL param on load
+  // --- URL param selection ---
   useEffect(() => {
     const id = searchParams.get("id");
     if (id) setSelectedId(id);
   }, [searchParams]);
 
-  // Auto-select first note on initial load only
+  // --- Auto-select first note (list view only) ---
   const hasAutoSelected = useRef(false);
   useEffect(() => {
-    if (!hasAutoSelected.current && !selectedId && notes.length > 0) {
+    if (view === "list" && !hasAutoSelected.current && !selectedId && notes.length > 0) {
       hasAutoSelected.current = true;
       setSelectedId(notes[0].id);
     }
+  }, [notes, selectedId, view]);
+
+  // --- Filtered notes ---
+  const filteredNotes = useMemo(() => {
+    let result = folder === "all" ? notes : notes.filter((n) => n.folder === folder);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = notes.filter((n) => n.title.toLowerCase().includes(q) || (n.content || "").toLowerCase().includes(q));
+    }
+    // Exclude archived from non-archive contexts
+    result = result.filter((n) => n.status !== "archived");
+    return result;
+  }, [notes, folder, searchQuery]);
+
+  const selectedNote = useMemo(() => {
+    return notes.find((n) => String(n.id) === String(selectedId));
   }, [notes, selectedId]);
 
-  const folderFiltered = folder === "all" ? notes : notes.filter((n) => n.folder === folder);
-  const q = searchQuery.toLowerCase().trim();
-  const filteredNotes = q
-    ? notes.filter((n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
-    : folderFiltered;
-  const selectedNote = filteredNotes.find((n) => String(n.id) === String(selectedId));
-
-  const addNote = useCallback(async () => {
+  // --- Note CRUD ---
+  const addNote = useCallback(async (status = "inbox", dueDate = null) => {
     const newNote = {
       id: isDev ? String(Date.now()) : undefined,
       title: "Untitled thread",
       content: "",
       source: "Manual",
       folder: folder === "all" ? "work" : folder,
+      status,
+      labels: [],
+      due_date: dueDate,
+      position: 0,
       created_at: new Date().toISOString(),
+      actions: [],
     };
-
     if (isDev) {
       setNotes((prev) => [newNote, ...prev]);
       setSelectedId(newNote.id);
     } else {
+      const { id: _id, actions: _actions, ...insertData } = newNote;
       const { data } = await supabase
         .from("notes")
-        .insert({ ...newNote, user_id: user.id })
+        .insert({ ...insertData, user_id: user.id })
         .select()
         .single();
       if (data) {
@@ -169,8 +310,6 @@ function ThreadsContent() {
 
   const updateNote = useCallback((id, field, value) => {
     setNotes((prev) => prev.map((n) => String(n.id) === String(id) ? { ...n, [field]: value } : n));
-
-    // Debounced save to Supabase
     if (!isDev) {
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
@@ -179,92 +318,167 @@ function ThreadsContent() {
     }
   }, [isDev]);
 
-  const commitIconEdit = useCallback((folderKey) => {
-    const trimmed = editIconValue.trim().toLowerCase();
-    if (trimmed && iconNames.includes(trimmed)) {
-      persistFolders(folders.map((f) => f.key === folderKey ? { ...f, icon: trimmed } : f));
+  // Move a note to a column at a specific position (handles both cross-column and within-column reorder)
+  const moveNote = useCallback((noteId, toStatus, toPosition) => {
+    setNotes((prev) => {
+      const note = prev.find((n) => String(n.id) === String(noteId));
+      if (!note) return prev;
+
+      // Get all notes in the target column, excluding the dragged note
+      const columnNotes = prev
+        .filter((n) => (n.status || "inbox") === toStatus && String(n.id) !== String(noteId))
+        .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+      // Insert at the target position
+      const clamped = Math.max(0, Math.min(toPosition, columnNotes.length));
+      columnNotes.splice(clamped, 0, { ...note, status: toStatus });
+
+      // Reassign positions sequentially
+      const positionMap = {};
+      columnNotes.forEach((n, i) => { positionMap[String(n.id)] = i; });
+
+      return prev.map((n) => {
+        if (String(n.id) === String(noteId)) {
+          return { ...n, status: toStatus, position: positionMap[String(noteId)] ?? 0 };
+        }
+        if ((n.status || "inbox") === toStatus && positionMap[String(n.id)] !== undefined) {
+          return { ...n, position: positionMap[String(n.id)] };
+        }
+        return n;
+      });
+    });
+
+    // Persist to DB
+    if (!isDev) {
+      setTimeout(() => {
+        // Fetch fresh positions from state after update
+        supabase.from("notes").update({ status: toStatus, position: toPosition }).eq("id", noteId);
+      }, 100);
+    }
+  }, [isDev]);
+
+  // --- Folder editing (name + icon) ---
+  const commitFolderEdit = useCallback((folderKey) => {
+    const newLabel = editLabelValue.trim();
+    const newIcon = editIconValue.trim().toLowerCase();
+    const validIcon = newIcon && iconNames.includes(newIcon);
+
+    const update = (f) => {
+      if (f.key !== folderKey) return f;
+      return {
+        ...f,
+        ...(newLabel ? { label: newLabel } : {}),
+        ...(validIcon ? { icon: newIcon } : {}),
+      };
+    };
+
+    if (DEFAULT_FOLDERS.some((df) => df.key === folderKey)) {
+      persistFolders(folders.map(update));
+    } else {
+      persistCustomFolders(customFolders.map(update));
     }
     setEditingFolder(null);
-  }, [editIconValue, folders, persistFolders]);
+  }, [editLabelValue, editIconValue, folders, customFolders, persistFolders, persistCustomFolders]);
 
-  // --- Drag handlers ---
-  const dragGhost = useRef(null);
-  const handleDragStart = useCallback((e, idx, noteId) => {
-    setDragIdx(idx);
-    dragNode.current = e.currentTarget;
-    dragNoteId.current = noteId;
+  // --- List view drag handlers ---
+  const handleListDragStart = useCallback((e, idx, noteId) => {
+    setListDragIdx(idx);
+    listDragNode.current = e.currentTarget;
+    listDragNoteId.current = noteId;
     e.dataTransfer.effectAllowed = "move";
-    // Create a small card-shaped drag ghost so it doesn't cover folder tabs
     const ghost = document.createElement("div");
     ghost.style.cssText = "position:fixed;top:-100px;left:-100px;width:120px;height:32px;background:#D9D5CE;border:1px solid #CBC7C0;border-left:2px solid #2A2826;opacity:0.85;";
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 60, 16);
-    dragGhost.current = ghost;
-    setTimeout(() => { if (dragNode.current) dragNode.current.style.opacity = "0.15"; }, 0);
+    listDragGhost.current = ghost;
+    setTimeout(() => { if (listDragNode.current) listDragNode.current.style.opacity = "0.15"; }, 0);
   }, []);
 
-  const handleDragOver = useCallback((e, idx) => {
+  const handleListDragOver = useCallback((e, idx) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    if (idx !== dragOverIdx) setDragOverIdx(idx);
-  }, [dragOverIdx]);
+    if (idx !== listDragOverIdx) setListDragOverIdx(idx);
+  }, [listDragOverIdx]);
 
-  const handleDrop = useCallback((e, toIdx) => {
+  const handleListDrop = useCallback((e, toIdx) => {
     e.preventDefault();
-    if (dragIdx != null && dragIdx !== toIdx) {
+    if (listDragIdx != null && listDragIdx !== toIdx) {
       setNotes((prev) => {
-        // Reorder within the filtered view, then map back to full array
         const filtered = folder === "all" ? [...prev] : prev.filter((n) => n.folder === folder);
-        const [moved] = filtered.splice(dragIdx, 1);
+        const [moved] = filtered.splice(listDragIdx, 1);
         filtered.splice(toIdx, 0, moved);
         if (folder === "all") return filtered;
-        // Rebuild full array: non-folder notes stay in place, folder notes get new order
         const reordered = [];
         let fi = 0;
         for (const n of prev) {
-          if (n.folder === folder) {
-            reordered.push(filtered[fi++]);
-          } else {
-            reordered.push(n);
-          }
+          if (n.folder === folder) reordered.push(filtered[fi++]);
+          else reordered.push(n);
         }
         return reordered;
       });
     }
-    setDragIdx(null);
-    setDragOverIdx(null);
-    if (dragNode.current) dragNode.current.style.opacity = "1";
-  }, [dragIdx, folder]);
+    setListDragIdx(null);
+    setListDragOverIdx(null);
+    if (listDragNode.current) listDragNode.current.style.opacity = "1";
+  }, [listDragIdx, folder]);
 
-  const handleDragEnd = useCallback(() => {
-    setDragIdx(null);
-    setDragOverIdx(null);
+  const handleListDragEnd = useCallback(() => {
+    setListDragIdx(null);
+    setListDragOverIdx(null);
     setDragOverFolder(null);
-    if (dragNode.current) dragNode.current.style.opacity = "1";
-    if (dragGhost.current) { dragGhost.current.remove(); dragGhost.current = null; }
-    dragNoteId.current = null;
+    if (listDragNode.current) listDragNode.current.style.opacity = "1";
+    if (listDragGhost.current) { listDragGhost.current.remove(); listDragGhost.current = null; }
+    listDragNoteId.current = null;
   }, []);
 
-  // Drop onto folder tab — move thread to that folder
   const handleFolderDrop = useCallback((e, folderKey) => {
     e.preventDefault();
-    if (folderKey === "all" || !dragNoteId.current) return;
-    const noteId = dragNoteId.current;
-    // Update folder on the note
+    if (folderKey === "all" || !listDragNoteId.current) return;
+    const noteId = listDragNoteId.current;
     setNotes((prev) => prev.map((n) => String(n.id) === String(noteId) ? { ...n, folder: folderKey } : n));
-    // Always clear selection — the note just left this folder
     setSelectedId(null);
     if (!isDev) {
       supabase.from("notes").update({ folder: folderKey }).eq("id", noteId);
     }
-    setDragIdx(null);
-    setDragOverIdx(null);
+    setListDragIdx(null);
+    setListDragOverIdx(null);
     setDragOverFolder(null);
-    if (dragNode.current) dragNode.current.style.opacity = "1";
-    if (dragGhost.current) { dragGhost.current.remove(); dragGhost.current = null; }
-    dragNoteId.current = null;
+    if (listDragNode.current) listDragNode.current.style.opacity = "1";
+    if (listDragGhost.current) { listDragGhost.current.remove(); listDragGhost.current = null; }
+    listDragNoteId.current = null;
   }, [isDev]);
 
+  // Urgency helper for list view
+  const safeDate = (str) => {
+    if (!str) return null;
+    if (typeof str === "string" && str.length === 10) {
+      const [y, m, d] = str.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date(str);
+  };
+  const getUrgency = (dueDate) => {
+    if (!dueDate) return null;
+    const days = Math.ceil((safeDate(dueDate) - new Date()) / 86400000);
+    if (days < 0) return "overdue";
+    if (days <= 3) return "soon";
+    return "on-track";
+  };
+  const UrgencyMeter = ({ urgency }) => {
+    if (!urgency) return null;
+    const filled = urgency === "overdue" ? 3 : urgency === "soon" ? 2 : 1;
+    const on = filled === 3 ? "var(--color-text)" : filled === 2 ? "var(--color-text-muted)" : "var(--color-text-dim)";
+    const off = "var(--color-border-light)";
+    return (
+      <svg width={5} height={14} viewBox="0 0 5 14" style={{ flexShrink: 0 }}>
+        <circle cx="2.5" cy="2.5" r="2" fill={filled >= 3 ? on : off} />
+        <circle cx="2.5" cy="7" r="2" fill={filled >= 2 ? on : off} />
+        <circle cx="2.5" cy="11.5" r="2" fill={on} />
+      </svg>
+    );
+  };
+
+  // --- Render ---
   return (
     <AuthGuard>
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
@@ -288,16 +502,16 @@ function ThreadsContent() {
               Fülkit
             </span>
             {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-            )}
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                Threads
-              </span>
+              <>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                  Threads
+                </span>
+              </>
             )}
           </div>
 
-          {/* Folder tabs */}
+          {/* Tab bar: folder tabs left, view toggle + actions right */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -307,99 +521,249 @@ function ThreadsContent() {
             position: "relative",
             zIndex: 10,
           }}>
-            {folders.map((f) => {
+            {/* Folder tabs */}
+            {allFolders.map((f) => {
               const active = folder === f.key;
               const isEditing = editingFolder === f.key;
               const isDropTarget = f.key !== "all";
+              const isCustomFolder = !DEFAULT_FOLDERS.some((df) => df.key === f.key);
               return (
                 <div
                   key={f.key}
+                  style={{ position: "relative", display: "flex", alignItems: "center" }}
+                  onMouseEnter={isCustomFolder ? () => setHoverFolder(f.key) : undefined}
+                  onMouseLeave={isCustomFolder ? () => setHoverFolder(null) : undefined}
                   onDragEnter={isDropTarget ? (e) => { e.preventDefault(); e.stopPropagation(); setDragOverFolder(f.key); } : undefined}
                   onDragOver={isDropTarget ? (e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; } : undefined}
                   onDragLeave={isDropTarget ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverFolder(null); } : undefined}
                   onDrop={isDropTarget ? (e) => handleFolderDrop(e, f.key) : undefined}
                 >
-                <Tooltip label={compactMode ? f.label : null}>
-                  <button
-                    onClick={() => { setFolder(f.key); setSelectedId(null); }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1-5)",
-                      padding: "var(--space-2-5) var(--space-3)",
-                      border: "none",
-                      outline: "none",
-                      background: dragOverFolder === f.key ? "var(--color-bg-alt)" : active ? "var(--color-bg-alt)" : "transparent",
-                      borderRadius: "var(--radius-md)",
-                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                      fontSize: "var(--font-size-xs)",
-                      fontFamily: "var(--font-primary)",
-                      cursor: "pointer",
-                      transition: "all var(--duration-fast) var(--ease-default)",
-                      // When dragging: dim non-target tabs, pop target tab above drag ghost
-                      ...(dragIdx != null && isDropTarget ? (dragOverFolder === f.key ? {
-                        position: "relative",
-                        zIndex: 9999,
-                        transform: "translateY(-8px) scale(1.15)",
-                        background: "var(--color-bg-elevated)",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-                        opacity: 1,
-                      } : {
-                        opacity: 0.35,
-                      }) : {}),
-                    }}
-                  >
-                    {isEditing ? (
-                      <input
-                        autoFocus
-                        value={editIconValue}
-                        onChange={(e) => setEditIconValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commitIconEdit(f.key);
-                          if (e.key === "Escape") setEditingFolder(null);
-                          e.stopPropagation();
-                        }}
-                        onBlur={() => commitIconEdit(f.key)}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder={f.icon}
-                        style={{
-                          width: 80,
-                          fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-mono)",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: "1px solid var(--color-text-muted)",
-                          outline: "none",
-                          padding: 0,
-                          color: "var(--color-text)",
-                        }}
-                      />
-                    ) : (
+                  <Tooltip label={compactMode ? f.label : null}>
+                    <button
+                      onClick={() => { setFolder(f.key); setSelectedId(null); setMenuFolder(null); updateThreadsUrl(f.key, view); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-1-5)",
+                        padding: "var(--space-2-5) var(--space-3)",
+                        border: "none",
+                        outline: "none",
+                        background: dragOverFolder === f.key ? "var(--color-bg-alt)" : active ? "var(--color-bg-alt)" : "transparent",
+                        borderRadius: "var(--radius-md)",
+                        color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                        fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-primary)",
+                        cursor: "pointer",
+                        transition: "all var(--duration-fast) var(--ease-default)",
+                        ...(listDragIdx != null && isDropTarget ? (dragOverFolder === f.key ? {
+                          position: "relative",
+                          zIndex: 9999,
+                          transform: "translateY(-8px) scale(1.15)",
+                          background: "var(--color-bg-elevated)",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                          opacity: 1,
+                        } : {
+                          opacity: 0.35,
+                        }) : {}),
+                      }}
+                    >
                       <span
                         onDoubleClick={(e) => {
                           if (f.key === "all") return;
                           e.stopPropagation();
                           setEditingFolder(f.key);
+                          setEditLabelValue(f.label);
                           setEditIconValue(f.icon);
                         }}
-                        style={{
-                          display: "flex",
-                          cursor: f.key !== "all" ? "pointer" : "default",
-                        }}
+                        style={{ display: "flex", cursor: f.key !== "all" ? "pointer" : "default" }}
                       >
                         <DynamicIcon name={f.icon} size={TAB_ICON_SIZE} strokeWidth={1.8} />
                       </span>
-                    )}
-                    {!compactMode && f.label}
-                  </button>
-                </Tooltip>
+                      {!compactMode && f.label}
+                    </button>
+                  </Tooltip>
+                  {/* Folder edit popover (name + icon) */}
+                  {isEditing && (
+                    <div
+                      tabIndex={-1}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onBlur={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) commitFolderEdit(f.key);
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        zIndex: 40,
+                        background: "var(--color-bg-elevated)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                        border: "1px solid var(--color-border-light)",
+                        padding: "var(--space-2-5) var(--space-3)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "var(--space-2)",
+                        minWidth: 140,
+                      }}
+                    >
+                      <input
+                        autoFocus
+                        value={editLabelValue}
+                        onChange={(e) => setEditLabelValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitFolderEdit(f.key);
+                          if (e.key === "Escape") setEditingFolder(null);
+                          e.stopPropagation();
+                        }}
+                        placeholder="Name"
+                        style={{
+                          width: "100%",
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-primary)",
+                          background: "transparent",
+                          border: "none",
+                          borderBottom: "1px solid var(--color-text-muted)",
+                          outline: "none",
+                          padding: "0 0 var(--space-1) 0",
+                          color: "var(--color-text)",
+                        }}
+                      />
+                      <input
+                        value={editIconValue}
+                        onChange={(e) => setEditIconValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitFolderEdit(f.key);
+                          if (e.key === "Escape") setEditingFolder(null);
+                          e.stopPropagation();
+                        }}
+                        placeholder="Icon name"
+                        style={{
+                          width: "100%",
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-mono)",
+                          background: "transparent",
+                          border: "none",
+                          borderBottom: "1px solid var(--color-text-muted)",
+                          outline: "none",
+                          padding: "0 0 var(--space-1) 0",
+                          color: "var(--color-text)",
+                        }}
+                      />
+                      <span style={{
+                        fontSize: "var(--font-size-2xs)",
+                        color: "var(--color-text-dim)",
+                        marginTop: -4,
+                      }}>
+                        Lucide Icon
+                      </span>
+                    </div>
+                  )}
+                  {/* Custom folder kebab menu — visible on hover only */}
+                  {isCustomFolder && (hoverFolder === f.key || menuFolder === f.key) && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMenuFolder(menuFolder === f.key ? null : f.key); }}
+                        style={{
+                          position: "absolute",
+                          right: -2,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          display: "flex",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--color-text-dim)",
+                          padding: 2,
+                        }}
+                      >
+                        <MoreVertical size={10} strokeWidth={2} />
+                      </button>
+                      {menuFolder === f.key && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            background: "var(--color-bg-elevated)",
+                            border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-sm)",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                            zIndex: 30,
+                            minWidth: 120,
+                            padding: "var(--space-1) 0",
+                          }}
+                          onMouseLeave={() => setMenuFolder(null)}
+                        >
+                          <button
+                            onClick={() => { removeFolder(f.key); setMenuFolder(null); }}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "var(--space-1-5) var(--space-3)",
+                              fontSize: "var(--font-size-xs)",
+                              fontFamily: "var(--font-primary)",
+                              color: "var(--color-error)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Delete folder
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })}
 
-            {/* Search + New — right-justified */}
+            {/* Spacer */}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              {/* View toggle */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                background: "var(--color-bg-alt)",
+                borderRadius: "var(--radius-md)",
+                padding: 2,
+                gap: 1,
+              }}>
+                {VIEWS.map((v) => {
+                  const isActive = view === v.key;
+                  return (
+                    <Tooltip key={v.key} label={compactMode ? v.label : null}>
+                      <button
+                        onClick={() => setViewPersist(v.key)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          padding: "var(--space-1) var(--space-2)",
+                          border: "none",
+                          outline: "none",
+                          background: isActive ? "var(--color-bg-elevated)" : "transparent",
+                          borderRadius: "var(--radius-sm)",
+                          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
+                          fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                          fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-primary)",
+                          cursor: "pointer",
+                          transition: "all var(--duration-fast) var(--ease-default)",
+                          boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                        }}
+                      >
+                        <v.Icon size={12} strokeWidth={1.8} />
+                        {!compactMode && v.label}
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+
+              {/* Search */}
               {searchOpen ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
                   <Search size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
@@ -436,7 +800,6 @@ function ThreadsContent() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "var(--space-1)",
                     fontSize: "var(--font-size-xs)",
                     color: "var(--color-text-muted)",
                     background: "none",
@@ -452,175 +815,325 @@ function ThreadsContent() {
                   <Search size={12} strokeWidth={2} />
                 </button>
               )}
-              <button
-                onClick={addNote}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-primary)",
-                  padding: "var(--space-2-5) var(--space-2)",
-                  lineHeight: 1,
-                }}
-                title="New thread"
-              >
-                <Plus size={12} strokeWidth={2} />
-                {!compactMode && "New"}
-              </button>
+
+              {/* Add folder */}
+              {addingFolder ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
+                  <input
+                    autoFocus
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const name = newFolderName.trim();
+                        if (name) addFolder(name);
+                        setNewFolderName("");
+                        setAddingFolder(false);
+                      }
+                      if (e.key === "Escape") { setNewFolderName(""); setAddingFolder(false); }
+                    }}
+                    onBlur={() => { setNewFolderName(""); setAddingFolder(false); }}
+                    placeholder="Folder name..."
+                    style={{
+                      width: 120,
+                      fontSize: "var(--font-size-xs)",
+                      fontFamily: "var(--font-primary)",
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      padding: "var(--space-1) 0",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <button
+                    onMouseDown={(e) => { e.preventDefault(); setNewFolderName(""); setAddingFolder(false); }}
+                    style={{ display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)" }}
+                  >
+                    <X size={10} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <Tooltip label="Add folder">
+                  <button
+                    onClick={() => setAddingFolder(true)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-muted)",
+                      background: "none",
+                      border: "none",
+                      outline: "none",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-primary)",
+                      padding: "var(--space-2-5) var(--space-2)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    <Plus size={12} strokeWidth={2} />
+                  </button>
+                </Tooltip>
+              )}
             </div>
           </div>
 
-          {/* Split panel */}
-          <div style={{
-            flex: 1,
-            display: "flex",
-            overflow: "hidden",
-            margin: "var(--space-4) var(--space-6)",
-            background: "var(--color-bg-elevated)",
-            border: "1px solid var(--color-border-light)",
-            borderRadius: "var(--radius-lg)",
-          }}>
-            {/* Left — note list */}
-            <div style={{
-              width: 280,
-              minWidth: 280,
-              borderRight: "1px solid var(--color-border-light)",
-              overflowY: "auto",
-              padding: "var(--space-3) 0",
-            }}>
-              {filteredNotes.length > 0 ? (
-                filteredNotes.map((note, i) => {
-                  const active = String(note.id) === String(selectedId);
-                  return (
-                    <div
-                      key={note.id}
-                      draggable
-                      onClick={() => setSelectedId(note.id)}
-                      onDragStart={(e) => handleDragStart(e, i, note.id)}
-                      onDragOver={(e) => handleDragOver(e, i)}
-                      onDrop={(e) => handleDrop(e, i)}
-                      onDragEnd={handleDragEnd}
-                      style={{
-                        padding: "var(--space-3) var(--space-4)",
-                        cursor: "grab",
-                        background: active ? "var(--color-bg-alt)" : "transparent",
-                        borderLeft: active ? "2px solid var(--color-text)" : "2px solid transparent",
-                        borderTop: dragOverIdx === i && dragIdx !== i ? "2px solid var(--color-text)" : "2px solid transparent",
-                        transition: "background var(--duration-fast) var(--ease-default)",
-                      }}
-                    >
-                      <div style={{
-                        fontSize: "var(--font-size-sm)",
-                        fontWeight: "var(--font-weight-medium)",
-                        color: "var(--color-text)",
-                        marginBottom: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}>
-                        {note.title}
-                      </div>
-                      <div style={{
-                        fontSize: "var(--font-size-xs)",
-                        color: "var(--color-text-dim)",
-                      }}>
-                        {note.source} · {timeAgo(note.created_at)}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{
-                  padding: "var(--space-6) var(--space-4)",
-                  fontSize: "var(--font-size-sm)",
-                  color: "var(--color-text-dim)",
-                  textAlign: "center",
-                }}>
-                  No threads yet. Threads are created from conversations, actions, imports, or The Hum.
-                </div>
-              )}
-            </div>
-
-            {/* Right — note viewer */}
-            <div style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "var(--space-6)",
-            }}>
-              {selectedNote ? (
-                <div>
-                  <input
-                    value={selectedNote.title}
-                    onChange={(e) => updateNote(selectedNote.id, "title", e.target.value)}
-                    style={{
-                      fontSize: "var(--font-size-lg)",
-                      fontWeight: "var(--font-weight-bold)",
-                      letterSpacing: "var(--letter-spacing-tight)",
-                      marginBottom: "var(--space-2)",
-                      width: "100%",
-                      background: "none",
-                      border: "none",
-                      outline: "none",
-                      padding: 0,
-                      color: "var(--color-text)",
-                      fontFamily: "var(--font-primary)",
-                    }}
-                  />
+          {/* Content area */}
+          <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+            {/* === BOARD VIEW === */}
+            {view === "board" && (
+              <>
+                <ThreadBoard
+                  notes={filteredNotes}
+                  columns={allColumns}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onUpdateNote={updateNote}
+                  onMoveNote={moveNote}
+                  onAddNote={addNote}
+                  onAddColumn={addColumn}
+                  onRemoveColumn={removeColumn}
+                  compact={compactMode}
+                />
+                {selectedNote && (
                   <div style={{
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-dim)",
-                    marginBottom: "var(--space-6)",
-                    display: "flex",
-                    gap: "var(--space-2)",
-                    alignItems: "center",
+                    width: 420,
+                    ...(detailMode === "overlap" ? {
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 20,
+                      boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
+                    } : {
+                      minWidth: 420,
+                    }),
+                    borderLeft: "1px solid var(--color-border-light)",
+                    background: "var(--color-bg-elevated)",
+                    overflowY: "auto",
                   }}>
-                    <span style={{
-                      padding: "1px var(--space-2)",
-                      background: "var(--color-bg-alt)",
-                      borderRadius: "var(--radius-sm)",
-                      fontWeight: "var(--font-weight-medium)",
-                    }}>
-                      {selectedNote.source}
-                    </span>
-                    <span>·</span>
-                    <span>{timeAgo(selectedNote.created_at)}</span>
+                    <ThreadDetail
+                      note={selectedNote}
+                      isDev={isDev}
+                      onUpdate={updateNote}
+                      onClose={() => setSelectedId(null)}
+                      allLabels={allLabels}
+                      columns={allColumns}
+                      detailMode={detailMode}
+                      onToggleDetailMode={toggleDetailMode}
+                    />
                   </div>
-                  <textarea
-                    value={selectedNote.content}
-                    onChange={(e) => updateNote(selectedNote.id, "content", e.target.value)}
-                    style={{
-                      fontSize: "var(--font-size-sm)",
-                      color: "var(--color-text-secondary)",
-                      lineHeight: "var(--line-height-relaxed)",
-                      whiteSpace: "pre-wrap",
-                      width: "100%",
-                      minHeight: 300,
-                      background: "none",
-                      border: "none",
-                      outline: "none",
-                      padding: 0,
-                      resize: "none",
-                      fontFamily: "var(--font-primary)",
-                    }}
-                  />
-                </div>
-              ) : (
+                )}
+              </>
+            )}
+
+            {/* === LIST VIEW === */}
+            {view === "list" && (
+              <div style={{
+                flex: 1,
+                display: "flex",
+                overflow: "hidden",
+                margin: "var(--space-4) var(--space-6)",
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-lg)",
+              }}>
+                {/* Left — note list */}
                 <div style={{
-                  fontSize: "var(--font-size-sm)",
-                  color: "var(--color-text-dim)",
-                  textAlign: "center",
-                  marginTop: "var(--space-10)",
+                  width: 280,
+                  minWidth: 280,
+                  borderRight: "1px solid var(--color-border-light)",
+                  overflowY: "auto",
+                  padding: "var(--space-3) 0",
                 }}>
-                  Select a thread to view
+                  {filteredNotes.length > 0 ? (
+                    filteredNotes.map((note, i) => {
+                      const active = String(note.id) === String(selectedId);
+                      const urgency = getUrgency(note.due_date);
+                      return (
+                        <div
+                          key={note.id}
+                          draggable
+                          onClick={() => setSelectedId(note.id)}
+                          onDragStart={(e) => handleListDragStart(e, i, note.id)}
+                          onDragOver={(e) => handleListDragOver(e, i)}
+                          onDrop={(e) => handleListDrop(e, i)}
+                          onDragEnd={handleListDragEnd}
+                          style={{
+                            padding: "var(--space-3) var(--space-4)",
+                            cursor: "grab",
+                            background: active ? "var(--color-bg-alt)" : "transparent",
+                            borderLeft: active ? "2px solid var(--color-text)" : "2px solid transparent",
+                            borderTop: listDragOverIdx === i && listDragIdx !== i ? "2px solid var(--color-text)" : "2px solid transparent",
+                            opacity: urgency === "overdue" ? 0.55 : 1,
+                            transition: "background var(--duration-fast) var(--ease-default), opacity var(--duration-fast) var(--ease-default)",
+                          }}
+                        >
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--space-2)",
+                          }}>
+                            {/* Status dot */}
+                            {note.status && note.status !== "inbox" && (
+                              <span style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "var(--radius-full)",
+                                background: note.status === "done" ? "var(--color-text)" : "var(--color-text-muted)",
+                                flexShrink: 0,
+                                opacity: note.status === "done" ? 1 : 0.6,
+                              }} />
+                            )}
+                            <div style={{
+                              fontSize: "var(--font-size-sm)",
+                              fontWeight: "var(--font-weight-medium)",
+                              color: "var(--color-text)",
+                              marginBottom: 2,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                            }}>
+                              {note.title}
+                            </div>
+                            {/* Urgency dot */}
+                            <UrgencyMeter urgency={urgency} />
+                          </div>
+                          <div style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: "var(--color-text-dim)",
+                          }}>
+                            {note.source} · {timeAgo(note.created_at)}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{
+                      padding: "var(--space-6) var(--space-4)",
+                      fontSize: "var(--font-size-sm)",
+                      color: "var(--color-text-dim)",
+                      textAlign: "center",
+                    }}>
+                      No threads yet. Threads are created from conversations, actions, imports, or The Hum.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Right — detail */}
+                <div style={{ flex: 1, overflowY: "auto" }}>
+                  {selectedNote ? (
+                    <ThreadDetail
+                      note={selectedNote}
+                      isDev={isDev}
+                      onUpdate={updateNote}
+                      onClose={() => setSelectedId(null)}
+                      allLabels={allLabels}
+                      columns={allColumns}
+                      detailMode={detailMode}
+                      onToggleDetailMode={toggleDetailMode}
+                    />
+                  ) : (
+                    <div style={{
+                      fontSize: "var(--font-size-sm)",
+                      color: "var(--color-text-dim)",
+                      textAlign: "center",
+                      marginTop: "var(--space-10)",
+                      padding: "var(--space-6)",
+                    }}>
+                      Select a thread to view
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* === CALENDAR VIEW === */}
+            {view === "calendar" && (
+              <>
+                <ThreadCalendar
+                  notes={filteredNotes}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onUpdateNote={updateNote}
+                  onAddNote={addNote}
+                  compact={compactMode}
+                />
+                {selectedNote && (
+                  <div style={{
+                    width: 420,
+                    ...(detailMode === "overlap" ? {
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 20,
+                      boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
+                    } : {
+                      minWidth: 420,
+                    }),
+                    borderLeft: "1px solid var(--color-border-light)",
+                    background: "var(--color-bg-elevated)",
+                    overflowY: "auto",
+                  }}>
+                    <ThreadDetail
+                      note={selectedNote}
+                      isDev={isDev}
+                      onUpdate={updateNote}
+                      onClose={() => setSelectedId(null)}
+                      allLabels={allLabels}
+                      columns={allColumns}
+                      detailMode={detailMode}
+                      onToggleDetailMode={toggleDetailMode}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* === TABLE VIEW === */}
+            {view === "table" && (
+              <>
+                <ThreadTable
+                  notes={filteredNotes}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onUpdateNote={updateNote}
+                  columns={allColumns}
+                  compact={compactMode}
+                />
+                {selectedNote && (
+                  <div style={{
+                    width: 420,
+                    ...(detailMode === "overlap" ? {
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 20,
+                      boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
+                    } : {
+                      minWidth: 420,
+                    }),
+                    borderLeft: "1px solid var(--color-border-light)",
+                    background: "var(--color-bg-elevated)",
+                    overflowY: "auto",
+                  }}>
+                    <ThreadDetail
+                      note={selectedNote}
+                      isDev={isDev}
+                      onUpdate={updateNote}
+                      onClose={() => setSelectedId(null)}
+                      allLabels={allLabels}
+                      columns={allColumns}
+                      detailMode={detailMode}
+                      onToggleDetailMode={toggleDetailMode}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

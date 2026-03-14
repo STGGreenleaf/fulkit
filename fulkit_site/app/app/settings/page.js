@@ -272,7 +272,7 @@ const REFERRALS = [
   { name: "Pending invite", status: "pending", since: "—" },
 ];
 
-export default function Settings({ initialTab = "account" }) {
+export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const { compactMode, isOwner } = useAuth();
   const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
@@ -373,7 +373,7 @@ export default function Settings({ initialTab = "account" }) {
             {tab === "referrals" && <ReferralsTab />}
             {tab === "billing" && <BillingTab />}
             {tab === "privacy" && <PrivacyTab />}
-            {tab === "owner" && isOwner && <OwnerPanel />}
+            {tab === "owner" && isOwner && <OwnerPanel initialTab={initialOwnerTab} urlPrefix="/settings/owner" />}
           </div>
         </div>
       </div>
@@ -531,7 +531,7 @@ function DrawerItem({ index = 0, visible, children }) {
 }
 
 function AccountTab() {
-  const { user, profile, signOut, isOwner } = useAuth();
+  const { user, profile, signOut, isOwner, accessToken } = useAuth();
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "—";
@@ -580,6 +580,45 @@ function AccountTab() {
       </div>
 
       <div style={{ marginTop: "var(--space-8)" }}>
+        <button
+          onClick={async () => {
+            try {
+              if (!accessToken) return;
+              const res = await fetch("/api/export", { headers: { Authorization: `Bearer ${accessToken}` } });
+              const data = await res.json();
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `fulkit-vault-${new Date().toISOString().split("T")[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch {}
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-2)",
+            width: "100%",
+            padding: "var(--space-2-5) var(--space-4)",
+            background: "transparent",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-medium)",
+            fontFamily: "var(--font-primary)",
+            color: "var(--color-text-muted)",
+            cursor: "pointer",
+            transition: "all var(--duration-fast) var(--ease-default)",
+          }}
+        >
+          <Download size={14} strokeWidth={1.8} />
+          Download my data
+        </button>
+      </div>
+
+      <div style={{ marginTop: "var(--space-3)" }}>
         <button
           onClick={signOut}
           style={{
@@ -662,6 +701,21 @@ function SourcesTab() {
   const [trelloExpanded, setTrelloExpanded] = useState(false);
   const [trelloLastSynced, setTrelloLastSynced] = useState(null);
   const [trelloDisconnecting, setTrelloDisconnecting] = useState(false);
+  const [vaultCounts, setVaultCounts] = useState(null);
+
+  // Fetch vault inventory counts
+  useEffect(() => {
+    if (isDev) { setVaultCounts({ notes: 12, actions: 8 }); return; }
+    if (!accessToken) return;
+    Promise.all([
+      supabase.from("notes").select("id", { count: "exact", head: true }),
+      supabase.from("actions").select("id", { count: "exact", head: true }),
+    ]).then(([n, a]) => {
+      const nc = n.count || 0;
+      const ac = a.count || 0;
+      if (nc > 0 || ac > 0) setVaultCounts({ notes: nc, actions: ac });
+    }).catch(() => {});
+  }, [accessToken, isDev]);
 
   // Fetch repos and active state on mount
   useEffect(() => {
@@ -1255,6 +1309,17 @@ function SourcesTab() {
           Your data stays yours. We can't see it. →
         </a>
       </div>
+
+      {/* Vault inventory */}
+      {vaultCounts && (
+        <div style={{
+          fontSize: "var(--font-size-2xs)",
+          color: "var(--color-text-dim)",
+          marginBottom: "var(--space-4)",
+        }}>
+          {vaultCounts.notes} notes · {vaultCounts.actions} actions in your vault
+        </div>
+      )}
 
       {/* No sources connected */}
       {!hasConnected && (
@@ -2933,7 +2998,7 @@ function VaultTab() {
 }
 
 function PrivacyTab() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
 
   const [counts, setCounts] = useState(null);
@@ -2989,6 +3054,20 @@ function PrivacyTab() {
             </div>
           </div>
           <button
+            onClick={async () => {
+              try {
+                if (!accessToken) return;
+                const res = await fetch("/api/export", { headers: { Authorization: `Bearer ${accessToken}` } });
+                const data = await res.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `fulkit-vault-${new Date().toISOString().split("T")[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch {}
+            }}
             style={{
               padding: "var(--space-2) var(--space-4)",
               background: "transparent",
