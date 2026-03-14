@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Plus, Check, Disc, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import { useFabric } from "../lib/fabric";
 import VolumeSlider from "./VolumeSlider";
@@ -136,10 +136,7 @@ export default function MiniPlayer({ compact }) {
               transition: "all 150ms",
             }}
           >
-            {flaggedNow
-              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
-              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
-            }
+            <ThumbsUp size={IC_SM} strokeWidth={STROKE} fill={flaggedNow ? "var(--color-text-inverse)" : "none"} color={flaggedNow ? "var(--color-text-inverse)" : "var(--color-text-muted)"} />
           </button>
 
           {/* Prev — bare */}
@@ -225,10 +222,7 @@ export default function MiniPlayer({ compact }) {
               transition: "all 150ms",
             }}
           >
-            {flaggedNow
-              ? <Check size={IC_SM} strokeWidth={STROKE_BOLD} color="var(--color-text-inverse)" />
-              : <Plus size={IC_SM} strokeWidth={STROKE} color="var(--color-text-muted)" />
-            }
+            <ThumbsUp size={IC_SM} strokeWidth={STROKE} fill={flaggedNow ? "var(--color-text-inverse)" : "none"} color={flaggedNow ? "var(--color-text-inverse)" : "var(--color-text-muted)"} />
           </button>
 
           {/* Prev — bare */}

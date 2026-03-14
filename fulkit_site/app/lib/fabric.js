@@ -338,6 +338,19 @@ export function FabricProvider({ children }) {
     }, 300);
   }, [isDev, apiFetch]);
 
+  // Seek to position (fraction 0-1)
+  const seekTo = useCallback((fraction) => {
+    if (!currentTrack?.duration) return;
+    const ms = Math.round(fraction * currentTrack.duration * 1000);
+    setProgress(fraction);
+    pollSuppressedUntil.current = Date.now() + 3000;
+    if (isDev) return;
+    apiFetch("/api/fabric/controls", {
+      method: "POST",
+      body: JSON.stringify({ action: "seek", value: ms }),
+    });
+  }, [currentTrack, isDev, apiFetch]);
+
   // Fetch Fabric timeline when track changes
   const prevTimelineTrack = useRef(null);
   useEffect(() => {
@@ -439,9 +452,19 @@ export function FabricProvider({ children }) {
       persistSets(next);
       // Mark adoption via ref (history state declared below, accessed via flagAdoptionRef)
       if (!wasInSet && activeSet) flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
+      // Save to Spotify Liked Songs (fire-and-forget)
+      if (!wasInSet && !isDev) {
+        const spotifyId = track.spotifyId || (track.id && !track.id.startsWith("btc-") ? track.id : null);
+        if (spotifyId) {
+          apiFetch("/api/fabric/controls", {
+            method: "POST",
+            body: JSON.stringify({ action: "save_track", value: { id: spotifyId } }),
+          }).catch(() => {});
+        }
+      }
       return next;
     });
-  }, [persistSets]);
+  }, [persistSets, isDev, apiFetch]);
 
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),
@@ -1065,6 +1088,7 @@ export function FabricProvider({ children }) {
         playPlaylist,
         fetchPlaylistTracks,
         setProgress,
+        seekTo,
         volume,
         setVolume,
         formatTime,

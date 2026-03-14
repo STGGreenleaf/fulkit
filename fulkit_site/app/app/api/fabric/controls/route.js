@@ -22,6 +22,27 @@ export async function POST(request) {
     return Response.json({ error: "Volume error" }, { status: res.status });
   }
 
+  // Seek to position
+  if (action === "seek" && typeof value === "number") {
+    const ms = Math.max(0, Math.round(value));
+    const res = await fabricFetch(userId, `/me/player/seek?position_ms=${ms}`, { method: "PUT" });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 204 || res.status === 202 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Seek error" }, { status: res.status });
+  }
+
+  // Save track to Liked Songs
+  if (action === "save_track" && value?.id) {
+    const res = await fabricFetch(userId, `/me/tracks`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [value.id] }),
+    });
+    if (res.error) return Response.json({ error: res.error }, { status: res.status });
+    if (res.status === 200 || res.status === 204 || res.ok) return Response.json({ ok: true });
+    return Response.json({ error: "Save error" }, { status: res.status });
+  }
+
   // Play a specific track by URI
   if (action === "play_track" && value?.uri) {
     const res = await fabricFetch(userId, "/me/player/play", {

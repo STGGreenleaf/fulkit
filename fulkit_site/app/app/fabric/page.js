@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1462,6 +1462,7 @@ export default function FabricPage() {
     fetchPlaylistTracks,
     formatTime,
     setProgress,
+    seekTo,
     timeline,
     getSnapshot,
     publishedSets,
@@ -2025,15 +2026,15 @@ export default function FabricPage() {
               </div>
 
               {/* Progress */}
-              <div style={{ width: 120, flexShrink: 0 }}>
-                <div
-                  style={{ width: "100%", height: 2, background: "var(--color-border)", cursor: "pointer", position: "relative" }}
-                  onClick={(e) => {
-                    if (!currentTrack) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setProgress((e.clientX - rect.left) / rect.width);
-                  }}
-                >
+              <div
+                style={{ flex: 1, minWidth: 80, flexShrink: 1, padding: "4px 0", cursor: "pointer" }}
+                onClick={(e) => {
+                  if (!currentTrack) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  seekTo((e.clientX - rect.left) / rect.width);
+                }}
+              >
+                <div style={{ width: "100%", height: 3, background: "var(--color-border)", position: "relative" }}>
                   <div style={{ width: `${progress * 100}%`, height: "100%", background: "var(--color-text)", transition: "width 0.1s linear" }} />
                 </div>
               </div>
@@ -2244,9 +2245,9 @@ export default function FabricPage() {
                   }}
                 >
                   {currentTrack && isFlagged(currentTrack?.id) ? (
-                    <Check size={14} strokeWidth={2.8} color="var(--color-text-inverse)" />
+                    <ThumbsUp size={14} strokeWidth={2.2} fill="var(--color-text-inverse)" color="var(--color-text-inverse)" />
                   ) : (
-                    <Plus size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                    <ThumbsUp size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                   )}
                 </button>
 
@@ -2508,12 +2509,17 @@ export default function FabricPage() {
                                       const alreadyAdded = guyCrate?.tracks?.some(t => t.id === s.trackId);
                                       const isPlaying = currentTrack?.id === s.trackId;
                                       return (
-                                      <div key={si} style={{
+                                      <div key={si}
+                                        draggable
+                                        onDragStart={() => { crossDragTrack.current = { id: s.trackId, title: s.title, artist: s.artist }; }}
+                                        onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                                        style={{
                                         fontFamily: "var(--font-mono)",
                                         fontSize: "var(--font-size-2xs)",
                                         letterSpacing: "var(--letter-spacing-wide)",
                                         lineHeight: "var(--line-height-snug)",
                                         padding: "var(--space-1) 0",
+                                        cursor: "grab",
                                       }}>
                                         {/* Line 1: Artist */}
                                         <div style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
@@ -2528,7 +2534,7 @@ export default function FabricPage() {
                                           <span style={{ color: "var(--color-text-dim)", fontSize: 9 }}>{s.bpm || ""}</span>
                                           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                                             <button
-                                              onClick={() => playTrack({ id: s.trackId, artist: s.artist, title: s.title })}
+                                              onClick={() => playTrackInContext({ id: s.trackId, artist: s.artist, title: s.title }, "bsides", `btc-msg-${i}`, songsWithIds.map(x => ({ id: x.trackId, artist: x.artist, title: x.title })), si)}
                                               style={{
                                                 background: "none", border: "none", cursor: "pointer", padding: 0,
                                                 color: isPlaying ? "var(--color-text)" : "var(--color-text-muted)",
@@ -3065,6 +3071,9 @@ export default function FabricPage() {
                           return (
                           <div
                             key={track.spotify_id || i}
+                            draggable
+                            onDragStart={() => { crossDragTrack.current = { id: track.spotify_id, title: track.title, artist: track.artist, album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null, duration: Math.round((track.duration_ms || 0) / 1000) }; }}
+                            onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                             onClick={() => playTrackInContext({
                               id: track.spotify_id,
                               title: track.title,
@@ -3082,7 +3091,7 @@ export default function FabricPage() {
                               alignItems: "center",
                               gap: "var(--space-1-5)",
                               padding: "var(--space-1) var(--space-2)",
-                              cursor: "pointer",
+                              cursor: "grab",
                               borderBottom: "1px solid var(--color-border-light)",
                               background: isActive ? "var(--color-bg-inverse)" : "transparent",
                               borderRadius: isActive ? "var(--radius-sm)" : 0,
@@ -3125,19 +3134,18 @@ export default function FabricPage() {
                               }); }}
                               style={{
                                 background: "none",
-                                border: `1px solid ${isActive ? "rgba(255,255,255,0.25)" : "var(--color-border)"}`,
-                                borderRadius: "var(--radius-sm)",
+                                border: "none",
                                 cursor: "pointer",
-                                padding: "0 3px",
-                                fontSize: 8,
-                                fontFamily: "var(--font-mono)",
+                                padding: "0 2px",
                                 color: isActive
                                   ? "var(--color-text-inverse)"
                                   : isFlagged(track.spotify_id) ? "var(--color-text)" : "var(--color-text-muted)",
                                 flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
                               }}
                             >
-                              {isFlagged(track.spotify_id) ? "✓" : "+"}
+                              <ThumbsUp size={10} strokeWidth={2} fill={isFlagged(track.spotify_id) ? "currentColor" : "none"} />
                             </button>
                           </div>
                           );
@@ -3634,10 +3642,13 @@ export default function FabricPage() {
                         const isActive = currentTrack?.id === track.id;
                         return (
                           <div key={track.id}
+                            draggable
+                            onDragStart={() => { crossDragTrack.current = track; }}
+                            onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
                             onClick={() => playTrackInContext(track, "bsides", "guy-crate", guyCrate.tracks, i)}
                             style={{
                               display: "flex", alignItems: "center", gap: "var(--space-2)",
-                              padding: "var(--space-2)", cursor: "pointer",
+                              padding: "var(--space-2)", cursor: "grab",
                               borderBottom: "1px solid var(--color-border-light)",
                               background: isActive ? "var(--color-bg-alt)" : "transparent",
                             }}>
@@ -3666,7 +3677,7 @@ export default function FabricPage() {
                               onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-muted)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
-                              {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                              <ThumbsUp size={12} strokeWidth={2} fill={inSet ? "currentColor" : "none"} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); removeFromGuyCrate(track.id); }}
@@ -3936,7 +3947,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                            <ThumbsUp size={12} strokeWidth={2} fill={trackFlagged ? "currentColor" : "none"} />
                           </button>
                         </div>
                       );
@@ -4061,7 +4072,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                            <ThumbsUp size={12} strokeWidth={2} fill={trackFlagged ? "currentColor" : "none"} />
                           </button>
                         </div>
                       );
@@ -4331,7 +4342,7 @@ export default function FabricPage() {
                                     color: "var(--color-text-dim)", display: "flex", flexShrink: 0, opacity: 0.5,
                                   }}
                                 >
-                                  <ListX size={10} strokeWidth={1.8} />
+                                  <ThumbsUp size={10} strokeWidth={1.8} fill={isFlagged(track.id) ? "currentColor" : "none"} />
                                 </button>
                               </div>
                             );
