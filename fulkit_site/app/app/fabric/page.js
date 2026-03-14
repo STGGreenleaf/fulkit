@@ -3119,7 +3119,7 @@ export default function FabricPage() {
 
                 {/* ── Discovery Tray — album tracks from BTC links ── */}
                 {(discoveryAlbum || discoveryLoading) && (
-                  <div style={{ marginBottom: "var(--space-3)" }}>
+                  <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-2) var(--space-3)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
                       <Label>{discoveryAlbum ? discoveryAlbum.name : "Loading..."}</Label>
                       <button
