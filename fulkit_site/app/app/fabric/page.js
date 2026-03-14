@@ -3479,7 +3479,8 @@ export default function FabricPage() {
                     )}
                   </div>
                 )}
-              </div>
+              </div>{/* end playlists wrapper */}
+              </div>{/* end scroll container */}
             </div>
 
             {/* ── MIDDLE: Crates ── */}
