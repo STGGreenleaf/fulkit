@@ -2486,7 +2486,7 @@ export default function FabricPage() {
                   marginBottom: 0,
                   borderBottom: "1px solid var(--color-border-light)",
                   overflow: "hidden",
-                  maxHeight: (musicChatOpen || searchResults) ? "75%" : undefined,
+                  maxHeight: (musicChatOpen || searchResults) ? "85%" : undefined,
                   minHeight: (musicChatOpen || searchResults) ? 0 : undefined,
                   display: "flex",
                   flexDirection: "column",
