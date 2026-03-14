@@ -943,10 +943,14 @@ export default function ChatContent({ isPopout = false }) {
                   maxWidth: 640,
                   width: "100%",
                   margin: "0 auto",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: "var(--space-1-5)",
                 }}
               >
                 <div
                   style={{
+                    flex: 1,
                     display: "flex",
                     alignItems: "flex-end",
                     gap: "var(--space-1-5)",
@@ -1042,32 +1046,32 @@ export default function ChatContent({ isPopout = false }) {
                   >
                     <ArrowRight size={14} strokeWidth={2.5} color="var(--color-text-inverse)" />
                   </button>
-                  {!isPopout && (
-                    <button
-                      onClick={() => {
-                        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-                        const qs = params?.get("auth") ? `?auth=${params.get("auth")}` : "";
-                        window.open(`/chat/popout${qs}`, "fulkit-popout", "width=400,height=600,resizable=yes,scrollbars=yes");
-                      }}
-                      title="Pop out chat"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--color-text-secondary)",
-                        borderRadius: "var(--radius-md)",
-                      }}
-                    >
-                      <ExternalLink size={14} strokeWidth={2} />
-                    </button>
-                  )}
                 </div>
+                {!isPopout && (
+                  <button
+                    onClick={() => {
+                      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+                      const qs = params?.get("auth") ? `?auth=${params.get("auth")}` : "";
+                      window.open(`/chat/popout${qs}`, "fulkit-popout", "width=400,height=600,resizable=yes,scrollbars=yes");
+                    }}
+                    title="Pop out chat"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-secondary)",
+                      borderRadius: "var(--radius-md)",
+                    }}
+                  >
+                    <ExternalLink size={14} strokeWidth={2} />
+                  </button>
+                )}
               </div>
             </div>
 
