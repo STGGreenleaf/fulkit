@@ -39,6 +39,64 @@ function MeterBar({ value = 0, label }) {
   );
 }
 
+// iPod-style marquee — pause, scroll, pause, repeat
+function MarqueeText({ children, style }) {
+  const outerRef = useRef(null);
+  const innerRef = useRef(null);
+  const animRef = useRef(null);
+  const [overflow, setOverflow] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      if (!outerRef.current || !innerRef.current) return;
+      const diff = innerRef.current.scrollWidth - outerRef.current.clientWidth;
+      setOverflow(diff > 2 ? diff : 0);
+    };
+    measure();
+    const obs = new ResizeObserver(measure);
+    if (outerRef.current) obs.observe(outerRef.current);
+    return () => obs.disconnect();
+  }, [children]);
+
+  useEffect(() => {
+    if (!overflow || !innerRef.current) return;
+    let cancelled = false;
+    const PAUSE = 3000;
+    const SPEED = 30; // px per second
+
+    const cycle = () => {
+      if (cancelled) return;
+      // Reset to start
+      if (innerRef.current) innerRef.current.style.transform = "translateX(0)";
+      // Pause at start
+      setTimeout(() => {
+        if (cancelled) return;
+        const duration = (overflow / SPEED) * 1000;
+        if (innerRef.current) {
+          innerRef.current.style.transition = `transform ${duration}ms linear`;
+          innerRef.current.style.transform = `translateX(-${overflow}px)`;
+        }
+        // Pause at end, then restart
+        setTimeout(() => {
+          if (cancelled || !innerRef.current) return;
+          innerRef.current.style.transition = "none";
+          cycle();
+        }, duration + PAUSE);
+      }, PAUSE);
+    };
+    cycle();
+    return () => { cancelled = true; if (innerRef.current) { innerRef.current.style.transition = "none"; innerRef.current.style.transform = "translateX(0)"; } };
+  }, [overflow]);
+
+  return (
+    <div ref={outerRef} style={{ ...style, overflow: "hidden", whiteSpace: "nowrap" }}>
+      <div ref={innerRef} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════
 // SIGNAL TERRAIN — 4-layer audio visualization system
 //
@@ -2008,12 +2066,12 @@ export default function FabricPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {currentTrack ? (
                   <>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <MarqueeText style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)" }}>
                       {currentTrack.title}
-                    </div>
-                    <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    </MarqueeText>
+                    <MarqueeText style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>
                       {currentTrack.artist}{features ? ` — ${features.bpm} BPM / ${features.key}` : ""}
-                    </div>
+                    </MarqueeText>
                   </>
                 ) : statusChecked && !connected ? (
                   <>
