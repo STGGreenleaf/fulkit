@@ -49,7 +49,28 @@ export async function GET(request) {
     const type = searchParams.get("type") || "album";
     if (!q) return Response.json({ error: "q required" }, { status: 400 });
 
-    const res = await fabricFetch(userId, `/search?q=${encodeURIComponent(q)}&type=${type}&limit=5`);
+    // Top tracks by artist ID (not a search — direct endpoint)
+    if (type === "top-tracks") {
+      const artistId = searchParams.get("artist_id");
+      if (!artistId) return Response.json({ error: "artist_id required for top-tracks" }, { status: 400 });
+      const ttRes = await fabricFetch(userId, `/artists/${artistId}/top-tracks?market=US`);
+      if (ttRes.error) return Response.json({ error: ttRes.error }, { status: ttRes.status || 500 });
+      const ttData = await ttRes.json();
+      return Response.json({
+        tracks: (ttData.tracks || []).map((t, i) => ({
+          spotify_id: t.id,
+          title: t.name,
+          artist: t.artists?.[0]?.name || "Unknown",
+          album: t.album?.name || null,
+          duration_ms: t.duration_ms,
+          uri: t.uri,
+          track_number: i + 1,
+        })),
+      });
+    }
+
+    const limit = type === "album" ? 20 : 5;
+    const res = await fabricFetch(userId, `/search?q=${encodeURIComponent(q)}&type=${type}&limit=${limit}`);
     if (res.error) return Response.json({ error: res.error }, { status: res.status || 500 });
 
     const data = await res.json();
@@ -88,6 +109,19 @@ export async function GET(request) {
           duration_ms: t.duration_ms,
           uri: t.uri,
           image: t.album?.images?.[0]?.url || null,
+        })),
+      });
+    }
+
+    if (type === "playlist") {
+      return Response.json({
+        playlists: (data.playlists?.items || []).filter(Boolean).map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description || null,
+          trackCount: p.tracks?.total || 0,
+          owner: p.owner?.display_name || null,
+          uri: p.uri,
         })),
       });
     }

@@ -1573,6 +1573,7 @@ export default function FabricPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [showAllAlbums, setShowAllAlbums] = useState(false);
   // Per-set expand/collapse — default closed, persisted in localStorage
   const [expandedSetIds, setExpandedSetIds] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -1752,19 +1753,32 @@ export default function FabricPage() {
     if (!accessToken || searchLoading || !query.trim()) return;
     setSearchLoading(true);
     setSearchResults(null);
+    setShowAllAlbums(false);
     try {
-      const [artistRes, albumRes] = await Promise.all([
-        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=artist`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=album`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
+      const headers = { Authorization: `Bearer ${accessToken}` };
+      const [artistRes, albumRes, playlistRes] = await Promise.all([
+        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=artist`, { headers }),
+        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=album`, { headers }),
+        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=playlist`, { headers }),
       ]);
-      const [artistData, albumData] = await Promise.all([artistRes.json(), albumRes.json()]);
+      const [artistData, albumData, playlistData] = await Promise.all([artistRes.json(), albumRes.json(), playlistRes.json()]);
+      const artist = artistData.artists?.[0] || null;
+
+      // If we found an artist, fetch their top tracks
+      let topTracks = [];
+      if (artist?.id) {
+        try {
+          const ttRes = await fetch(`/api/fabric/search?type=top-tracks&artist_id=${artist.id}`, { headers });
+          const ttData = await ttRes.json();
+          topTracks = ttData.tracks || [];
+        } catch {}
+      }
+
       setSearchResults({
-        artist: artistData.artists?.[0] || null,
+        artist,
+        topTracks,
         albums: albumData.albums || [],
+        playlists: playlistData.playlists || [],
       });
     } catch (e) {
       console.warn("[search]", e.message);
@@ -3045,11 +3059,70 @@ export default function FabricPage() {
                           </div>
                         )}
 
+                        {/* Top Tracks */}
+                        {searchResults.topTracks?.length > 0 && (
+                          <div style={{ marginBottom: "var(--space-2)" }}>
+                            <Label style={{ marginBottom: "var(--space-1)" }}>Top Tracks</Label>
+                            {searchResults.topTracks.slice(0, 10).map((track, ti) => {
+                              const isActive = currentTrack?.id === track.spotify_id;
+                              const mins = Math.floor((track.duration_ms || 0) / 60000);
+                              const secs = String(Math.floor(((track.duration_ms || 0) % 60000) / 1000)).padStart(2, "0");
+                              return (
+                                <div key={track.spotify_id || ti} style={{
+                                  display: "flex", alignItems: "center", gap: "var(--space-2)",
+                                  padding: "var(--space-1-5) var(--space-1)",
+                                  borderBottom: "1px solid var(--color-border-light)",
+                                  borderLeft: isActive ? "3px solid var(--color-text)" : "3px solid transparent",
+                                  background: isActive ? "var(--color-bg-alt)" : "transparent",
+                                  cursor: "pointer",
+                                }}
+                                  onClick={() => {
+                                    if (track.spotify_id) {
+                                      playTrack({ id: track.spotify_id, title: track.title, artist: track.artist });
+                                    }
+                                  }}
+                                >
+                                  <span style={{ width: 16, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textAlign: "center", flexShrink: 0 }}>
+                                    {String(ti + 1).padStart(2, "0")}
+                                  </span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                      fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                                      fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                                      color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                    }}>
+                                      {track.title}
+                                    </div>
+                                  </div>
+                                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                                    {mins}:{secs}
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const trackId = `search-${track.artist}-${track.title}`.toLowerCase().replace(/\s+/g, "-");
+                                      addToGuyCrate({ id: trackId, title: track.title, artist: track.artist });
+                                      setGuyCrateCollapsed(false);
+                                      try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
+                                    }}
+                                    style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-dim)", display: "flex", flexShrink: 0 }}
+                                    title="Add to B-Sides"
+                                  >
+                                    <Plus size={10} strokeWidth={2} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
                         {/* Albums list */}
-                        {searchResults.albums?.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {searchResults.albums?.length > 0 && (() => {
+                          const visible = showAllAlbums ? searchResults.albums : searchResults.albums.slice(0, 5);
+                          return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: "var(--space-2)" }}>
                             <Label style={{ marginBottom: "var(--space-1)" }}>Albums</Label>
-                            {searchResults.albums.map((album) => (
+                            {visible.map((album) => (
                               <button
                                 key={album.id}
                                 onClick={() => {
@@ -3103,11 +3176,54 @@ export default function FabricPage() {
                                 </div>
                               </button>
                             ))}
+                            {searchResults.albums.length > 5 && !showAllAlbums && (
+                              <button
+                                onClick={() => setShowAllAlbums(true)}
+                                style={{
+                                  background: "none", border: "none", cursor: "pointer",
+                                  padding: "var(--space-1) var(--space-1)",
+                                  fontSize: 9, fontFamily: "var(--font-mono)",
+                                  letterSpacing: "var(--letter-spacing-wide)",
+                                  textTransform: "uppercase",
+                                  color: "var(--color-text-dim)",
+                                  textAlign: "left",
+                                }}
+                              >
+                                See all {searchResults.albums.length} albums
+                              </button>
+                            )}
+                          </div>
+                          );
+                        })()}
+
+                        {/* Playlists */}
+                        {searchResults.playlists?.length > 0 && (
+                          <div style={{ marginBottom: "var(--space-1)" }}>
+                            <Label style={{ marginBottom: "var(--space-1)" }}>Playlists</Label>
+                            {searchResults.playlists.map((pl) => (
+                              <div key={pl.id} style={{
+                                display: "flex", alignItems: "center", justifyContent: "space-between",
+                                padding: "var(--space-1-5) var(--space-1)",
+                                borderBottom: "1px solid var(--color-border-light)",
+                              }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                                    color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                  }}>
+                                    {pl.name}
+                                  </div>
+                                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                                    {pl.owner}{pl.trackCount ? ` · ${pl.trackCount} tracks` : ""}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
 
                         {/* No results */}
-                        {!searchResults.artist && searchResults.albums?.length === 0 && (
+                        {!searchResults.artist && searchResults.albums?.length === 0 && !searchResults.topTracks?.length && !searchResults.playlists?.length && (
                           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)" }}>
                             Nothing found.
                           </div>
