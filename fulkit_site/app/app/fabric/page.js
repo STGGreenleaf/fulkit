@@ -2665,7 +2665,7 @@ export default function FabricPage() {
                                           background: "none", border: "none", cursor: "pointer",
                                           display: "flex", alignItems: "center", gap: "var(--space-1)",
                                           padding: "var(--space-1) 0", marginTop: 2,
-                                          fontFamily: "var(--font-mono)", fontSize: 9,
+                                          fontFamily: "var(--font-primary)", fontSize: 9,
                                           letterSpacing: "var(--letter-spacing-wide)",
                                           color: "var(--color-text-dim)", opacity: 0.5,
                                           transition: "opacity 120ms",
