@@ -3220,101 +3220,136 @@ export default function FabricPage() {
 
                 {/* ── Bin Picks — crowned sets ── */}
                 {crates.filter(c => c.source === "set").length > 0 && (
-                  <div style={{ marginBottom: "var(--space-3)" }}>
-                    <button
+                  <div style={{ borderBottom: "1px solid var(--color-border-light)", overflow: "hidden", background: "var(--color-bg-elevated)" }}>
+                    <div
                       onClick={() => setBinPicksOpen(v => !v)}
                       style={{
+                        padding: "var(--space-2) var(--space-3)",
+                        borderBottom: binPicksOpen ? "1px solid var(--color-border-light)" : "none",
                         display: "flex",
                         alignItems: "center",
-                        gap: "var(--space-1)",
-                        width: "100%",
-                        background: "none",
-                        border: "none",
+                        gap: "var(--space-2)",
                         cursor: "pointer",
-                        padding: 0,
-                        marginBottom: binPicksOpen ? "var(--space-2)" : 0,
+                        background: "var(--color-bg-elevated)",
                       }}
                     >
-                      {binPicksOpen ? <ChevronDown size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} /> : <ChevronRight size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />}
-                      <Label style={{ cursor: "pointer" }}>Bin Picks</Label>
-                    </button>
-                    {binPicksOpen && <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                      {crates.filter(c => c.source === "set").map((mix) => (
-                        <div
-                          key={mix.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "var(--space-2) var(--space-3)",
-                            background: "var(--color-bg-elevated)",
-                            borderRadius: 0,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => {
-                            setExpandedFeatured(mix.id);
-                            setFeaturedTracks(mix.tracks || []);
-                            setExpandedCrate(null);
-                            setCrateTracks([]);
-                            const first = mix.tracks?.[0];
-                            if (first) {
-                              playTrackInContext({
-                                id: first.spotify_id,
-                                title: first.title,
-                                artist: first.artist,
-                                duration: Math.round((first.duration_ms || 0) / 1000),
-                              }, "featured", mix.id, (mix.tracks || []).map(t => ({
-                                id: t.spotify_id, title: t.title, artist: t.artist,
-                                duration: Math.round((t.duration_ms || 0) / 1000),
-                              })), 0);
-                            }
-                          }}
-                        >
-                          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
-                            {mix.name}
-                          </span>
-                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
-                            {mix.tracks?.length || 0} songs
-                          </span>
-                        </div>
-                      ))}
-                    </div>}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setBinPicksOpen(v => !v); }}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 0,
+                          color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                          transform: binPicksOpen ? "none" : "rotate(-90deg)",
+                          transition: "transform 120ms",
+                        }}
+                      >
+                        <ChevronDown size={10} strokeWidth={2} />
+                      </button>
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 9,
+                        fontWeight: "var(--font-weight-bold)",
+                        color: "var(--color-text-muted)",
+                        textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                      }}>
+                        Bin Picks
+                      </span>
+                    </div>
+                    {binPicksOpen && (
+                      <div>
+                        {crates.filter(c => c.source === "set").map((mix) => (
+                          <div
+                            key={mix.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "var(--space-2) var(--space-3)",
+                              borderBottom: "1px solid var(--color-border-light)",
+                              cursor: "pointer",
+                              background: "var(--color-bg-elevated)",
+                            }}
+                            onClick={() => {
+                              setExpandedFeatured(mix.id);
+                              setFeaturedTracks(mix.tracks || []);
+                              setExpandedCrate(null);
+                              setCrateTracks([]);
+                              const first = mix.tracks?.[0];
+                              if (first) {
+                                playTrackInContext({
+                                  id: first.spotify_id,
+                                  title: first.title,
+                                  artist: first.artist,
+                                  duration: Math.round((first.duration_ms || 0) / 1000),
+                                }, "featured", mix.id, (mix.tracks || []).map(t => ({
+                                  id: t.spotify_id, title: t.title, artist: t.artist,
+                                  duration: Math.round((t.duration_ms || 0) / 1000),
+                                })), 0);
+                              }
+                            }}
+                          >
+                            <span style={{
+                              fontFamily: "var(--font-mono)", fontSize: 9,
+                              fontWeight: "var(--font-weight-bold)",
+                              color: "var(--color-text)",
+                              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+                            }}>
+                              {mix.name}
+                            </span>
+                            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                              {mix.tracks?.length || 0}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* ── Playlists with opt-in picker ── */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: playlistsOpen ? "var(--space-2)" : 0 }}>
+                <div style={{ borderBottom: "1px solid var(--color-border-light)", overflow: "hidden", background: "var(--color-bg-elevated)" }}>
+                <div
+                  onClick={() => setPlaylistsOpen(v => !v)}
+                  style={{
+                    padding: "var(--space-2) var(--space-3)",
+                    borderBottom: playlistsOpen ? "1px solid var(--color-border-light)" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-2)",
+                    cursor: "pointer",
+                    background: "var(--color-bg-elevated)",
+                  }}
+                >
                   <button
-                    onClick={() => setPlaylistsOpen(v => !v)}
+                    onClick={(e) => { e.stopPropagation(); setPlaylistsOpen(v => !v); }}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                      transform: playlistsOpen ? "none" : "rotate(-90deg)",
+                      transition: "transform 120ms",
                     }}
                   >
-                    {playlistsOpen ? <ChevronDown size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} /> : <ChevronRight size={12} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />}
-                    <Label style={{ cursor: "pointer" }}>Playlists</Label>
+                    <ChevronDown size={10} strokeWidth={2} />
                   </button>
+                  <span style={{
+                    fontFamily: "var(--font-mono)", fontSize: 9,
+                    fontWeight: "var(--font-weight-bold)",
+                    color: "var(--color-text-muted)",
+                    textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                    flex: 1,
+                  }}>
+                    Playlists
+                  </span>
                   {playlistsOpen && playlists.length > 0 && (
                     <button
-                      onClick={() => setPlaylistPickerOpen(v => !v)}
+                      onClick={(e) => { e.stopPropagation(); setPlaylistPickerOpen(v => !v); }}
                       style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--color-text-dim)",
+                        padding: 2,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        width: 20,
-                        height: 20,
-                        background: playlistPickerOpen ? "var(--color-bg-alt)" : "transparent",
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: 0,
-                        cursor: "pointer",
-                        color: "var(--color-text-muted)",
-                        padding: 0,
-                        transition: "all 120ms",
                       }}
                       title="Choose visible playlists"
                     >
@@ -3390,52 +3425,60 @@ export default function FabricPage() {
                   </div>
                 )}
 
-                {playlistsOpen && <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                  {filteredPlaylists.map((pl) => {
-                    const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
-                    return (
-                      <div
-                        key={pl.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "var(--space-2) var(--space-3)",
-                          background: "var(--color-bg-elevated)",
-                          borderRadius: 0,
-                          cursor: "pointer",
-                        }}
-                        onClick={() => {
-                          if (!alreadyImported && playlists.length > 0) {
-                            importPlaylist(pl);
-                            setVisiblePlaylistIds(prev => {
-                              const next = [...(prev || []), pl.id];
-                              try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
-                              return next;
-                            });
-                          }
-                        }}
-                      >
-                        <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", fontFamily: "var(--font-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
-                          {pl.name}
-                        </span>
-                        <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: alreadyImported ? "var(--color-text-dim)" : "var(--color-text-muted)", flexShrink: 0, marginLeft: "var(--space-2)" }}>
-                          {alreadyImported ? "imported" : `${pl.trackCount || 0}`}
-                        </span>
+                {playlistsOpen && (
+                  <div>
+                    {filteredPlaylists.map((pl) => {
+                      const alreadyImported = crates.some(c => c.source_spotify_id === pl.id);
+                      return (
+                        <div
+                          key={pl.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "var(--space-2) var(--space-3)",
+                            borderBottom: "1px solid var(--color-border-light)",
+                            background: "var(--color-bg-elevated)",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => {
+                            if (!alreadyImported && playlists.length > 0) {
+                              importPlaylist(pl);
+                              setVisiblePlaylistIds(prev => {
+                                const next = [...(prev || []), pl.id];
+                                try { localStorage.setItem("fulkit-visible-playlists", JSON.stringify(next)); } catch {}
+                                return next;
+                              });
+                            }
+                          }}
+                        >
+                          <span style={{
+                            fontFamily: "var(--font-mono)", fontSize: 9,
+                            fontWeight: "var(--font-weight-bold)",
+                            color: alreadyImported ? "var(--color-text-dim)" : "var(--color-text)",
+                            textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+                          }}>
+                            {pl.name}
+                          </span>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                            {alreadyImported ? "imported" : `${pl.trackCount || 0}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {filteredPlaylists.length === 0 && playlists.length > 0 && (
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) var(--space-3)" }}>
+                        All playlists hidden — click + to manage
                       </div>
-                    );
-                  })}
-                  {filteredPlaylists.length === 0 && playlists.length > 0 && (
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) 0" }}>
-                      All playlists hidden — click + to manage
-                    </div>
-                  )}
-                  {playlists.length === 0 && (
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) 0" }}>
-                      Connect Spotify in Settings → Sources
-                    </div>
-                  )}
-                </div>}
+                    )}
+                    {playlists.length === 0 && (
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) var(--space-3)" }}>
+                        Connect Spotify in Settings → Sources
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
