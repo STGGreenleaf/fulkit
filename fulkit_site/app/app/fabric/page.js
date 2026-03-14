@@ -2479,7 +2479,7 @@ export default function FabricPage() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", paddingBottom: 50 }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingBottom: 50 }}>
 
                 {/* ── Record Store Guy — Behind the Counter ── */}
                 <div style={{
