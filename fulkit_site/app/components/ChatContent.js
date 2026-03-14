@@ -24,7 +24,7 @@ function timeAgo(dateStr) {
 }
 
 export default function ChatContent({ isPopout = false }) {
-  const { user, accessToken, githubConnected, compactMode, hasContext } = useAuth();
+  const { user, accessToken, authFetch, githubConnected, compactMode, hasContext } = useAuth();
   const isDev = user?.isDev;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
 
@@ -32,11 +32,11 @@ export default function ChatContent({ isPopout = false }) {
   const sandbox = useSandbox();
 
   // ─── Core chat hook ───────────────────────────────────────
-  const chat = useChat({ user, isDev, accessToken, storageMode, directoryHandle, sandbox });
+  const chat = useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox });
 
   // ─── Context hook ─────────────────────────────────────────
   const ctx = useChatContext({
-    user, isDev, accessToken, githubConnected,
+    user, isDev, accessToken, authFetch, githubConnected,
     getContextWithMeta, recallNotes, isReady, sandbox,
   });
 

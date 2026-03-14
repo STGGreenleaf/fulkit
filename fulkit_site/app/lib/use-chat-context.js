@@ -9,7 +9,7 @@ import { supabase } from "./supabase";
  * Owns: GitHub context, Numbrly context, TrueGauge context, attached files, recalled notes.
  * Provides assembleContext() for useChat's sendMessage.
  */
-export function useChatContext({ user, isDev, accessToken, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
+export function useChatContext({ user, isDev, accessToken, authFetch, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
   const [ghContext, setGhContext] = useState([]);
   const [nblContext, setNblContext] = useState(null);
   const [nblError, setNblError] = useState(false);
@@ -36,9 +36,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     if (!accessToken || !githubConnected || isDev) return;
     async function load() {
       try {
-        const res = await fetch("/api/github/active", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const res = await authFetch("/api/github/active");
         if (res.ok) {
           const data = await res.json();
           setGhContext(data.filter((r) => r.tree.length > 0));
@@ -46,41 +44,41 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
       } catch {}
     }
     load();
-  }, [accessToken, githubConnected, isDev]);
+  }, [accessToken, authFetch, githubConnected, isDev]);
 
   // ─── Load Numbrly context ─────────────────────────────────
 
   useEffect(() => {
     if (!accessToken || isDev) return;
-    fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+    authFetch("/api/numbrly/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.connected) return null;
-        return fetch("/api/numbrly/context", { headers: { Authorization: `Bearer ${accessToken}` } });
+        return authFetch("/api/numbrly/context");
       })
       .then((r) => (r?.ok ? r.json() : null))
       .then((data) => {
         if (data?.message) setNblContext(data.message);
       })
       .catch(() => setNblError(true));
-  }, [accessToken, isDev]);
+  }, [accessToken, authFetch, isDev]);
 
   // ─── Load TrueGauge context ───────────────────────────────
 
   useEffect(() => {
     if (!accessToken || isDev) return;
-    fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+    authFetch("/api/truegauge/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.connected) return null;
-        return fetch("/api/truegauge/context", { headers: { Authorization: `Bearer ${accessToken}` } });
+        return authFetch("/api/truegauge/context");
       })
       .then((r) => (r?.ok ? r.json() : null))
       .then((data) => {
         if (data?.message) setTgContext(data.message);
       })
       .catch(() => setTgError(true));
-  }, [accessToken, isDev]);
+  }, [accessToken, authFetch, isDev]);
 
   // ─── Fetch alerts ─────────────────────────────────────────
 
@@ -88,9 +86,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     if (!accessToken || isDev) return;
     async function fetchAlerts() {
       try {
-        const res = await fetch("/api/numbrly/alerts", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const res = await authFetch("/api/numbrly/alerts");
         if (res.ok) {
           const data = await res.json();
           if (data.alerts?.length) {
@@ -107,7 +103,7 @@ export function useChatContext({ user, isDev, accessToken, githubConnected, getC
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [accessToken, isDev]);
+  }, [accessToken, authFetch, isDev]);
 
   // ─── File handling ────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-wri
  * Owns: messages, streaming, conversations, send flow, DB persistence.
  * Does NOT own: context assembly, file attachments, UI state.
  */
-export function useChat({ user, isDev, accessToken, storageMode, directoryHandle, sandbox }) {
+export function useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -220,18 +220,10 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         }, 30000);
       }
 
-      // Always fetch a fresh token at send time — React state may hold a stale JWT
-      let freshToken = accessToken;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) freshToken = session.access_token;
-      } catch {}
-
-      const res = await fetch("/api/chat", {
+      const res = await authFetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(freshToken ? { Authorization: `Bearer ${freshToken}` } : {}),
         },
         body: JSON.stringify({
           messages: apiMessages,
@@ -404,7 +396,7 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         } catch {}
       }
     }
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken,
+  }, [input, streaming, messages, conversationId, user, isDev, accessToken, authFetch,
     loadConversations, storageMode, directoryHandle, sandbox]);
 
   // ─── Actions ──────────────────────────────────────────────

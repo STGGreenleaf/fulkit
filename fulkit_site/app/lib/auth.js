@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
 const AuthContext = createContext(null);
@@ -158,6 +158,24 @@ export function AuthProvider({ children }) {
   const isOwner = profile?.role === "owner";
   const isOnboarded = profile?.onboarded ?? false;
 
+  // ─── authFetch: always-fresh-token fetch wrapper ────────
+  // Use instead of raw fetch + accessToken for any authenticated API call.
+  // Gets a fresh session token every call — no stale JWT issues.
+  const authFetch = useCallback(async (url, opts = {}) => {
+    let token = accessToken;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) token = session.access_token;
+    } catch {}
+    return fetch(url, {
+      ...opts,
+      headers: {
+        ...opts.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  }, [accessToken]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -165,6 +183,7 @@ export function AuthProvider({ children }) {
         profile,
         loading,
         accessToken,
+        authFetch,
         signIn,
         signInWithEmail,
         signOut,
