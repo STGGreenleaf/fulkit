@@ -220,11 +220,18 @@ export function useChat({ user, isDev, accessToken, storageMode, directoryHandle
         }, 30000);
       }
 
+      // Always fetch a fresh token at send time — React state may hold a stale JWT
+      let freshToken = accessToken;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) freshToken = session.access_token;
+      } catch {}
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(freshToken ? { Authorization: `Bearer ${freshToken}` } : {}),
         },
         body: JSON.stringify({
           messages: apiMessages,
