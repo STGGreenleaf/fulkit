@@ -45,6 +45,7 @@ export async function POST(request) {
     if (body.og_description !== undefined) updates.og_description = body.og_description;
     if (body.og_image_url !== undefined) updates.og_image_url = body.og_image_url;
     if (body.og_image_slot !== undefined) updates.og_image_slot = body.og_image_slot;
+    if (body.twitter_image_url !== undefined) updates.twitter_image_url = body.twitter_image_url;
     updates.updated_at = new Date().toISOString();
 
     // Get the single row ID first

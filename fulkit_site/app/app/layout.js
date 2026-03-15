@@ -45,6 +45,7 @@ export async function generateMetadata() {
     },
     twitter: {
       card: "summary_large_image",
+      ...(meta?.twitter_image_url && { images: [meta.twitter_image_url] }),
     },
     verification: {
       google: "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",

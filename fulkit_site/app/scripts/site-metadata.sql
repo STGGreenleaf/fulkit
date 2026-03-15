@@ -7,6 +7,7 @@ CREATE TABLE site_metadata (
   og_description TEXT DEFAULT 'The app that thinks with you.',
   og_image_url TEXT,
   og_image_slot INTEGER DEFAULT 1,
+  twitter_image_url TEXT,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 

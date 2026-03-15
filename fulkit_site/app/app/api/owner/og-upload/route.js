@@ -16,13 +16,17 @@ export async function POST(request) {
 
     const formData = await request.formData();
     const file = formData.get("file");
-    const slot = parseInt(formData.get("slot") || "1", 10);
+    const slotRaw = formData.get("slot") || "1";
 
     if (!file || !(file instanceof File)) {
       return Response.json({ error: "file required" }, { status: 400 });
     }
-    if (slot < 1 || slot > 3) {
-      return Response.json({ error: "slot must be 1-3" }, { status: 400 });
+
+    // Accept numeric slots 1-3 or "twitter"
+    const isTwitter = slotRaw === "twitter";
+    const slot = isTwitter ? "twitter" : parseInt(slotRaw, 10);
+    if (!isTwitter && (slot < 1 || slot > 3)) {
+      return Response.json({ error: "slot must be 1-3 or 'twitter'" }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop() || "png";

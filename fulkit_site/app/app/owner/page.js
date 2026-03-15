@@ -1895,6 +1895,7 @@ function SocialsTab() {
   const [ogDescription, setOgDescription] = useState("");
   const [ogSlot, setOgSlot] = useState(1);
   const [ogSlots, setOgSlots] = useState([null, null, null]);
+  const [twitterImage, setTwitterImage] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
@@ -1920,6 +1921,7 @@ function SocialsTab() {
           slots[(data.og_image_slot || 1) - 1] = data.og_image_url;
           setOgSlots(slots);
         }
+        if (data.twitter_image_url) setTwitterImage(data.twitter_image_url);
       })
       .catch(() => {});
   }, [accessToken]);
@@ -1932,7 +1934,7 @@ function SocialsTab() {
       await fetch("/api/owner/site-metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ title, description, og_title: ogTitle, og_description: ogDescription, og_image_slot: ogSlot, og_image_url: activeUrl || null }),
+        body: JSON.stringify({ title, description, og_title: ogTitle, og_description: ogDescription, og_image_slot: ogSlot, og_image_url: activeUrl || null, twitter_image_url: twitterImage || null }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -2003,6 +2005,7 @@ function SocialsTab() {
   const pOgTitle = ogTitle || pTitle;
   const pOgDesc = ogDescription || "The app that thinks with you.";
   const pOgImage = ogSlots[ogSlot - 1];
+  const pTwitterImage = twitterImage || pOgImage;
 
   return (
     <div>
@@ -2138,6 +2141,83 @@ function SocialsTab() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Twitter/X Image — separate from OG */}
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
+            <div style={sectionLabel}>Twitter / X Image</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+              Optional. Falls back to OG image if not set. 1200 {"\u00D7"} 630px.
+            </div>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                width: "100%",
+                aspectRatio: "1200/630",
+                border: twitterImage ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--color-bg-alt)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+                position: "relative",
+              }}>
+                {twitterImage ? (
+                  <img src={twitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                    {uploading === "twitter" ? "Uploading\u2026" : "Uses OG image"}
+                  </span>
+                )}
+                {twitterImage && (
+                  <button
+                    onClick={() => setTwitterImage(null)}
+                    style={{
+                      position: "absolute", top: 4, left: 4,
+                      width: 18, height: 18,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
+                      cursor: "pointer", padding: 0,
+                    }}
+                  >
+                    <X size={10} color="#EFEDE8" />
+                  </button>
+                )}
+              </div>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-1)",
+                padding: "var(--space-1-5) 0",
+                fontSize: "var(--font-size-2xs)",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                marginTop: "var(--space-1)",
+              }}>
+                <Upload size={10} /> Upload
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading("twitter");
+                  try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("slot", "twitter");
+                    const res = await fetch("/api/owner/og-upload", {
+                      method: "POST",
+                      headers: { Authorization: `Bearer ${accessToken}` },
+                      body: fd,
+                    });
+                    if (res.ok) {
+                      const { url } = await res.json();
+                      setTwitterImage(url);
+                    }
+                  } catch {}
+                  setUploading(null);
+                }} />
+              </label>
             </div>
           </div>
 
@@ -2278,10 +2358,10 @@ function SocialsTab() {
                 borderBottom: "1px solid var(--color-border-light)",
                 overflow: "hidden",
               }}>
-                {pOgImage ? (
-                  <img src={pOgImage} alt="OG" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {pTwitterImage ? (
+                  <img src={pTwitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
-                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No OG image set</span>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No image set</span>
                 )}
               </div>
               <div style={{ padding: "var(--space-2-5)" }}>
