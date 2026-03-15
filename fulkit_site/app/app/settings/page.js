@@ -2944,8 +2944,9 @@ function ReferralsTab() {
 }
 
 function BillingTab() {
-  const { user, profile, isOwner } = useAuth();
+  const { user, profile, isOwner, accessToken } = useAuth();
   const isDev = user?.isDev;
+  const [loading, setLoading] = useState(null); // "pro" | "standard" | "credits" | "portal"
 
   const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
   const seatType = isDev ? "standard" : (profile?.seat_type || "free");
@@ -2957,6 +2958,33 @@ function BillingTab() {
   const gaugeColor = gaugeCapped ? "var(--color-error)" : gaugeLow ? "var(--color-warning)" : "var(--color-accent)";
   const PLAN_LABELS = { standard: "Standard", pro: "Pro", free: "Free" };
   const PLAN_PRICES = { standard: "$7/mo", pro: "$15/mo", free: "Free" };
+
+  async function handleCheckout(plan) {
+    if (!accessToken || isDev) return;
+    setLoading(plan);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {} finally { setLoading(null); }
+  }
+
+  async function handlePortal() {
+    if (!accessToken || isDev) return;
+    setLoading("portal");
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {} finally { setLoading(null); }
+  }
 
   // Owner with own API key = unlimited
   if (!isDev && isOwner) {
@@ -2997,8 +3025,49 @@ function BillingTab() {
               {PLAN_PRICES[seatType] || "$7/mo"} — {seatLimit} messages
             </div>
           </div>
-          {seatType !== "pro" && (
+          {seatType === "free" ? (
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <button
+                onClick={() => handleCheckout("standard")}
+                disabled={!!loading}
+                style={{
+                  padding: "var(--space-1-5) var(--space-3)",
+                  background: "transparent",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: loading ? "wait" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                }}
+              >
+                {loading === "standard" ? "..." : "Standard $7/mo"}
+              </button>
+              <button
+                onClick={() => handleCheckout("pro")}
+                disabled={!!loading}
+                style={{
+                  padding: "var(--space-1-5) var(--space-3)",
+                  background: "var(--color-accent)",
+                  color: "var(--color-text-inverse)",
+                  border: "none",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: loading ? "wait" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                }}
+              >
+                {loading === "pro" ? "..." : "Pro $15/mo"}
+              </button>
+            </div>
+          ) : seatType === "standard" ? (
             <button
+              onClick={() => handleCheckout("pro")}
+              disabled={!!loading}
               style={{
                 padding: "var(--space-1-5) var(--space-3)",
                 background: "transparent",
@@ -3008,12 +3077,13 @@ function BillingTab() {
                 fontSize: "var(--font-size-xs)",
                 fontWeight: "var(--font-weight-semibold)",
                 fontFamily: "var(--font-primary)",
-                cursor: "pointer",
+                cursor: loading ? "wait" : "pointer",
+                opacity: loading ? 0.6 : 1,
               }}
             >
-              Upgrade to Pro
+              {loading === "pro" ? "..." : "Upgrade to Pro"}
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* Fül gauge */}
@@ -3048,6 +3118,25 @@ function BillingTab() {
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
           {isDev ? "Resets Mar 15. ~10 messages/day remaining." : `${remaining} messages remaining this period.`}
         </div>
+        {seatType !== "free" && !isDev && (
+          <button
+            onClick={handlePortal}
+            disabled={!!loading}
+            style={{
+              marginTop: "var(--space-2)",
+              padding: 0,
+              background: "none",
+              border: "none",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              fontFamily: "var(--font-primary)",
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            {loading === "portal" ? "..." : "Manage subscription"}
+          </button>
+        )}
       </Card>
 
       <Card style={{ marginBottom: "var(--space-4)" }}>
@@ -3062,6 +3151,8 @@ function BillingTab() {
             </div>
           </div>
           <button
+            onClick={() => handleCheckout("credits")}
+            disabled={!!loading}
             style={{
               padding: "var(--space-1-5) var(--space-3)",
               background: "var(--color-accent)",
@@ -3071,10 +3162,11 @@ function BillingTab() {
               fontSize: "var(--font-size-xs)",
               fontWeight: "var(--font-weight-semibold)",
               fontFamily: "var(--font-primary)",
-              cursor: "pointer",
+              cursor: loading ? "wait" : "pointer",
+              opacity: loading === "credits" ? 0.6 : 1,
             }}
           >
-            Fül up
+            {loading === "credits" ? "..." : "F\u00fcl up"}
           </button>
         </div>
       </Card>
