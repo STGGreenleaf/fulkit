@@ -2283,7 +2283,7 @@ function ManualTab() {
                       }} />
                     </button>
                     {isExpanded && (
-                      <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)" }}>
+                      <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)", background: "var(--color-surface)" }}>
                         {section.categories.map((cat, catIdx) => (
                           <div key={catIdx}>
                             <div style={{
