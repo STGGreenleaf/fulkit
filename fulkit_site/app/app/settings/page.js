@@ -2128,6 +2128,21 @@ const MANUAL_SECTIONS = {
   },
 };
 
+const MANUAL_GUIDE = [
+  "Fülkit is your single surface — one chat that connects to everything you use.",
+  "Talk naturally. No slash commands, no menus. Just say what you need.",
+  "Save notes — say 'save this' and Fülkit distills it to what matters.",
+  "Create actions — say 'remind me to...' and it becomes a tracked task.",
+  "Track projects — say 'track this' and it creates a kanban card in Threads.",
+  "Memory — Fülkit remembers facts across sessions. No setup needed.",
+  "Vault — 3 storage modes: local-only, encrypted sync, or Fülkit-managed.",
+  "Semantic search — notes are embedded for meaning-based recall, not just keywords.",
+  "Fül gauge — Standard: 450 msgs/mo. Pro: 800/mo. BYOK: unlimited.",
+  "BYOK — bring your own Anthropic key in Settings → AI for unlimited usage.",
+  "Privacy — you own your data. Export or delete everything anytime.",
+  "Keyboard — Enter to send, Shift+Enter for new line.",
+];
+
 function ManualTab() {
   const { accessToken, githubConnected } = useAuth();
   const [expanded, setExpanded] = useState({});
@@ -2162,101 +2177,146 @@ function ManualTab() {
   const connectedSections = Object.entries(MANUAL_SECTIONS)
     .filter(([id]) => connections[id]);
 
-  if (connectedSections.length === 0) {
-    return (
-      <div>
-        <SectionTitle>Operator&apos;s Manual</SectionTitle>
-        <Card>
-          <div style={{
-            padding: "var(--space-6)",
-            textAlign: "center",
-            color: "var(--color-text-muted)",
-            fontSize: "var(--font-size-sm)",
-          }}>
-            Connect an integration in Sources to see what it can do.
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div>
       <SectionTitle>Operator&apos;s Manual</SectionTitle>
-      <div style={{
-        fontSize: "var(--font-size-xs)",
-        color: "var(--color-text-muted)",
-        marginBottom: "var(--space-4)",
-        lineHeight: "var(--line-height-relaxed)",
-      }}>
-        Everything your connected tools can do — with example commands.
-      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", alignItems: "start" }}>
+        {/* Left column — about the app */}
+        <div style={{
+          background: "var(--color-surface-alt)",
+          borderRadius: "var(--radius-sm)",
+          padding: "var(--space-3)",
+        }}>
+          <div style={{
+            fontSize: "var(--font-size-2xs)",
+            fontWeight: "var(--font-weight-semibold)",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-2)",
+          }}>
+            About Fülkit
+          </div>
+          <ul style={{ margin: 0, padding: "0 0 0 var(--space-3)", listStyle: "disc" }}>
+            {MANUAL_GUIDE.map((line, i) => (
+              <li key={i} style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text)",
+                lineHeight: "var(--line-height-relaxed)",
+                marginBottom: 3,
+              }}>
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-        {connectedSections.map(([id, section]) => {
-          const isExpanded = expanded[id] || false;
-          const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
-          return (
-            <Card key={id} style={{ padding: 0, overflow: "hidden" }}>
-              <CardHeader
-                logo={SOURCE_LOGOS[id]}
-                name={section.name}
-                subtitle={`${cmdCount} command${cmdCount !== 1 ? "s" : ""}`}
-                isExpanded={isExpanded}
-                onToggle={() => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))}
-              />
-              <Drawer open={isExpanded}>
-                <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                  {section.categories.map((cat, catIdx) => (
-                    <div key={catIdx}>
-                      <DrawerItem index={catIdx} visible={isExpanded}>
-                        <div style={{
-                          padding: "var(--space-2-5) var(--space-4)",
-                          borderBottom: "1px solid var(--color-border-light)",
-                        }}>
-                          <span style={{
-                            fontSize: "var(--font-size-2xs)",
-                            fontWeight: "var(--font-weight-semibold)",
-                            textTransform: "uppercase",
-                            letterSpacing: "var(--letter-spacing-wider)",
-                            color: "var(--color-text-dim)",
-                          }}>
-                            {cat.label}
-                          </span>
-                        </div>
-                      </DrawerItem>
-                      {cat.commands.map((cmd, cmdIdx) => (
-                        <DrawerItem key={cmdIdx} index={catIdx + cmdIdx + 1} visible={isExpanded}>
-                          <div style={{
-                            padding: "var(--space-2) var(--space-4)",
-                            borderBottom: cmdIdx < cat.commands.length - 1 || catIdx < section.categories.length - 1
-                              ? "1px solid var(--color-border-light)" : "none",
-                          }}>
-                            <div style={{
-                              fontSize: "var(--font-size-xs)",
-                              color: "var(--color-text-dim)",
-                              fontStyle: "italic",
-                              lineHeight: "var(--line-height-relaxed)",
-                            }}>
-                              {`\u201C${cmd.example}\u201D`}
-                            </div>
+        {/* Right column — connections accordion */}
+        <div>
+          <div style={{
+            fontSize: "var(--font-size-2xs)",
+            fontWeight: "var(--font-weight-semibold)",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-1)",
+          }}>
+            Connections
+          </div>
+          <div style={{
+            fontSize: "var(--font-size-2xs)",
+            color: "var(--color-text-dim)",
+            marginBottom: "var(--space-2)",
+          }}>
+            Everything your connected tools can do — with example commands.
+          </div>
+          {connectedSections.length === 0 ? (
+            <div style={{
+              background: "var(--color-surface-alt)",
+              borderRadius: "var(--radius-sm)",
+              padding: "var(--space-3)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-dim)",
+              textAlign: "center",
+            }}>
+              Connect an integration in Sources to see what it can do.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              {connectedSections.map(([id, section]) => {
+                const isExpanded = expanded[id] || false;
+                const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
+                return (
+                  <div key={id} style={{
+                    background: "var(--color-surface-alt)",
+                    borderRadius: "var(--radius-sm)",
+                    overflow: "hidden",
+                  }}>
+                    <button
+                      onClick={() => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-2)",
+                        width: "100%",
+                        padding: "var(--space-2) var(--space-3)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
+                        {SOURCE_LOGOS[id]}
+                      </span>
+                      <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", flex: 1, textAlign: "left" }}>
+                        {section.name}
+                      </span>
+                      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                        {cmdCount}
+                      </span>
+                      <ChevronRight size={12} style={{
+                        color: "var(--color-text-dim)",
+                        transform: isExpanded ? "rotate(90deg)" : "none",
+                        transition: "transform 0.15s ease",
+                      }} />
+                    </button>
+                    {isExpanded && (
+                      <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)" }}>
+                        {section.categories.map((cat, catIdx) => (
+                          <div key={catIdx}>
                             <div style={{
                               fontSize: "var(--font-size-2xs)",
-                              color: "var(--color-text-muted)",
-                              marginTop: 2,
+                              fontWeight: "var(--font-weight-semibold)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                              color: "var(--color-text-dim)",
+                              padding: "var(--space-1) 0 2px",
                             }}>
-                              {cmd.description}
+                              {cat.label}
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--space-2)" }}>
+                              {cat.commands.map((cmd, cmdIdx) => (
+                                <div key={cmdIdx} style={{ padding: "2px 0" }}>
+                                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text)", fontStyle: "italic" }}>
+                                    {`\u201C${cmd.example}\u201D`}
+                                  </div>
+                                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                                    {cmd.description}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        </DrawerItem>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </Drawer>
-            </Card>
-          );
-        })}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
