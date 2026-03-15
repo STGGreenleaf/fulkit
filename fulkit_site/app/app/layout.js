@@ -21,7 +21,9 @@ export async function generateMetadata() {
     if (data) meta = data;
   } catch {}
 
-  const ogImages = meta?.og_image_url ? [{ url: meta.og_image_url }] : undefined;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
+  const ogImageUrl = meta?.og_image_url || `${siteUrl}/api/og`;
+  const ogImages = [{ url: ogImageUrl, width: 1200, height: 630 }];
 
   return {
     title: meta?.title || DEFAULTS.title,
@@ -39,7 +41,7 @@ export async function generateMetadata() {
       title: meta?.og_title || DEFAULTS.ogTitle,
       description: meta?.og_description || DEFAULTS.ogDescription,
       type: "website",
-      ...(ogImages && { images: ogImages }),
+      images: ogImages,
     },
     twitter: {
       card: "summary_large_image",

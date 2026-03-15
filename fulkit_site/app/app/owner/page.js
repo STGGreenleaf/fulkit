@@ -24,6 +24,7 @@ import {
   RefreshCw,
   X,
   CreditCard,
+  Download,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -2106,21 +2107,35 @@ function SocialsTab() {
                         Live
                       </div>
                     )}
+                    {ogSlots[slot - 1] && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOgSlots(prev => { const n = [...prev]; n[slot - 1] = null; return n; }); }}
+                        style={{
+                          position: "absolute", top: 4, left: 4,
+                          width: 18, height: 18,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
+                          cursor: "pointer", padding: 0,
+                        }}
+                      >
+                        <X size={10} color="#EFEDE8" />
+                      </button>
+                    )}
                   </div>
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "var(--space-1)",
-                    padding: "var(--space-1-5) 0",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-muted)",
-                    cursor: "pointer",
-                    marginTop: "var(--space-1)",
-                  }}>
-                    <Upload size={10} /> Upload
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) uploadOg(slot, e.target.files[0]); }} />
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                    <label style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-1-5) 0",
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-muted)",
+                      cursor: "pointer",
+                    }}>
+                      <Upload size={10} /> Upload
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) uploadOg(slot, e.target.files[0]); }} />
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2151,11 +2166,93 @@ function SocialsTab() {
               ))}
             </div>
           </div>
+
+          {/* Social Templates — Dieter Rams CTA designs */}
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
+            <div style={sectionLabel}>Social Templates</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+              Ready-to-use designs. Download as PNG.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {[
+                { name: "OG Hero", desc: "Fülkit dictionary entry", size: "1200 × 630", url: "/api/og", aspect: "1200/630", dark: false },
+                { name: "IG Post", desc: "$15/mo CTA", size: "1080 × 1350", url: "/api/social/ig-post", aspect: "1080/1350", dark: true },
+                { name: "IG Stories", desc: "Second brain manifesto", size: "1080 × 1920", url: "/api/social/ig-stories", aspect: "1080/1920", dark: false },
+              ].map(t => (
+                <div key={t.name} style={{
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-lg)",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    width: "100%",
+                    maxHeight: 160,
+                    overflow: "hidden",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    background: t.dark ? "#2A2826" : "#EFEDE8",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <img src={t.url} alt={t.name} style={{ width: "100%", objectFit: "cover", objectPosition: "center top" }} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-2-5) var(--space-3)" }}>
+                    <div>
+                      <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{t.name}</div>
+                      <div style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>{t.desc} · {t.size}</div>
+                    </div>
+                    <a
+                      href={t.url}
+                      download={`fulkit-${t.name.toLowerCase().replace(/\s/g, "-")}.png`}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-1)",
+                        padding: "var(--space-1-5) var(--space-2-5)",
+                        background: "var(--color-text)",
+                        color: "var(--color-bg)",
+                        border: "none",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-2xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-primary)",
+                        textDecoration: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Download size={10} /> PNG
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* RIGHT: Live Previews */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
           <div style={sectionLabel}>Live Previews</div>
+
+          {/* OG Image Preview */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>OG Image (1200 × 630)</div>
+            <div style={{
+              width: "100%",
+              aspectRatio: "1200/630",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-lg)",
+              background: "var(--color-bg-alt)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}>
+              {pOgImage ? (
+                <img src={pOgImage} alt="OG preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No OG image set — upload one on the left</span>
+              )}
+            </div>
+          </div>
 
           {/* Google SERP */}
           <div>
