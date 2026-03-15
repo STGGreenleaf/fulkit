@@ -173,7 +173,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "dashboard" && <DashboardTab />}
         {tab === "questions" && <QuestionsTab />}
         {tab === "design" && <DesignTab />}
-        {tab === "users" && <PlaceholderTab title="Users" description="Invite tree, usage stats, revenue per user. Coming soon." />}
+        {tab === "users" && <UsersTab />}
         {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
         {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
         {tab === "fabric" && <FabricTab />}
@@ -213,6 +213,17 @@ function DashboardTab() {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [discovered, setDiscovered] = useState(false);
+  const [siteMetrics, setSiteMetrics] = useState(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/owner/metrics", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSiteMetrics(data); })
+      .catch(() => {});
+  }, [accessToken]);
 
   // Folder assignment based on path
   const getFolder = (path) => {
@@ -321,11 +332,13 @@ function DashboardTab() {
     }
   };
 
+  const paying = siteMetrics ? siteMetrics.standard + siteMetrics.pro : 0;
+  const mrr = siteMetrics ? (siteMetrics.standard * 7) + (siteMetrics.pro * 15) : 0;
   const metrics = [
-    { label: "Total Users", value: "1", change: "You" },
-    { label: "Active This Week", value: "1", change: "100%" },
-    { label: "Messages Today", value: "0", change: "—" },
-    { label: "MRR", value: "$0", change: "Pre-launch" },
+    { label: "Total Users", value: siteMetrics ? String(siteMetrics.total) : "\u2014", change: siteMetrics?.total === 1 ? "You" : "" },
+    { label: "Paying Users", value: siteMetrics ? String(paying) : "\u2014", change: paying === 0 ? "Pre-launch" : "" },
+    { label: "Messages/mo", value: siteMetrics ? String(siteMetrics.messagesThisMonth) : "\u2014", change: "" },
+    { label: "MRR", value: siteMetrics ? `$${mrr}` : "\u2014", change: mrr === 0 ? "Pre-launch" : "" },
   ];
 
   return (
@@ -1491,6 +1504,295 @@ function NotesTab() {
             ))}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Revenue Projections Data ─── */
+
+const REVENUE_GRID = [
+  { users: 20, free: 6, std: 10, pro: 4, revenue: 130, apiCost: 90, credits: 14, hosting: 25, net: 1 },
+  { users: 35, free: 6, std: 20, pro: 9, revenue: 275, apiCost: 158, credits: 29, hosting: 25, net: 63 },
+  { users: 50, free: 6, std: 31, pro: 13, revenue: 412, apiCost: 225, credits: 44, hosting: 30, net: 113 },
+  { users: 75, free: 6, std: 48, pro: 21, revenue: 651, apiCost: 338, credits: 69, hosting: 35, net: 209 },
+  { users: 100, free: 6, std: 66, pro: 28, revenue: 882, apiCost: 450, credits: 94, hosting: 40, net: 298 },
+  { users: 150, free: 6, std: 101, pro: 43, revenue: 1352, apiCost: 675, credits: 144, hosting: 50, net: 483 },
+  { users: 200, free: 6, std: 136, pro: 58, revenue: 1822, apiCost: 900, credits: 194, hosting: 50, net: 678 },
+  { users: 300, free: 6, std: 206, pro: 88, revenue: 2762, apiCost: 1350, credits: 294, hosting: 60, net: 1058 },
+  { users: 500, free: 6, std: 346, pro: 148, revenue: 4642, apiCost: 2250, credits: 494, hosting: 75, net: 1823 },
+  { users: 750, free: 6, std: 521, pro: 223, revenue: 6992, apiCost: 3375, credits: 744, hosting: 100, net: 2773 },
+  { users: 1000, free: 6, std: 696, pro: 298, revenue: 9342, apiCost: 4500, credits: 994, hosting: 200, net: 3648 },
+  { users: 1500, free: 6, std: 1046, pro: 448, revenue: 14042, apiCost: 6750, credits: 1494, hosting: 200, net: 5598 },
+  { users: 2000, free: 6, std: 1396, pro: 598, revenue: 18742, apiCost: 9000, credits: 1994, hosting: 200, net: 7548 },
+];
+
+const MILESTONES = REVENUE_GRID.map(r => r.users);
+
+const BINGO_CARDS = [
+  { label: "First paying user", threshold: 7 },
+  { label: "Cover hosting", threshold: 12 },
+  { label: "Break even", threshold: 20 },
+  { label: "First $100/mo", threshold: 50 },
+  { label: "Ramen profitable", threshold: 75 },
+  { label: "First $500/mo", threshold: 150 },
+  { label: "$1K/mo club", threshold: 300 },
+  { label: "Quit your day job", threshold: 500 },
+  { label: "Real business", threshold: 750 },
+  { label: "Four figures net", threshold: 1000 },
+  { label: "Scaling", threshold: 1500 },
+  { label: "Two thousand strong", threshold: 2000 },
+];
+
+function getProgressPercent(userCount) {
+  if (userCount <= 0) return 0;
+  if (userCount >= 2000) return 100;
+  for (let i = 0; i < MILESTONES.length; i++) {
+    if (userCount <= MILESTONES[i]) {
+      const prev = i === 0 ? 0 : MILESTONES[i - 1];
+      const segmentWidth = 100 / MILESTONES.length;
+      const segmentProgress = (userCount - prev) / (MILESTONES[i] - prev);
+      return (i * segmentWidth) + (segmentProgress * segmentWidth);
+    }
+  }
+  return 100;
+}
+
+function formatDollar(n) {
+  return n >= 1000 ? `$${n.toLocaleString()}` : `$${n}`;
+}
+
+/* ─── Users Tab — Revenue Dashboard ─── */
+
+function UsersTab() {
+  const { accessToken } = useAuth();
+  const [metrics, setMetrics] = useState(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/owner/metrics", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setMetrics(data); })
+      .catch(() => {});
+  }, [accessToken]);
+
+  const currentTotal = metrics?.total || 0;
+  const progressPct = getProgressPercent(currentTotal);
+
+  // Find the row to highlight (closest milestone >= current)
+  const highlightUsers = REVENUE_GRID.find(r => r.users >= currentTotal)?.users || REVENUE_GRID[0].users;
+
+  const cardStyle = {
+    padding: "var(--space-5)",
+    background: "var(--color-bg-elevated)",
+    border: "1px solid var(--color-border-light)",
+    borderRadius: "var(--radius-lg)",
+    marginBottom: "var(--space-6)",
+  };
+
+  const sectionLabel = {
+    fontSize: 9,
+    fontFamily: "var(--font-mono)",
+    fontWeight: "var(--font-weight-medium)",
+    textTransform: "uppercase",
+    letterSpacing: "var(--letter-spacing-widest)",
+    color: "var(--color-text-dim)",
+    marginBottom: "var(--space-4)",
+  };
+
+  const thStyle = {
+    fontSize: "var(--font-size-2xs)",
+    fontWeight: "var(--font-weight-semibold)",
+    textTransform: "uppercase",
+    letterSpacing: "var(--letter-spacing-wider)",
+    color: "var(--color-text-muted)",
+    padding: "var(--space-2) var(--space-3)",
+    textAlign: "right",
+    whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--color-border-light)",
+  };
+
+  const tdStyle = {
+    fontSize: "var(--font-size-sm)",
+    fontFamily: "var(--font-mono)",
+    padding: "var(--space-2) var(--space-3)",
+    textAlign: "right",
+    whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--color-border-light)",
+  };
+
+  // Milestone label positions (show subset to avoid crowding)
+  const labelMilestones = [20, 100, 500, 1000, 2000];
+
+  return (
+    <div>
+      {/* ── PROGRESS METER ── */}
+      <div style={cardStyle}>
+        <div style={sectionLabel}>Progress</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+          <span style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>
+            {currentTotal}
+          </span>
+          <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>
+            / 2,000 users
+          </span>
+        </div>
+
+        {/* Track */}
+        <div style={{ position: "relative", marginBottom: "var(--space-6)" }}>
+          <div style={{
+            height: 8,
+            background: "var(--color-border-light)",
+            borderRadius: "var(--radius-full)",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              height: "100%",
+              width: `${Math.max(progressPct, 1)}%`,
+              background: "var(--color-text)",
+              borderRadius: "var(--radius-full)",
+              transition: "width 0.6s ease",
+            }} />
+          </div>
+
+          {/* Milestone ticks */}
+          <div style={{ position: "relative", height: 28, marginTop: 4 }}>
+            {MILESTONES.map((m, i) => {
+              const left = ((i + 1) / MILESTONES.length) * 100;
+              const showLabel = labelMilestones.includes(m);
+              const passed = currentTotal >= m;
+              return (
+                <div key={m} style={{ position: "absolute", left: `${left}%`, transform: "translateX(-50%)" }}>
+                  <div style={{
+                    width: 1,
+                    height: 6,
+                    background: passed ? "var(--color-text)" : "var(--color-border)",
+                    margin: "0 auto",
+                  }} />
+                  {showLabel && (
+                    <div style={{
+                      fontSize: 9,
+                      fontFamily: "var(--font-mono)",
+                      color: passed ? "var(--color-text)" : "var(--color-text-dim)",
+                      marginTop: 2,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {m >= 1000 ? `${m / 1000}K` : m}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BINGO CARD ── */}
+      <div style={cardStyle}>
+        <div style={sectionLabel}>Milestones</div>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "var(--space-2)",
+        }}>
+          {BINGO_CARDS.map((card) => {
+            const achieved = currentTotal >= card.threshold;
+            return (
+              <div
+                key={card.label}
+                style={{
+                  padding: "var(--space-3)",
+                  borderRadius: "var(--radius-md)",
+                  textAlign: "center",
+                  background: achieved ? "var(--color-bg-inverse)" : "transparent",
+                  border: achieved ? "1px solid var(--color-bg-inverse)" : "1px dashed var(--color-border-light)",
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                }}
+              >
+                <div style={{
+                  fontSize: "var(--font-size-sm)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  marginBottom: 2,
+                }}>
+                  {card.label}
+                </div>
+                <div style={{
+                  fontSize: 9,
+                  fontFamily: "var(--font-mono)",
+                  opacity: 0.6,
+                }}>
+                  {card.threshold >= 1000 ? `~${(card.threshold / 1000).toFixed(0)}K` : `~${card.threshold}`} users
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── REVENUE GRID ── */}
+      <div style={cardStyle}>
+        <div style={sectionLabel}>Revenue Projections</div>
+
+        {/* Key */}
+        <div style={{
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-muted)",
+          lineHeight: "var(--line-height-relaxed)",
+          marginBottom: "var(--space-4)",
+        }}>
+          <div>Standard $7/mo (450 msgs) &middot; Pro $15/mo (800 msgs) &middot; Credits $2/100</div>
+          <div>70/30 Standard/Pro split &middot; 6 free seats &middot; ~1.5&cent;/msg API cost &middot; ~$1/mo blended referral credit</div>
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Users", "Free", "Std", "Pro", "Revenue", "API Cost", "Credits", "Hosting", "Net"].map((h, i) => (
+                  <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "right" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {REVENUE_GRID.map((row) => {
+                const isHighlight = row.users === highlightUsers;
+                const rowBg = isHighlight ? "var(--color-bg-alt)" : "transparent";
+                const rowWeight = isHighlight ? "var(--font-weight-semibold)" : "normal";
+                const leftBorder = isHighlight ? "3px solid var(--color-text)" : "3px solid transparent";
+                return (
+                  <tr key={row.users} style={{ background: rowBg }}>
+                    <td style={{ ...tdStyle, textAlign: "left", fontWeight: rowWeight, borderLeft: leftBorder }}>{row.users.toLocaleString()}</td>
+                    <td style={tdStyle}>{row.free}</td>
+                    <td style={tdStyle}>{row.std.toLocaleString()}</td>
+                    <td style={tdStyle}>{row.pro}</td>
+                    <td style={tdStyle}>{formatDollar(row.revenue)}</td>
+                    <td style={tdStyle}>{formatDollar(row.apiCost)}</td>
+                    <td style={tdStyle}>{formatDollar(row.credits)}</td>
+                    <td style={tdStyle}>{formatDollar(row.hosting)}</td>
+                    <td style={{ ...tdStyle, fontWeight: "var(--font-weight-bold)" }}>
+                      {row.net >= 0 ? "+" : ""}{formatDollar(row.net)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Wrap-up */}
+        <p style={{
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-muted)",
+          lineHeight: "var(--line-height-relaxed)",
+          marginTop: "var(--space-4)",
+          fontStyle: "italic",
+        }}>
+          The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$300/mo. At 500 it's a real income.
+        </p>
       </div>
     </div>
   );

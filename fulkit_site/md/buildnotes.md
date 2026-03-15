@@ -551,7 +551,7 @@ Behind the hamburger / settings, a full control panel exists:
 | Tier | Price | Messages/month | ~Messages/day |
 |:---|:---:|:---:|:---:|
 | Standard | $7/mo | 450 | ~15 |
-| Pro | $12/mo | 800 | ~26 |
+| Pro | $15/mo | 800 | ~26 |
 | Buy credits | $2/100 | On demand | — |
 
 **Why Fül caps, not unlimited:**
@@ -892,7 +892,7 @@ A typical Fülkit exchange (question + RAG context from notes + AI response) ≈
 - **Founder = free.** Your usage is the cost of building the product.
 - **5 hot seats = free.** Your inner circle. You float ~$22/mo max. The only cost center.
 - **Standard = $7/mo.** Light-to-moderate users. Get a set amount of messages, refill when empty.
-- **Pro = $12/mo.** Medium-to-heavy users. Bigger Fül tank. Still protected — house always wins.
+- **Pro = $15/mo.** Medium-to-heavy users. Bigger Fül tank. Still protected — house always wins.
 
 No confusing matrix. You're in for free, your people are in for free, everyone else picks a tier.
 
@@ -902,12 +902,12 @@ Users get a SET amount of messages per billing cycle. When the tank is empty, th
 | Tier | Price | Monthly messages | Cost per msg | Max API cost | Margin |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | Standard | $7/mo | ~450 msgs (~15/day) | 1.5¢ | ~$6.75 | **+$0.25 min** |
-| Pro | $12/mo | ~800 msgs (~26/day) | 1.5¢ | ~$12.00 | **≈ $0 worst case** |
+| Pro | $15/mo | ~800 msgs (~26/day) | 1.5¢ | ~$12.00 | **+$3.00 min** |
 | Buy credits | $2 per 100 msgs | On demand | 1.5¢ | $1.50 | **+$0.50 per pack** |
 
 **The house NEVER loses:**
 - Standard users: capped at 450 msgs. Even if they use every one, you profit $0.25. Most won't hit the cap — profit is higher.
-- Pro users: capped at 800 msgs. Worst case you break even. Most use ~500 → you profit ~$4.50.
+- Pro users: capped at 800 msgs. Worst case you profit $3. Most use ~500 → you profit ~$7.50.
 - Buy credits: pure margin. $2 for 100 msgs that cost you $1.50.
 - Nobody can run you under. The Fül system prevents it.
 
@@ -969,7 +969,7 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 - **In the heartbeat (whispers):** If a user has never sent an invite, Fülkit whispers: "You know you could get a free account, right? Every friend who joins earns you $1/mo off your subscription." Permission-based, earns its way in, fades if ignored.
 
 **The math per referral:**
-- Referred user pays: $7/mo (Standard) or $12/mo (Pro)
+- Referred user pays: $7/mo (Standard) or $15/mo (Pro)
 - API cost for that user: ~$4.50/mo (capped by Fül)
 - **Fülkit nets: +$2.50/mo minimum** from the referred user
 - Referral credit paid: -$1/mo (foregone revenue, not cash out of pocket)
@@ -979,8 +979,8 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 - Refer 1 friend → pay $6/mo instead of $7
 - Refer 3 friends → pay $4/mo
 - Refer 7 friends → **$7 in credits = Standard subscription fully offset. Free.**
-- Refer 12 friends → **Pro subscription fully offset. Free.**
-- Refer 15+ friends → excess credits banked for buy-credit packs or premium perks
+- Refer 15 friends → **Pro subscription fully offset. Free.**
+- Refer 16+ friends → excess credits banked for buy-credit packs or premium perks
 
 **Key: credits are tied to ACTIVE referred users.** If 2 of your 7 referrals cancel, your credits drop to $5/mo. You pay the $2 difference. Keeps referrers invested in quality users, not just bodies.
 
@@ -991,26 +991,26 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 - The more they share, the more they save. The more they save, the more Fülkit earns.
 
 **The flywheel:**
-Good product → users love it → they "Get Fülkit" for friends → friends pay $7-12 → referrer earns credits → referrer refers more → Fülkit grows AND profits on every step
+Good product → users love it → they "Get Fülkit" for friends → friends pay $7-15 → referrer earns credits → referrer refers more → Fülkit grows AND profits on every step
 
 ---
 
 ## The Math at Scale
 
-**Assumes 70% Standard ($7), 30% Pro ($12). Fül caps prevent losses.**
+**Assumes 70% Standard ($7), 30% Pro ($15). Fül caps prevent losses.**
 
 | Total Users | Free | Standard | Pro | Revenue | API Cost (capped) | Credits Out | Hosting | Net Profit |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | 6 | 6 | 0 | 0 | $0 | $27 | $0 | $25 | **-$52** |
-| 20 | 6 | 10 | 4 | $118 | $90 | $14 | $25 | **-$11** |
-| 35 | 6 | 20 | 9 | $248 | $157 | $29 | $25 | **+$37** |
-| 50 | 6 | 31 | 13 | $373 | $225 | $44 | $25 | **+$79** |
-| 100 | 6 | 66 | 28 | $798 | $450 | $94 | $25 | **+$229** |
-| 250 | 6 | 171 | 73 | $2,073 | $1,125 | $244 | $75 | **+$629** |
-| 500 | 6 | 346 | 148 | $4,198 | $2,250 | $494 | $75 | **+$1,379** |
-| 1,000 | 6 | 696 | 298 | $8,448 | $4,500 | $994 | $200 | **+$2,754** |
+| 20 | 6 | 10 | 4 | $130 | $90 | $14 | $25 | **+$1** |
+| 35 | 6 | 20 | 9 | $275 | $158 | $29 | $25 | **+$63** |
+| 50 | 6 | 31 | 13 | $412 | $225 | $44 | $30 | **+$113** |
+| 100 | 6 | 66 | 28 | $882 | $450 | $94 | $40 | **+$298** |
+| 250 | 6 | 171 | 73 | $2,288 | $1,125 | $244 | $75 | **+$844** |
+| 500 | 6 | 346 | 148 | $4,642 | $2,250 | $494 | $75 | **+$1,823** |
+| 1,000 | 6 | 696 | 298 | $9,342 | $4,500 | $994 | $200 | **+$3,648** |
 
-**Breakeven: ~30 paying users** (improved with Pro tier).
+**Breakeven: ~20 paying users** (improved with $15 Pro tier).
 
 **Plus buy-credit revenue** not shown above — pure margin on top.
 
@@ -1472,7 +1472,7 @@ fulkit/                   # Monorepo root (git root)
 ## Open Questions
 - ~~Storage backend~~ → Supabase ✅
 - ~~RAG implementation~~ → pgvector on Supabase ✅
-- ~~Pricing model~~ → Standard $7/mo, Pro $12/mo, Fül caps, buy credits $2/100 ✅
+- ~~Pricing model~~ → Standard $7/mo, Pro $15/mo, Fül caps, buy credits $2/100 ✅
 - ~~Heavy user protection~~ → Fül system, BYOK nudge for power burners ✅
 - ~~Referral model~~ → "Get Fülkit" — $1 credit per active referral, unlimited, credits not cash ✅
 - ~~Referral visibility~~ → Account settings + dashboard pull-tab + whisper nudge ✅

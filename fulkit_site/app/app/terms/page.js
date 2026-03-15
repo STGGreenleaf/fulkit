@@ -116,7 +116,7 @@ export default function Terms() {
             Subscriptions and billing
           </h2>
           <p>
-            Standard ($7/mo) and Pro ($12/mo) plans are billed monthly. Credits
+            Standard ($7/mo) and Pro ($15/mo) plans are billed monthly. Credits
             ($2/100 messages) are one-time purchases. Referral credits reduce your
             monthly bill but cannot be cashed out. Cancel anytime from Settings.
           </p>
