@@ -147,52 +147,28 @@ export default function PaymentPreview() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
+      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "var(--space-6) var(--space-4)",
-            overflowY: "auto",
-          }}
-        >
-          {/* Header */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          {/* Header bar */}
           <div
             style={{
-              width: "100%",
-              maxWidth: 480,
+              padding: "var(--space-2-5) var(--space-6)",
+              borderBottom: "1px solid var(--color-border-light)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: "var(--space-5)",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
-              <CreditCard
-                size={20}
-                strokeWidth={1.5}
-                style={{ color: "var(--color-text-muted)" }}
-              />
-              <h1
-                style={{
-                  fontSize: "var(--font-size-lg)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  color: "var(--color-text)",
-                  margin: 0,
-                  fontFamily: "var(--font-primary)",
-                }}
-              >
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <CreditCard size={16} strokeWidth={1.5} style={{ color: "var(--color-text-muted)" }} />
+              <span style={{
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-semibold)",
+                color: "var(--color-text)",
+              }}>
                 Payment Gateway
-              </h1>
+              </span>
             </div>
             {gwStep > 0 && (
               <button
@@ -216,11 +192,15 @@ export default function PaymentPreview() {
             )}
           </div>
 
+          {/* Scrollable content */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6) var(--space-6)" }}>
+
           {/* Step indicator */}
           <div
             style={{
               width: "100%",
               maxWidth: 480,
+              margin: "0 auto var(--space-4)",
               display: "flex",
               alignItems: "center",
               gap: "var(--space-1)",
@@ -228,7 +208,6 @@ export default function PaymentPreview() {
               background: "var(--color-bg-elevated)",
               borderRadius: "var(--radius-sm)",
               overflowX: "auto",
-              marginBottom: "var(--space-4)",
             }}
           >
             {GATEWAY_STEPS.map((s, i) => (
@@ -258,6 +237,7 @@ export default function PaymentPreview() {
             style={{
               width: "100%",
               maxWidth: 480,
+              margin: "0 auto",
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "var(--radius-md)",
@@ -926,6 +906,7 @@ export default function PaymentPreview() {
                 </button>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>
