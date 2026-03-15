@@ -17,23 +17,30 @@ const MUTED = "#8A8784";
 const SEC = "#5C5955";
 const DIM = "#B0ADA8";
 
-// Brand name with square-dot umlaut — proportions from fulkit.svg
-function brandMark(fontSize, color, weight = 700, ls = -3, lh = 1) {
-  const dw = Math.round(fontSize * 0.14);
-  const dh = Math.round(fontSize * 0.15);
-  const dg = Math.round(fontSize * 0.17);
-  const dt = Math.round(fontSize * 0.02);
-  const dl = Math.round(fontSize * 0.54);
+// SVG aspect ratio from fulkit.svg viewBox (888.78 / 257.63)
+const SVG_RATIO = 888.78 / 257.63;
+
+// Brand wordmark using actual fulkit.svg — pixel-perfect square-dot umlaut
+let _darkUri = null;
+let _lightUri = null;
+let _mutedUri = null;
+
+async function loadBrandSvg() {
+  if (_darkUri) return;
+  const svgRaw = await readFile(join(process.cwd(), "public/assets/brand/fulkit.svg"), "utf-8");
+  const svgDark = svgRaw.replace(/#2b2725/gi, TEXT);
+  const svgLight = svgRaw.replace(/#2b2725/gi, TEXT_INV);
+  const svgMuted = svgRaw.replace(/#2b2725/gi, SEC);
+  _darkUri = `data:image/svg+xml;base64,${Buffer.from(svgDark).toString("base64")}`;
+  _lightUri = `data:image/svg+xml;base64,${Buffer.from(svgLight).toString("base64")}`;
+  _mutedUri = `data:image/svg+xml;base64,${Buffer.from(svgMuted).toString("base64")}`;
+}
+
+function brandMark(height, isDark = false, variant = "default") {
+  const width = Math.round(height * SVG_RATIO);
+  const src = variant === "muted" ? _mutedUri : (isDark ? _lightUri : _darkUri);
   return (
-    <div style={{ position: "relative", display: "flex" }}>
-      <span style={{ fontSize, fontWeight: weight, color, fontFamily: "D-DIN", letterSpacing: ls, lineHeight: lh }}>
-        {"Fulkit"}
-      </span>
-      <div style={{ position: "absolute", top: dt, left: dl, display: "flex", gap: dg }}>
-        <div style={{ width: dw, height: dh, background: color }} />
-        <div style={{ width: dw, height: dh, background: color }} />
-      </div>
-    </div>
+    <img src={src} width={width} height={height} style={{ display: "block" }} />
   );
 }
 
@@ -42,7 +49,7 @@ function brandMark(fontSize, color, weight = 700, ls = -3, lh = 1) {
 function ogHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      {brandMark(120, TEXT)}
+      {brandMark(120)}
       <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, marginTop: 20, letterSpacing: 2 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: SEC, marginTop: 40 }}>{"I\u2019ll be your bestie."}</div>
     </div>
@@ -62,7 +69,7 @@ function ogMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
       <div style={{ fontSize: 52, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 8 }}>{brandMark(52, TEXT, 700, -1, 1.2)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, marginLeft: 4 }}>{"never does."}</span></div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 8 }}>{brandMark(52)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
     </div>
   );
 }
@@ -71,7 +78,7 @@ function ogStack() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
       <div style={{ fontSize: 48, fontWeight: 400, color: MUTED, letterSpacing: -1, lineHeight: 1.2 }}>{"10 apps. $88/month."}</div>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 4 }}>{"Or"}</span>{brandMark(64, TEXT, 700, -2, 1.2)}<span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 0 }}>{". $7."}</span></div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 12 }}>{"Or"}</span>{brandMark(52)}<span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 4 }}>{". $7."}</span></div>
     </div>
   );
 }
@@ -109,7 +116,7 @@ function ogNotes() {
 function igPostHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      {brandMark(88, TEXT_INV)}
+      {brandMark(88, true)}
       <div style={{ fontSize: 22, fontWeight: 400, color: SEC, marginTop: 16, letterSpacing: 2 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 60 }}>{"I\u2019ll be your bestie."}</div>
       <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
@@ -120,7 +127,7 @@ function igPostHero() {
 function igPostPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      {brandMark(72, TEXT_INV)}
+      {brandMark(72, true)}
       <div style={{ fontSize: 20, fontWeight: 400, color: SEC, marginTop: 14, letterSpacing: 2, marginBottom: 80 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 160, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{"$15"}</div>
       <div style={{ fontSize: 36, fontWeight: 400, color: SEC, letterSpacing: 3, marginTop: 4, marginBottom: 80 }}>{"/month"}</div>
@@ -135,7 +142,7 @@ function igPostMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       <div style={{ fontSize: 48, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 12 }}>{brandMark(48, TEXT_INV, 700, -1, 1.2)}<span style={{ fontSize: 48, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 4 }}>{"never does."}</span></div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12 }}>{brandMark(48, true)}<span style={{ fontSize: 48, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
       <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 60, textAlign: "center" }}>{"Every conversation starts"}</div>
       <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"from what you\u2019ve saved."}</div>
       <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
@@ -201,7 +208,7 @@ function igPostNotes() {
 function igStoriesHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80)}</div>
       <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
@@ -225,7 +232,7 @@ function igStoriesHero() {
 function igStoriesPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80)}</div>
       <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4, marginBottom: 64 }}>
@@ -245,7 +252,7 @@ function igStoriesMemory() {
       <div style={{ fontSize: 60, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.15, marginBottom: 24 }}>{"ChatGPT"}</div>
       <div style={{ fontSize: 60, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.15, marginBottom: 24 }}>{"forgets you."}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32, marginTop: 16 }} />
-      {brandMark(60, TEXT, 700, -2, 1.15)}
+      {brandMark(60)}
       <div style={{ fontSize: 60, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.15 }}>{"never does."}</div>
       <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 48 }}>{"Every conversation starts from you."}</div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
@@ -297,7 +304,7 @@ function igStoriesBestie() {
           <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"2."}</span>{"Not a chatbot. A thinking partner."}
         </div>
         <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"3."}</span><span style={{ display: "flex", alignItems: "baseline" }}><span>{"See: "}</span>{brandMark(26, SEC, 400, 0, 1.4)}<span>{"."}</span></span>
+          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"3."}</span><span style={{ display: "flex", alignItems: "center" }}><span>{"See: "}</span>{brandMark(22, false, "muted")}<span>{"."}</span></span>
         </div>
       </div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
@@ -360,6 +367,8 @@ export async function GET(request) {
       readFile(join(process.cwd(), "public/assets/fonts/d-din-bold.otf")),
       readFile(join(process.cwd(), "public/assets/fonts/inter-regular.ttf")),
     ]);
+
+    await loadBrandSvg();
 
     return new ImageResponse(render(), {
       width: dim.w,

@@ -2,19 +2,21 @@ import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
+// SVG aspect ratio from fulkit.svg viewBox (888.78 / 257.63)
+const SVG_RATIO = 888.78 / 257.63;
+
 export async function GET() {
   try {
-    const [fontBold, interRegular] = await Promise.all([
+    const [fontBold, interRegular, svgRaw] = await Promise.all([
       readFile(join(process.cwd(), "public/assets/fonts/d-din-bold.otf")),
       readFile(join(process.cwd(), "public/assets/fonts/inter-regular.ttf")),
+      readFile(join(process.cwd(), "public/assets/brand/fulkit.svg"), "utf-8"),
     ]);
 
-    // Square-dot umlaut — proportions from fulkit.svg
-    const dw = Math.round(120 * 0.14);
-    const dh = Math.round(120 * 0.15);
-    const dg = Math.round(120 * 0.17);
-    const dt = Math.round(120 * 0.02);
-    const dl = Math.round(120 * 0.54);
+    const svgDark = svgRaw.replace(/#2b2725/gi, "#2A2826");
+    const darkUri = `data:image/svg+xml;base64,${Buffer.from(svgDark).toString("base64")}`;
+    const markH = 120;
+    const markW = Math.round(markH * SVG_RATIO);
 
     return new ImageResponse(
       (
@@ -30,15 +32,7 @@ export async function GET() {
             fontFamily: "D-DIN",
           }}
         >
-          <div style={{ position: "relative", display: "flex" }}>
-            <span style={{ fontSize: 120, fontWeight: 700, color: "#2A2826", letterSpacing: -3, lineHeight: 1 }}>
-              {"Fulkit"}
-            </span>
-            <div style={{ position: "absolute", top: dt, left: dl, display: "flex", gap: dg }}>
-              <div style={{ width: dw, height: dh, background: "#2A2826" }} />
-              <div style={{ width: dw, height: dh, background: "#2A2826" }} />
-            </div>
-          </div>
+          <img src={darkUri} width={markW} height={markH} style={{ display: "block" }} />
           <div style={{ fontSize: 26, fontWeight: 700, color: "#8A8784", marginTop: 20, letterSpacing: 2 }}>
             {"/ fu:l\u00B7kit /"}
           </div>

@@ -2495,9 +2495,9 @@ function SocialsTab() {
           Ready-to-use designs across 3 sizes. Download as PNG.
         </div>
         {[
-          { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbH: 100 },
-          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbH: 130 },
-          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbH: 150 },
+          { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbW: 300 },
+          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbW: 300 },
+          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbW: 300 },
         ].map(row => (
           <div key={row.key} style={{ marginBottom: "var(--space-5)" }}>
             <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
@@ -2511,7 +2511,7 @@ function SocialsTab() {
                     <div
                       onClick={() => setPreviewTemplate({ url, concept, size: row.label, aspect: row.aspect, sizeKey: row.key })}
                       style={{
-                        height: row.thumbH,
+                        width: row.thumbW,
                         aspectRatio: row.aspect,
                         border: "1px solid var(--color-border-light)",
                         borderRadius: "var(--radius-md)",
