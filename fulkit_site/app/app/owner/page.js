@@ -2418,7 +2418,7 @@ function SocialsTab() {
             <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
               <div style={{
                 width: "100%",
-                height: 160,
+                aspectRatio: "2/1",
                 background: "var(--color-bg-alt)",
                 display: "flex",
                 alignItems: "center",
