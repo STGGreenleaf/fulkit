@@ -2128,19 +2128,24 @@ const MANUAL_SECTIONS = {
   },
 };
 
-const MANUAL_GUIDE = [
-  "Fülkit is your single surface — one chat that connects to everything you use.",
-  "Talk naturally. No slash commands, no menus. Just say what you need.",
-  "Save notes — say 'save this' and Fülkit distills it to what matters.",
-  "Create actions — say 'remind me to...' and it becomes a tracked task.",
-  "Track projects — say 'track this' and it creates a kanban card in Threads.",
-  "Memory — Fülkit remembers facts across sessions. No setup needed.",
-  "Vault — 3 storage modes: local-only, encrypted sync, or Fülkit-managed.",
-  "Semantic search — notes are embedded for meaning-based recall, not just keywords.",
-  "Fül gauge — Standard: 450 msgs/mo. Pro: 800/mo. BYOK: unlimited.",
-  "BYOK — bring your own Anthropic key in Settings → AI for unlimited usage.",
-  "Privacy — you own your data. Export or delete everything anytime.",
-  "Keyboard — Enter to send, Shift+Enter for new line.",
+const MANUAL_BLUEPRINT = [
+  { num: "01", label: "TALK", desc: "One chat. Say what you need.", examples: ["\u201CHow did we do today?\u201D", "\u201CSave this recipe.\u201D", "\u201CPlay something chill.\u201D"] },
+  { num: "02", label: "REMEMBER", desc: "Notes, memories, semantic search.", examples: ["\u201CSave this\u201D \u2014 F\u00fclkit distills it.", "\u201CWhat did I save about\u2026\u201D \u2014 meaning, not keywords."] },
+  { num: "03", label: "ACT", desc: "Actions + Threads.", examples: ["\u201CRemind me to\u2026\u201D \u2192 tracked action.", "\u201CTrack this\u201D \u2192 kanban card."] },
+  { num: "04", label: "LISTEN", desc: "The Hum. Voice \u2192 understanding.", examples: ["Talk to a presence, not a form.", "No visible transcript. You flow."] },
+  { num: "05", label: "PROTECT", desc: "Three vault modes. Your data, your rules.", vaultModes: true },
+];
+
+const ALL_INTEGRATIONS = [
+  { id: "square", name: "Square", summary: "POS, inventory, orders, customers" },
+  { id: "truegauge", name: "TrueGauge", summary: "Pace, cash, expenses, alerts" },
+  { id: "github", name: "GitHub", summary: "Commits, issues, repo structure" },
+  { id: "fabric", name: "Spotify", summary: "Playback, playlists, search" },
+  { id: "numbrly", name: "Numbrly", summary: "Margins, vendor costs, components" },
+  { id: "shopify", name: "Shopify", summary: "Products, orders, fulfillment" },
+  { id: "stripe", name: "Stripe", summary: "Revenue, payments, disputes" },
+  { id: "toast", name: "Toast", summary: "Service periods, menu, sales" },
+  { id: "trello", name: "Trello", summary: "Boards, cards, deadlines" },
 ];
 
 function ManualTab() {
@@ -2174,154 +2179,267 @@ function ManualTab() {
     });
   }, [accessToken, githubConnected]);
 
-  const connectedSections = Object.entries(MANUAL_SECTIONS)
-    .filter(([id]) => connections[id]);
+  const connectedCount = ALL_INTEGRATIONS.filter(i => connections[i.id]).length;
 
   return (
     <div>
       <SectionTitle>Operator&apos;s Manual</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", alignItems: "start" }}>
-        {/* Left column — about the app */}
-        <div style={{
-          background: "var(--color-surface-alt)",
-          borderRadius: "var(--radius-sm)",
-          padding: "var(--space-3)",
-        }}>
-          <div style={{
-            fontSize: "var(--font-size-2xs)",
-            fontWeight: "var(--font-weight-semibold)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: "var(--color-text-muted)",
-            marginBottom: "var(--space-2)",
-          }}>
-            About Fülkit
-          </div>
-          <ul style={{ margin: 0, padding: "0 0 0 var(--space-3)", listStyle: "disc" }}>
-            {MANUAL_GUIDE.map((line, i) => (
-              <li key={i} style={{
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text)",
-                lineHeight: "var(--line-height-relaxed)",
-                marginBottom: 3,
-              }}>
-                {line}
-              </li>
-            ))}
-          </ul>
-        </div>
 
-        {/* Right column — connections accordion */}
-        <div>
-          <div style={{
-            fontSize: "var(--font-size-2xs)",
-            fontWeight: "var(--font-weight-semibold)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: "var(--color-text-muted)",
-            marginBottom: "var(--space-1)",
-          }}>
-            Connections
-          </div>
-          <div style={{
-            fontSize: "var(--font-size-2xs)",
-            color: "var(--color-text-dim)",
-            marginBottom: "var(--space-2)",
-          }}>
-            Everything your connected tools can do — with example commands.
-          </div>
-          {connectedSections.length === 0 ? (
+      {/* ── Blueprint rows 01–05 ── */}
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        {MANUAL_BLUEPRINT.map((item) => (
+          <div key={item.num}>
             <div style={{
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              padding: "var(--space-3)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-dim)",
-              textAlign: "center",
+              display: "flex",
+              alignItems: "baseline",
+              gap: "var(--space-3)",
+              padding: "var(--space-2) 0",
+              borderBottom: "1px solid var(--color-border-light)",
             }}>
-              Connect an integration in Sources to see what it can do.
+              <span style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-2xs)",
+                color: "var(--color-text-dim)",
+                width: 20,
+                flexShrink: 0,
+              }}>{item.num}</span>
+              <span style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-bold)",
+                letterSpacing: "var(--letter-spacing-wider)",
+                color: "var(--color-text)",
+                width: 80,
+                flexShrink: 0,
+              }}>{item.label}</span>
+              <span style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-secondary)",
+                flex: 1,
+              }}>{item.desc}</span>
             </div>
-          ) : (
-            <div style={{
-              overflow: "hidden",
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-            }}>
-              {connectedSections.map(([id, section]) => {
-                const isExpanded = expanded[id] || false;
-                const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
-                return (
-                  <div key={id} style={{
-                    borderBottom: "1px solid var(--color-border-light)",
+            {/* Examples */}
+            {item.examples && (
+              <div style={{
+                paddingLeft: 103,
+                paddingBottom: "var(--space-1)",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-1) var(--space-3)",
+              }}>
+                {item.examples.map((ex, i) => (
+                  <span key={i} style={{
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-muted)",
+                    fontStyle: "italic",
+                  }}>{ex}</span>
+                ))}
+              </div>
+            )}
+            {/* Vault mode diagram */}
+            {item.vaultModes && (
+              <div style={{
+                paddingLeft: 103,
+                paddingBottom: "var(--space-2)",
+                paddingTop: "var(--space-1)",
+                display: "flex",
+                gap: "var(--space-2)",
+              }}>
+                {[
+                  { label: "LOCAL", sub: "browser only" },
+                  { label: "ENCRYPTED", sub: "sync + pass" },
+                  { label: "MANAGED", sub: "f\u00fclkit" },
+                ].map((mode) => (
+                  <div key={mode.label} style={{
+                    border: "1px solid var(--color-border)",
+                    padding: "var(--space-1) var(--space-2)",
+                    width: 90,
+                    textAlign: "center",
                   }}>
-                    <button
-                      onClick={() => setExpanded(prev => prev[id] ? {} : { [id]: true })}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-2)",
-                        width: "100%",
-                        padding: "var(--space-2) var(--space-3)",
-                        background: isExpanded ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                        border: "none",
-                        borderLeft: isExpanded ? "3px solid var(--color-text-muted)" : "3px solid transparent",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-primary)",
-                        borderRadius: 0,
-                        transition: "background var(--duration-fast) var(--ease-default)",
-                      }}
-                    >
-                      <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
-                        {SOURCE_LOGOS[id]}
-                      </span>
-                      <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", flex: 1, textAlign: "left" }}>
-                        {section.name}
-                      </span>
-                      <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                        {cmdCount}
-                      </span>
-                      <ChevronRight size={12} style={{
+                    <div style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--font-size-2xs)",
+                      fontWeight: "var(--font-weight-bold)",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                      color: "var(--color-text)",
+                    }}>{mode.label}</div>
+                    <div style={{
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-dim)",
+                    }}>{mode.sub}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── 06 CONNECT — integration showcase ── */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        padding: "var(--space-2) 0",
+        borderBottom: "1px solid var(--color-border-light)",
+        marginBottom: 0,
+      }}>
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--font-size-2xs)",
+          color: "var(--color-text-dim)",
+          width: 20,
+          flexShrink: 0,
+        }}>06</span>
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--font-size-xs)",
+          fontWeight: "var(--font-weight-bold)",
+          letterSpacing: "var(--letter-spacing-wider)",
+          color: "var(--color-text)",
+          width: 80,
+          flexShrink: 0,
+        }}>CONNECT</span>
+        <span style={{
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
+          flex: 1,
+        }}>{connectedCount} of {ALL_INTEGRATIONS.length} connected</span>
+      </div>
+
+      {/* Integration setlist */}
+      <div style={{
+        overflow: "hidden",
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        borderTop: "none",
+      }}>
+        {ALL_INTEGRATIONS.map((integration) => {
+          const isConnected = connections[integration.id] || false;
+          const isExpanded = expanded[integration.id] || false;
+          const section = MANUAL_SECTIONS[integration.id];
+          const cmdCount = section ? section.categories.reduce((sum, c) => sum + c.commands.length, 0) : 0;
+          return (
+            <div key={integration.id} style={{
+              borderBottom: "1px solid var(--color-border-light)",
+            }}>
+              <button
+                onClick={() => {
+                  if (!isConnected || !section) return;
+                  setExpanded(prev => prev[integration.id] ? {} : { [integration.id]: true });
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  width: "100%",
+                  padding: "var(--space-2) var(--space-3)",
+                  background: isExpanded ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                  border: "none",
+                  borderLeft: isExpanded ? "3px solid var(--color-text-muted)" : "3px solid transparent",
+                  cursor: isConnected ? "pointer" : "default",
+                  fontFamily: "var(--font-primary)",
+                  borderRadius: 0,
+                  transition: "background var(--duration-fast) var(--ease-default)",
+                  opacity: isConnected ? 1 : 0.45,
+                }}
+              >
+                {/* Status dot */}
+                <span style={{
+                  width: 6, height: 6,
+                  borderRadius: "var(--radius-full)",
+                  background: isConnected ? "var(--color-text)" : "transparent",
+                  border: isConnected ? "none" : "1px solid var(--color-text-dim)",
+                  flexShrink: 0,
+                }} />
+                {/* Logo */}
+                <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
+                  {SOURCE_LOGOS[integration.id]}
+                </span>
+                {/* Name */}
+                <span style={{
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  color: "var(--color-text)",
+                  width: 80,
+                  flexShrink: 0,
+                  textAlign: "left",
+                }}>{integration.name}</span>
+                {/* Summary */}
+                <span style={{
+                  fontSize: "var(--font-size-2xs)",
+                  color: "var(--color-text-muted)",
+                  flex: 1,
+                  textAlign: "left",
+                }}>{integration.summary}</span>
+                {/* Right side */}
+                {isConnected ? (
+                  <>
+                    <span style={{
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-dim)",
+                      fontFamily: "var(--font-mono)",
+                    }}>{cmdCount}</span>
+                    <ChevronRight size={12} style={{
+                      color: "var(--color-text-dim)",
+                      transform: isExpanded ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s ease",
+                    }} />
+                  </>
+                ) : (
+                  <span style={{
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-dim)",
+                  }}>Connect &rarr;</span>
+                )}
+              </button>
+              {/* Expanded commands */}
+              {isExpanded && section && (
+                <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)", background: "var(--color-surface)" }}>
+                  {section.categories.map((cat, catIdx) => (
+                    <div key={catIdx}>
+                      <div style={{
+                        fontSize: "var(--font-size-2xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
                         color: "var(--color-text-dim)",
-                        transform: isExpanded ? "rotate(90deg)" : "none",
-                        transition: "transform 0.15s ease",
-                      }} />
-                    </button>
-                    {isExpanded && (
-                      <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)", background: "var(--color-surface)" }}>
-                        {section.categories.map((cat, catIdx) => (
-                          <div key={catIdx}>
-                            <div style={{
-                              fontSize: "var(--font-size-2xs)",
-                              fontWeight: "var(--font-weight-semibold)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.04em",
-                              color: "var(--color-text-dim)",
-                              padding: "var(--space-1) 0 2px",
-                            }}>
-                              {cat.label}
+                        padding: "var(--space-1) 0 2px",
+                      }}>
+                        {cat.label}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--space-2)" }}>
+                        {cat.commands.map((cmd, cmdIdx) => (
+                          <div key={cmdIdx} style={{ padding: "2px 0" }}>
+                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text)", fontStyle: "italic" }}>
+                              {`\u201C${cmd.example}\u201D`}
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--space-2)" }}>
-                              {cat.commands.map((cmd, cmdIdx) => (
-                                <div key={cmdIdx} style={{ padding: "2px 0" }}>
-                                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text)", fontStyle: "italic" }}>
-                                    {`\u201C${cmd.example}\u201D`}
-                                  </div>
-                                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                                    {cmd.description}
-                                  </div>
-                                </div>
-                              ))}
+                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                              {cmd.description}
                             </div>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
+      </div>
+
+      {/* Keyboard shortcuts */}
+      <div style={{
+        padding: "var(--space-3) 0 0",
+        fontSize: "var(--font-size-2xs)",
+        color: "var(--color-text-dim)",
+        fontFamily: "var(--font-mono)",
+        display: "flex",
+        gap: "var(--space-4)",
+      }}>
+        <span>Enter &rarr; send</span>
+        <span>Shift+Enter &rarr; new line</span>
       </div>
     </div>
   );
