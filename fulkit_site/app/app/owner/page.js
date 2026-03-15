@@ -1469,31 +1469,28 @@ const OWNER_NOTES = [
 function NotesTab() {
   return (
     <div>
-      <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-4)" }}>
+      <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-2)" }}>
         Owner Notes
       </h2>
-      <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
-        Service providers, credentials locations, and operational notes.
-      </p>
-      {OWNER_NOTES.map((cat) => (
-        <div key={cat.category} style={{ marginBottom: "var(--space-6)" }}>
-          <h3 style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "var(--space-3)" }}>
-            {cat.category}
-          </h3>
-          {cat.items.map((item) => (
-            <div key={item.name} style={{ padding: "var(--space-3) var(--space-4)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-2)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-1)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+        {OWNER_NOTES.map((cat) => (
+          <div key={cat.category}>
+            <h3 style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "var(--space-1)" }}>
+              {cat.category}
+            </h3>
+            {cat.items.map((item) => (
+              <div key={item.name} style={{ padding: "var(--space-1) 0" }}>
                 <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textDecoration: "none", borderBottom: "1px solid var(--color-border)" }}>
                   {item.name}
                 </a>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginLeft: "var(--space-2)" }}>
+                  {item.note}
+                </span>
               </div>
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", margin: 0, lineHeight: "var(--line-height-relaxed)" }}>
-                {item.note}
-              </p>
-            </div>
-          ))}
-        </div>
-      ))}
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
