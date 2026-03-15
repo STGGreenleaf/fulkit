@@ -7,8 +7,9 @@ import {
   ArrowRight,
   RotateCcw,
   Users,
-  ArrowLeft,
 } from "lucide-react";
+import Sidebar from "../../components/Sidebar";
+import AuthGuard from "../../components/AuthGuard";
 
 const GATEWAY_STEPS = [
   { id: "plans", label: "Choose Plan" },
@@ -145,109 +146,75 @@ export default function PaymentPreview() {
   const remaining = seatLimit - mockProfile.messages_this_month;
 
   return (
-    <div
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        background: "var(--color-bg)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "var(--space-6) var(--space-4)",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 480,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "var(--space-6)",
-        }}
-      >
-        <a
-          href="/owner/playground"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-dim)",
-            textDecoration: "none",
-            fontFamily: "var(--font-primary)",
-          }}
-        >
-          <ArrowLeft size={14} /> Back to Playground
-        </a>
-        {gwStep > 0 && (
-          <button
-            onClick={resetGateway}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              padding: "var(--space-1) var(--space-2)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              background: "transparent",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              fontFamily: "var(--font-primary)",
-            }}
-          >
-            <RotateCcw size={11} /> Reset
-          </button>
-        )}
-      </div>
-
-      {/* Title */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 480,
-          textAlign: "center",
-          marginBottom: "var(--space-5)",
-        }}
-      >
+    <AuthGuard>
+      <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-bg)" }}>
+        <Sidebar />
         <div
           style={{
+            flex: 1,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            gap: "var(--space-2)",
-            marginBottom: "var(--space-1)",
+            padding: "var(--space-6) var(--space-4)",
+            overflowY: "auto",
           }}
         >
-          <CreditCard
-            size={20}
-            strokeWidth={1.5}
-            style={{ color: "var(--color-text-muted)" }}
-          />
-          <h1
+          {/* Header */}
+          <div
             style={{
-              fontSize: "var(--font-size-lg)",
-              fontWeight: "var(--font-weight-semibold)",
-              color: "var(--color-text)",
-              margin: 0,
-              fontFamily: "var(--font-primary)",
+              width: "100%",
+              maxWidth: 480,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "var(--space-5)",
             }}
           >
-            Payment Gateway
-          </h1>
-        </div>
-        <p
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-dim)",
-            margin: 0,
-          }}
-        >
-          Mock — no real charges
-        </p>
-      </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+              }}
+            >
+              <CreditCard
+                size={20}
+                strokeWidth={1.5}
+                style={{ color: "var(--color-text-muted)" }}
+              />
+              <h1
+                style={{
+                  fontSize: "var(--font-size-lg)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  color: "var(--color-text)",
+                  margin: 0,
+                  fontFamily: "var(--font-primary)",
+                }}
+              >
+                Payment Gateway
+              </h1>
+            </div>
+            {gwStep > 0 && (
+              <button
+                onClick={resetGateway}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-1)",
+                  padding: "var(--space-1) var(--space-2)",
+                  fontSize: "var(--font-size-2xs)",
+                  color: "var(--color-text-dim)",
+                  background: "transparent",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-primary)",
+                }}
+              >
+                <RotateCcw size={11} /> Reset
+              </button>
+            )}
+          </div>
 
       {/* Step indicator */}
       <div
@@ -635,11 +602,10 @@ export default function PaymentPreview() {
                 marginBottom: "var(--space-3)",
               }}
             >
-              Webhook verified (signature valid). Processing: update
-              profiles.seat_type \u2192 &quot;
-              {selectedPlan === "credits" ? "free" : selectedPlan}&quot;
-              {selectedPlan === "credits" &&
-                ", decrement messages_this_month by 100"}
+              Webhook verified. Updating seat type to{" "}
+              <strong>{selectedPlan === "credits" ? "free" : selectedPlan}</strong>
+              {selectedPlan === "credits" && " and adding 100 messages to allowance"}
+              .
             </div>
             <button
               onClick={() => advanceGateway()}
@@ -965,7 +931,9 @@ export default function PaymentPreview() {
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }
