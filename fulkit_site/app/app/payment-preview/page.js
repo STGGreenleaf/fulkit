@@ -499,7 +499,7 @@ export default function PaymentPreview() {
                     }}
                   >
                     <span>Email</span>
-                    <span>collin@fulkit.app</span>
+                    <span>ah@fulkit.app</span>
                   </div>
                 </div>
                 <button onClick={() => advanceGateway()} style={btnStyle("primary")}>
