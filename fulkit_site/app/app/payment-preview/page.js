@@ -539,7 +539,7 @@ export default function PaymentPreview() {
                       padding: "var(--space-3) var(--space-4)",
                       background: "var(--color-bg)",
                       borderRadius: "var(--radius-sm)",
-                      marginBottom: "var(--space-2)",
+                      marginBottom: "var(--space-3)",
                       fontFamily: "var(--font-mono)",
                       fontSize: "var(--font-size-xs)",
                     }}
@@ -548,7 +548,9 @@ export default function PaymentPreview() {
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        marginBottom: "var(--space-1)",
+                        paddingBottom: "var(--space-2)",
+                        borderBottom: "1px solid var(--color-border-light)",
+                        marginBottom: "var(--space-2)",
                       }}
                     >
                       <span
@@ -557,21 +559,25 @@ export default function PaymentPreview() {
                           fontWeight: "var(--font-weight-bold)",
                         }}
                       >
-                        {"● "}{evt.type}
+                        {evt.type}
                       </span>
                       <span style={{ color: "var(--color-text-dim)" }}>
                         {evt.time}
                       </span>
                     </div>
-                    <div
-                      style={{
-                        color: "var(--color-text-muted)",
-                        fontSize: "var(--font-size-2xs)",
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      {JSON.stringify(evt.data)}
-                    </div>
+                    {Object.entries(evt.data).map(([k, v]) => (
+                      <div
+                        key={k}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          padding: "var(--space-1) 0",
+                        }}
+                      >
+                        <span style={{ color: "var(--color-text-muted)" }}>{k}</span>
+                        <span style={{ color: "var(--color-text)" }}>{v}</span>
+                      </div>
+                    ))}
                   </div>
                 ))}
                 <div
