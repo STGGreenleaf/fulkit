@@ -2005,9 +2005,9 @@ const MANUAL_SECTIONS = {
       {
         label: "What you can do",
         commands: [
-          { example: "3 Acg, 12 Aloha, 0 Sunrise", description: "Update inventory counts — preview before confirm" },
-          { example: "86 Sunrise", description: "Mark an item sold out (coming soon)" },
-          { example: "Bump Kahapuhi to $14", description: "Change item pricing (coming soon)" },
+          { example: "3 tropical, 12 ginger shots, 0 orange", description: "Update inventory counts — preview before confirm" },
+          { example: "86 chia pudding", description: "Mark an item sold out (coming soon)" },
+          { example: "Bump acai bowl to $14", description: "Change item pricing (coming soon)" },
           { example: "Invoice Matt $150 for catering", description: "Create an invoice (coming soon)" },
         ],
       },
@@ -2029,7 +2029,7 @@ const MANUAL_SECTIONS = {
         label: "What you can do",
         commands: [
           { example: "Log $450 to Sysco for COGS", description: "Record an expense with preview/confirm" },
-          { example: "We did $1,200 today", description: "Update daily sales entry" },
+          { example: "We did $2,400 today", description: "Update daily sales entry" },
         ],
       },
     ],
@@ -2242,7 +2242,7 @@ function ManualTab() {
               Connect an integration in Sources to see what it can do.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
               {connectedSections.map(([id, section]) => {
                 const isExpanded = expanded[id] || false;
                 const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
@@ -2253,17 +2253,18 @@ function ManualTab() {
                     overflow: "hidden",
                   }}>
                     <button
-                      onClick={() => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))}
+                      onClick={() => setExpanded(prev => prev[id] ? {} : { [id]: true })}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "var(--space-2)",
                         width: "100%",
                         padding: "var(--space-2) var(--space-3)",
-                        background: "none",
+                        background: "var(--color-surface)",
                         border: "none",
                         cursor: "pointer",
                         fontFamily: "var(--font-primary)",
+                        borderRadius: isExpanded ? "var(--radius-sm) var(--radius-sm) 0 0" : "var(--radius-sm)",
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
