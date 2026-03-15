@@ -24,7 +24,7 @@ import {
   Paperclip,
   Search,
   Crown,
-  BookOpen,
+  BookOpenText,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -40,7 +40,7 @@ import { supabase } from "../../lib/supabase";
 const TABS = [
   { id: "account", label: "Account", icon: User },
   { id: "sources", label: "Sources", icon: Quote },
-  { id: "manual", label: "Manual", icon: BookOpen },
+  { id: "manual", label: "Manual", icon: BookOpenText},
   { id: "vault", label: "Vault", icon: FolderOpen },
   { id: "ai", label: "AI & Memory", icon: Brain },
   { id: "referrals", label: "Get Fülkit", icon: Gift },
