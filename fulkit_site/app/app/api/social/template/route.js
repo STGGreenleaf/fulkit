@@ -17,20 +17,21 @@ const MUTED = "#8A8784";
 const SEC = "#5C5955";
 const DIM = "#B0ADA8";
 
-// Brand name with square-dot umlaut (matches SVG brand mark)
+// Brand name with square-dot umlaut — proportions from fulkit.svg
 function brandMark(fontSize, color, weight = 700, ls = -3, lh = 1) {
-  const ds = Math.round(fontSize * 0.07);
-  const dg = Math.round(fontSize * 0.09);
+  const dw = Math.round(fontSize * 0.14);
+  const dh = Math.round(fontSize * 0.15);
+  const dg = Math.round(fontSize * 0.17);
   const dt = Math.round(fontSize * 0.02);
-  const dl = Math.round(fontSize * 0.60);
+  const dl = Math.round(fontSize * 0.54);
   return (
     <div style={{ position: "relative", display: "flex" }}>
       <span style={{ fontSize, fontWeight: weight, color, fontFamily: "D-DIN", letterSpacing: ls, lineHeight: lh }}>
         {"Fulkit"}
       </span>
       <div style={{ position: "absolute", top: dt, left: dl, display: "flex", gap: dg }}>
-        <div style={{ width: ds, height: ds, background: color }} />
-        <div style={{ width: ds, height: ds, background: color }} />
+        <div style={{ width: dw, height: dh, background: color }} />
+        <div style={{ width: dw, height: dh, background: color }} />
       </div>
     </div>
   );

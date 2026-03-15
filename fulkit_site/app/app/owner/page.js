@@ -2139,22 +2139,6 @@ function SocialsTab() {
             <CopyButton text="https://fulkit.app" label="Link" />
           </div>
 
-          {/* Save */}
-          <button onClick={saveMeta} disabled={saving} style={{
-            padding: "var(--space-2-5) var(--space-4)",
-            background: saved ? "var(--color-bg-inverse)" : "var(--color-text)",
-            color: "var(--color-bg)",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-semibold)",
-            fontFamily: "var(--font-primary)",
-            cursor: saving ? "wait" : "pointer",
-            transition: "all var(--duration-normal) var(--ease-default)",
-            width: "100%",
-          }}>
-            {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
-          </button>
         </div>
 
         {/* RIGHT: Live Previews */}
@@ -2326,6 +2310,7 @@ function SocialsTab() {
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>{asset.name}</div>
                   <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>{asset.info}</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-muted)", marginTop: 2 }}>{asset.desc}</div>
                 </div>
               </div>
             ))}
@@ -2484,6 +2469,24 @@ function SocialsTab() {
           </div>
         </div>
       </div>
+
+      {/* ── SAVE ── */}
+      <button onClick={saveMeta} disabled={saving} style={{
+        padding: "var(--space-2-5) var(--space-4)",
+        background: saved ? "var(--color-bg-inverse)" : "var(--color-text)",
+        color: "var(--color-bg)",
+        border: "none",
+        borderRadius: "var(--radius-md)",
+        fontSize: "var(--font-size-sm)",
+        fontWeight: "var(--font-weight-semibold)",
+        fontFamily: "var(--font-primary)",
+        cursor: saving ? "wait" : "pointer",
+        transition: "all var(--duration-normal) var(--ease-default)",
+        width: "100%",
+        marginBottom: "var(--space-6)",
+      }}>
+        {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
+      </button>
 
       {/* ── SOCIAL TEMPLATES ── */}
       <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>

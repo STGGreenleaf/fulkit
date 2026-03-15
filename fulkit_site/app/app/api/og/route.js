@@ -9,11 +9,12 @@ export async function GET() {
       readFile(join(process.cwd(), "public/assets/fonts/inter-regular.ttf")),
     ]);
 
-    // Square-dot umlaut brand mark
-    const ds = Math.round(120 * 0.07);
-    const dg = Math.round(120 * 0.09);
+    // Square-dot umlaut — proportions from fulkit.svg
+    const dw = Math.round(120 * 0.14);
+    const dh = Math.round(120 * 0.15);
+    const dg = Math.round(120 * 0.17);
     const dt = Math.round(120 * 0.02);
-    const dl = Math.round(120 * 0.60);
+    const dl = Math.round(120 * 0.54);
 
     return new ImageResponse(
       (
@@ -34,8 +35,8 @@ export async function GET() {
               {"Fulkit"}
             </span>
             <div style={{ position: "absolute", top: dt, left: dl, display: "flex", gap: dg }}>
-              <div style={{ width: ds, height: ds, background: "#2A2826" }} />
-              <div style={{ width: ds, height: ds, background: "#2A2826" }} />
+              <div style={{ width: dw, height: dh, background: "#2A2826" }} />
+              <div style={{ width: dw, height: dh, background: "#2A2826" }} />
             </div>
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: "#8A8784", marginTop: 20, letterSpacing: 2 }}>
