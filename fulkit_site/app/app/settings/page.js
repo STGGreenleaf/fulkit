@@ -2148,6 +2148,53 @@ const ALL_INTEGRATIONS = [
   { id: "trello", name: "Trello", summary: "Boards, cards, deadlines" },
 ];
 
+const GETTING_STARTED = [
+  { step: "1", action: "Say something", desc: "Open chat. Talk naturally \u2014 no menus, no commands." },
+  { step: "2", action: "Save your first note", desc: "\u201CSave this\u201D \u2014 F\u00fclkit distills it to what matters." },
+  { step: "3", action: "Pick your vault", desc: "Settings \u2192 Vault. Local, encrypted, or managed. You choose." },
+];
+
+const QUICK_REFERENCE = [
+  { left: "Enter \u2192 send", right: "\u201CSave this\u201D \u2192 note" },
+  { left: "Shift+Enter \u2192 new line", right: "\u201CRemind me\u201D \u2192 action" },
+  { left: "", right: "\u201CTrack this\u201D \u2192 thread" },
+  { left: "", right: "\u201CWhat did I save about\u2026\u201D \u2192 search" },
+];
+
+function SectionDivider({ label, right }) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--space-2)",
+      padding: "var(--space-4) 0 var(--space-2) 0",
+    }}>
+      <span style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: "var(--font-size-2xs)",
+        fontWeight: "var(--font-weight-bold)",
+        letterSpacing: "var(--letter-spacing-widest)",
+        color: "var(--color-text-dim)",
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
+      }}>{label}</span>
+      <span style={{
+        flex: 1,
+        height: 1,
+        background: "var(--color-border-light)",
+      }} />
+      {right && (
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--font-size-2xs)",
+          color: "var(--color-text-dim)",
+          whiteSpace: "nowrap",
+        }}>{right}</span>
+      )}
+    </div>
+  );
+}
+
 function ManualTab() {
   const { accessToken, githubConnected } = useAuth();
   const [expanded, setExpanded] = useState({});
@@ -2185,8 +2232,44 @@ function ManualTab() {
     <div>
       <SectionTitle>Operator&apos;s Manual</SectionTitle>
 
-      {/* ── Blueprint rows 01–05 ── */}
-      <div style={{ marginBottom: "var(--space-4)" }}>
+      {/* ═══ Layer 1: Getting Started ═══ */}
+      <SectionDivider label="Getting Started" />
+      <div>
+        {GETTING_STARTED.map((item) => (
+          <div key={item.step} style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "var(--space-3)",
+            padding: "var(--space-2) 0",
+            borderBottom: "1px solid var(--color-border-light)",
+          }}>
+            <span style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-bold)",
+              color: "var(--color-text-dim)",
+              width: 20,
+              flexShrink: 0,
+            }}>{item.step}</span>
+            <span style={{
+              fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              color: "var(--color-text)",
+              width: 140,
+              flexShrink: 0,
+            }}>{item.action}</span>
+            <span style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-secondary)",
+              flex: 1,
+            }}>{item.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ Layer 2: Capabilities ═══ */}
+      <SectionDivider label="What It Does" />
+      <div>
         {MANUAL_BLUEPRINT.map((item) => (
           <div key={item.num}>
             <div style={{
@@ -2218,7 +2301,6 @@ function ManualTab() {
                 flex: 1,
               }}>{item.desc}</span>
             </div>
-            {/* Examples */}
             {item.examples && (
               <div style={{
                 paddingLeft: 103,
@@ -2236,7 +2318,6 @@ function ManualTab() {
                 ))}
               </div>
             )}
-            {/* Vault mode diagram */}
             {item.vaultModes && (
               <div style={{
                 paddingLeft: 103,
@@ -2275,44 +2356,12 @@ function ManualTab() {
         ))}
       </div>
 
-      {/* ── 06 CONNECT — integration showcase ── */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-3)",
-        padding: "var(--space-2) 0",
-        borderBottom: "1px solid var(--color-border-light)",
-        marginBottom: 0,
-      }}>
-        <span style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "var(--font-size-2xs)",
-          color: "var(--color-text-dim)",
-          width: 20,
-          flexShrink: 0,
-        }}>06</span>
-        <span style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "var(--font-size-xs)",
-          fontWeight: "var(--font-weight-bold)",
-          letterSpacing: "var(--letter-spacing-wider)",
-          color: "var(--color-text)",
-          width: 80,
-          flexShrink: 0,
-        }}>CONNECT</span>
-        <span style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-          flex: 1,
-        }}>{connectedCount} of {ALL_INTEGRATIONS.length} connected</span>
-      </div>
-
-      {/* Integration setlist */}
+      {/* ═══ Layer 3: Reference ═══ */}
+      <SectionDivider label="Connect" right={`${connectedCount}/${ALL_INTEGRATIONS.length}`} />
       <div style={{
         overflow: "hidden",
         background: "var(--color-bg-elevated)",
         border: "1px solid var(--color-border-light)",
-        borderTop: "none",
       }}>
         {ALL_INTEGRATIONS.map((integration) => {
           const isConnected = connections[integration.id] || false;
@@ -2344,7 +2393,6 @@ function ManualTab() {
                   opacity: isConnected ? 1 : 0.45,
                 }}
               >
-                {/* Status dot */}
                 <span style={{
                   width: 6, height: 6,
                   borderRadius: "var(--radius-full)",
@@ -2352,11 +2400,9 @@ function ManualTab() {
                   border: isConnected ? "none" : "1px solid var(--color-text-dim)",
                   flexShrink: 0,
                 }} />
-                {/* Logo */}
                 <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
                   {SOURCE_LOGOS[integration.id]}
                 </span>
-                {/* Name */}
                 <span style={{
                   fontSize: "var(--font-size-xs)",
                   fontWeight: "var(--font-weight-semibold)",
@@ -2365,14 +2411,12 @@ function ManualTab() {
                   flexShrink: 0,
                   textAlign: "left",
                 }}>{integration.name}</span>
-                {/* Summary */}
                 <span style={{
                   fontSize: "var(--font-size-2xs)",
                   color: "var(--color-text-muted)",
                   flex: 1,
                   textAlign: "left",
                 }}>{integration.summary}</span>
-                {/* Right side */}
                 {isConnected ? (
                   <>
                     <span style={{
@@ -2393,7 +2437,6 @@ function ManualTab() {
                   }}>Connect &rarr;</span>
                 )}
               </button>
-              {/* Expanded commands */}
               {isExpanded && section && (
                 <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)", background: "var(--color-surface)" }}>
                   {section.categories.map((cat, catIdx) => (
@@ -2429,17 +2472,27 @@ function ManualTab() {
         })}
       </div>
 
-      {/* Keyboard shortcuts */}
+      {/* Quick Reference */}
+      <SectionDivider label="Quick Reference" />
       <div style={{
-        padding: "var(--space-3) 0 0",
-        fontSize: "var(--font-size-2xs)",
-        color: "var(--color-text-dim)",
-        fontFamily: "var(--font-mono)",
-        display: "flex",
-        gap: "var(--space-4)",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "2px var(--space-4)",
       }}>
-        <span>Enter &rarr; send</span>
-        <span>Shift+Enter &rarr; new line</span>
+        {QUICK_REFERENCE.flatMap((row, i) => [
+          <span key={`l${i}`} style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              padding: "2px 0",
+            }}>{row.left}</span>,
+          <span key={`r${i}`} style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              padding: "2px 0",
+            }}>{row.right}</span>,
+        ])}
       </div>
     </div>
   );
