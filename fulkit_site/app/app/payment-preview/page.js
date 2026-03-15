@@ -150,7 +150,7 @@ export default function PaymentPreview() {
       <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
         <Sidebar />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header bar */}
+          {/* Header */}
           <div
             style={{
               padding: "var(--space-2-5) var(--space-6)",
@@ -161,12 +161,16 @@ export default function PaymentPreview() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <CreditCard size={16} strokeWidth={1.5} style={{ color: "var(--color-text-muted)" }} />
               <span style={{
                 fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-semibold)",
+                fontWeight: "var(--font-weight-black)",
+                letterSpacing: "var(--letter-spacing-tight)",
                 color: "var(--color-text)",
               }}>
+                {"F\u00fclkit"}
+              </span>
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
                 Payment Gateway
               </span>
             </div>
@@ -198,9 +202,6 @@ export default function PaymentPreview() {
           {/* Step indicator */}
           <div
             style={{
-              width: "100%",
-              maxWidth: 480,
-              margin: "0 auto var(--space-4)",
               display: "flex",
               alignItems: "center",
               gap: "var(--space-1)",
@@ -208,6 +209,7 @@ export default function PaymentPreview() {
               background: "var(--color-bg-elevated)",
               borderRadius: "var(--radius-sm)",
               overflowX: "auto",
+              marginBottom: "var(--space-4)",
             }}
           >
             {GATEWAY_STEPS.map((s, i) => (
@@ -235,9 +237,6 @@ export default function PaymentPreview() {
           {/* Step content */}
           <div
             style={{
-              width: "100%",
-              maxWidth: 480,
-              margin: "0 auto",
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "var(--radius-md)",
