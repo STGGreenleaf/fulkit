@@ -1897,8 +1897,6 @@ function SocialsTab() {
   const [ogSlots, setOgSlots] = useState([null, null, null]);
   const [twitterImage, setTwitterImage] = useState(null);
   const [canonicalUrl, setCanonicalUrl] = useState("https://fulkit.app");
-  const [robots, setRobots] = useState("index, follow");
-  const [googleVerification, setGoogleVerification] = useState("bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo");
   const [themeColor, setThemeColor] = useState("#EFEDE8");
   const [keywords, setKeywords] = useState("");
   const [author, setAuthor] = useState("");
@@ -1931,8 +1929,6 @@ function SocialsTab() {
         }
         if (data.twitter_image_url) setTwitterImage(data.twitter_image_url);
         if (data.canonical_url) setCanonicalUrl(data.canonical_url);
-        if (data.robots) setRobots(data.robots);
-        if (data.google_verification) setGoogleVerification(data.google_verification);
         if (data.theme_color) setThemeColor(data.theme_color);
         if (data.keywords) setKeywords(data.keywords);
         if (data.author) setAuthor(data.author);
@@ -1953,7 +1949,7 @@ function SocialsTab() {
         body: JSON.stringify({
           title, description, og_title: ogTitle, og_description: ogDescription,
           og_image_slot: ogSlot, og_image_url: activeUrl || null, twitter_image_url: twitterImage || null,
-          canonical_url: canonicalUrl, robots, google_verification: googleVerification,
+          canonical_url: canonicalUrl,
           theme_color: themeColor, keywords, author, og_site_name: ogSiteName, twitter_handle: twitterHandle,
         }),
       });
@@ -2251,15 +2247,6 @@ function SocialsTab() {
                 <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
               </div>
               <div>
-                <div style={labelStyle}>Robots</div>
-                <select value={robots} onChange={e => setRobots(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="index, follow">index, follow</option>
-                  <option value="index, nofollow">index, nofollow</option>
-                  <option value="noindex, follow">noindex, follow</option>
-                  <option value="noindex, nofollow">noindex, nofollow</option>
-                </select>
-              </div>
-              <div>
                 <div style={labelStyle}>Theme Color</div>
                 <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                   <input type="color" value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ width: 28, height: 28, border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: 0, cursor: "pointer", background: "none" }} />
@@ -2279,100 +2266,75 @@ function SocialsTab() {
                 <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <div style={labelStyle}>Google Verification</div>
-                <input value={googleVerification} onChange={e => setGoogleVerification(e.target.value)} style={{ ...inputStyle, fontFamily: "var(--font-mono)", fontSize: "var(--font-size-2xs)" }} />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
                 <div style={labelStyle}>Keywords</div>
                 <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
               </div>
             </div>
           </div>
 
-          {/* Social Post Sizes */}
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
-            <div style={sectionLabel}>Social Post Sizes</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
-              {[
-                ["OG Image", "1200 \u00D7 630"],
-                ["X / Twitter", "1200 \u00D7 630"],
-                ["IG Post", "1080 \u00D7 1350"],
-                ["IG Stories", "1080 \u00D7 1920"],
-              ].map(([label, size]) => (
-                <div key={label} style={{
-                  padding: "var(--space-2) var(--space-3)",
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-md)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}>
-                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{label}</span>
-                  <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>{size}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Social Templates — Dieter Rams CTA designs */}
+          {/* Social Templates — 3 rows by size, 7 concepts each */}
           <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
             <div style={sectionLabel}>Social Templates</div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
-              Ready-to-use designs. Download as PNG.
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+              Ready-to-use designs across 3 sizes. Download as PNG.
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {[
-                { name: "OG Hero", desc: "Fülkit dictionary entry", size: "1200 × 630", url: "/api/og", aspect: "1200/630", dark: false },
-                { name: "IG Post", desc: "$15/mo CTA", size: "1080 × 1350", url: "/api/social/ig-post", aspect: "1080/1350", dark: true },
-                { name: "IG Stories", desc: "Second brain manifesto", size: "1080 × 1920", url: "/api/social/ig-stories", aspect: "1080/1920", dark: false },
-              ].map(t => (
-                <div key={t.name} style={{
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-lg)",
-                  overflow: "hidden",
-                }}>
-                  <div style={{
-                    width: "100%",
-                    maxHeight: 160,
-                    overflow: "hidden",
-                    borderBottom: "1px solid var(--color-border-light)",
-                    background: t.dark ? "#2A2826" : "#EFEDE8",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <img src={t.url} alt={t.name} style={{ width: "100%", objectFit: "cover", objectPosition: "center top" }} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-2-5) var(--space-3)" }}>
-                    <div>
-                      <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{t.name}</div>
-                      <div style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>{t.desc} · {t.size}</div>
-                    </div>
-                    <a
-                      href={t.url}
-                      download={`fulkit-${t.name.toLowerCase().replace(/\s/g, "-")}.png`}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-1)",
-                        padding: "var(--space-1-5) var(--space-2-5)",
-                        background: "var(--color-text)",
-                        color: "var(--color-bg)",
-                        border: "none",
-                        borderRadius: "var(--radius-md)",
-                        fontSize: "var(--font-size-2xs)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        fontFamily: "var(--font-primary)",
-                        textDecoration: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Download size={10} /> PNG
-                    </a>
-                  </div>
+            {[
+              { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbH: 120 },
+              { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbH: 160 },
+              { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbH: 180 },
+            ].map(row => (
+              <div key={row.key} style={{ marginBottom: "var(--space-5)" }}>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                  {row.label} {"\u00B7"} {row.dims}
                 </div>
-              ))}
-            </div>
+                <div style={{ display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+                  {["hero", "price", "memory", "stack", "voice", "bestie", "notes"].map(concept => {
+                    const url = `/api/social/template?concept=${concept}&size=${row.key}`;
+                    return (
+                      <div key={concept} style={{ flexShrink: 0 }}>
+                        <div style={{
+                          height: row.thumbH,
+                          aspectRatio: row.aspect,
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-md)",
+                          overflow: "hidden",
+                          background: "var(--color-bg-alt)",
+                        }}>
+                          <img
+                            src={url}
+                            alt={`${concept} ${row.key}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                            loading="lazy"
+                          />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
+                          <a
+                            href={url}
+                            download={`fulkit-${concept}-${row.key}.png`}
+                            style={{
+                              display: "flex", alignItems: "center",
+                              padding: "2px 6px",
+                              background: "var(--color-text)",
+                              color: "var(--color-bg)",
+                              border: "none",
+                              borderRadius: "var(--radius-sm)",
+                              fontSize: 8,
+                              fontWeight: "var(--font-weight-semibold)",
+                              fontFamily: "var(--font-primary)",
+                              textDecoration: "none",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Download size={8} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -2480,11 +2442,9 @@ function SocialsTab() {
                     ["twitter:image", twitterImage || "(uses og:image)"],
                     ["twitter:site", twitterHandle || "(not set)"],
                     ["canonical", canonicalUrl],
-                    ["robots", robots],
                     ["theme-color", themeColor],
                     ["author", author || "(not set)"],
                     ["keywords", keywords || "(not set)"],
-                    ["verification", googleVerification ? "\u2713 Google" : "(not set)"],
                   ].map(([k, v]) => (
                     <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
                       <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>

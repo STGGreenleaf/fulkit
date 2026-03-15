@@ -30,7 +30,7 @@ export async function generateMetadata() {
     description: meta?.description || DEFAULTS.description,
     ...(meta?.keywords && { keywords: meta.keywords.split(",").map(k => k.trim()) }),
     ...(meta?.author && { authors: [{ name: meta.author }] }),
-    ...(meta?.robots && { robots: meta.robots }),
+    robots: "index, follow",
     ...(meta?.canonical_url && { alternates: { canonical: meta.canonical_url } }),
     icons: {
       icon: [
@@ -56,7 +56,7 @@ export async function generateMetadata() {
       ...(meta?.twitter_image_url && { images: [meta.twitter_image_url] }),
     },
     verification: {
-      google: meta?.google_verification || "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
+      google: "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
     },
     other: {
       "theme-color": meta?.theme_color || "#EFEDE8",
