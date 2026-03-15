@@ -2232,8 +2232,8 @@ function ManualTab() {
           </div>
           {connectedSections.length === 0 ? (
             <div style={{
-              background: "var(--color-surface-alt)",
-              borderRadius: "var(--radius-sm)",
+              background: "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
               padding: "var(--space-3)",
               fontSize: "var(--font-size-xs)",
               color: "var(--color-text-dim)",
@@ -2242,15 +2242,17 @@ function ManualTab() {
               Connect an integration in Sources to see what it can do.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <div style={{
+              overflow: "hidden",
+              background: "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
+            }}>
               {connectedSections.map(([id, section]) => {
                 const isExpanded = expanded[id] || false;
                 const cmdCount = section.categories.reduce((sum, c) => sum + c.commands.length, 0);
                 return (
                   <div key={id} style={{
-                    background: "var(--color-surface-alt)",
-                    borderRadius: "var(--radius-sm)",
-                    overflow: "hidden",
+                    borderBottom: "1px solid var(--color-border-light)",
                   }}>
                     <button
                       onClick={() => setExpanded(prev => prev[id] ? {} : { [id]: true })}
@@ -2260,11 +2262,13 @@ function ManualTab() {
                         gap: "var(--space-2)",
                         width: "100%",
                         padding: "var(--space-2) var(--space-3)",
-                        background: "var(--color-surface-alt)",
-                        border: "1px solid var(--color-border-light)",
+                        background: isExpanded ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                        border: "none",
+                        borderLeft: isExpanded ? "3px solid var(--color-text-muted)" : "3px solid transparent",
                         cursor: "pointer",
                         fontFamily: "var(--font-primary)",
-                        borderRadius: isExpanded ? "var(--radius-sm) var(--radius-sm) 0 0" : "var(--radius-sm)",
+                        borderRadius: 0,
+                        transition: "background var(--duration-fast) var(--ease-default)",
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
