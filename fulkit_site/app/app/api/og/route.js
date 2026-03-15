@@ -4,9 +4,16 @@ import { join } from "path";
 
 export async function GET() {
   try {
-    const fontBold = await readFile(
-      join(process.cwd(), "public/assets/fonts/inter-bold.ttf")
-    );
+    const [fontBold, interRegular] = await Promise.all([
+      readFile(join(process.cwd(), "public/assets/fonts/d-din-bold.otf")),
+      readFile(join(process.cwd(), "public/assets/fonts/inter-regular.ttf")),
+    ]);
+
+    // Square-dot umlaut brand mark
+    const ds = Math.round(120 * 0.07);
+    const dg = Math.round(120 * 0.1);
+    const dt = Math.round(120 * 0.02);
+    const dl = Math.round(120 * 0.42);
 
     return new ImageResponse(
       (
@@ -19,11 +26,17 @@ export async function GET() {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: "#EFEDE8",
-            fontFamily: "Inter",
+            fontFamily: "D-DIN",
           }}
         >
-          <div style={{ fontSize: 120, fontWeight: 700, color: "#2A2826", letterSpacing: -3 }}>
-            {"F\u00FClkit"}
+          <div style={{ position: "relative", display: "flex" }}>
+            <span style={{ fontSize: 120, fontWeight: 700, color: "#2A2826", letterSpacing: -3, lineHeight: 1 }}>
+              {"Fulkit"}
+            </span>
+            <div style={{ position: "absolute", top: dt, left: dl, display: "flex", gap: dg }}>
+              <div style={{ width: ds, height: ds, background: "#2A2826" }} />
+              <div style={{ width: ds, height: ds, background: "#2A2826" }} />
+            </div>
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: "#8A8784", marginTop: 20, letterSpacing: 2 }}>
             {"/ fu:l\u00B7kit /"}
@@ -37,7 +50,8 @@ export async function GET() {
         width: 1200,
         height: 630,
         fonts: [
-          { name: "Inter", data: fontBold, weight: 700, style: "normal" },
+          { name: "D-DIN", data: fontBold, weight: 700, style: "normal" },
+          { name: "Inter", data: interRegular, weight: 400, style: "normal" },
         ],
       }
     );
