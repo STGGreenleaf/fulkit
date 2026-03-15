@@ -25,6 +25,7 @@ import {
   X,
   CreditCard,
   Download,
+  DatabaseSearch,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -45,6 +46,7 @@ const TABS = [
   { id: "fabric", label: "Fabric", icon: Music },
   { id: "playground", label: "Playground", icon: GamepadDirectional },
   { id: "notes", label: "Notes", icon: FileText },
+  { id: "dogfood", label: "Dogfood", icon: DatabaseSearch },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -180,6 +182,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "fabric" && <FabricTab />}
         {tab === "playground" && <PlaygroundTab />}
         {tab === "notes" && <NotesTab />}
+        {tab === "dogfood" && <DogfoodTab />}
       </div>
     </div>
   );
@@ -206,7 +209,129 @@ export default function Owner({ initialTab }) {
   );
 }
 
+// Reusable bar-list card for analytics sections
+function AnalyticsCard({ title, items, valueKey, labelKey, maxItems = 10 }) {
+  if (!items || items.length === 0) return null;
+  const max = Math.max(...items.slice(0, maxItems).map(i => i[valueKey] || 0), 1);
+  return (
+    <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+      <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+        {title}
+      </div>
+      {items.slice(0, maxItems).map((item, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {item[labelKey] || "(not set)"}
+          </span>
+          <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${(item[valueKey] / max) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
+          </div>
+          <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 32, textAlign: "right" }}>
+            {item[valueKey]}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DashboardTab() {
+  const { accessToken } = useAuth();
+  const [siteMetrics, setSiteMetrics] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    // Fetch both in parallel
+    fetch("/api/owner/metrics", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSiteMetrics(data); })
+      .catch(() => {});
+
+    fetch("/api/owner/analytics", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setAnalytics(data); setLoadingAnalytics(false); })
+      .catch(() => { setLoadingAnalytics(false); });
+  }, [accessToken]);
+
+  const paying = siteMetrics ? siteMetrics.standard + siteMetrics.pro : 0;
+  const mrr = siteMetrics ? (siteMetrics.standard * 7) + (siteMetrics.pro * 15) : 0;
+
+  const metrics = [
+    { label: "Total Users", value: siteMetrics ? String(siteMetrics.total) : "\u2014", sub: siteMetrics?.total === 1 ? "You" : "" },
+    { label: "Visitors (30d)", value: analytics?.overview ? String(analytics.overview.visitors) : "\u2014", sub: !analytics?.configured ? "GA4 not configured" : "" },
+    { label: "Avg Session", value: analytics?.overview?.avgDuration || "\u2014", sub: "" },
+    { label: "Messages/mo", value: siteMetrics ? String(siteMetrics.messagesThisMonth) : "\u2014", sub: "" },
+    { label: "MRR", value: siteMetrics ? `$${mrr}` : "\u2014", sub: mrr === 0 ? "Pre-launch" : "" },
+  ];
+
+  return (
+    <div>
+      {/* Overview Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-6)" }}>
+        {metrics.map((m, i) => (
+          <div key={i} style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+              {m.label}
+            </div>
+            <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>
+              {m.value}
+            </div>
+            {m.sub && <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>{m.sub}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* Analytics Sections */}
+      {loadingAnalytics ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
+          <LoadingMark size={32} />
+        </div>
+      ) : !analytics?.configured ? (
+        <div style={{ padding: "var(--space-6)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-primary)", marginBottom: "var(--space-2)" }}>
+            Connect Google Analytics
+          </div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", maxWidth: 400, margin: "0 auto" }}>
+            Set GA_PROPERTY_ID and GOOGLE_SERVICE_ACCOUNT_KEY in your environment to see traffic, geographic, and engagement data here.
+          </div>
+        </div>
+      ) : analytics?.overview?.visitors === 0 ? (
+        <div style={{ padding: "var(--space-6)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+            Data will appear after your first visitors.
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+          <AnalyticsCard title="Top Pages" items={analytics.topPages} labelKey="path" valueKey="views" />
+          <div>
+            <AnalyticsCard title="Geographic" items={analytics.countries} labelKey="name" valueKey="users" maxItems={8} />
+            {analytics.cities?.length > 0 && (
+              <div style={{ marginTop: "var(--space-3)" }}>
+                <AnalyticsCard title="US Cities" items={analytics.cities} labelKey="name" valueKey="users" maxItems={8} />
+              </div>
+            )}
+          </div>
+          <AnalyticsCard title="Referrers" items={analytics.referrers} labelKey="source" valueKey="sessions" maxItems={8} />
+          <div>
+            <AnalyticsCard title="Devices" items={analytics.devices} labelKey="type" valueKey="users" />
+            {analytics.browsers?.length > 0 && (
+              <div style={{ marginTop: "var(--space-3)" }}>
+                <AnalyticsCard title="Browsers" items={analytics.browsers} labelKey="name" valueKey="users" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Dogfood Tab ─── */
+
+function DogfoodTab() {
   const { accessToken } = useAuth();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -214,29 +339,15 @@ function DashboardTab() {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [discovered, setDiscovered] = useState(false);
-  const [siteMetrics, setSiteMetrics] = useState(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/owner/metrics", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setSiteMetrics(data); })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Folder assignment based on path
   const getFolder = (path) => {
     if (path.includes("Audio_Crate")) return "02-AUDIO";
     if (path.includes("numbrly") || path.includes("truegauge")) return "03-INTEGRATIONS";
     return "01-PROJECT";
   };
 
-  // Title from filename
   const getTitle = (name) => name.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
-  // Discover all .md files from GitHub
   const discoverDocs = useCallback(async () => {
     setLoadingFiles(true);
     setImportResult(null);
@@ -250,11 +361,9 @@ function DashboardTab() {
         return await res.json();
       };
 
-      // Fetch md/ directory
       const mdItems = await fetchDir("fulkit_site/md");
       for (const item of mdItems) {
         if (item.type === "dir") {
-          // Skip archive directory
           if (item.name === "archive") continue;
           const subItems = await fetchDir(item.path);
           for (const sub of subItems) {
@@ -265,7 +374,6 @@ function DashboardTab() {
         }
       }
 
-      // Also include CLAUDE.md and TODO.md from fulkit_site/
       const rootItems = await fetchDir("fulkit_site");
       for (const item of rootItems) {
         if (["CLAUDE.md", "TODO.md"].includes(item.name)) {
@@ -333,55 +441,13 @@ function DashboardTab() {
     }
   };
 
-  const paying = siteMetrics ? siteMetrics.standard + siteMetrics.pro : 0;
-  const mrr = siteMetrics ? (siteMetrics.standard * 7) + (siteMetrics.pro * 15) : 0;
-  const metrics = [
-    { label: "Total Users", value: siteMetrics ? String(siteMetrics.total) : "\u2014", change: siteMetrics?.total === 1 ? "You" : "" },
-    { label: "Paying Users", value: siteMetrics ? String(paying) : "\u2014", change: paying === 0 ? "Pre-launch" : "" },
-    { label: "Messages/mo", value: siteMetrics ? String(siteMetrics.messagesThisMonth) : "\u2014", change: "" },
-    { label: "MRR", value: siteMetrics ? `$${mrr}` : "\u2014", change: mrr === 0 ? "Pre-launch" : "" },
-  ];
-
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
-        {metrics.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              padding: "var(--space-4)",
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-lg)",
-            }}
-          >
-            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-              {m.label}
-            </div>
-            <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>
-              {m.value}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>
-              {m.change}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Dogfood Tools */}
-      <div
-        style={{
-          padding: "var(--space-4)",
-          background: "var(--color-bg-elevated)",
-          border: "1px solid var(--color-border-light)",
-          borderRadius: "var(--radius-lg)",
-          marginBottom: "var(--space-4)",
-        }}
-      >
+      <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
           <FileText size={13} strokeWidth={2} color="var(--color-text-muted)" />
           <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-            Dogfood Tools
+            Doc Import
           </span>
         </div>
         <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
@@ -410,36 +476,20 @@ function DashboardTab() {
             <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
               <button
                 onClick={() => setSelectedFiles(new Set(mdFiles.map(f => f.path)))}
-                style={{
-                  padding: "var(--space-1) var(--space-3)",
-                  background: "transparent", border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)", cursor: "pointer",
-                }}
+                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer" }}
               >
                 Select all
               </button>
               <button
                 onClick={() => setSelectedFiles(new Set())}
-                style={{
-                  padding: "var(--space-1) var(--space-3)",
-                  background: "transparent", border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)", cursor: "pointer",
-                }}
+                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer" }}
               >
                 Deselect all
               </button>
               <button
                 onClick={discoverDocs}
                 disabled={loadingFiles}
-                style={{
-                  padding: "var(--space-1) var(--space-3)",
-                  background: "transparent", border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)", cursor: "pointer",
-                  marginLeft: "auto",
-                }}
+                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer", marginLeft: "auto" }}
               >
                 <RefreshCw size={10} strokeWidth={2} style={{ marginRight: 4, verticalAlign: "middle", ...(loadingFiles ? { animation: "spin 1s linear infinite" } : {}) }} />
                 Refresh
@@ -504,20 +554,6 @@ function DashboardTab() {
         {importResult?.error && (
           <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-error)" }}>{importResult.error}</div>
         )}
-      </div>
-
-      <div
-        style={{
-          padding: "var(--space-4)",
-          background: "var(--color-bg-elevated)",
-          border: "1px solid var(--color-border-light)",
-          borderRadius: "var(--radius-lg)",
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-          lineHeight: "var(--line-height-relaxed)",
-        }}
-      >
-        This is your command center. Metrics, user management, design tools, and content creation — all here. Tabs will fill in as we build them out.
       </div>
     </div>
   );

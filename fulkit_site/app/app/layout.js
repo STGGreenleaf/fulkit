@@ -1,4 +1,5 @@
 import "./globals.css";
+import Script from "next/script";
 import { AuthProvider } from "../lib/auth";
 import { VaultProvider } from "../lib/vault";
 import { SandboxProvider } from "../lib/sandbox";
@@ -78,6 +79,10 @@ export default function RootLayout({ children }) {
             </SandboxProvider>
           </VaultProvider>
         </AuthProvider>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-94X31TXJ2F" strategy="afterInteractive" />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-94X31TXJ2F');`}
+        </Script>
       </body>
     </html>
   );
