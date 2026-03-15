@@ -40,6 +40,7 @@ const TABS = [
   { id: "design", label: "Design", icon: Palette },
   { id: "users", label: "Users", icon: Users },
   { id: "socials", label: "Socials", icon: Share2 },
+  { id: "pitches", label: "Pitches", icon: Speech },
   { id: "fabric", label: "Fabric", icon: Music },
   { id: "playground", label: "Playground", icon: GamepadDirectional },
   { id: "notes", label: "Notes", icon: FileText },
@@ -174,6 +175,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "design" && <DesignTab />}
         {tab === "users" && <UsersTab />}
         {tab === "socials" && <SocialsTab />}
+        {tab === "pitches" && <PitchesTab />}
         {tab === "fabric" && <FabricTab />}
         {tab === "playground" && <PlaygroundTab />}
         {tab === "notes" && <NotesTab />}
@@ -2156,61 +2158,7 @@ function SocialsTab() {
         </div>
       </div>
 
-      {/* ── SECTION 4: PITCHES ── */}
-      <div style={sectionRule}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-5)" }}>
-          <Speech size={14} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
-          <span style={sectionLabel}>Pitches</span>
-        </div>
-        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)", marginTop: "calc(-1 * var(--space-3))" }}>
-          Sales facts, one-liners, and CTAs. Copy and paste anywhere.
-        </p>
-        {PITCH_CATEGORIES.map((cat) => {
-          const items = PITCHES.filter(p => p.cat === cat);
-          return (
-            <div key={cat} style={{ marginBottom: "var(--space-6)" }}>
-              <div style={{
-                fontSize: "var(--font-size-2xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-wider)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-2)",
-              }}>
-                {cat}
-              </div>
-              <div style={{
-                background: "var(--color-bg-elevated)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-lg)",
-                overflow: "hidden",
-              }}>
-                {items.map((pitch, i) => (
-                  <div key={i} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    padding: "var(--space-3) var(--space-4)",
-                    borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
-                  }}>
-                    <span style={{
-                      flex: 1,
-                      fontSize: "var(--font-size-sm)",
-                      color: "var(--color-text)",
-                      lineHeight: "var(--line-height-relaxed)",
-                    }}>
-                      {pitch.text}
-                    </span>
-                    <CopyButton text={pitch.text} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── SECTION 5: OG CREATOR ── */}
+      {/* ── SECTION 4: OG CREATOR ── */}
       <div style={sectionRule}>
         <div style={sectionLabel}>OG Creator</div>
         <div style={{
@@ -2261,6 +2209,72 @@ function SocialsTab() {
           Template editor with brand token picker {"\u2014"} coming soon.
         </p>
       </div>
+    </div>
+  );
+}
+
+/* ─── Pitches Tab ─── */
+
+function PitchesTab() {
+  return (
+    <div>
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <h2 style={{
+          fontSize: "var(--font-size-3xl)",
+          fontWeight: "var(--font-weight-black)",
+          letterSpacing: "var(--letter-spacing-tighter)",
+          lineHeight: "var(--line-height-tight)",
+          marginBottom: "var(--space-1)",
+        }}>
+          Pitches
+        </h2>
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+          Sales facts, one-liners, and CTAs. Copy and paste anywhere.
+        </p>
+      </div>
+      {PITCH_CATEGORIES.map((cat) => {
+        const items = PITCHES.filter(p => p.cat === cat);
+        return (
+          <div key={cat} style={{ marginBottom: "var(--space-6)" }}>
+            <div style={{
+              fontSize: "var(--font-size-2xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--letter-spacing-wider)",
+              color: "var(--color-text-muted)",
+              marginBottom: "var(--space-2)",
+            }}>
+              {cat}
+            </div>
+            <div style={{
+              background: "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-lg)",
+              overflow: "hidden",
+            }}>
+              {items.map((pitch, i) => (
+                <div key={i} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-3)",
+                  padding: "var(--space-3) var(--space-4)",
+                  borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
+                }}>
+                  <span style={{
+                    flex: 1,
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--color-text)",
+                    lineHeight: "var(--line-height-relaxed)",
+                  }}>
+                    {pitch.text}
+                  </span>
+                  <CopyButton text={pitch.text} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
