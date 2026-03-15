@@ -2065,8 +2065,8 @@ function SocialsTab() {
         </p>
       </div>
 
-      {/* ── METADATA + PREVIEWS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+      {/* ── METADATA + PREVIEWS + IDENTITY ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
 
         {/* LEFT: Editor */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
@@ -2295,6 +2295,42 @@ function SocialsTab() {
             )}
           </div>
         </div>
+
+        {/* RIGHT: Site Identity */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+          <div style={sectionLabel}>Site Identity</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {SITE_ASSETS.map((asset) => (
+              <div key={asset.name} style={{
+                padding: "var(--space-3)",
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-lg)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "var(--space-2)",
+              }}>
+                <div style={{
+                  width: asset.previewSize + 12,
+                  height: asset.previewSize + 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "var(--color-bg-alt)",
+                  borderRadius: asset.rounded ? "var(--radius-lg)" : "var(--radius-sm)",
+                  border: "1px solid var(--color-border-light)",
+                }}>
+                  <img src={asset.src} alt={asset.name} width={asset.previewSize} height={asset.previewSize} style={{ imageRendering: asset.previewSize <= 32 ? "pixelated" : "auto", borderRadius: asset.rounded ? "var(--radius-md)" : 0 }} />
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>{asset.name}</div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>{asset.info}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── IMAGES ── */}
@@ -2518,46 +2554,6 @@ function SocialsTab() {
         ))}
       </div>
 
-
-      {/* ── SITE IDENTITY (full width below) ── */}
-      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-8)" }}>
-        <div style={sectionLabel}>Site Identity</div>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-          gap: "var(--space-3)",
-        }}>
-          {SITE_ASSETS.map((asset) => (
-            <div key={asset.name} style={{
-              padding: "var(--space-3)",
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-lg)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "var(--space-2)",
-            }}>
-              <div style={{
-                width: asset.previewSize + 12,
-                height: asset.previewSize + 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "var(--color-bg-alt)",
-                borderRadius: asset.rounded ? "var(--radius-lg)" : "var(--radius-sm)",
-                border: "1px solid var(--color-border-light)",
-              }}>
-                <img src={asset.src} alt={asset.name} width={asset.previewSize} height={asset.previewSize} style={{ imageRendering: asset.previewSize <= 32 ? "pixelated" : "auto", borderRadius: asset.rounded ? "var(--radius-md)" : 0 }} />
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>{asset.name}</div>
-                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>{asset.info}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Template Preview Modal */}
       {previewTemplate && (() => {
