@@ -20,9 +20,9 @@ const DIM = "#B0ADA8";
 // Brand name with square-dot umlaut (matches SVG brand mark)
 function brandMark(fontSize, color, weight = 700, ls = -3, lh = 1) {
   const ds = Math.round(fontSize * 0.07);
-  const dg = Math.round(fontSize * 0.1);
+  const dg = Math.round(fontSize * 0.09);
   const dt = Math.round(fontSize * 0.02);
-  const dl = Math.round(fontSize * 0.42);
+  const dl = Math.round(fontSize * 0.60);
   return (
     <div style={{ position: "relative", display: "flex" }}>
       <span style={{ fontSize, fontWeight: weight, color, fontFamily: "D-DIN", letterSpacing: ls, lineHeight: lh }}>
@@ -200,7 +200,7 @@ function igPostNotes() {
 function igStoriesHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
       <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
@@ -224,7 +224,7 @@ function igStoriesHero() {
 function igStoriesPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80, TEXT)}</div>
       <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4, marginBottom: 64 }}>

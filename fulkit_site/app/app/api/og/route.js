@@ -11,9 +11,9 @@ export async function GET() {
 
     // Square-dot umlaut brand mark
     const ds = Math.round(120 * 0.07);
-    const dg = Math.round(120 * 0.1);
+    const dg = Math.round(120 * 0.09);
     const dt = Math.round(120 * 0.02);
-    const dl = Math.round(120 * 0.42);
+    const dl = Math.round(120 * 0.60);
 
     return new ImageResponse(
       (
