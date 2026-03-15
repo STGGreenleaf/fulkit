@@ -28,6 +28,10 @@ export async function generateMetadata() {
   return {
     title: meta?.title || DEFAULTS.title,
     description: meta?.description || DEFAULTS.description,
+    ...(meta?.keywords && { keywords: meta.keywords.split(",").map(k => k.trim()) }),
+    ...(meta?.author && { authors: [{ name: meta.author }] }),
+    ...(meta?.robots && { robots: meta.robots }),
+    ...(meta?.canonical_url && { alternates: { canonical: meta.canonical_url } }),
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "16x16 32x32" },
@@ -41,17 +45,21 @@ export async function generateMetadata() {
       title: meta?.og_title || DEFAULTS.ogTitle,
       description: meta?.og_description || DEFAULTS.ogDescription,
       type: "website",
+      siteName: meta?.og_site_name || "F\u00FClkit",
+      locale: "en_US",
+      url: meta?.canonical_url || siteUrl,
       images: ogImages,
     },
     twitter: {
       card: "summary_large_image",
+      ...(meta?.twitter_handle && { site: meta.twitter_handle, creator: meta.twitter_handle }),
       ...(meta?.twitter_image_url && { images: [meta.twitter_image_url] }),
     },
     verification: {
-      google: "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
+      google: meta?.google_verification || "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
     },
     other: {
-      "theme-color": "#EFEDE8",
+      "theme-color": meta?.theme_color || "#EFEDE8",
     },
   };
 }

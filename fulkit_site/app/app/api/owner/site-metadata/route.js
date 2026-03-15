@@ -46,6 +46,14 @@ export async function POST(request) {
     if (body.og_image_url !== undefined) updates.og_image_url = body.og_image_url;
     if (body.og_image_slot !== undefined) updates.og_image_slot = body.og_image_slot;
     if (body.twitter_image_url !== undefined) updates.twitter_image_url = body.twitter_image_url;
+    if (body.canonical_url !== undefined) updates.canonical_url = body.canonical_url;
+    if (body.robots !== undefined) updates.robots = body.robots;
+    if (body.google_verification !== undefined) updates.google_verification = body.google_verification;
+    if (body.theme_color !== undefined) updates.theme_color = body.theme_color;
+    if (body.keywords !== undefined) updates.keywords = body.keywords;
+    if (body.author !== undefined) updates.author = body.author;
+    if (body.og_site_name !== undefined) updates.og_site_name = body.og_site_name;
+    if (body.twitter_handle !== undefined) updates.twitter_handle = body.twitter_handle;
     updates.updated_at = new Date().toISOString();
 
     // Get the single row ID first

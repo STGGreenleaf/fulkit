@@ -1896,6 +1896,14 @@ function SocialsTab() {
   const [ogSlot, setOgSlot] = useState(1);
   const [ogSlots, setOgSlots] = useState([null, null, null]);
   const [twitterImage, setTwitterImage] = useState(null);
+  const [canonicalUrl, setCanonicalUrl] = useState("https://fulkit.app");
+  const [robots, setRobots] = useState("index, follow");
+  const [googleVerification, setGoogleVerification] = useState("bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo");
+  const [themeColor, setThemeColor] = useState("#EFEDE8");
+  const [keywords, setKeywords] = useState("");
+  const [author, setAuthor] = useState("");
+  const [ogSiteName, setOgSiteName] = useState("F\u00FClkit");
+  const [twitterHandle, setTwitterHandle] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
@@ -1922,6 +1930,14 @@ function SocialsTab() {
           setOgSlots(slots);
         }
         if (data.twitter_image_url) setTwitterImage(data.twitter_image_url);
+        if (data.canonical_url) setCanonicalUrl(data.canonical_url);
+        if (data.robots) setRobots(data.robots);
+        if (data.google_verification) setGoogleVerification(data.google_verification);
+        if (data.theme_color) setThemeColor(data.theme_color);
+        if (data.keywords) setKeywords(data.keywords);
+        if (data.author) setAuthor(data.author);
+        if (data.og_site_name) setOgSiteName(data.og_site_name);
+        if (data.twitter_handle) setTwitterHandle(data.twitter_handle);
       })
       .catch(() => {});
   }, [accessToken]);
@@ -1934,7 +1950,12 @@ function SocialsTab() {
       await fetch("/api/owner/site-metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ title, description, og_title: ogTitle, og_description: ogDescription, og_image_slot: ogSlot, og_image_url: activeUrl || null, twitter_image_url: twitterImage || null }),
+        body: JSON.stringify({
+          title, description, og_title: ogTitle, og_description: ogDescription,
+          og_image_slot: ogSlot, og_image_url: activeUrl || null, twitter_image_url: twitterImage || null,
+          canonical_url: canonicalUrl, robots, google_verification: googleVerification,
+          theme_color: themeColor, keywords, author, og_site_name: ogSiteName, twitter_handle: twitterHandle,
+        }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -2221,6 +2242,53 @@ function SocialsTab() {
             </div>
           </div>
 
+          {/* SEO Settings */}
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
+            <div style={sectionLabel}>SEO Settings</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+              <div>
+                <div style={labelStyle}>Canonical URL</div>
+                <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
+              </div>
+              <div>
+                <div style={labelStyle}>Robots</div>
+                <select value={robots} onChange={e => setRobots(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="index, follow">index, follow</option>
+                  <option value="index, nofollow">index, nofollow</option>
+                  <option value="noindex, follow">noindex, follow</option>
+                  <option value="noindex, nofollow">noindex, nofollow</option>
+                </select>
+              </div>
+              <div>
+                <div style={labelStyle}>Theme Color</div>
+                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                  <input type="color" value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ width: 28, height: 28, border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: 0, cursor: "pointer", background: "none" }} />
+                  <input value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)" }} />
+                </div>
+              </div>
+              <div>
+                <div style={labelStyle}>OG Site Name</div>
+                <input value={ogSiteName} onChange={e => setOgSiteName(e.target.value)} style={inputStyle} placeholder="F\u00FClkit" />
+              </div>
+              <div>
+                <div style={labelStyle}>Author</div>
+                <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
+              </div>
+              <div>
+                <div style={labelStyle}>Twitter Handle</div>
+                <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={labelStyle}>Google Verification</div>
+                <input value={googleVerification} onChange={e => setGoogleVerification(e.target.value)} style={{ ...inputStyle, fontFamily: "var(--font-mono)", fontSize: "var(--font-size-2xs)" }} />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={labelStyle}>Keywords</div>
+                <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
+              </div>
+            </div>
+          </div>
+
           {/* Social Post Sizes */}
           <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
             <div style={sectionLabel}>Social Post Sizes</div>
@@ -2406,9 +2474,17 @@ function SocialsTab() {
                     ["og:title", pOgTitle],
                     ["og:description", pOgDesc],
                     ["og:type", "website"],
+                    ["og:site_name", ogSiteName || "(not set)"],
                     ["og:image", pOgImage || "(not set)"],
                     ["twitter:card", "summary_large_image"],
-                    ["theme-color", "#EFEDE8"],
+                    ["twitter:image", twitterImage || "(uses og:image)"],
+                    ["twitter:site", twitterHandle || "(not set)"],
+                    ["canonical", canonicalUrl],
+                    ["robots", robots],
+                    ["theme-color", themeColor],
+                    ["author", author || "(not set)"],
+                    ["keywords", keywords || "(not set)"],
+                    ["verification", googleVerification ? "\u2713 Google" : "(not set)"],
                   ].map(([k, v]) => (
                     <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
                       <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
