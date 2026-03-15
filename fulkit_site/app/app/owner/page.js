@@ -7,7 +7,7 @@ import {
   Palette,
   Users,
   Share2,
-  Image,
+  Speech,
   Crown,
   ClipboardList,
   Plus,
@@ -40,7 +40,6 @@ const TABS = [
   { id: "design", label: "Design", icon: Palette },
   { id: "users", label: "Users", icon: Users },
   { id: "socials", label: "Socials", icon: Share2 },
-  { id: "og", label: "OG Creator", icon: Image },
   { id: "fabric", label: "Fabric", icon: Music },
   { id: "playground", label: "Playground", icon: GamepadDirectional },
   { id: "notes", label: "Notes", icon: FileText },
@@ -174,8 +173,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "questions" && <QuestionsTab />}
         {tab === "design" && <DesignTab />}
         {tab === "users" && <UsersTab />}
-        {tab === "socials" && <PlaceholderTab title="Socials" description="Social post templates, scheduling, brand voice. Coming soon." />}
-        {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
+        {tab === "socials" && <SocialsTab />}
         {tab === "fabric" && <FabricTab />}
         {tab === "playground" && <PlaygroundTab />}
         {tab === "notes" && <NotesTab />}
@@ -1792,6 +1790,475 @@ function UsersTab() {
           fontStyle: "italic",
         }}>
           The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$300/mo. At 500 it's a real income.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Copy Button Helper ─── */
+
+function CopyButton({ text, label = "Copy" }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={copy} style={{
+      display: "inline-flex", alignItems: "center", gap: "var(--space-1-5)",
+      padding: "var(--space-1-5) var(--space-3)",
+      border: "1px solid var(--color-border-light)",
+      borderRadius: "var(--radius-md)",
+      background: copied ? "var(--color-bg-inverse)" : "var(--color-bg-elevated)",
+      color: copied ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+      fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+      fontWeight: "var(--font-weight-medium)", cursor: "pointer",
+      transition: "all var(--duration-normal) var(--ease-default)",
+      flexShrink: 0,
+    }}>
+      {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> {label}</>}
+    </button>
+  );
+}
+
+/* ─── Socials Tab Data ─── */
+
+const SITE_META = {
+  title: "F\u00FClkit \u2014 I'll be your bestie",
+  description: "Your second brain that talks back. AI-powered notes, voice capture, and a bestie that knows everything you\u2019ve saved.",
+  ogTitle: "F\u00FClkit \u2014 I'll be your bestie",
+  ogDescription: "The app that thinks with you.",
+  ogType: "website",
+  twitterCard: "summary_large_image",
+  themeColor: "#EFEDE8",
+  url: "fulkit.app",
+};
+
+const SITE_ASSETS = [
+  { name: "Favicon", src: "/favicon.ico", previewSize: 32, info: "16x16 + 32x32 ICO", desc: "Browser tab" },
+  { name: "PWA Icon", src: "/icon-192.png", previewSize: 48, info: "192x192 PNG", desc: "Android / PWA" },
+  { name: "PWA Icon (lg)", src: "/icon-512.png", previewSize: 64, info: "512x512 PNG", desc: "Splash / install" },
+  { name: "Apple Touch", src: "/apple-touch-icon.png", previewSize: 60, info: "180x180 PNG", desc: "iOS home screen", rounded: true },
+  { name: "Logo Mark", src: "/logo-mark.png", previewSize: 48, info: "PNG", desc: "Sidebar circle logo" },
+];
+
+const PITCHES = [
+  { cat: "Value Props", text: "$15/mo instead of Claude or OpenAI \u2014 and it knows you." },
+  { cat: "Value Props", text: "You\u2019re paying $88/mo for 10 apps. F\u00FClkit replaces them for $7." },
+  { cat: "Value Props", text: "F\u00FClkit pays for itself 12x over. $972/year in savings." },
+  { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
+  { cat: "Value Props", text: "Stop catching AI up to speed. F\u00FClkit already knows what you\u2019re working on." },
+  { cat: "Comparisons", text: "10 apps. $88/month. Or F\u00FClkit. $7." },
+  { cat: "Comparisons", text: "Average knowledge worker uses 9.4 apps daily. F\u00FClkit replaces them with 1." },
+  { cat: "Comparisons", text: "Workers spend 3.6 hours a day searching for information. F\u00FClkit finds it in seconds." },
+  { cat: "Comparisons", text: "Only 15% of saved knowledge is ever found again. F\u00FClkit retrieves it \u2014 proactively." },
+  { cat: "Comparisons", text: "Context switching costs 23 minutes to return to focus. With F\u00FClkit, everything\u2019s in one place." },
+  { cat: "Features", text: "The Hum: talk to an orb, not a transcript. It silently files your thoughts." },
+  { cat: "Features", text: "Whispers: proactive suggestions that drift in and fade out. Like a text from a friend." },
+  { cat: "Features", text: "Your notes talk back. Ask a question, get an answer from your own knowledge." },
+  { cat: "Features", text: "Three vault modes: local-first, encrypted sync, or F\u00FClkit-managed. Your data, your rules." },
+  { cat: "Features", text: "Voice mode that auto-files: ramble for 5 minutes, open your notes, everything\u2019s organized." },
+  { cat: "One-Liners", text: "I\u2019ll be your bestie." },
+  { cat: "One-Liners", text: "One app. One bestie. Everything else is noise." },
+  { cat: "One-Liners", text: "A friend with benefits \u2014 and the benefits are real." },
+  { cat: "One-Liners", text: "Your notes finally talk back." },
+  { cat: "One-Liners", text: "The app that thinks with you." },
+  { cat: "One-Liners", text: "Everything you see was chosen. Everything you don\u2019t was removed." },
+  { cat: "One-Liners", text: "Let\u2019s chat and get shit done." },
+  { cat: "One-Liners", text: "Your second brain, fully loaded." },
+  { cat: "One-Liners", text: "Capture everything. Retrieve anything. Forget nothing." },
+  { cat: "Brand", text: "F\u00FClkit \u2014 from German \u2018f\u00FChlen\u2019 (to feel) + kit. A toolkit that feels right." },
+  { cat: "Brand", text: "The two dots aren\u2019t decoration. They\u2019re German. F\u00FCl = to feel." },
+  { cat: "Brand", text: "Get your F\u00FClkit together." },
+  { cat: "Brand", text: "F\u00FClkit around and find out." },
+  { cat: "Social Posts", text: "I replaced 10 apps with one. Here\u2019s how." },
+  { cat: "Social Posts", text: "My AI remembers everything I\u2019ve ever saved. Yours starts from zero every time." },
+  { cat: "Social Posts", text: "I talked to an orb for 5 minutes. It organized my entire week." },
+  { cat: "Social Posts", text: "Refer 7 friends, use F\u00FClkit free forever. The math works." },
+];
+
+const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "One-Liners", "Brand", "Social Posts"];
+
+/* ─── Socials Tab ─── */
+
+function SocialsTab() {
+  const sectionRule = {
+    borderTop: "1px solid var(--color-border-light)",
+    paddingTop: "var(--space-8)",
+    marginTop: "var(--space-8)",
+  };
+
+  const sectionLabel = {
+    fontSize: 9,
+    fontFamily: "var(--font-mono)",
+    fontWeight: "var(--font-weight-medium)",
+    textTransform: "uppercase",
+    letterSpacing: "var(--letter-spacing-widest)",
+    color: "var(--color-text-dim)",
+    marginBottom: "var(--space-5)",
+  };
+
+  return (
+    <div>
+      {/* Masthead */}
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <h2 style={{
+          fontSize: "var(--font-size-3xl)",
+          fontWeight: "var(--font-weight-black)",
+          letterSpacing: "var(--letter-spacing-tighter)",
+          lineHeight: "var(--line-height-tight)",
+          marginBottom: "var(--space-1)",
+        }}>
+          Socials & Identity
+        </h2>
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+          Every way {"\u0046\u00FC"}lkit shows up in the world.
+        </p>
+      </div>
+
+      {/* ── SECTION 1: SITE IDENTITY ── */}
+      <div>
+        <div style={sectionLabel}>Site Identity</div>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+          gap: "var(--space-3)",
+        }}>
+          {SITE_ASSETS.map((asset) => (
+            <div key={asset.name} style={{
+              padding: "var(--space-4)",
+              background: "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-lg)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "var(--space-3)",
+            }}>
+              <div style={{
+                width: asset.previewSize + 16,
+                height: asset.previewSize + 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--color-bg-alt)",
+                borderRadius: asset.rounded ? "var(--radius-lg)" : "var(--radius-sm)",
+                border: "1px solid var(--color-border-light)",
+              }}>
+                <img
+                  src={asset.src}
+                  alt={asset.name}
+                  width={asset.previewSize}
+                  height={asset.previewSize}
+                  style={{
+                    imageRendering: asset.previewSize <= 32 ? "pixelated" : "auto",
+                    borderRadius: asset.rounded ? "var(--radius-md)" : 0,
+                  }}
+                />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                  {asset.name}
+                </div>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                  {asset.info}
+                </div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                  {asset.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── SECTION 2: SOCIAL PREVIEWS ── */}
+      <div style={sectionRule}>
+        <div style={sectionLabel}>Social Previews</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+
+          {/* Google SERP */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
+              How it appears on Google
+            </div>
+            <div style={{
+              background: "#fff",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-4)",
+              maxWidth: 600,
+            }}>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "#202124", marginBottom: "var(--space-1)" }}>
+                https://fulkit.app
+              </div>
+              <div style={{ fontSize: "var(--font-size-lg)", color: "#1a0dab", fontWeight: "var(--font-weight-medium)", lineHeight: "var(--line-height-snug)", marginBottom: "var(--space-1)" }}>
+                {SITE_META.title}
+              </div>
+              <div style={{ fontSize: "var(--font-size-sm)", color: "#4d5156", lineHeight: "var(--line-height-relaxed)" }}>
+                {SITE_META.description}
+              </div>
+            </div>
+          </div>
+
+          {/* Twitter/X Card */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
+              How it appears on X / Twitter
+            </div>
+            <div style={{
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-xl)",
+              overflow: "hidden",
+              maxWidth: 500,
+            }}>
+              <div style={{
+                width: "100%",
+                height: 200,
+                background: "var(--color-bg-alt)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderBottom: "1px solid var(--color-border-light)",
+              }}>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>
+                  No OG image set
+                </span>
+              </div>
+              <div style={{ padding: "var(--space-3)" }}>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                  fulkit.app
+                </div>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                  {SITE_META.ogTitle}
+                </div>
+                <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+                  {SITE_META.ogDescription}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* iMessage Preview */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
+              How it appears in iMessage
+            </div>
+            <div style={{
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-3)",
+              maxWidth: 300,
+              border: "1px solid var(--color-border-light)",
+            }}>
+              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
+                {SITE_META.ogTitle}
+              </div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+                {SITE_META.ogDescription}
+              </div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>
+                fulkit.app
+              </div>
+            </div>
+          </div>
+
+          {/* Raw OG Tags */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
+              Raw Meta Tags
+            </div>
+            <div style={{
+              background: "var(--color-bg-elevated)",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-4)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--font-size-xs)",
+            }}>
+              {[
+                ["og:title", SITE_META.ogTitle],
+                ["og:description", SITE_META.ogDescription],
+                ["og:type", SITE_META.ogType],
+                ["og:image", null],
+                ["twitter:card", SITE_META.twitterCard],
+                ["theme-color", SITE_META.themeColor],
+              ].map(([key, val]) => (
+                <div key={key} style={{ display: "flex", gap: "var(--space-3)", padding: "var(--space-1-5) 0", borderBottom: "1px solid var(--color-border-light)" }}>
+                  <span style={{ color: "var(--color-text-muted)", minWidth: 120, flexShrink: 0 }}>{key}</span>
+                  <span style={{ color: val ? "var(--color-text)" : "var(--color-text-dim)", fontStyle: val ? "normal" : "italic" }}>
+                    {val || "(not set)"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── SECTION 3: META & MANIFEST ── */}
+      <div style={sectionRule}>
+        <div style={sectionLabel}>Meta & Manifest</div>
+        <div style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-4)",
+        }}>
+          {[
+            ["Page Title", SITE_META.title],
+            ["PWA Name", "F\u00FClkit"],
+            ["Display", "standalone"],
+            ["Start URL", "/"],
+            ["Background", "#EFEDE8"],
+            ["Theme Color", "#EFEDE8"],
+            ["Icons", "192x192, 512x512"],
+            ["Google Verified", "bxotBll\u20268Uo"],
+          ].map(([label, val], i) => (
+            <div key={label} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+              padding: "var(--space-2) 0",
+              borderBottom: i < 7 ? "1px solid var(--color-border-light)" : "none",
+            }}>
+              <span style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-muted)",
+                minWidth: 120,
+                flexShrink: 0,
+              }}>
+                {label}
+              </span>
+              <span style={{
+                fontSize: "var(--font-size-sm)",
+                fontFamily: "var(--font-mono)",
+                color: "var(--color-text)",
+                flex: 1,
+                minWidth: 0,
+              }}>
+                {val}
+              </span>
+              {(label === "Theme Color" || label === "Background") && (
+                <div style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "var(--radius-sm)",
+                  background: val,
+                  border: "1px solid var(--color-border-light)",
+                  flexShrink: 0,
+                }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── SECTION 4: PITCHES ── */}
+      <div style={sectionRule}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-5)" }}>
+          <Speech size={14} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
+          <span style={sectionLabel}>Pitches</span>
+        </div>
+        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)", marginTop: "calc(-1 * var(--space-3))" }}>
+          Sales facts, one-liners, and CTAs. Copy and paste anywhere.
+        </p>
+        {PITCH_CATEGORIES.map((cat) => {
+          const items = PITCHES.filter(p => p.cat === cat);
+          return (
+            <div key={cat} style={{ marginBottom: "var(--space-6)" }}>
+              <div style={{
+                fontSize: "var(--font-size-2xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wider)",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-2)",
+              }}>
+                {cat}
+              </div>
+              <div style={{
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+              }}>
+                {items.map((pitch, i) => (
+                  <div key={i} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
+                  }}>
+                    <span style={{
+                      flex: 1,
+                      fontSize: "var(--font-size-sm)",
+                      color: "var(--color-text)",
+                      lineHeight: "var(--line-height-relaxed)",
+                    }}>
+                      {pitch.text}
+                    </span>
+                    <CopyButton text={pitch.text} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── SECTION 5: OG CREATOR ── */}
+      <div style={sectionRule}>
+        <div style={sectionLabel}>OG Creator</div>
+        <div style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-4)",
+          marginBottom: "var(--space-4)",
+        }}>
+          <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+            Current OG State
+          </div>
+          {[
+            { tag: "og:title", set: true },
+            { tag: "og:description", set: true },
+            { tag: "og:type", set: true },
+            { tag: "og:image (1200\u00D7630)", set: false },
+            { tag: "twitter:card", set: true },
+          ].map((item) => (
+            <div key={item.tag} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-1-5) 0",
+              fontSize: "var(--font-size-sm)",
+            }}>
+              <div style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: item.set ? "var(--color-text)" : "var(--color-text-dim)",
+                flexShrink: 0,
+                opacity: item.set ? 1 : 0.3,
+              }} />
+              <span style={{ color: item.set ? "var(--color-text)" : "var(--color-text-dim)" }}>
+                {item.tag}
+              </span>
+              {!item.set && <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>not set</span>}
+            </div>
+          ))}
+        </div>
+        <p style={{
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-dim)",
+          fontStyle: "italic",
+          lineHeight: "var(--line-height-relaxed)",
+        }}>
+          Template editor with brand token picker {"\u2014"} coming soon.
         </p>
       </div>
     </div>
