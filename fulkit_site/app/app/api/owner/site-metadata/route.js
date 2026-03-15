@@ -47,7 +47,6 @@ export async function POST(request) {
     if (body.og_image_slot !== undefined) updates.og_image_slot = body.og_image_slot;
     if (body.twitter_image_url !== undefined) updates.twitter_image_url = body.twitter_image_url;
     if (body.canonical_url !== undefined) updates.canonical_url = body.canonical_url;
-    if (body.theme_color !== undefined) updates.theme_color = body.theme_color;
     if (body.keywords !== undefined) updates.keywords = body.keywords;
     if (body.author !== undefined) updates.author = body.author;
     if (body.og_site_name !== undefined) updates.og_site_name = body.og_site_name;

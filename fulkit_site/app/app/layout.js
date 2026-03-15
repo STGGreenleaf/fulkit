@@ -59,7 +59,7 @@ export async function generateMetadata() {
       google: "bxotBlliMEej3R9iaE9wMaMdCtF9IWBRsugS2lAN8Uo",
     },
     other: {
-      "theme-color": meta?.theme_color || "#EFEDE8",
+      "theme-color": "#EFEDE8",
     },
   };
 }

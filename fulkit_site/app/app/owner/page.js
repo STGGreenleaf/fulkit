@@ -1897,7 +1897,8 @@ function SocialsTab() {
   const [ogSlots, setOgSlots] = useState([null, null, null]);
   const [twitterImage, setTwitterImage] = useState(null);
   const [canonicalUrl, setCanonicalUrl] = useState("https://fulkit.app");
-  const [themeColor, setThemeColor] = useState("#EFEDE8");
+  const [syncOgTitle, setSyncOgTitle] = useState(false);
+  const [syncOgDesc, setSyncOgDesc] = useState(false);
   const [keywords, setKeywords] = useState("");
   const [author, setAuthor] = useState("");
   const [ogSiteName, setOgSiteName] = useState("F\u00FClkit");
@@ -1930,7 +1931,6 @@ function SocialsTab() {
         }
         if (data.twitter_image_url) setTwitterImage(data.twitter_image_url);
         if (data.canonical_url) setCanonicalUrl(data.canonical_url);
-        if (data.theme_color) setThemeColor(data.theme_color);
         if (data.keywords) setKeywords(data.keywords);
         if (data.author) setAuthor(data.author);
         if (data.og_site_name) setOgSiteName(data.og_site_name);
@@ -1951,7 +1951,7 @@ function SocialsTab() {
           title, description, og_title: ogTitle, og_description: ogDescription,
           og_image_slot: ogSlot, og_image_url: activeUrl || null, twitter_image_url: twitterImage || null,
           canonical_url: canonicalUrl,
-          theme_color: themeColor, keywords, author, og_site_name: ogSiteName, twitter_handle: twitterHandle,
+          keywords, author, og_site_name: ogSiteName, twitter_handle: twitterHandle,
         }),
       });
       setSaved(true);
@@ -1977,6 +1977,28 @@ function SocialsTab() {
       }
     } catch {}
     setUploading(null);
+  };
+
+  // Sync OG fields when toggled
+  useEffect(() => {
+    if (syncOgTitle) setOgTitle(title);
+  }, [title, syncOgTitle]);
+
+  useEffect(() => {
+    if (syncOgDesc) setOgDescription(description);
+  }, [description, syncOgDesc]);
+
+  const charCount = (val, min, max) => {
+    const n = val.length;
+    const color = n >= min && n <= max ? "var(--color-text-dim)"
+      : n > max ? "#8A6E4E"
+      : "var(--color-text-muted)";
+    const hint = n > max ? " \u00B7 too long" : n < min && n > 0 ? " \u00B7 add more" : "";
+    return (
+      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color, marginTop: 2, textAlign: "right" }}>
+        {n}/{max}{hint}
+      </div>
+    );
   };
 
   const inputStyle = {
@@ -2053,21 +2075,62 @@ function SocialsTab() {
           <div>
             <div style={labelStyle}>Site Title</div>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} placeholder="F\u00FClkit \u2014 I'll be your bestie" />
+            {charCount(title, 50, 60)}
           </div>
 
           <div>
             <div style={labelStyle}>Site Description</div>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Your second brain that talks back." />
+            {charCount(description, 150, 160)}
           </div>
 
           <div>
-            <div style={labelStyle}>OG Title</div>
-            <input type="text" value={ogTitle} onChange={e => setOgTitle(e.target.value)} style={inputStyle} placeholder="F\u00FClkit \u2014 I'll be your bestie" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={labelStyle}>OG Title</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", cursor: "pointer" }}>
+                <input type="checkbox" checked={syncOgTitle} onChange={e => setSyncOgTitle(e.target.checked)} style={{ width: 12, height: 12, accentColor: "var(--color-text)" }} />
+                Same as Site Title
+              </label>
+            </div>
+            <input type="text" value={ogTitle} onChange={e => setOgTitle(e.target.value)} disabled={syncOgTitle} style={{ ...inputStyle, ...(syncOgTitle && { opacity: 0.5, cursor: "not-allowed" }) }} placeholder="F&#252;lkit &#8212; I'll be your bestie" />
+            {charCount(ogTitle, 50, 60)}
           </div>
 
           <div>
-            <div style={labelStyle}>OG Description</div>
-            <textarea value={ogDescription} onChange={e => setOgDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="The app that thinks with you." />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={labelStyle}>OG Description</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", cursor: "pointer" }}>
+                <input type="checkbox" checked={syncOgDesc} onChange={e => setSyncOgDesc(e.target.checked)} style={{ width: 12, height: 12, accentColor: "var(--color-text)" }} />
+                Same as Site Description
+              </label>
+            </div>
+            <textarea value={ogDescription} onChange={e => setOgDescription(e.target.value)} disabled={syncOgDesc} rows={2} style={{ ...inputStyle, resize: "vertical", ...(syncOgDesc && { opacity: 0.5, cursor: "not-allowed" }) }} placeholder="The app that thinks with you." />
+            {charCount(ogDescription, 55, 200)}
+          </div>
+
+          <div>
+            <div style={labelStyle}>Canonical URL</div>
+            <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+            <div>
+              <div style={labelStyle}>OG Site Name</div>
+              <input value={ogSiteName} onChange={e => setOgSiteName(e.target.value)} style={inputStyle} placeholder="F&#252;lkit" />
+            </div>
+            <div>
+              <div style={labelStyle}>Author</div>
+              <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
+            </div>
+            <div>
+              <div style={labelStyle}>Twitter Handle</div>
+              <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
+            </div>
+          </div>
+
+          <div>
+            <div style={labelStyle}>Keywords</div>
+            <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
           </div>
 
           {/* Link */}
@@ -2167,6 +2230,69 @@ function SocialsTab() {
               <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginBottom: 2 }}>{pOgDesc}</div>
               <div style={{ fontSize: 9, color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>fulkit.app</div>
             </div>
+          </div>
+
+          {/* Meta Tags & Manifest — collapsed */}
+          <div style={{ marginTop: "var(--space-5)" }}>
+            <button onClick={() => setMetaOpen(!metaOpen)} style={{
+              display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
+              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+              fontFamily: "var(--font-primary)", padding: 0, marginBottom: metaOpen ? "var(--space-2)" : 0,
+            }}>
+              {metaOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Meta Tags & Manifest
+            </button>
+            {metaOpen && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={cardStyle}>
+                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>Meta Tags</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                    HTML tags platforms read when someone shares your link.
+                  </div>
+                  {[
+                    ["og:title", pOgTitle],
+                    ["og:description", pOgDesc],
+                    ["og:type", "website"],
+                    ["og:site_name", ogSiteName || "(not set)"],
+                    ["og:image", pOgImage || "(not set)"],
+                    ["twitter:card", "summary_large_image"],
+                    ["twitter:image", twitterImage || "(uses og:image)"],
+                    ["twitter:site", twitterHandle || "(not set)"],
+                    ["canonical", canonicalUrl],
+                    ["theme-color", "#EFEDE8"],
+                    ["author", author || "(not set)"],
+                    ["keywords", keywords || "(not set)"],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                      <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
+                      <span style={{ color: v === "(not set)" ? "var(--color-text-dim)" : "var(--color-text)", fontStyle: v === "(not set)" ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>PWA Manifest</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                    Controls how the app appears when installed on a device.
+                  </div>
+                  {[
+                    ["Name", "F\u00FClkit"],
+                    ["Display", "standalone"],
+                    ["Start URL", "/"],
+                    ["Background", "#EFEDE8"],
+                    ["Theme", "#EFEDE8"],
+                    ["Icons", "192, 512"],
+                    ["Verified", "\u2713"],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                      <span style={{ color: "var(--color-text-muted)", minWidth: 70, flexShrink: 0 }}>{k}</span>
+                      <span style={{ color: "var(--color-text)" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2320,103 +2446,6 @@ function SocialsTab() {
               </label>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── SEO SETTINGS ── */}
-      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
-        <div style={sectionLabel}>SEO Settings</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
-          <div>
-            <div style={labelStyle}>Canonical URL</div>
-            <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
-          </div>
-          <div>
-            <div style={labelStyle}>Theme Color</div>
-            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-              <input type="color" value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ width: 28, height: 28, border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: 0, cursor: "pointer", background: "none" }} />
-              <input value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)" }} />
-            </div>
-          </div>
-          <div>
-            <div style={labelStyle}>OG Site Name</div>
-            <input value={ogSiteName} onChange={e => setOgSiteName(e.target.value)} style={inputStyle} placeholder="F\u00FClkit" />
-          </div>
-          <div>
-            <div style={labelStyle}>Author</div>
-            <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
-          </div>
-          <div>
-            <div style={labelStyle}>Twitter Handle</div>
-            <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <div style={labelStyle}>Keywords</div>
-            <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
-          </div>
-        </div>
-
-        {/* Meta Tags & Manifest — collapsed */}
-        <div style={{ marginTop: "var(--space-5)" }}>
-          <button onClick={() => setMetaOpen(!metaOpen)} style={{
-            display: "flex", alignItems: "center", gap: "var(--space-1-5)",
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
-            textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
-            fontFamily: "var(--font-primary)", padding: 0, marginBottom: metaOpen ? "var(--space-2)" : 0,
-          }}>
-            {metaOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Meta Tags & Manifest
-          </button>
-          {metaOpen && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-              <div style={cardStyle}>
-                <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>Meta Tags</div>
-                <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
-                  HTML tags platforms read when someone shares your link.
-                </div>
-                {[
-                  ["og:title", pOgTitle],
-                  ["og:description", pOgDesc],
-                  ["og:type", "website"],
-                  ["og:site_name", ogSiteName || "(not set)"],
-                  ["og:image", pOgImage || "(not set)"],
-                  ["twitter:card", "summary_large_image"],
-                  ["twitter:image", twitterImage || "(uses og:image)"],
-                  ["twitter:site", twitterHandle || "(not set)"],
-                  ["canonical", canonicalUrl],
-                  ["theme-color", themeColor],
-                  ["author", author || "(not set)"],
-                  ["keywords", keywords || "(not set)"],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
-                    <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
-                    <span style={{ color: v === "(not set)" ? "var(--color-text-dim)" : "var(--color-text)", fontStyle: v === "(not set)" ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={cardStyle}>
-                <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>PWA Manifest</div>
-                <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
-                  Controls how the app appears when installed on a device.
-                </div>
-                {[
-                  ["Name", "F\u00FClkit"],
-                  ["Display", "standalone"],
-                  ["Start URL", "/"],
-                  ["Background", "#EFEDE8"],
-                  ["Theme", "#EFEDE8"],
-                  ["Icons", "192, 512"],
-                  ["Verified", "\u2713"],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
-                    <span style={{ color: "var(--color-text-muted)", minWidth: 70, flexShrink: 0 }}>{k}</span>
-                    <span style={{ color: "var(--color-text)" }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
