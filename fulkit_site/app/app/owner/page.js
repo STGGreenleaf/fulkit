@@ -1906,6 +1906,7 @@ function SocialsTab() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
 
   // Load current metadata
   useEffect(() => {
@@ -2042,8 +2043,8 @@ function SocialsTab() {
         </p>
       </div>
 
-      {/* ── TWO-COLUMN: EDITOR + PREVIEWS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-8)" }}>
+      {/* ── METADATA + PREVIEWS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
 
         {/* LEFT: Editor */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
@@ -2091,251 +2092,6 @@ function SocialsTab() {
           }}>
             {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
           </button>
-
-          {/* OG Image Manager */}
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
-            <div style={sectionLabel}>OG Images</div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))" }}>
-              Recommended: 1200 {"\u00D7"} 630px. Upload up to 3, click to set live.
-            </div>
-            <div style={{ display: "flex", gap: "var(--space-3)" }}>
-              {[1, 2, 3].map(slot => (
-                <div key={slot} style={{ flex: 1 }}>
-                  <div
-                    onClick={() => { if (ogSlots[slot - 1]) setOgSlot(slot); }}
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1200/630",
-                      border: ogSlot === slot && ogSlots[slot - 1] ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
-                      borderRadius: "var(--radius-md)",
-                      background: "var(--color-bg-alt)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: ogSlots[slot - 1] ? "pointer" : "default",
-                      overflow: "hidden",
-                      position: "relative",
-                    }}
-                  >
-                    {ogSlots[slot - 1] ? (
-                      <img src={ogSlots[slot - 1]} alt={`OG slot ${slot}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontSize: 9, color: "var(--color-text-dim)" }}>{uploading === slot ? "Uploading\u2026" : `Slot ${slot}`}</span>
-                    )}
-                    {ogSlot === slot && ogSlots[slot - 1] && (
-                      <div style={{ position: "absolute", top: 4, right: 4, fontSize: 8, fontFamily: "var(--font-mono)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", padding: "1px 4px", borderRadius: "var(--radius-sm)", textTransform: "uppercase" }}>
-                        Live
-                      </div>
-                    )}
-                    {ogSlots[slot - 1] && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOgSlots(prev => { const n = [...prev]; n[slot - 1] = null; return n; }); }}
-                        style={{
-                          position: "absolute", top: 4, left: 4,
-                          width: 18, height: 18,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
-                          cursor: "pointer", padding: 0,
-                        }}
-                      >
-                        <X size={10} color="#EFEDE8" />
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
-                    <label style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1)",
-                      padding: "var(--space-1-5) 0",
-                      fontSize: "var(--font-size-2xs)",
-                      color: "var(--color-text-muted)",
-                      cursor: "pointer",
-                    }}>
-                      <Upload size={10} /> Upload
-                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) uploadOg(slot, e.target.files[0]); }} />
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Twitter/X Image — separate from OG */}
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
-            <div style={sectionLabel}>Twitter / X Image</div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
-              Optional. Falls back to OG image if not set. 1200 {"\u00D7"} 630px.
-            </div>
-            <div style={{ position: "relative" }}>
-              <div style={{
-                width: "100%",
-                aspectRatio: "1200/630",
-                border: twitterImage ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
-                borderRadius: "var(--radius-md)",
-                background: "var(--color-bg-alt)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                position: "relative",
-              }}>
-                {twitterImage ? (
-                  <img src={twitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                    {uploading === "twitter" ? "Uploading\u2026" : "Uses OG image"}
-                  </span>
-                )}
-                {twitterImage && (
-                  <button
-                    onClick={() => setTwitterImage(null)}
-                    style={{
-                      position: "absolute", top: 4, left: 4,
-                      width: 18, height: 18,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
-                      cursor: "pointer", padding: 0,
-                    }}
-                  >
-                    <X size={10} color="#EFEDE8" />
-                  </button>
-                )}
-              </div>
-              <label style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--space-1)",
-                padding: "var(--space-1-5) 0",
-                fontSize: "var(--font-size-2xs)",
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                marginTop: "var(--space-1)",
-              }}>
-                <Upload size={10} /> Upload
-                <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setUploading("twitter");
-                  try {
-                    const fd = new FormData();
-                    fd.append("file", file);
-                    fd.append("slot", "twitter");
-                    const res = await fetch("/api/owner/og-upload", {
-                      method: "POST",
-                      headers: { Authorization: `Bearer ${accessToken}` },
-                      body: fd,
-                    });
-                    if (res.ok) {
-                      const { url } = await res.json();
-                      setTwitterImage(url);
-                    }
-                  } catch {}
-                  setUploading(null);
-                }} />
-              </label>
-            </div>
-          </div>
-
-          {/* SEO Settings */}
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
-            <div style={sectionLabel}>SEO Settings</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-              <div>
-                <div style={labelStyle}>Canonical URL</div>
-                <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
-              </div>
-              <div>
-                <div style={labelStyle}>Theme Color</div>
-                <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-                  <input type="color" value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ width: 28, height: 28, border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: 0, cursor: "pointer", background: "none" }} />
-                  <input value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)" }} />
-                </div>
-              </div>
-              <div>
-                <div style={labelStyle}>OG Site Name</div>
-                <input value={ogSiteName} onChange={e => setOgSiteName(e.target.value)} style={inputStyle} placeholder="F\u00FClkit" />
-              </div>
-              <div>
-                <div style={labelStyle}>Author</div>
-                <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
-              </div>
-              <div>
-                <div style={labelStyle}>Twitter Handle</div>
-                <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <div style={labelStyle}>Keywords</div>
-                <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
-              </div>
-            </div>
-          </div>
-
-          {/* Social Templates — 3 rows by size, 7 concepts each */}
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
-            <div style={sectionLabel}>Social Templates</div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
-              Ready-to-use designs across 3 sizes. Download as PNG.
-            </div>
-            {[
-              { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbH: 120 },
-              { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbH: 160 },
-              { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbH: 180 },
-            ].map(row => (
-              <div key={row.key} style={{ marginBottom: "var(--space-5)" }}>
-                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                  {row.label} {"\u00B7"} {row.dims}
-                </div>
-                <div style={{ display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
-                  {["hero", "price", "memory", "stack", "voice", "bestie", "notes"].map(concept => {
-                    const url = `/api/social/template?concept=${concept}&size=${row.key}`;
-                    return (
-                      <div key={concept} style={{ flexShrink: 0 }}>
-                        <div style={{
-                          height: row.thumbH,
-                          aspectRatio: row.aspect,
-                          border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-md)",
-                          overflow: "hidden",
-                          background: "var(--color-bg-alt)",
-                        }}>
-                          <img
-                            src={url}
-                            alt={`${concept} ${row.key}`}
-                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                            loading="lazy"
-                          />
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
-                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
-                          <a
-                            href={url}
-                            download={`fulkit-${concept}-${row.key}.png`}
-                            style={{
-                              display: "flex", alignItems: "center",
-                              padding: "2px 6px",
-                              background: "var(--color-text)",
-                              color: "var(--color-bg)",
-                              border: "none",
-                              borderRadius: "var(--radius-sm)",
-                              fontSize: 8,
-                              fontWeight: "var(--font-weight-semibold)",
-                              fontFamily: "var(--font-primary)",
-                              textDecoration: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Download size={8} />
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* RIGHT: Live Previews */}
@@ -2412,71 +2168,327 @@ function SocialsTab() {
               <div style={{ fontSize: 9, color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>fulkit.app</div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Raw Meta Tags — collapsed */}
+      {/* ── IMAGES ── */}
+      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "var(--space-6)" }}>
+
+          {/* LEFT: OG Image Manager */}
           <div>
-            <button onClick={() => setMetaOpen(!metaOpen)} style={{
-              display: "flex", alignItems: "center", gap: "var(--space-1-5)",
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
-              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
-              fontFamily: "var(--font-primary)", padding: 0, marginBottom: metaOpen ? "var(--space-2)" : 0,
-            }}>
-              {metaOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              Meta Tags & Manifest
-            </button>
-            {metaOpen && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                <div style={cardStyle}>
-                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>Meta Tags</div>
-                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
-                    HTML tags platforms read when someone shares your link.
+            <div style={sectionLabel}>OG Images</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))" }}>
+              Recommended: 1200 {"\u00D7"} 630px. Upload up to 3, click to set live.
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-3)" }}>
+              {[1, 2, 3].map(slot => (
+                <div key={slot} style={{ flex: 1 }}>
+                  <div
+                    onClick={() => { if (ogSlots[slot - 1]) setOgSlot(slot); }}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "1200/630",
+                      border: ogSlot === slot && ogSlots[slot - 1] ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--color-bg-alt)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: ogSlots[slot - 1] ? "pointer" : "default",
+                      overflow: "hidden",
+                      position: "relative",
+                    }}
+                  >
+                    {ogSlots[slot - 1] ? (
+                      <img src={ogSlots[slot - 1]} alt={`OG slot ${slot}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 9, color: "var(--color-text-dim)" }}>{uploading === slot ? "Uploading\u2026" : `Slot ${slot}`}</span>
+                    )}
+                    {ogSlot === slot && ogSlots[slot - 1] && (
+                      <div style={{ position: "absolute", top: 4, right: 4, fontSize: 8, fontFamily: "var(--font-mono)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", padding: "1px 4px", borderRadius: "var(--radius-sm)", textTransform: "uppercase" }}>
+                        Live
+                      </div>
+                    )}
+                    {ogSlots[slot - 1] && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOgSlots(prev => { const n = [...prev]; n[slot - 1] = null; return n; }); }}
+                        style={{
+                          position: "absolute", top: 4, left: 4,
+                          width: 18, height: 18,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
+                          cursor: "pointer", padding: 0,
+                        }}
+                      >
+                        <X size={10} color="#EFEDE8" />
+                      </button>
+                    )}
                   </div>
-                  {[
-                    ["og:title", pOgTitle],
-                    ["og:description", pOgDesc],
-                    ["og:type", "website"],
-                    ["og:site_name", ogSiteName || "(not set)"],
-                    ["og:image", pOgImage || "(not set)"],
-                    ["twitter:card", "summary_large_image"],
-                    ["twitter:image", twitterImage || "(uses og:image)"],
-                    ["twitter:site", twitterHandle || "(not set)"],
-                    ["canonical", canonicalUrl],
-                    ["theme-color", themeColor],
-                    ["author", author || "(not set)"],
-                    ["keywords", keywords || "(not set)"],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
-                      <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
-                      <span style={{ color: v === "(not set)" ? "var(--color-text-dim)" : "var(--color-text)", fontStyle: v === "(not set)" ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={cardStyle}>
-                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>PWA Manifest</div>
-                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
-                    Controls how the app appears when installed on a device.
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                    <label style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      padding: "var(--space-1-5) 0",
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-muted)",
+                      cursor: "pointer",
+                    }}>
+                      <Upload size={10} /> Upload
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) uploadOg(slot, e.target.files[0]); }} />
+                    </label>
                   </div>
-                  {[
-                    ["Name", "F\u00FClkit"],
-                    ["Display", "standalone"],
-                    ["Start URL", "/"],
-                    ["Background", "#EFEDE8"],
-                    ["Theme", "#EFEDE8"],
-                    ["Icons", "192, 512"],
-                    ["Verified", "\u2713"],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
-                      <span style={{ color: "var(--color-text-muted)", minWidth: 70, flexShrink: 0 }}>{k}</span>
-                      <span style={{ color: "var(--color-text)" }}>{v}</span>
-                    </div>
-                  ))}
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT: Twitter/X Image */}
+          <div>
+            <div style={sectionLabel}>Twitter / X Image</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+              Optional. Falls back to OG image if not set. 1200 {"\u00D7"} 630px.
+            </div>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                width: "100%",
+                aspectRatio: "1200/630",
+                border: twitterImage ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--color-bg-alt)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+                position: "relative",
+              }}>
+                {twitterImage ? (
+                  <img src={twitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                    {uploading === "twitter" ? "Uploading\u2026" : "Uses OG image"}
+                  </span>
+                )}
+                {twitterImage && (
+                  <button
+                    onClick={() => setTwitterImage(null)}
+                    style={{
+                      position: "absolute", top: 4, left: 4,
+                      width: 18, height: 18,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "rgba(42,40,38,0.7)", border: "none", borderRadius: "50%",
+                      cursor: "pointer", padding: 0,
+                    }}
+                  >
+                    <X size={10} color="#EFEDE8" />
+                  </button>
+                )}
               </div>
-            )}
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-1)",
+                padding: "var(--space-1-5) 0",
+                fontSize: "var(--font-size-2xs)",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                marginTop: "var(--space-1)",
+              }}>
+                <Upload size={10} /> Upload
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading("twitter");
+                  try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("slot", "twitter");
+                    const res = await fetch("/api/owner/og-upload", {
+                      method: "POST",
+                      headers: { Authorization: `Bearer ${accessToken}` },
+                      body: fd,
+                    });
+                    if (res.ok) {
+                      const { url } = await res.json();
+                      setTwitterImage(url);
+                    }
+                  } catch {}
+                  setUploading(null);
+                }} />
+              </label>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── SEO SETTINGS ── */}
+      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+        <div style={sectionLabel}>SEO Settings</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
+          <div>
+            <div style={labelStyle}>Canonical URL</div>
+            <input value={canonicalUrl} onChange={e => setCanonicalUrl(e.target.value)} style={inputStyle} placeholder="https://fulkit.app" />
+          </div>
+          <div>
+            <div style={labelStyle}>Theme Color</div>
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <input type="color" value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ width: 28, height: 28, border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: 0, cursor: "pointer", background: "none" }} />
+              <input value={themeColor} onChange={e => setThemeColor(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-mono)" }} />
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle}>OG Site Name</div>
+            <input value={ogSiteName} onChange={e => setOgSiteName(e.target.value)} style={inputStyle} placeholder="F\u00FClkit" />
+          </div>
+          <div>
+            <div style={labelStyle}>Author</div>
+            <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
+          </div>
+          <div>
+            <div style={labelStyle}>Twitter Handle</div>
+            <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div style={labelStyle}>Keywords</div>
+            <input value={keywords} onChange={e => setKeywords(e.target.value)} style={inputStyle} placeholder="AI, notes, voice, personal assistant, second brain" />
+          </div>
+        </div>
+
+        {/* Meta Tags & Manifest — collapsed */}
+        <div style={{ marginTop: "var(--space-5)" }}>
+          <button onClick={() => setMetaOpen(!metaOpen)} style={{
+            display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
+            textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+            fontFamily: "var(--font-primary)", padding: 0, marginBottom: metaOpen ? "var(--space-2)" : 0,
+          }}>
+            {metaOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            Meta Tags & Manifest
+          </button>
+          {metaOpen && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+              <div style={cardStyle}>
+                <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>Meta Tags</div>
+                <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                  HTML tags platforms read when someone shares your link.
+                </div>
+                {[
+                  ["og:title", pOgTitle],
+                  ["og:description", pOgDesc],
+                  ["og:type", "website"],
+                  ["og:site_name", ogSiteName || "(not set)"],
+                  ["og:image", pOgImage || "(not set)"],
+                  ["twitter:card", "summary_large_image"],
+                  ["twitter:image", twitterImage || "(uses og:image)"],
+                  ["twitter:site", twitterHandle || "(not set)"],
+                  ["canonical", canonicalUrl],
+                  ["theme-color", themeColor],
+                  ["author", author || "(not set)"],
+                  ["keywords", keywords || "(not set)"],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                    <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
+                    <span style={{ color: v === "(not set)" ? "var(--color-text-dim)" : "var(--color-text)", fontStyle: v === "(not set)" ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={cardStyle}>
+                <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>PWA Manifest</div>
+                <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                  Controls how the app appears when installed on a device.
+                </div>
+                {[
+                  ["Name", "F\u00FClkit"],
+                  ["Display", "standalone"],
+                  ["Start URL", "/"],
+                  ["Background", "#EFEDE8"],
+                  ["Theme", "#EFEDE8"],
+                  ["Icons", "192, 512"],
+                  ["Verified", "\u2713"],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                    <span style={{ color: "var(--color-text-muted)", minWidth: 70, flexShrink: 0 }}>{k}</span>
+                    <span style={{ color: "var(--color-text)" }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── SOCIAL TEMPLATES ── */}
+      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+        <div style={sectionLabel}>Social Templates</div>
+        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+          Ready-to-use designs across 3 sizes. Download as PNG.
+        </div>
+        {[
+          { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbH: 100 },
+          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbH: 130 },
+          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbH: 150 },
+        ].map(row => (
+          <div key={row.key} style={{ marginBottom: "var(--space-5)" }}>
+            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+              {row.label} {"\u00B7"} {row.dims}
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+              {["hero", "price", "memory", "stack", "voice", "bestie", "notes"].map(concept => {
+                const url = `/api/social/template?concept=${concept}&size=${row.key}`;
+                return (
+                  <div key={concept} style={{ flexShrink: 0 }}>
+                    <div
+                      onClick={() => setPreviewTemplate({ url, concept, size: row.label, aspect: row.aspect, sizeKey: row.key })}
+                      style={{
+                        height: row.thumbH,
+                        aspectRatio: row.aspect,
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-md)",
+                        overflow: "hidden",
+                        background: "var(--color-bg-alt)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <img
+                        src={url}
+                        alt={`${concept} ${row.key}`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        loading="lazy"
+                      />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
+                      <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
+                      <a
+                        href={url}
+                        download={`fulkit-${concept}-${row.key}.png`}
+                        style={{
+                          display: "flex", alignItems: "center",
+                          padding: "2px 6px",
+                          background: "var(--color-text)",
+                          color: "var(--color-bg)",
+                          border: "none",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: 8,
+                          fontWeight: "var(--font-weight-semibold)",
+                          fontFamily: "var(--font-primary)",
+                          textDecoration: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Download size={8} />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
 
       {/* ── SITE IDENTITY (full width below) ── */}
       <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-8)" }}>
@@ -2517,6 +2529,142 @@ function SocialsTab() {
           ))}
         </div>
       </div>
+
+      {/* Template Preview Modal */}
+      {previewTemplate && (() => {
+        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const sizes = [
+          { key: "og", label: "OG / Twitter", aspect: "1200/630" },
+          { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
+          { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
+        ];
+        const ci = concepts.indexOf(previewTemplate.concept);
+        const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
+        const totalItems = concepts.length * sizes.length;
+        const currentIndex = si * concepts.length + ci;
+        const navigate = (delta) => {
+          const next = (currentIndex + delta + totalItems) % totalItems;
+          const nextSi = Math.floor(next / concepts.length);
+          const nextCi = next % concepts.length;
+          const nextSize = sizes[nextSi];
+          const nextConcept = concepts[nextCi];
+          setPreviewTemplate({
+            url: `/api/social/template?concept=${nextConcept}&size=${nextSize.key}`,
+            concept: nextConcept,
+            size: nextSize.label,
+            aspect: nextSize.aspect,
+            sizeKey: nextSize.key,
+          });
+        };
+        return (
+          <div
+            onClick={() => setPreviewTemplate(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(42,40,38,0.85)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "var(--space-6)",
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: "relative",
+                maxWidth: "80vw",
+                maxHeight: "85vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "var(--space-3)",
+              }}
+            >
+              {/* Close */}
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                style={{
+                  position: "absolute", top: -32, right: 0,
+                  background: "none", border: "none", cursor: "pointer", padding: 0,
+                }}
+              >
+                <X size={20} color="#EFEDE8" />
+              </button>
+
+              {/* Image */}
+              <div style={{
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+                border: "1px solid rgba(239,237,232,0.15)",
+                maxHeight: "75vh",
+                display: "flex",
+              }}>
+                <img
+                  src={previewTemplate.url}
+                  alt={`${previewTemplate.concept} ${previewTemplate.sizeKey}`}
+                  style={{ maxWidth: "80vw", maxHeight: "75vh", objectFit: "contain", display: "block" }}
+                />
+              </div>
+
+              {/* Controls bar */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: "var(--space-4)",
+              }}>
+                {/* Prev */}
+                <button
+                  onClick={() => navigate(-1)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
+                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
+                  }}
+                >
+                  <ChevronRight size={18} style={{ transform: "rotate(180deg)" }} />
+                </button>
+
+                {/* Label */}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "#EFEDE8", textTransform: "capitalize" }}>
+                    {previewTemplate.concept}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "#8A8784" }}>
+                    {previewTemplate.size}
+                  </div>
+                </div>
+
+                {/* Next */}
+                <button
+                  onClick={() => navigate(1)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
+                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
+                  }}
+                >
+                  <ChevronRight size={18} />
+                </button>
+
+                {/* Download */}
+                <a
+                  href={previewTemplate.url}
+                  download={`fulkit-${previewTemplate.concept}-${previewTemplate.sizeKey}.png`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1-5) var(--space-3)",
+                    background: "#EFEDE8",
+                    color: "#2A2826",
+                    border: "none",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "var(--font-size-2xs)",
+                    fontWeight: "var(--font-weight-semibold)",
+                    fontFamily: "var(--font-primary)",
+                    textDecoration: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Download size={10} /> PNG
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
