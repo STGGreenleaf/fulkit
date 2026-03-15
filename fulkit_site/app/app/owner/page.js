@@ -1886,10 +1886,97 @@ const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "One-Liners"
 /* ─── Socials Tab ─── */
 
 function SocialsTab() {
-  const sectionRule = {
-    borderTop: "1px solid var(--color-border-light)",
-    paddingTop: "var(--space-8)",
-    marginTop: "var(--space-8)",
+  const { accessToken } = useAuth();
+  const [meta, setMeta] = useState(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [ogTitle, setOgTitle] = useState("");
+  const [ogDescription, setOgDescription] = useState("");
+  const [ogSlot, setOgSlot] = useState(1);
+  const [ogSlots, setOgSlots] = useState([null, null, null]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(null);
+  const [metaOpen, setMetaOpen] = useState(false);
+
+  // Load current metadata
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/owner/site-metadata", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        setMeta(data);
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        setOgTitle(data.og_title || "");
+        setOgDescription(data.og_description || "");
+        setOgSlot(data.og_image_slot || 1);
+        if (data.og_image_url) {
+          const slots = [null, null, null];
+          slots[(data.og_image_slot || 1) - 1] = data.og_image_url;
+          setOgSlots(slots);
+        }
+      })
+      .catch(() => {});
+  }, [accessToken]);
+
+  const saveMeta = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const activeUrl = ogSlots[ogSlot - 1];
+      await fetch("/api/owner/site-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ title, description, og_title: ogTitle, og_description: ogDescription, og_image_slot: ogSlot, og_image_url: activeUrl || null }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {}
+    setSaving(false);
+  };
+
+  const uploadOg = async (slot, file) => {
+    setUploading(slot);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("slot", String(slot));
+      const res = await fetch("/api/owner/og-upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: fd,
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        setOgSlots(prev => { const n = [...prev]; n[slot - 1] = url; return n; });
+      }
+    } catch {}
+    setUploading(null);
+  };
+
+  const inputStyle = {
+    width: "100%",
+    padding: "var(--space-2) var(--space-3)",
+    border: "1px solid var(--color-border-light)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg-elevated)",
+    color: "var(--color-text)",
+    fontSize: "var(--font-size-sm)",
+    fontFamily: "var(--font-primary)",
+    outline: "none",
+  };
+
+  const labelStyle = {
+    fontSize: "var(--font-size-2xs)",
+    fontWeight: "var(--font-weight-semibold)",
+    textTransform: "uppercase",
+    letterSpacing: "var(--letter-spacing-wider)",
+    color: "var(--color-text-muted)",
+    marginBottom: "var(--space-1)",
   };
 
   const sectionLabel = {
@@ -1899,13 +1986,27 @@ function SocialsTab() {
     textTransform: "uppercase",
     letterSpacing: "var(--letter-spacing-widest)",
     color: "var(--color-text-dim)",
-    marginBottom: "var(--space-5)",
+    marginBottom: "var(--space-4)",
   };
+
+  const cardStyle = {
+    background: "var(--color-bg-elevated)",
+    border: "1px solid var(--color-border-light)",
+    borderRadius: "var(--radius-lg)",
+    padding: "var(--space-4)",
+  };
+
+  // Live preview values
+  const pTitle = title || "F\u00FClkit \u2014 I'll be your bestie";
+  const pDesc = description || "Your second brain that talks back.";
+  const pOgTitle = ogTitle || pTitle;
+  const pOgDesc = ogDescription || "The app that thinks with you.";
+  const pOgImage = ogSlots[ogSlot - 1];
 
   return (
     <div>
       {/* Masthead */}
-      <div style={{ marginBottom: "var(--space-8)" }}>
+      <div style={{ marginBottom: "var(--space-6)" }}>
         <h2 style={{
           fontSize: "var(--font-size-3xl)",
           fontWeight: "var(--font-weight-black)",
@@ -1916,32 +2017,276 @@ function SocialsTab() {
           Socials & Identity
         </h2>
         <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
-          Every way {"\u0046\u00FC"}lkit shows up in the world.
+          Edit how {"F\u00FCl"}kit appears everywhere. Changes update your real site metadata.
         </p>
       </div>
 
-      {/* ── SECTION 1: SITE IDENTITY ── */}
-      <div>
+      {/* ── TWO-COLUMN: EDITOR + PREVIEWS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-8)" }}>
+
+        {/* LEFT: Editor */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+          <div style={sectionLabel}>Edit Metadata</div>
+
+          <div>
+            <div style={labelStyle}>Site Title</div>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} placeholder="F\u00FClkit \u2014 I'll be your bestie" />
+          </div>
+
+          <div>
+            <div style={labelStyle}>Site Description</div>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Your second brain that talks back." />
+          </div>
+
+          <div>
+            <div style={labelStyle}>OG Title</div>
+            <input type="text" value={ogTitle} onChange={e => setOgTitle(e.target.value)} style={inputStyle} placeholder="F\u00FClkit \u2014 I'll be your bestie" />
+          </div>
+
+          <div>
+            <div style={labelStyle}>OG Description</div>
+            <textarea value={ogDescription} onChange={e => setOgDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="The app that thinks with you." />
+          </div>
+
+          {/* Link */}
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>fulkit.app</span>
+            <CopyButton text="https://fulkit.app" label="Link" />
+          </div>
+
+          {/* Save */}
+          <button onClick={saveMeta} disabled={saving} style={{
+            padding: "var(--space-2-5) var(--space-4)",
+            background: saved ? "var(--color-bg-inverse)" : "var(--color-text)",
+            color: "var(--color-bg)",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-semibold)",
+            fontFamily: "var(--font-primary)",
+            cursor: saving ? "wait" : "pointer",
+            transition: "all var(--duration-normal) var(--ease-default)",
+            width: "100%",
+          }}>
+            {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
+          </button>
+
+          {/* OG Image Manager */}
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
+            <div style={sectionLabel}>OG Images</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))" }}>
+              Recommended: 1200 {"\u00D7"} 630px. Upload up to 3, click to set live.
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-3)" }}>
+              {[1, 2, 3].map(slot => (
+                <div key={slot} style={{ flex: 1 }}>
+                  <div
+                    onClick={() => { if (ogSlots[slot - 1]) setOgSlot(slot); }}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "1200/630",
+                      border: ogSlot === slot && ogSlots[slot - 1] ? "2px solid var(--color-text)" : "1px dashed var(--color-border-light)",
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--color-bg-alt)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: ogSlots[slot - 1] ? "pointer" : "default",
+                      overflow: "hidden",
+                      position: "relative",
+                    }}
+                  >
+                    {ogSlots[slot - 1] ? (
+                      <img src={ogSlots[slot - 1]} alt={`OG slot ${slot}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 9, color: "var(--color-text-dim)" }}>{uploading === slot ? "Uploading\u2026" : `Slot ${slot}`}</span>
+                    )}
+                    {ogSlot === slot && ogSlots[slot - 1] && (
+                      <div style={{ position: "absolute", top: 4, right: 4, fontSize: 8, fontFamily: "var(--font-mono)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", padding: "1px 4px", borderRadius: "var(--radius-sm)", textTransform: "uppercase" }}>
+                        Live
+                      </div>
+                    )}
+                  </div>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "var(--space-1)",
+                    padding: "var(--space-1-5) 0",
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-text-muted)",
+                    cursor: "pointer",
+                    marginTop: "var(--space-1)",
+                  }}>
+                    <Upload size={10} /> Upload
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) uploadOg(slot, e.target.files[0]); }} />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Social Post Sizes */}
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-5)" }}>
+            <div style={sectionLabel}>Social Post Sizes</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
+              {[
+                ["OG Image", "1200 \u00D7 630"],
+                ["X / Twitter", "1200 \u00D7 630"],
+                ["IG Post", "1080 \u00D7 1350"],
+                ["IG Stories", "1080 \u00D7 1920"],
+              ].map(([label, size]) => (
+                <div key={label} style={{
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{label}</span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>{size}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Live Previews */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+          <div style={sectionLabel}>Live Previews</div>
+
+          {/* Google SERP */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>Google</div>
+            <div style={{ background: "#fff", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)" }}>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "#202124", marginBottom: 2 }}>https://fulkit.app</div>
+              <div style={{ fontSize: "var(--font-size-base)", color: "#1a0dab", fontWeight: "var(--font-weight-medium)", lineHeight: "var(--line-height-snug)", marginBottom: 2 }}>{pTitle}</div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "#4d5156", lineHeight: "var(--line-height-relaxed)" }}>{pDesc}</div>
+            </div>
+          </div>
+
+          {/* Twitter/X Card */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>X / Twitter</div>
+            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+              <div style={{
+                width: "100%",
+                height: 160,
+                background: "var(--color-bg-alt)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderBottom: "1px solid var(--color-border-light)",
+                overflow: "hidden",
+              }}>
+                {pOgImage ? (
+                  <img src={pOgImage} alt="OG" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No OG image set</span>
+                )}
+              </div>
+              <div style={{ padding: "var(--space-2-5)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: 2 }}>fulkit.app</div>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: 2 }}>{pOgTitle}</div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{pOgDesc}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* iMessage Preview */}
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>iMessage</div>
+            <div style={{ background: "var(--color-bg-alt)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)", border: "1px solid var(--color-border-light)", maxWidth: 280 }}>
+              {pOgImage && <img src={pOgImage} alt="OG" style={{ width: "100%", borderRadius: "var(--radius-sm)", marginBottom: "var(--space-2)" }} />}
+              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: 2 }}>{pOgTitle}</div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginBottom: 2 }}>{pOgDesc}</div>
+              <div style={{ fontSize: 9, color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>fulkit.app</div>
+            </div>
+          </div>
+
+          {/* Raw Meta Tags — collapsed */}
+          <div>
+            <button onClick={() => setMetaOpen(!metaOpen)} style={{
+              display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
+              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+              fontFamily: "var(--font-primary)", padding: 0, marginBottom: metaOpen ? "var(--space-2)" : 0,
+            }}>
+              {metaOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Meta Tags & Manifest
+            </button>
+            {metaOpen && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                <div style={cardStyle}>
+                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>Meta Tags</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                    HTML tags platforms read when someone shares your link.
+                  </div>
+                  {[
+                    ["og:title", pOgTitle],
+                    ["og:description", pOgDesc],
+                    ["og:type", "website"],
+                    ["og:image", pOgImage || "(not set)"],
+                    ["twitter:card", "summary_large_image"],
+                    ["theme-color", "#EFEDE8"],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                      <span style={{ color: "var(--color-text-muted)", minWidth: 90, flexShrink: 0 }}>{k}</span>
+                      <span style={{ color: v === "(not set)" ? "var(--color-text-dim)" : "var(--color-text)", fontStyle: v === "(not set)" ? "italic" : "normal", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={cardStyle}>
+                  <div style={{ ...labelStyle, marginBottom: "var(--space-2)" }}>PWA Manifest</div>
+                  <div style={{ fontSize: 9, color: "var(--color-text-dim)", marginBottom: "var(--space-2)", lineHeight: "var(--line-height-relaxed)" }}>
+                    Controls how the app appears when installed on a device.
+                  </div>
+                  {[
+                    ["Name", "F\u00FClkit"],
+                    ["Display", "standalone"],
+                    ["Start URL", "/"],
+                    ["Background", "#EFEDE8"],
+                    ["Theme", "#EFEDE8"],
+                    ["Icons", "192, 512"],
+                    ["Verified", "\u2713"],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: 9, fontFamily: "var(--font-mono)" }}>
+                      <span style={{ color: "var(--color-text-muted)", minWidth: 70, flexShrink: 0 }}>{k}</span>
+                      <span style={{ color: "var(--color-text)" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── SITE IDENTITY (full width below) ── */}
+      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-8)" }}>
         <div style={sectionLabel}>Site Identity</div>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
           gap: "var(--space-3)",
         }}>
           {SITE_ASSETS.map((asset) => (
             <div key={asset.name} style={{
-              padding: "var(--space-4)",
+              padding: "var(--space-3)",
               background: "var(--color-bg-elevated)",
               border: "1px solid var(--color-border-light)",
               borderRadius: "var(--radius-lg)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "var(--space-3)",
+              gap: "var(--space-2)",
             }}>
               <div style={{
-                width: asset.previewSize + 16,
-                height: asset.previewSize + 16,
+                width: asset.previewSize + 12,
+                height: asset.previewSize + 12,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1949,265 +2294,15 @@ function SocialsTab() {
                 borderRadius: asset.rounded ? "var(--radius-lg)" : "var(--radius-sm)",
                 border: "1px solid var(--color-border-light)",
               }}>
-                <img
-                  src={asset.src}
-                  alt={asset.name}
-                  width={asset.previewSize}
-                  height={asset.previewSize}
-                  style={{
-                    imageRendering: asset.previewSize <= 32 ? "pixelated" : "auto",
-                    borderRadius: asset.rounded ? "var(--radius-md)" : 0,
-                  }}
-                />
+                <img src={asset.src} alt={asset.name} width={asset.previewSize} height={asset.previewSize} style={{ imageRendering: asset.previewSize <= 32 ? "pixelated" : "auto", borderRadius: asset.rounded ? "var(--radius-md)" : 0 }} />
               </div>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                  {asset.name}
-                </div>
-                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
-                  {asset.info}
-                </div>
-                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
-                  {asset.desc}
-                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>{asset.name}</div>
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>{asset.info}</div>
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* ── SECTION 2: SOCIAL PREVIEWS ── */}
-      <div style={sectionRule}>
-        <div style={sectionLabel}>Social Previews</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-
-          {/* Google SERP */}
-          <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
-              How it appears on Google
-            </div>
-            <div style={{
-              background: "#fff",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-lg)",
-              padding: "var(--space-4)",
-              maxWidth: 600,
-            }}>
-              <div style={{ fontSize: "var(--font-size-xs)", color: "#202124", marginBottom: "var(--space-1)" }}>
-                https://fulkit.app
-              </div>
-              <div style={{ fontSize: "var(--font-size-lg)", color: "#1a0dab", fontWeight: "var(--font-weight-medium)", lineHeight: "var(--line-height-snug)", marginBottom: "var(--space-1)" }}>
-                {SITE_META.title}
-              </div>
-              <div style={{ fontSize: "var(--font-size-sm)", color: "#4d5156", lineHeight: "var(--line-height-relaxed)" }}>
-                {SITE_META.description}
-              </div>
-            </div>
-          </div>
-
-          {/* Twitter/X Card */}
-          <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
-              How it appears on X / Twitter
-            </div>
-            <div style={{
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-xl)",
-              overflow: "hidden",
-              maxWidth: 500,
-            }}>
-              <div style={{
-                width: "100%",
-                height: 200,
-                background: "var(--color-bg-alt)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottom: "1px solid var(--color-border-light)",
-              }}>
-                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>
-                  No OG image set
-                </span>
-              </div>
-              <div style={{ padding: "var(--space-3)" }}>
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
-                  fulkit.app
-                </div>
-                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
-                  {SITE_META.ogTitle}
-                </div>
-                <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
-                  {SITE_META.ogDescription}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* iMessage Preview */}
-          <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
-              How it appears in iMessage
-            </div>
-            <div style={{
-              background: "var(--color-bg-alt)",
-              borderRadius: "var(--radius-lg)",
-              padding: "var(--space-3)",
-              maxWidth: 300,
-              border: "1px solid var(--color-border-light)",
-            }}>
-              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
-                {SITE_META.ogTitle}
-              </div>
-              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
-                {SITE_META.ogDescription}
-              </div>
-              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>
-                fulkit.app
-              </div>
-            </div>
-          </div>
-
-          {/* Raw OG Tags */}
-          <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
-              Raw Meta Tags
-            </div>
-            <div style={{
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-lg)",
-              padding: "var(--space-4)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--font-size-xs)",
-            }}>
-              {[
-                ["og:title", SITE_META.ogTitle],
-                ["og:description", SITE_META.ogDescription],
-                ["og:type", SITE_META.ogType],
-                ["og:image", null],
-                ["twitter:card", SITE_META.twitterCard],
-                ["theme-color", SITE_META.themeColor],
-              ].map(([key, val]) => (
-                <div key={key} style={{ display: "flex", gap: "var(--space-3)", padding: "var(--space-1-5) 0", borderBottom: "1px solid var(--color-border-light)" }}>
-                  <span style={{ color: "var(--color-text-muted)", minWidth: 120, flexShrink: 0 }}>{key}</span>
-                  <span style={{ color: val ? "var(--color-text)" : "var(--color-text-dim)", fontStyle: val ? "normal" : "italic" }}>
-                    {val || "(not set)"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── SECTION 3: META & MANIFEST ── */}
-      <div style={sectionRule}>
-        <div style={sectionLabel}>Meta & Manifest</div>
-        <div style={{
-          background: "var(--color-bg-elevated)",
-          border: "1px solid var(--color-border-light)",
-          borderRadius: "var(--radius-lg)",
-          padding: "var(--space-4)",
-        }}>
-          {[
-            ["Page Title", SITE_META.title],
-            ["PWA Name", "F\u00FClkit"],
-            ["Display", "standalone"],
-            ["Start URL", "/"],
-            ["Background", "#EFEDE8"],
-            ["Theme Color", "#EFEDE8"],
-            ["Icons", "192x192, 512x512"],
-            ["Google Verified", "bxotBll\u20268Uo"],
-          ].map(([label, val], i) => (
-            <div key={label} style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-3)",
-              padding: "var(--space-2) 0",
-              borderBottom: i < 7 ? "1px solid var(--color-border-light)" : "none",
-            }}>
-              <span style={{
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-muted)",
-                minWidth: 120,
-                flexShrink: 0,
-              }}>
-                {label}
-              </span>
-              <span style={{
-                fontSize: "var(--font-size-sm)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text)",
-                flex: 1,
-                minWidth: 0,
-              }}>
-                {val}
-              </span>
-              {(label === "Theme Color" || label === "Background") && (
-                <div style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "var(--radius-sm)",
-                  background: val,
-                  border: "1px solid var(--color-border-light)",
-                  flexShrink: 0,
-                }} />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── SECTION 4: OG CREATOR ── */}
-      <div style={sectionRule}>
-        <div style={sectionLabel}>OG Creator</div>
-        <div style={{
-          background: "var(--color-bg-elevated)",
-          border: "1px solid var(--color-border-light)",
-          borderRadius: "var(--radius-lg)",
-          padding: "var(--space-4)",
-          marginBottom: "var(--space-4)",
-        }}>
-          <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-            Current OG State
-          </div>
-          {[
-            { tag: "og:title", set: true },
-            { tag: "og:description", set: true },
-            { tag: "og:type", set: true },
-            { tag: "og:image (1200\u00D7630)", set: false },
-            { tag: "twitter:card", set: true },
-          ].map((item) => (
-            <div key={item.tag} style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              padding: "var(--space-1-5) 0",
-              fontSize: "var(--font-size-sm)",
-            }}>
-              <div style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: item.set ? "var(--color-text)" : "var(--color-text-dim)",
-                flexShrink: 0,
-                opacity: item.set ? 1 : 0.3,
-              }} />
-              <span style={{ color: item.set ? "var(--color-text)" : "var(--color-text-dim)" }}>
-                {item.tag}
-              </span>
-              {!item.set && <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>not set</span>}
-            </div>
-          ))}
-        </div>
-        <p style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-dim)",
-          fontStyle: "italic",
-          lineHeight: "var(--line-height-relaxed)",
-        }}>
-          Template editor with brand token picker {"\u2014"} coming soon.
-        </p>
       </div>
     </div>
   );
@@ -2232,49 +2327,51 @@ function PitchesTab() {
           Sales facts, one-liners, and CTAs. Copy and paste anywhere.
         </p>
       </div>
-      {PITCH_CATEGORIES.map((cat) => {
-        const items = PITCHES.filter(p => p.cat === cat);
-        return (
-          <div key={cat} style={{ marginBottom: "var(--space-6)" }}>
-            <div style={{
-              fontSize: "var(--font-size-2xs)",
-              fontWeight: "var(--font-weight-semibold)",
-              textTransform: "uppercase",
-              letterSpacing: "var(--letter-spacing-wider)",
-              color: "var(--color-text-muted)",
-              marginBottom: "var(--space-2)",
-            }}>
-              {cat}
-            </div>
-            <div style={{
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-lg)",
-              overflow: "hidden",
-            }}>
-              {items.map((pitch, i) => (
-                <div key={i} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-3)",
-                  padding: "var(--space-3) var(--space-4)",
-                  borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
-                }}>
-                  <span style={{
-                    flex: 1,
-                    fontSize: "var(--font-size-sm)",
-                    color: "var(--color-text)",
-                    lineHeight: "var(--line-height-relaxed)",
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+        {PITCH_CATEGORIES.map((cat) => {
+          const items = PITCHES.filter(p => p.cat === cat);
+          return (
+            <div key={cat}>
+              <div style={{
+                fontSize: "var(--font-size-2xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wider)",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-2)",
+              }}>
+                {cat}
+              </div>
+              <div style={{
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+              }}>
+                {items.map((pitch, i) => (
+                  <div key={i} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
                   }}>
-                    {pitch.text}
-                  </span>
-                  <CopyButton text={pitch.text} />
-                </div>
-              ))}
+                    <span style={{
+                      flex: 1,
+                      fontSize: "var(--font-size-sm)",
+                      color: "var(--color-text)",
+                      lineHeight: "var(--line-height-relaxed)",
+                    }}>
+                      {pitch.text}
+                    </span>
+                    <CopyButton text={pitch.text} />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
