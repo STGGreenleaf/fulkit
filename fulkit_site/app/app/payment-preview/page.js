@@ -110,7 +110,7 @@ export default function PaymentPreview() {
         : "var(--font-weight-normal)",
     color:
       i < gwStep
-        ? "var(--color-success)"
+        ? "var(--color-text)"
         : i === gwStep
         ? "var(--color-text)"
         : "var(--color-text-dim)",
@@ -216,80 +216,146 @@ export default function PaymentPreview() {
             )}
           </div>
 
-      {/* Step indicator */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 480,
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-1)",
-          padding: "var(--space-3) var(--space-4)",
-          background: "var(--color-bg-elevated)",
-          borderRadius: "var(--radius-sm)",
-          overflowX: "auto",
-          marginBottom: "var(--space-4)",
-        }}
-      >
-        {GATEWAY_STEPS.map((s, i) => (
+          {/* Step indicator */}
           <div
-            key={s.id}
             style={{
+              width: "100%",
+              maxWidth: 480,
               display: "flex",
               alignItems: "center",
               gap: "var(--space-1)",
+              padding: "var(--space-3) var(--space-4)",
+              background: "var(--color-bg-elevated)",
+              borderRadius: "var(--radius-sm)",
+              overflowX: "auto",
+              marginBottom: "var(--space-4)",
             }}
           >
-            <span style={stepStyle(i)}>
-              {i < gwStep ? "\u2713" : i + 1} {s.label}
-            </span>
-            {i < GATEWAY_STEPS.length - 1 && (
-              <ArrowRight
-                size={10}
-                style={{ color: "var(--color-text-dim)", flexShrink: 0 }}
-              />
-            )}
+            {GATEWAY_STEPS.map((s, i) => (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-1)",
+                }}
+              >
+                <span style={stepStyle(i)}>
+                  {i < gwStep ? "\u2713" : i + 1} {s.label}
+                </span>
+                {i < GATEWAY_STEPS.length - 1 && (
+                  <ArrowRight
+                    size={10}
+                    style={{ color: "var(--color-text-dim)", flexShrink: 0 }}
+                  />
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Step content */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 480,
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Step 0: Choose Plan */}
-        {gwStep === 0 && (
-          <div style={{ padding: "var(--space-4)" }}>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              Select a plan
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 0,
-              }}
-            >
-              {MOCK_PLANS.map((plan) => (
+          {/* Step content */}
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Step 0: Choose Plan */}
+            {gwStep === 0 && (
+              <div style={{ padding: "var(--space-4)" }}>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
+                    marginBottom: "var(--space-3)",
+                  }}
+                >
+                  Select a plan
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0,
+                  }}
+                >
+                  {MOCK_PLANS.map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => advanceGateway(plan.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "var(--space-3) var(--space-4)",
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: "1px solid var(--color-border-light)",
+                        cursor: "pointer",
+                        width: "100%",
+                        textAlign: "left",
+                        fontFamily: "var(--font-primary)",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "var(--font-size-sm)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            color: "var(--color-text)",
+                          }}
+                        >
+                          {plan.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: "var(--color-text-muted)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {plan.features.join(" \u00b7 ")}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: 2,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-lg)",
+                            fontWeight: "var(--font-weight-bold)",
+                            fontFamily: "var(--font-mono)",
+                            color: "var(--color-text)",
+                          }}
+                        >
+                          {plan.price}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-2xs)",
+                            color: "var(--color-text-dim)",
+                          }}
+                        >
+                          {plan.period}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key={plan.id}
-                  onClick={() => advanceGateway(plan.id)}
+                  onClick={() => advanceGateway("credits")}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -297,31 +363,42 @@ export default function PaymentPreview() {
                     padding: "var(--space-3) var(--space-4)",
                     background: "transparent",
                     border: "none",
-                    borderBottom: "1px solid var(--color-border-light)",
                     cursor: "pointer",
                     width: "100%",
                     textAlign: "left",
                     fontFamily: "var(--font-primary)",
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "var(--font-size-sm)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        color: "var(--color-text)",
-                      }}
-                    >
-                      {plan.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "var(--font-size-xs)",
-                        color: "var(--color-text-muted)",
-                        marginTop: 2,
-                      }}
-                    >
-                      {plan.features.join(" \u00b7 ")}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    <Zap
+                      size={14}
+                      strokeWidth={1.8}
+                      style={{ color: "var(--color-text-muted)" }}
+                    />
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "var(--font-size-sm)",
+                          fontWeight: "var(--font-weight-semibold)",
+                          color: "var(--color-text)",
+                        }}
+                      >
+                        {"F\u00fcl up"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "var(--font-size-xs)",
+                          color: "var(--color-text-muted)",
+                        }}
+                      >
+                        100 messages on demand
+                      </div>
                     </div>
                   </div>
                   <div
@@ -329,7 +406,6 @@ export default function PaymentPreview() {
                       display: "flex",
                       alignItems: "baseline",
                       gap: 2,
-                      flexShrink: 0,
                     }}
                   >
                     <span
@@ -340,7 +416,7 @@ export default function PaymentPreview() {
                         color: "var(--color-text)",
                       }}
                     >
-                      {plan.price}
+                      $2
                     </span>
                     <span
                       style={{
@@ -348,592 +424,511 @@ export default function PaymentPreview() {
                         color: "var(--color-text-dim)",
                       }}
                     >
-                      {plan.period}
+                      once
                     </span>
                   </div>
                 </button>
-              ))}
-            </div>
-            <button
-              onClick={() => advanceGateway("credits")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "var(--space-3) var(--space-4)",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                width: "100%",
-                textAlign: "left",
-                fontFamily: "var(--font-primary)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <Zap
-                  size={14}
-                  strokeWidth={1.8}
-                  style={{ color: "var(--color-warning)" }}
-                />
-                <div>
+              </div>
+            )}
+
+            {/* Step 1: Stripe Checkout (mock) */}
+            {gwStep === 1 && (
+              <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    margin: "0 auto var(--space-3)",
+                    background: "var(--color-bg-elevated)",
+                    borderRadius: "var(--radius-full)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <CreditCard
+                    size={22}
+                    strokeWidth={1.5}
+                    style={{ color: "var(--color-text-muted)" }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
+                    marginBottom: "var(--space-1)",
+                  }}
+                >
+                  Stripe Checkout
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-md)",
+                    fontWeight: "var(--font-weight-bold)",
+                    marginBottom: "var(--space-1)",
+                  }}
+                >
+                  {"F\u00fclkit "}
+                  {selectedPlan === "credits"
+                    ? "Credits"
+                    : selectedPlan === "pro"
+                    ? "Pro"
+                    : "Standard"}
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "var(--space-4)",
+                  }}
+                >
+                  {selectedPlan === "credits"
+                    ? "$2.00 one-time"
+                    : selectedPlan === "pro"
+                    ? "$15.00/month"
+                    : "$7.00/month"}
+                </div>
+                <div
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    background: "var(--color-bg)",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: "var(--space-4)",
+                  }}
+                >
                   <div
                     style={{
-                      fontSize: "var(--font-size-sm)",
-                      fontWeight: "var(--font-weight-semibold)",
-                      color: "var(--color-text)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-muted)",
+                      marginBottom: "var(--space-2)",
                     }}
                   >
-                    F\u00fcl up
+                    <span>Card</span>
+                    <span>{"•••• •••• •••• 4242"}</span>
                   </div>
                   <div
                     style={{
+                      display: "flex",
+                      justifyContent: "space-between",
                       fontSize: "var(--font-size-xs)",
                       color: "var(--color-text-muted)",
                     }}
                   >
-                    100 messages on demand
+                    <span>Email</span>
+                    <span>collin@fulkit.app</span>
                   </div>
                 </div>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 2,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "var(--font-size-lg)",
-                    fontWeight: "var(--font-weight-bold)",
-                    fontFamily: "var(--font-mono)",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  $2
-                </span>
-                <span
+                <button onClick={() => advanceGateway()} style={btnStyle("primary")}>
+                  {"Complete Payment \u2192"}
+                </button>
+                <div
                   style={{
                     fontSize: "var(--font-size-2xs)",
                     color: "var(--color-text-dim)",
+                    marginTop: "var(--space-2)",
                   }}
                 >
-                  once
-                </span>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Step 1: Stripe Checkout (mock) */}
-        {gwStep === 1 && (
-          <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                margin: "0 auto var(--space-3)",
-                background: "var(--color-bg-elevated)",
-                borderRadius: "var(--radius-full)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <CreditCard
-                size={22}
-                strokeWidth={1.5}
-                style={{ color: "var(--color-text-muted)" }}
-              />
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-1)",
-              }}
-            >
-              Stripe Checkout
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-md)",
-                fontWeight: "var(--font-weight-bold)",
-                marginBottom: "var(--space-1)",
-              }}
-            >
-              F\u00fclkit{" "}
-              {selectedPlan === "credits"
-                ? "Credits"
-                : selectedPlan === "pro"
-                ? "Pro"
-                : "Standard"}
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-sm)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-4)",
-              }}
-            >
-              {selectedPlan === "credits"
-                ? "$2.00 one-time"
-                : selectedPlan === "pro"
-                ? "$15.00/month"
-                : "$7.00/month"}
-            </div>
-            <div
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                background: "var(--color-bg)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-2)",
-                }}
-              >
-                <span>Card</span>
-                <span>\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 4242</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                }}
-              >
-                <span>Email</span>
-                <span>collin@fulkit.app</span>
-              </div>
-            </div>
-            <button onClick={() => advanceGateway()} style={btnStyle("primary")}>
-              Complete Payment \u2192
-            </button>
-            <div
-              style={{
-                fontSize: "var(--font-size-2xs)",
-                color: "var(--color-text-dim)",
-                marginTop: "var(--space-2)",
-              }}
-            >
-              Mock \u2014 no real charge
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Webhook Received */}
-        {gwStep === 2 && (
-          <div style={{ padding: "var(--space-4)" }}>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              Webhook Event Log
-            </div>
-            {webhookEvents.map((evt, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: "var(--space-3) var(--space-4)",
-                  background: "var(--color-bg)",
-                  borderRadius: "var(--radius-sm)",
-                  marginBottom: "var(--space-2)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--font-size-xs)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "var(--space-1)",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "var(--color-success)",
-                      fontWeight: "var(--font-weight-bold)",
-                    }}
-                  >
-                    \u25cf {evt.type}
-                  </span>
-                  <span style={{ color: "var(--color-text-dim)" }}>
-                    {evt.time}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    color: "var(--color-text-muted)",
-                    fontSize: "var(--font-size-2xs)",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {JSON.stringify(evt.data)}
+                  {"Mock \u2014 no real charge"}
                 </div>
               </div>
-            ))}
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              Webhook verified. Updating seat type to{" "}
-              <strong>{selectedPlan === "credits" ? "free" : selectedPlan}</strong>
-              {selectedPlan === "credits" && " and adding 100 messages to allowance"}
-              .
-            </div>
-            <button
-              onClick={() => advanceGateway()}
-              style={btnStyle("primary")}
-            >
-              Process Webhook \u2192
-            </button>
-          </div>
-        )}
+            )}
 
-        {/* Step 3: Subscription Active */}
-        {gwStep === 3 && (
-          <div style={{ padding: "var(--space-4)" }}>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              Profile Updated
-            </div>
-            <div
-              style={{
-                padding: "var(--space-4)",
-                background: "var(--color-bg)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--font-size-xs)",
-              }}
-            >
-              {Object.entries(mockProfile).map(([k, v]) => (
+            {/* Step 2: Webhook Received */}
+            {gwStep === 2 && (
+              <div style={{ padding: "var(--space-4)" }}>
                 <div
-                  key={k}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "var(--space-1) 0",
-                    borderBottom: "1px solid var(--color-border-light)",
-                  }}
-                >
-                  <span style={{ color: "var(--color-text-muted)" }}>{k}</span>
-                  <span
-                    style={{
-                      color:
-                        k === "seat_type"
-                          ? "var(--color-success)"
-                          : "var(--color-text)",
-                      fontWeight:
-                        k === "seat_type"
-                          ? "var(--font-weight-bold)"
-                          : "var(--font-weight-normal)",
-                    }}
-                  >
-                    {v === null ? "null" : String(v)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Mini Fül gauge */}
-            <div style={{ marginBottom: "var(--space-4)" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "var(--space-1)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  F\u00fcl remaining
-                </span>
-                <span
                   style={{
                     fontSize: "var(--font-size-xs)",
                     fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--font-weight-bold)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
+                    marginBottom: "var(--space-3)",
                   }}
                 >
-                  {remaining} / {seatLimit}
-                </span>
-              </div>
-              <div
-                style={{
-                  height: 6,
-                  borderRadius: "var(--radius-full)",
-                  background: "var(--color-border-light)",
-                  overflow: "hidden",
-                }}
-              >
+                  Webhook Event Log
+                </div>
+                {webhookEvents.map((evt, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: "var(--space-3) var(--space-4)",
+                      background: "var(--color-bg)",
+                      borderRadius: "var(--radius-sm)",
+                      marginBottom: "var(--space-2)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--font-size-xs)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "var(--space-1)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "var(--color-text)",
+                          fontWeight: "var(--font-weight-bold)",
+                        }}
+                      >
+                        {"● "}{evt.type}
+                      </span>
+                      <span style={{ color: "var(--color-text-dim)" }}>
+                        {evt.time}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--color-text-muted)",
+                        fontSize: "var(--font-size-2xs)",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {JSON.stringify(evt.data)}
+                    </div>
+                  </div>
+                ))}
                 <div
                   style={{
-                    height: "100%",
-                    width: `${Math.max(0, (remaining / seatLimit) * 100)}%`,
-                    borderRadius: "var(--radius-full)",
-                    background: "var(--color-accent)",
-                    transition:
-                      "width var(--duration-slow) var(--ease-default)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "var(--space-3)",
                   }}
-                />
+                >
+                  Webhook verified. Updating seat type to{" "}
+                  <strong>{selectedPlan === "credits" ? "free" : selectedPlan}</strong>
+                  {selectedPlan === "credits" && " and adding 100 messages to allowance"}
+                  .
+                </div>
+                <button
+                  onClick={() => advanceGateway()}
+                  style={btnStyle("primary")}
+                >
+                  {"Process Webhook \u2192"}
+                </button>
               </div>
-            </div>
+            )}
 
-            <button
-              onClick={() => advanceGateway()}
-              style={btnStyle("primary")}
-            >
-              Open Customer Portal \u2192
-            </button>
-          </div>
-        )}
-
-        {/* Step 4: Customer Portal */}
-        {gwStep === 4 && (
-          <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                margin: "0 auto var(--space-3)",
-                background: "var(--color-bg-elevated)",
-                borderRadius: "var(--radius-full)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Users
-                size={22}
-                strokeWidth={1.5}
-                style={{ color: "var(--color-text-muted)" }}
-              />
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-1)",
-              }}
-            >
-              Stripe Customer Portal
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-md)",
-                fontWeight: "var(--font-weight-bold)",
-                marginBottom: "var(--space-1)",
-              }}
-            >
-              Manage Subscription
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-sm)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-4)",
-              }}
-            >
-              {mockProfile.stripe_customer_id} \u00b7 F\u00fclkit{" "}
-              {selectedPlan === "pro" ? "Pro" : "Standard"}
-            </div>
-            <div
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                background: "var(--color-bg)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
-                textAlign: "left",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-2)",
-                }}
-              >
-                Actions available:
-              </div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)",
-                  lineHeight: "var(--line-height-relaxed)",
-                }}
-              >
-                &bull; Update payment method
-                <br />
-                &bull; Change plan (Standard \u2194 Pro)
-                <br />
-                &bull; View billing history
-                <br />
-                &bull; Cancel subscription
-              </div>
-            </div>
-            <button
-              onClick={() => advanceGateway()}
-              style={{
-                ...btnStyle("ghost"),
-                color: "var(--color-error)",
-              }}
-            >
-              Cancel Subscription \u2192
-            </button>
-          </div>
-        )}
-
-        {/* Step 5: Cancelled */}
-        {gwStep === 5 && (
-          <div style={{ padding: "var(--space-4)" }}>
-            <div
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-widest)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              Subscription Cancelled
-            </div>
-            {webhookEvents.map((evt, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: "var(--space-3) var(--space-4)",
-                  background: "var(--color-bg)",
-                  borderRadius: "var(--radius-sm)",
-                  marginBottom: "var(--space-2)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--font-size-xs)",
-                }}
-              >
+            {/* Step 3: Subscription Active */}
+            {gwStep === 3 && (
+              <div style={{ padding: "var(--space-4)" }}>
                 <div
                   style={{
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
+                    marginBottom: "var(--space-3)",
+                  }}
+                >
+                  Profile Updated
+                </div>
+                <div
+                  style={{
+                    padding: "var(--space-4)",
+                    background: "var(--color-bg)",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: "var(--space-4)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "var(--font-size-xs)",
+                  }}
+                >
+                  {Object.entries(mockProfile).map(([k, v]) => (
+                    <div
+                      key={k}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "var(--space-1) 0",
+                        borderBottom: "1px solid var(--color-border-light)",
+                      }}
+                    >
+                      <span style={{ color: "var(--color-text-muted)" }}>{k}</span>
+                      <span
+                        style={{
+                          color: "var(--color-text)",
+                          fontWeight:
+                            k === "seat_type"
+                              ? "var(--font-weight-bold)"
+                              : "var(--font-weight-normal)",
+                        }}
+                      >
+                        {v === null ? "null" : String(v)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Mini gauge */}
+                <div style={{ marginBottom: "var(--space-4)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "var(--space-1)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text-muted)",
+                      }}
+                    >
+                      {"F\u00fcl remaining"}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: "var(--font-weight-bold)",
+                      }}
+                    >
+                      {remaining} / {seatLimit}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: "var(--radius-full)",
+                      background: "var(--color-border-light)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.max(0, (remaining / seatLimit) * 100)}%`,
+                        borderRadius: "var(--radius-full)",
+                        background: "var(--color-text-muted)",
+                        transition:
+                          "width var(--duration-slow) var(--ease-default)",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => advanceGateway()}
+                  style={btnStyle("primary")}
+                >
+                  {"Open Customer Portal \u2192"}
+                </button>
+              </div>
+            )}
+
+            {/* Step 4: Customer Portal */}
+            {gwStep === 4 && (
+              <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    margin: "0 auto var(--space-3)",
+                    background: "var(--color-bg-elevated)",
+                    borderRadius: "var(--radius-full)",
                     display: "flex",
-                    justifyContent: "space-between",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Users
+                    size={22}
+                    strokeWidth={1.5}
+                    style={{ color: "var(--color-text-muted)" }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
                     marginBottom: "var(--space-1)",
                   }}
                 >
-                  <span
-                    style={{
-                      color: evt.type.includes("deleted")
-                        ? "var(--color-error)"
-                        : "var(--color-success)",
-                      fontWeight: "var(--font-weight-bold)",
-                    }}
-                  >
-                    \u25cf {evt.type}
-                  </span>
-                  <span style={{ color: "var(--color-text-dim)" }}>
-                    {evt.time}
-                  </span>
+                  Stripe Customer Portal
                 </div>
-              </div>
-            ))}
-            <div
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                background: "var(--color-bg)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--font-size-xs)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "var(--space-1) 0",
-                }}
-              >
-                <span style={{ color: "var(--color-text-muted)" }}>
-                  seat_type
-                </span>
-                <span
+                <div
                   style={{
-                    color: "var(--color-text)",
+                    fontSize: "var(--font-size-md)",
                     fontWeight: "var(--font-weight-bold)",
+                    marginBottom: "var(--space-1)",
                   }}
                 >
-                  free
-                </span>
+                  Manage Subscription
+                </div>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "var(--space-4)",
+                  }}
+                >
+                  {mockProfile.stripe_customer_id}{" \u00b7 F\u00fclkit "}
+                  {selectedPlan === "pro" ? "Pro" : "Standard"}
+                </div>
+                <div
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    background: "var(--color-bg)",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: "var(--space-4)",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-muted)",
+                      marginBottom: "var(--space-2)",
+                    }}
+                  >
+                    Actions available:
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-secondary)",
+                      lineHeight: "var(--line-height-relaxed)",
+                    }}
+                  >
+                    {"• Update payment method"}
+                    <br />
+                    {"• Change plan (Standard \u2194 Pro)"}
+                    <br />
+                    {"• View billing history"}
+                    <br />
+                    {"• Cancel subscription"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => advanceGateway()}
+                  style={{
+                    ...btnStyle("ghost"),
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  {"Cancel Subscription \u2192"}
+                </button>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "var(--space-1) 0",
-                }}
-              >
-                <span style={{ color: "var(--color-text-muted)" }}>
-                  stripe_subscription_id
-                </span>
-                <span style={{ color: "var(--color-text-dim)" }}>null</span>
+            )}
+
+            {/* Step 5: Cancelled */}
+            {gwStep === 5 && (
+              <div style={{ padding: "var(--space-4)" }}>
+                <div
+                  style={{
+                    fontSize: "var(--font-size-xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-text-dim)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-widest)",
+                    marginBottom: "var(--space-3)",
+                  }}
+                >
+                  Subscription Cancelled
+                </div>
+                {webhookEvents.map((evt, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: "var(--space-3) var(--space-4)",
+                      background: "var(--color-bg)",
+                      borderRadius: "var(--radius-sm)",
+                      marginBottom: "var(--space-2)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--font-size-xs)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "var(--space-1)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "var(--color-text)",
+                          fontWeight: "var(--font-weight-bold)",
+                        }}
+                      >
+                        {"● "}{evt.type}
+                      </span>
+                      <span style={{ color: "var(--color-text-dim)" }}>
+                        {evt.time}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    background: "var(--color-bg)",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: "var(--space-4)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "var(--font-size-xs)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "var(--space-1) 0",
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)" }}>
+                      seat_type
+                    </span>
+                    <span
+                      style={{
+                        color: "var(--color-text)",
+                        fontWeight: "var(--font-weight-bold)",
+                      }}
+                    >
+                      free
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "var(--space-1) 0",
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)" }}>
+                      stripe_subscription_id
+                    </span>
+                    <span style={{ color: "var(--color-text-dim)" }}>null</span>
+                  </div>
+                </div>
+                <button onClick={resetGateway} style={btnStyle("primary")}>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    <RotateCcw size={14} /> Start Over
+                  </span>
+                </button>
               </div>
-            </div>
-            <button onClick={resetGateway} style={btnStyle("primary")}>
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                <RotateCcw size={14} /> Start Over
-              </span>
-            </button>
+            )}
           </div>
-        )}
         </div>
       </div>
-    </div>
     </AuthGuard>
   );
 }
