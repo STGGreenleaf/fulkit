@@ -7,7 +7,7 @@
  *
  * What it does:
  *   1. Fetches tracks from 5 Spotify sources (saved, playlists, top, artists, recent)
- *   2. Deduplicates by spotify_id
+ *   2. Deduplicates by source_id
  *   3. Inserts new tracks into fabric_tracks as 'pending' (skips existing)
  *
  * Requires: Spotify OAuth tokens in integrations table (connect via Fulkit first)
@@ -108,7 +108,7 @@ async function spotifyFetch(endpoint) {
 function extractTrack(item) {
   if (!item || !item.id) return null;
   return {
-    spotify_id: item.id,
+    source_id: item.id,
     title: item.name || "Unknown",
     artist: item.artists?.map(a => a.name).join(", ") || "Unknown",
     duration_ms: item.duration_ms || 0,
@@ -127,7 +127,7 @@ async function harvestSaved(tracks) {
     const data = await spotifyFetch(`/me/tracks?limit=50&offset=${offset}`);
     for (const item of (data.items || [])) {
       const t = extractTrack(item.track);
-      if (t) tracks.set(t.spotify_id, t);
+      if (t) tracks.set(t.source_id, t);
     }
     total = data.total || 0;
     offset += 50;
@@ -159,7 +159,7 @@ async function harvestPlaylists(tracks) {
       const data = await spotifyFetch(`/playlists/${pl.id}/tracks?limit=100&offset=${plOffset}&fields=items(track(id,name,artists,duration_ms,external_ids))`);
       for (const item of (data.items || [])) {
         const t = extractTrack(item.track);
-        if (t) tracks.set(t.spotify_id, t);
+        if (t) tracks.set(t.source_id, t);
       }
       plOffset += 100;
       if (!data.items?.length) break;
@@ -178,7 +178,7 @@ async function harvestTopTracks(tracks) {
     let count = 0;
     for (const item of (data.items || [])) {
       const t = extractTrack(item);
-      if (t) { tracks.set(t.spotify_id, t); count++; }
+      if (t) { tracks.set(t.source_id, t); count++; }
     }
     console.log(`  ${range}: ${count} tracks`);
   }
@@ -203,7 +203,7 @@ async function harvestTopArtists(tracks) {
       const data = await spotifyFetch(`/artists/${artistId}/top-tracks?market=US`);
       for (const item of (data.tracks || [])) {
         const t = extractTrack(item);
-        if (t) tracks.set(t.spotify_id, t);
+        if (t) tracks.set(t.source_id, t);
       }
     } catch (e) {
       console.log(`  Skipped artist ${artistId}: ${e.message}`);
@@ -220,7 +220,7 @@ async function harvestRecent(tracks) {
   let count = 0;
   for (const item of (data.items || [])) {
     const t = extractTrack(item.track);
-    if (t) { tracks.set(t.spotify_id, t); count++; }
+    if (t) { tracks.set(t.source_id, t); count++; }
   }
   console.log(`  ${count} recent tracks`);
 }
@@ -233,14 +233,14 @@ async function insertTracks(tracks) {
   console.log(`\nInserting ${trackList.length} unique tracks...`);
 
   // Check which already exist
-  const spotifyIds = trackList.map(t => t.spotify_id);
+  const spotifyIds = trackList.map(t => t.source_id);
   const { data: existing } = await supabase
     .from("fabric_tracks")
-    .select("spotify_id")
-    .in("spotify_id", spotifyIds);
+    .select("source_id")
+    .in("source_id", spotifyIds);
 
-  const existingIds = new Set((existing || []).map(t => t.spotify_id));
-  const newTracks = trackList.filter(t => !existingIds.has(t.spotify_id));
+  const existingIds = new Set((existing || []).map(t => t.source_id));
+  const newTracks = trackList.filter(t => !existingIds.has(t.source_id));
 
   console.log(`  Already in DB: ${existingIds.size}`);
   console.log(`  New to insert: ${newTracks.length}`);
@@ -255,7 +255,7 @@ async function insertTracks(tracks) {
   let inserted = 0;
   for (let i = 0; i < newTracks.length; i += BATCH) {
     const batch = newTracks.slice(i, i + BATCH).map(t => ({
-      spotify_id: t.spotify_id,
+      source_id: t.source_id,
       title: t.title,
       artist: t.artist,
       duration_ms: t.duration_ms,
@@ -270,7 +270,7 @@ async function insertTracks(tracks) {
       for (const row of batch) {
         const { error: singleErr } = await supabase
           .from("fabric_tracks")
-          .upsert(row, { onConflict: "spotify_id", ignoreDuplicates: true });
+          .upsert(row, { onConflict: "source_id", ignoreDuplicates: true });
         if (!singleErr) inserted++;
       }
     } else {

@@ -3,21 +3,18 @@ import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import crypto from "crypto";
 
 const SCOPES = [
-  "read_products",
   "read_orders",
+  "read_products",
   "read_customers",
   "read_inventory",
   "read_analytics",
-  "read_fulfillments",
-  "read_shipping",
-  "read_locations",
 ].join(",");
 
 export async function GET(request) {
   try {
     const url = new URL(request.url);
     const tokenFromParam = url.searchParams.get("token");
-    const shop = url.searchParams.get("shop"); // e.g. "mystore.myshopify.com"
+    const shop = url.searchParams.get("shop");
     const authHeader = request.headers.get("Authorization");
     const tokenFromHeader = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const token = tokenFromParam || tokenFromHeader;
@@ -28,9 +25,6 @@ export async function GET(request) {
     if (!shop) {
       return NextResponse.redirect(new URL("/settings/sources?shopify=error&reason=no_shop", request.url));
     }
-
-    // Validate shop format
-    const cleanShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
 
     let user;
     const { data, error } = await getSupabaseAdmin().auth.getUser(token);
@@ -50,8 +44,11 @@ export async function GET(request) {
       }
     }
 
+    // Normalize shop domain
+    const shopDomain = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+
     // HMAC-signed state
-    const payload = JSON.stringify({ userId: user.id, shop: cleanShop, nonce: crypto.randomUUID() });
+    const payload = JSON.stringify({ userId: user.id, shop: shopDomain, nonce: crypto.randomUUID() });
     const hmac = crypto.createHmac("sha256", process.env.SHOPIFY_CLIENT_SECRET);
     hmac.update(payload);
     const signature = hmac.digest("hex");
@@ -66,7 +63,7 @@ export async function GET(request) {
       state,
     });
 
-    return NextResponse.redirect(`https://${cleanShop}/admin/oauth/authorize?${params.toString()}`);
+    return NextResponse.redirect(`https://${shopDomain}/admin/oauth/authorize?${params.toString()}`);
   } catch (err) {
     console.error("[shopify/connect]", err.message);
     return NextResponse.redirect(new URL("/settings/sources?shopify=error&reason=server", request.url));

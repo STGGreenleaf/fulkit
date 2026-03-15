@@ -3282,30 +3282,399 @@ function VaultTab() {
   );
 }
 
+function ConfirmDeleteModal({ type, onCancel, onConfirm, loading }) {
+  const [confirmText, setConfirmText] = useState("");
+  const isAccount = type === "account";
+  const canConfirm = confirmText === "DELETE";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.5)",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-6)",
+          width: "100%",
+          maxWidth: 400,
+          margin: "0 var(--space-4)",
+        }}
+      >
+        <div style={{ fontSize: "var(--font-size-base)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-3)" }}>
+          {isAccount ? "Delete your account" : "Delete all your data"}
+        </div>
+        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>
+          {isAccount
+            ? "This will permanently delete ALL your data AND your Fülkit account. You will be signed out and cannot recover this account."
+            : "This will permanently delete all your notes, conversations, actions, memories, preferences, and integration connections. Your account will remain active but empty."}
+        </div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+          Type <span style={{ fontWeight: "var(--font-weight-semibold)" }}>DELETE</span> to confirm
+        </div>
+        <input
+          type="text"
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder="DELETE"
+          style={{
+            width: "100%",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--color-text)",
+            fontSize: "var(--font-size-sm)",
+            fontFamily: "var(--font-primary)",
+            marginBottom: "var(--space-4)",
+            boxSizing: "border-box",
+          }}
+        />
+        <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "var(--space-2) var(--space-4)",
+              background: "transparent",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--color-text-secondary)",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              fontFamily: "var(--font-primary)",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!canConfirm || loading}
+            style={{
+              padding: "var(--space-2) var(--space-4)",
+              background: "transparent",
+              border: `1px solid ${canConfirm ? "var(--color-error)" : "var(--color-border)"}`,
+              borderRadius: "var(--radius-sm)",
+              color: canConfirm ? "var(--color-error)" : "var(--color-text-dim)",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              fontFamily: "var(--font-primary)",
+              cursor: canConfirm && !loading ? "pointer" : "default",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? "Deleting..." : isAccount ? "Delete account" : "Delete everything"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PrivacyTab() {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, signOut } = useAuth();
   const isDev = user?.isDev;
 
   const [counts, setCounts] = useState(null);
+  const [expandedSection, setExpandedSection] = useState(null);
+  const [sectionData, setSectionData] = useState({});
+  const [loadingSection, setLoadingSection] = useState(null);
+  const [deleteModalType, setDeleteModalType] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     if (!user || isDev) return;
 
     async function fetchCounts() {
-      const [notes, actions, preferences] = await Promise.all([
+      const [notes, actions, conversations, prefsResult, notesContent, messagesContent] = await Promise.all([
         supabase.from("notes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("actions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("preferences").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("preferences").select("key").eq("user_id", user.id),
+        supabase.from("notes").select("content").eq("user_id", user.id),
+        supabase.from("conversations").select("id").eq("user_id", user.id),
       ]);
+      const allKeys = (prefsResult.data || []).map((p) => p.key);
+      const memoryKeys = allKeys.filter((k) => k.startsWith("memory:"));
+      const onboardingKeys = allKeys.filter((k) => ["tone", "frequency", "chronotype"].includes(k));
+
+      // Estimate storage from note content + message content
+      let storageBytes = 0;
+      (notesContent.data || []).forEach((n) => { if (n.content) storageBytes += new Blob([n.content]).size; });
+
+      // Fetch messages for user's conversations
+      const convIds = (messagesContent.data || []).map((c) => c.id);
+      if (convIds.length) {
+        const { data: msgs } = await supabase.from("messages").select("content").in("conversation_id", convIds);
+        (msgs || []).forEach((m) => { if (m.content) storageBytes += new Blob([m.content]).size; });
+      }
+
       setCounts({
         notes: notes.count || 0,
         actions: actions.count || 0,
-        preferences: preferences.count || 0,
-        conversations: 0, // Phase 2.6
+        conversations: conversations.count || 0,
+        memories: memoryKeys.length,
+        onboarding: onboardingKeys.length,
+        storageBytes,
       });
     }
     fetchCounts();
   }, [user, isDev]);
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
+  function relativeDate(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "yesterday";
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  async function loadSectionData(section) {
+    if (sectionData[section]) return;
+    setLoadingSection(section);
+
+    if (section === "notes") {
+      const { data } = await supabase
+        .from("notes")
+        .select("id, title, source, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setSectionData((prev) => ({ ...prev, notes: data || [] }));
+    }
+
+    if (section === "conversations") {
+      const { data } = await supabase
+        .from("conversations")
+        .select("id, title, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setSectionData((prev) => ({ ...prev, conversations: data || [] }));
+    }
+
+    if (section === "memories") {
+      const { data } = await supabase
+        .from("preferences")
+        .select("key, value, updated_at")
+        .eq("user_id", user.id)
+        .like("key", "memory:%");
+      setSectionData((prev) => ({ ...prev, memories: data || [] }));
+    }
+
+    if (section === "onboarding") {
+      const { data } = await supabase
+        .from("preferences")
+        .select("key, value, updated_at")
+        .eq("user_id", user.id)
+        .in("key", ["tone", "frequency", "chronotype"]);
+      setSectionData((prev) => ({ ...prev, onboarding: data || [] }));
+    }
+
+    setLoadingSection(null);
+  }
+
+  function toggleSection(section) {
+    if (expandedSection === section) {
+      setExpandedSection(null);
+    } else {
+      setExpandedSection(section);
+      loadSectionData(section);
+    }
+  }
+
+  async function forgetMemory(key) {
+    await supabase.from("preferences").delete().eq("user_id", user.id).eq("key", key);
+    setSectionData((prev) => ({
+      ...prev,
+      memories: (prev.memories || []).filter((m) => m.key !== key),
+    }));
+    setCounts((prev) => prev ? { ...prev, memories: Math.max(0, prev.memories - 1) } : prev);
+  }
+
+  async function handleDelete() {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const endpoint = deleteModalType === "account" ? "/api/account" : "/api/account/data";
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Delete failed");
+      }
+      if (deleteModalType === "account") {
+        setDeleteModalType(null);
+        await signOut();
+      } else {
+        setDeleteModalType(null);
+        setCounts({ notes: 0, actions: 0, conversations: 0, memories: 0, onboarding: 0 });
+        setSectionData({});
+        setExpandedSection(null);
+      }
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  const expandableRowStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "var(--space-2-5) 0",
+    borderBottom: "1px solid var(--color-border-light)",
+    cursor: "pointer",
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid var(--color-border-light)",
+    width: "100%",
+    textAlign: "left",
+    fontFamily: "var(--font-primary)",
+  };
+
+  const itemRowStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "var(--space-1-5) 0",
+    borderBottom: "1px solid var(--color-border-light)",
+    fontSize: "var(--font-size-xs)",
+    color: "var(--color-text-muted)",
+  };
+
+  function pluralize(count, singular, plural) {
+    return `${count} ${count === 1 ? singular : (plural || singular + "s")}`;
+  }
+
+  function renderExpandableRow(label, count, singular, section, plural) {
+    const isOpen = expandedSection === section;
+    const isLoading = loadingSection === section;
+    const items = sectionData[section] || [];
+
+    return (
+      <div key={section}>
+        <button onClick={() => toggleSection(section)} style={expandableRowStyle}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
+              {label}
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+              {counts ? pluralize(count, singular, plural) : "Loading..."}
+            </div>
+          </div>
+          <ChevronRight
+            size={14}
+            strokeWidth={2}
+            style={{
+              color: "var(--color-text-dim)",
+              transition: "transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+              transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+              flexShrink: 0,
+            }}
+          />
+        </button>
+        <Drawer open={isOpen}>
+          <div style={{ maxHeight: 300, overflowY: "auto", padding: "var(--space-2) var(--space-1)" }}>
+            {isLoading && (
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>Loading...</div>
+            )}
+            {!isLoading && items.length === 0 && (
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>Nothing here yet.</div>
+            )}
+            {!isLoading && section === "notes" && items.map((item) => (
+              <div key={item.id} style={itemRowStyle}>
+                <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "var(--space-2)" }}>
+                  {(item.title || "Untitled").slice(0, 40)}
+                </div>
+                <div style={{ flexShrink: 0, display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                  {item.source && (
+                    <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {item.source}
+                    </span>
+                  )}
+                  <span style={{ color: "var(--color-text-dim)" }}>{relativeDate(item.created_at)}</span>
+                </div>
+              </div>
+            ))}
+            {!isLoading && section === "conversations" && items.map((item) => (
+              <div key={item.id} style={itemRowStyle}>
+                <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "var(--space-2)" }}>
+                  {(item.title || "Untitled").slice(0, 50)}
+                </div>
+                <span style={{ flexShrink: 0, color: "var(--color-text-dim)" }}>{relativeDate(item.created_at)}</span>
+              </div>
+            ))}
+            {!isLoading && section === "memories" && items.map((item) => (
+              <div key={item.key} style={itemRowStyle}>
+                <div style={{ flex: 1, overflow: "hidden", marginRight: "var(--space-2)" }}>
+                  <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)" }}>
+                    {item.key.replace("memory:", "")}
+                  </span>
+                  <span style={{ marginLeft: "var(--space-2)", color: "var(--color-text-dim)" }}>
+                    {(item.value || "").slice(0, 60)}{item.value?.length > 60 ? "..." : ""}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); forgetMemory(item.key); }}
+                  style={{
+                    flexShrink: 0,
+                    padding: "2px var(--space-2)",
+                    background: "transparent",
+                    border: "1px solid var(--color-error-soft)",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--color-error)",
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Forget
+                </button>
+              </div>
+            ))}
+            {!isLoading && section === "onboarding" && items.map((item) => (
+              <div key={item.key} style={itemRowStyle}>
+                <span style={{ fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>
+                  {item.key}
+                </span>
+                <span style={{ color: "var(--color-text-dim)" }}>{item.value}</span>
+              </div>
+            ))}
+            {!isLoading && section === "onboarding" && items.length > 0 && (
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", padding: "var(--space-2) 0", fontStyle: "italic" }}>
+                Re-take onboarding to change these.
+              </div>
+            )}
+          </div>
+        </Drawer>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -3315,16 +3684,19 @@ function PrivacyTab() {
           <>
             <Row label="Notes stored" value="1,247 notes across 4 sources" />
             <Row label="AI conversations" value="34 conversations" />
-            <Row label="Learned preferences" value="6 active preferences" />
+            <Row label="Memories" value="12 memories" />
+            <Row label="Onboarding answers" value="3 answers" />
             <Row label="Action items" value="18 actions tracked" />
             <Row label="Storage used" value="12.4 MB" />
           </>
         ) : (
           <>
-            <Row label="Notes stored" value={counts ? `${counts.notes} note${counts.notes !== 1 ? "s" : ""}` : "Loading..."} />
-            <Row label="AI conversations" value={counts ? `${counts.conversations} conversation${counts.conversations !== 1 ? "s" : ""}` : "Loading..."} />
-            <Row label="Learned preferences" value={counts ? `${counts.preferences} preference${counts.preferences !== 1 ? "s" : ""}` : "Loading..."} />
+            {renderExpandableRow("Notes stored", counts?.notes, "note", "notes")}
+            {renderExpandableRow("Conversations", counts?.conversations, "conversation", "conversations")}
+            {renderExpandableRow("Memories", counts?.memories, "memory", "memories", "memories")}
+            {renderExpandableRow("Onboarding answers", counts?.onboarding, "answer", "onboarding")}
             <Row label="Action items" value={counts ? `${counts.actions} action${counts.actions !== 1 ? "s" : ""}` : "Loading..."} />
+            <Row label="Storage used" value={counts ? formatBytes(counts.storageBytes) : "Loading..."} />
           </>
         )}
       </Card>
@@ -3335,7 +3707,7 @@ function PrivacyTab() {
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
             <Download size={16} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
             <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
-              Export everything as markdown. No lock-in, ever.
+              Export everything as JSON. No lock-in, ever.
             </div>
           </div>
           <button
@@ -3381,16 +3753,27 @@ function PrivacyTab() {
             label="Delete all data"
             value="Permanently remove everything Fülkit knows about you."
             actionLabel="Delete"
+            action={() => setDeleteModalType("all-data")}
             danger
           />
           <Row
             label="Delete account"
             value="Cancel subscription and remove your account."
             actionLabel="Delete account"
+            action={() => setDeleteModalType("account")}
             danger
           />
         </Card>
       </div>
+
+      {deleteModalType && (
+        <ConfirmDeleteModal
+          type={deleteModalType}
+          onCancel={() => { setDeleteModalType(null); setDeleteError(null); }}
+          onConfirm={handleDelete}
+          loading={deleteLoading}
+        />
+      )}
     </div>
   );
 }

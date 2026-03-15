@@ -1,13 +1,15 @@
 // Model C: Fulkit-managed storage via Supabase
 // Plaintext notes, encrypted at rest by Supabase
 
-export async function readFulkitNotes(supabase) {
-  const { data, error } = await supabase
+export async function readFulkitNotes(supabase, userId) {
+  const query = supabase
     .from("notes")
     .select("id, title, content, pinned, context_mode, source, folder, updated_at")
     .eq("encrypted", false)
     .order("pinned", { ascending: false })
     .order("updated_at", { ascending: false });
+  if (userId) query.eq("user_id", userId);
+  const { data, error } = await query;
 
   if (error) {
     console.error("[vault-fulkit] Read error:", error.message);
@@ -16,13 +18,15 @@ export async function readFulkitNotes(supabase) {
   return data || [];
 }
 
-export async function readEncryptedNotes(supabase) {
-  const { data, error } = await supabase
+export async function readEncryptedNotes(supabase, userId) {
+  const query = supabase
     .from("notes")
     .select("id, title, content, iv, pinned, context_mode, source, folder, updated_at")
     .eq("encrypted", true)
     .order("pinned", { ascending: false })
     .order("updated_at", { ascending: false });
+  if (userId) query.eq("user_id", userId);
+  const { data, error } = await query;
 
   if (error) {
     console.error("[vault-fulkit] Read encrypted error:", error.message);
@@ -74,36 +78,44 @@ export async function importEncryptedNote({ title, ciphertext, iv, source, folde
   return data;
 }
 
-export async function deleteNote(id, supabase) {
-  const { error } = await supabase.from("notes").delete().eq("id", id);
+export async function deleteNote(id, supabase, userId) {
+  const query = supabase.from("notes").delete().eq("id", id);
+  if (userId) query.eq("user_id", userId);
+  const { error } = await query;
   if (error) throw new Error(error.message);
 }
 
-export async function getNoteCount(supabase) {
-  const { count, error } = await supabase
+export async function getNoteCount(supabase, userId) {
+  const query = supabase
     .from("notes")
     .select("id", { count: "exact", head: true });
+  if (userId) query.eq("user_id", userId);
+  const { count, error } = await query;
   if (error) return 0;
   return count || 0;
 }
 
-export async function updateContextMode(id, mode, supabase) {
-  const { error } = await supabase
+export async function updateContextMode(id, mode, supabase, userId) {
+  const query = supabase
     .from("notes")
     .update({
       context_mode: mode,
       pinned: mode === "always",
     })
     .eq("id", id);
+  if (userId) query.eq("user_id", userId);
+  const { error } = await query;
   if (error) throw new Error(error.message);
 }
 
-export async function searchNotes(query, supabase) {
+export async function searchNotes(query, supabase, userId) {
   const q = query.toLowerCase();
-  const { data, error } = await supabase
+  const dbQuery = supabase
     .from("notes")
     .select("id, title, content, context_mode, source, folder")
     .order("updated_at", { ascending: false });
+  if (userId) dbQuery.eq("user_id", userId);
+  const { data, error } = await dbQuery;
 
   if (error) {
     console.error("[vault-fulkit] searchNotes error:", error.message);
@@ -123,12 +135,14 @@ export async function searchNotes(query, supabase) {
   }));
 }
 
-export async function listNotes(supabase) {
-  const { data, error } = await supabase
+export async function listNotes(supabase, userId) {
+  const query = supabase
     .from("notes")
     .select("id, title, context_mode, source, folder, updated_at, content")
     .order("context_mode", { ascending: true })
     .order("updated_at", { ascending: false });
+  if (userId) query.eq("user_id", userId);
+  const { data, error } = await query;
 
   if (error) {
     console.error("[vault-fulkit] listNotes error:", error.message);

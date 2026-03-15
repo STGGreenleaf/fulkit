@@ -111,6 +111,7 @@ export default function ChatContent({ isPopout = false }) {
   // ─── UI-only state ────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
   const [historyWidth, setHistoryWidth] = useState(260);
+  const [topicFilter, setTopicFilter] = useState(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
@@ -231,8 +232,11 @@ export default function ChatContent({ isPopout = false }) {
 
   const handleSend = useCallback(async () => {
     const text = chat.input.trim();
-    console.log("[handleSend] fired", { text: text?.slice(0, 30), streaming: chat.streaming });
-    if (!text) return;
+    console.log("[handleSend] fired", { text: text?.slice(0, 30), streaming: chat.streaming, ts: Date.now() });
+    if (!text || chat.streaming) {
+      if (chat.streaming) console.warn("[handleSend] blocked — already streaming");
+      return;
+    }
 
     // Handle /recall command locally
     const recallMatch = text.match(/^\/recall\s+(.+)/i);
@@ -252,6 +256,10 @@ export default function ChatContent({ isPopout = false }) {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (e.repeat) {
+        console.warn("[handleKeyDown] blocked — key repeat");
+        return;
+      }
       handleSend();
     }
   };
@@ -1337,7 +1345,7 @@ export default function ChatContent({ isPopout = false }) {
               </>
             )}
 
-            {/* History panel */}
+            {/* History + Recall Rail */}
             {showHistory && (
               <>
                 <div
@@ -1374,7 +1382,64 @@ export default function ChatContent({ isPopout = false }) {
                     userSelect: draggingRef.current ? "none" : "auto",
                   }}
                 >
-                  {chat.conversations.map((conv) => (
+                  {/* Recall rail — topic chips */}
+                  {(() => {
+                    const allTopics = {};
+                    chat.conversations.forEach((c) => {
+                      (c.topics || []).forEach((t) => {
+                        allTopics[t] = (allTopics[t] || 0) + 1;
+                      });
+                    });
+                    const sorted = Object.entries(allTopics)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 10);
+                    if (sorted.length === 0) return null;
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: "var(--space-2)", paddingBottom: "var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
+                        {topicFilter && (
+                          <button
+                            onClick={() => setTopicFilter(null)}
+                            style={{
+                              fontSize: "var(--font-size-2xs)",
+                              padding: "2px 6px",
+                              borderRadius: "var(--radius-sm)",
+                              border: "1px solid var(--color-border)",
+                              background: "transparent",
+                              color: "var(--color-text-muted)",
+                              cursor: "pointer",
+                              fontFamily: "var(--font-primary)",
+                            }}
+                          >
+                            All
+                          </button>
+                        )}
+                        {sorted.map(([topic, count]) => (
+                          <button
+                            key={topic}
+                            onClick={() => setTopicFilter(topicFilter === topic ? null : topic)}
+                            style={{
+                              fontSize: "var(--font-size-2xs)",
+                              padding: "2px 6px",
+                              borderRadius: "var(--radius-sm)",
+                              border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border-light)"}`,
+                              background: topicFilter === topic ? "var(--color-bg-alt)" : "transparent",
+                              color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-dim)",
+                              cursor: "pointer",
+                              fontFamily: "var(--font-primary)",
+                              fontWeight: topicFilter === topic ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                            }}
+                          >
+                            {topic}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Conversation list (filtered by topic if selected) */}
+                  {chat.conversations
+                    .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
+                    .map((conv) => (
                     <button
                       key={conv.id}
                       onClick={() => chat.openConversation(conv)}
@@ -1417,6 +1482,11 @@ export default function ChatContent({ isPopout = false }) {
                       </span>
                     </button>
                   ))}
+                  {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
+                      No conversations with this topic.
+                    </div>
+                  )}
                 </div>
               </>
             )}

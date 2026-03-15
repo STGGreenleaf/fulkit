@@ -305,7 +305,7 @@ async function processTrack(track) {
   let pcmPath = null;
   try {
     // Download
-    pcmPath = searchAndDownload(track.spotify_id, track.artist, track.title);
+    pcmPath = searchAndDownload(track.source_id, track.artist, track.title);
 
     // Analyze
     const { timeline, durationSec } = analyzeAudio(pcmPath);
@@ -346,7 +346,7 @@ async function processTrack(track) {
     // Always cleanup
     if (pcmPath && existsSync(pcmPath)) unlinkSync(pcmPath);
     // Also clean up any stray wav files
-    const wavPath = `${TMP_DIR}/${track.spotify_id}.wav`;
+    const wavPath = `${TMP_DIR}/${track.source_id}.wav`;
     if (existsSync(wavPath)) unlinkSync(wavPath);
   }
 }
@@ -376,7 +376,7 @@ async function main() {
   // Fetch pending tracks
   const { data: tracks, error } = await supabase
     .from("fabric_tracks")
-    .select("id, spotify_id, title, artist, duration_ms, retry_count")
+    .select("id, source_id, title, artist, duration_ms, retry_count")
     .eq("status", "pending")
     .lt("retry_count", 3)
     .order("priority", { ascending: false })

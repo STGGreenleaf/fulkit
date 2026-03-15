@@ -11,6 +11,7 @@ import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
 import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
+import { getEmbedding } from "../embed/route";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -1592,7 +1593,7 @@ const MEMORY_TOOLS = [
 const NOTES_TOOLS = [
   {
     name: "notes_search",
-    description: "Search the user's notes and documents by keyword. Returns matching note titles and excerpts. Use when the user asks about something that might be in their notes, or when you need to reference their stored knowledge.",
+    description: "Search the user's notes and documents. Uses semantic similarity when available, with keyword fallback. Returns matching note titles and excerpts. Use when the user asks about something that might be in their notes, or when you need to reference their stored knowledge.",
     input_schema: {
       type: "object",
       properties: {
@@ -1753,35 +1754,66 @@ async function executeMemoryTool(name, input, userId) {
   throw new Error(`Unknown memory tool: ${name}`);
 }
 
-// Execute notes search
+// Execute notes search — semantic (vector) first, keyword fallback
 async function executeNoteSearch(input, userId) {
   const admin = getSupabaseAdmin();
-  // Sanitize query — strip SQL LIKE wildcards, cap length
   const sanitized = (input.query || "").replace(/[%_]/g, "").slice(0, 200);
   if (!sanitized.trim()) throw new Error("Search query is required");
-  const q = `%${sanitized}%`;
   const limit = Math.min(input.limit || 5, 20);
 
-  const { data, error } = await admin.from("notes")
-    .select("id, title, content, source, folder, created_at")
-    .eq("user_id", userId)
-    .eq("encrypted", false)
-    .or(`title.ilike.${q},content.ilike.${q}`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  // Try semantic search first (requires OPENAI_API_KEY + pgvector)
+  let results = [];
+  let searchMethod = "keyword";
 
-  if (error) throw new Error(error.message);
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const queryEmbedding = await getEmbedding(sanitized);
+      const { data, error } = await admin.rpc("match_notes", {
+        query_embedding: JSON.stringify(queryEmbedding),
+        match_user_id: userId,
+        match_threshold: 0.5,
+        match_count: limit,
+      });
+      if (!error && data?.length > 0) {
+        results = data.map(n => ({
+          id: n.id,
+          title: n.title,
+          source: n.source,
+          folder: n.folder,
+          excerpt: n.content?.slice(0, 500) + (n.content?.length > 500 ? "..." : ""),
+          similarity: Math.round(n.similarity * 100) / 100,
+        }));
+        searchMethod = "semantic";
+      }
+    } catch (e) {
+      console.log("[notes_search] Semantic search failed, falling back to keyword:", e.message);
+    }
+  }
 
-  const results = (data || []).map(n => ({
-    id: n.id,
-    title: n.title,
-    source: n.source,
-    folder: n.folder,
-    excerpt: n.content?.slice(0, 500) + (n.content?.length > 500 ? "..." : ""),
-    created_at: n.created_at,
-  }));
+  // Keyword fallback — if semantic returned nothing or wasn't available
+  if (results.length === 0) {
+    const q = `%${sanitized}%`;
+    const { data, error } = await admin.from("notes")
+      .select("id, title, content, source, folder, created_at")
+      .eq("user_id", userId)
+      .eq("encrypted", false)
+      .or(`title.ilike.${q},content.ilike.${q}`)
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  return { count: results.length, query: input.query, results };
+    if (error) throw new Error(error.message);
+
+    results = (data || []).map(n => ({
+      id: n.id,
+      title: n.title,
+      source: n.source,
+      folder: n.folder,
+      excerpt: n.content?.slice(0, 500) + (n.content?.length > 500 ? "..." : ""),
+      created_at: n.created_at,
+    }));
+  }
+
+  return { count: results.length, query: input.query, method: searchMethod, results };
 }
 
 // Read full note content by ID
@@ -1823,6 +1855,15 @@ async function executeNoteCreate(input, userId, conversationId) {
     .select("id, title, folder")
     .single();
   if (error) throw new Error(error.message);
+
+  // Fire-and-forget: embed the new note for semantic search
+  if (process.env.OPENAI_API_KEY) {
+    const embText = `${title}\n\n${content}`.trim();
+    getEmbedding(embText).then(emb => {
+      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch(() => {});
+    }).catch(() => {});
+  }
+
   return { saved: true, id: data.id, title: data.title, folder: data.folder };
 }
 
@@ -1842,6 +1883,15 @@ async function executeNoteUpdate(input, userId) {
     .single();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Note not found or not owned by user");
+
+  // Fire-and-forget: re-embed the updated note
+  if (process.env.OPENAI_API_KEY) {
+    const embText = `${data.title || ""}\n\n${content}`.trim();
+    getEmbedding(embText).then(emb => {
+      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch(() => {});
+    }).catch(() => {});
+  }
+
   return { updated: true, id: data.id, title: data.title, folder: data.folder };
 }
 
@@ -2074,6 +2124,17 @@ export async function POST(request) {
     // Build system prompt
     let system = BASE_PROMPT;
     system += `\n\nToday is ${userToday}. The user's timezone is ${timezone || "UTC"}.`;
+
+    // BYOK nudge — if non-BYOK user is burning through Fül, mention it naturally (once per session)
+    if (userId && !config.isByok && profile?.role !== "owner") {
+      const SEAT_LIMITS_SYS = { standard: 450, pro: 800, free: 100 };
+      const fuelLimit = SEAT_LIMITS_SYS[profile?.seat_type || "free"] || 100;
+      const fuelUsed = profile?.messages_this_month || 0;
+      const fuelPct = fuelLimit > 0 ? fuelUsed / fuelLimit : 0;
+      if (fuelPct >= 0.8) {
+        system += `\n\n## Low Fuel Notice\nThe user has used ${fuelUsed} of ${fuelLimit} messages this month (${Math.round(fuelPct * 100)}%). If it comes up naturally — not forced — mention that they can drop in their own Anthropic API key in Settings to get unlimited messages with no monthly cap. Don't lead with this, don't repeat it, and don't make it the focus. Just a gentle mention if the moment is right.`;
+      }
+    }
 
     // Inject preferences
     if (prefs && prefs.length > 0) {

@@ -23,6 +23,26 @@ export async function POST(request) {
       return Response.json({ error: "name and tracks required" }, { status: 400 });
     }
 
+    // Gate: all tracks must be analyzed before publishing
+    const trackSourceIds = tracks.map((t) => t.source_id).filter(Boolean);
+    if (trackSourceIds.length > 0) {
+      const { data: analyzed } = await db
+        .from("fabric_tracks")
+        .select("source_id, status")
+        .in("source_id", trackSourceIds);
+
+      const analyzedMap = {};
+      for (const t of (analyzed || [])) analyzedMap[t.source_id] = t.status;
+
+      const unanalyzed = trackSourceIds.filter((id) => analyzedMap[id] !== "complete");
+      if (unanalyzed.length > 0) {
+        return Response.json({
+          error: `${unanalyzed.length} track${unanalyzed.length > 1 ? "s" : ""} not yet analyzed. Run Fabric analysis first.`,
+          unanalyzed,
+        }, { status: 400 });
+      }
+    }
+
     // Create crate with source='set'
     const { data: crate, error: crateErr } = await db
       .from("crates")

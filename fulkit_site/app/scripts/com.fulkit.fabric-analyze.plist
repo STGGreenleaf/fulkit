@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.fulkit.fabric-analyze</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/greenleafhome/.local/share/fnm/node-versions/v24.11.0/installation/bin/node</string>
+		<string>/Users/greenleafhome/Desktop/fulkit/fulkit_site/app/scripts/batch-analyze.mjs</string>
+		<string>--limit</string>
+		<string>10</string>
+		<string>--delay</string>
+		<string>3</string>
+	</array>
+
+	<key>StartInterval</key>
+	<integer>300</integer>
+
+	<key>StandardOutPath</key>
+	<string>/tmp/fabric-analyze.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/tmp/fabric-analyze.err</string>
+
+	<key>RunAtLoad</key>
+	<false/>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+	</dict>
+</dict>
+</plist>

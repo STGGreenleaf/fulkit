@@ -7,14 +7,14 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const stateParam = searchParams.get("state");
-    const shopParam = searchParams.get("shop");
+    const shop = searchParams.get("shop");
 
-    if (!code || !stateParam) {
+    if (!code || !stateParam || !shop) {
       return NextResponse.redirect(new URL("/settings/sources?shopify=error&reason=missing_params", request.url));
     }
 
     // Verify HMAC-signed state
-    let userId, shop;
+    let userId, expectedShop;
     try {
       const decoded = JSON.parse(Buffer.from(stateParam, "base64url").toString());
       const hmac = crypto.createHmac("sha256", process.env.SHOPIFY_CLIENT_SECRET);
@@ -23,9 +23,14 @@ export async function GET(request) {
       if (expected !== decoded.signature) throw new Error("Invalid signature");
       const parsed = JSON.parse(decoded.payload);
       userId = parsed.userId;
-      shop = parsed.shop;
+      expectedShop = parsed.shop;
     } catch {
       return NextResponse.redirect(new URL("/settings/sources?shopify=error&reason=bad_state", request.url));
+    }
+
+    // Verify shop matches
+    if (shop !== expectedShop) {
+      return NextResponse.redirect(new URL("/settings/sources?shopify=error&reason=shop_mismatch", request.url));
     }
 
     // Exchange code for permanent access token

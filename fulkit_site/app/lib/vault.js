@@ -87,7 +87,7 @@ export function VaultProvider({ children }) {
     if (storageMode === "local" && directoryHandle) {
       return await readLocalVault(directoryHandle);
     } else if (storageMode === "encrypted" && cryptoKey) {
-      const encrypted = await readEncryptedNotes(supabase);
+      const encrypted = await readEncryptedNotes(supabase, user?.id);
       const decrypted = await Promise.all(
         encrypted.map(async (n) => {
           try {
@@ -100,7 +100,7 @@ export function VaultProvider({ children }) {
       );
       return decrypted.filter(Boolean);
     } else if (storageMode === "fulkit") {
-      return await readFulkitNotes(supabase);
+      return await readFulkitNotes(supabase, user?.id);
     }
     return [];
   }, [storageMode, directoryHandle, cryptoKey]);
@@ -159,7 +159,7 @@ export function VaultProvider({ children }) {
     }
 
     if (storageMode === "encrypted" || storageMode === "fulkit") {
-      return await listNotes(supabase);
+      return await listNotes(supabase, user?.id);
     }
 
     return [];
@@ -168,7 +168,7 @@ export function VaultProvider({ children }) {
   // Toggle context_mode for a note (Models B & C only)
   const updateNoteMode = useCallback(async (noteId, mode) => {
     if (isDev || storageMode === "local") return;
-    await updateContextMode(noteId, mode, supabase);
+    await updateContextMode(noteId, mode, supabase, user?.id);
   }, [isDev, storageMode]);
 
   // Search all notes (including off) by title/folder — for /recall
@@ -178,7 +178,7 @@ export function VaultProvider({ children }) {
         .map((n, i) => ({ id: `dev-${i}`, title: n.title, content: n.content, context_mode: "available", folder: "", tokenEstimate: estimateTokens(n.content) }));
     }
     if (storageMode === "local") return [];
-    return await searchNotes(query, supabase);
+    return await searchNotes(query, supabase, user?.id);
   }, [isDev, storageMode]);
 
   // Model A: connect vault directory

@@ -3,8 +3,8 @@
  * Fabric Pipeline — Analyze a track
  *
  * Usage:
- *   node scripts/analyze-track.mjs <spotify_id> [--title "Song"] [--artist "Artist"] [--duration 240000]
- *   node scripts/analyze-track.mjs <spotify_id> --youtube "https://youtube.com/watch?v=..."
+ *   node scripts/analyze-track.mjs <source_id> [--title "Song"] [--artist "Artist"] [--duration 240000]
+ *   node scripts/analyze-track.mjs <source_id> --youtube "https://youtube.com/watch?v=..."
  *
  * What it does:
  *   1. Searches YouTube for the track (or uses provided URL)
@@ -62,7 +62,7 @@ function hzToBin(hz) {
 // ═══════════════════════════════════════════
 const args = process.argv.slice(2);
 if (args.length === 0) {
-  console.log("Usage: node scripts/analyze-track.mjs <spotify_id> [--title \"Song\"] [--artist \"Artist\"] [--duration 240000] [--youtube \"URL\"]");
+  console.log("Usage: node scripts/analyze-track.mjs <source_id> [--title \"Song\"] [--artist \"Artist\"] [--duration 240000] [--youtube \"URL\"]");
   process.exit(0);
 }
 
@@ -383,7 +383,7 @@ async function uploadToSupabase(spotifyId, title, artist, durationMs, timeline) 
   const { data: track, error: trackErr } = await supabase
     .from("fabric_tracks")
     .upsert({
-      spotify_id: spotifyId,
+      source_id: spotifyId,
       composite_key: compositeKey,
       title,
       artist,
@@ -391,7 +391,7 @@ async function uploadToSupabase(spotifyId, title, artist, durationMs, timeline) 
       status: "complete",
       analyzed_at: new Date().toISOString(),
       analysis_version: 1,
-    }, { onConflict: "spotify_id" })
+    }, { onConflict: "source_id" })
     .select("id")
     .single();
 
@@ -400,7 +400,7 @@ async function uploadToSupabase(spotifyId, title, artist, durationMs, timeline) 
     const { data: track2, error: trackErr2 } = await supabase
       .from("fabric_tracks")
       .upsert({
-        spotify_id: spotifyId,
+        source_id: spotifyId,
         composite_key: compositeKey,
         title,
         artist,

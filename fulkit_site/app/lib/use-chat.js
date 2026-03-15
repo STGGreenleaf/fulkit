@@ -4,6 +4,53 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-writeback";
 
+// Lightweight topic extraction from message text — no API call
+const STOPWORDS = new Set([
+  "i", "me", "my", "we", "our", "you", "your", "he", "she", "it", "they", "them",
+  "a", "an", "the", "this", "that", "these", "those", "is", "are", "was", "were",
+  "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would",
+  "could", "should", "may", "might", "shall", "can", "need", "must", "to", "of",
+  "in", "for", "on", "with", "at", "by", "from", "as", "into", "about", "like",
+  "through", "after", "before", "between", "out", "up", "down", "if", "or", "and",
+  "but", "not", "no", "so", "than", "too", "very", "just", "also", "now", "then",
+  "here", "there", "when", "where", "how", "what", "which", "who", "whom", "why",
+  "all", "each", "every", "both", "few", "more", "most", "some", "any", "other",
+  "new", "old", "get", "got", "make", "made", "go", "going", "know", "think",
+  "take", "come", "see", "look", "want", "give", "use", "find", "tell", "ask",
+  "work", "seem", "feel", "try", "leave", "call", "keep", "let", "put", "show",
+  "set", "say", "said", "thing", "things", "way", "lot", "really", "much", "many",
+  "well", "back", "still", "even", "right", "only", "good", "great", "first",
+  "last", "long", "own", "same", "big", "sure", "able", "hey", "yeah", "yes",
+  "ok", "okay", "thanks", "thank", "please", "hi", "hello", "one", "two", "don",
+  "doesn", "didn", "won", "wouldn", "couldn", "shouldn", "isn", "aren", "wasn",
+  "weren", "hasn", "haven", "ll", "ve", "re", "im", "its",
+]);
+
+function extractTopics(messages) {
+  const userText = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content || "")
+    .join(" ");
+
+  const words = userText
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+
+  // Count frequency
+  const freq = {};
+  for (const w of words) {
+    freq[w] = (freq[w] || 0) + 1;
+  }
+
+  // Sort by frequency * word length (favor specific terms over short common ones)
+  return Object.entries(freq)
+    .sort((a, b) => (b[1] * b[0].length) - (a[1] * a[0].length))
+    .slice(0, 8)
+    .map(([word]) => word);
+}
+
 /**
  * useChat — core messaging hook for Fulkit chat.
  *
@@ -32,7 +79,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
     if (!user || isDev) return;
     const { data } = await supabase
       .from("conversations")
-      .select("id, title, updated_at")
+      .select("id, title, updated_at, topics")
       .or("type.eq.chat,type.is.null")
       .order("updated_at", { ascending: false })
       .limit(50);
@@ -151,6 +198,10 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       return;
     }
 
+    // Lock immediately — prevents rapid-fire double-sends
+    streamingRef.current = true;
+    console.log("[sendMessage] lock acquired, streamingRef → true");
+
     // On retry, remove the failed assistant message before re-sending
     if (isRetry) {
       setMessages((prev) => {
@@ -213,6 +264,8 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       let context = [];
       let annotatedMessages = null;
       try {
+        const ctxStart = Date.now();
+        console.log("[sendMessage] context assembly starting...");
         const ctxResult = await Promise.race([
           assembleContext(text, apiMessages),
           new Promise((_, reject) =>
@@ -221,6 +274,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         ]);
         context = ctxResult.context;
         annotatedMessages = ctxResult.annotatedMessages;
+        console.log("[sendMessage] context assembled in", Date.now() - ctxStart, "ms —", context.length, "items");
       } catch (err) {
         console.warn("[sendMessage] context assembly failed/timed out:", err.message);
       }
@@ -244,7 +298,9 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         }, 30000);
       }
 
-      console.log("[sendMessage] firing authFetch →", "/api/chat");
+      const msgCount = apiMessages.length;
+      console.log("[sendMessage] firing authFetch → /api/chat", { msgCount, hasContext: context.length > 0, convId });
+      const fetchStart = Date.now();
       const res = await authFetch("/api/chat", {
         method: "POST",
         headers: {
@@ -262,7 +318,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         signal: controller.signal,
       });
 
-      console.log("[sendMessage] response status:", res.status);
+      console.log("[sendMessage] response status:", res.status, "in", Date.now() - fetchStart, "ms");
       if (!res.ok) {
         clearTimeout(safetyTimeout); // kill watchdog
         const err = await res.json().catch(() => ({}));
@@ -297,6 +353,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
 
         if (!firstChunkReceived) {
           firstChunkReceived = true;
+          console.log("[sendMessage] first chunk received —", Date.now() - fetchStart, "ms after fetch");
           setStreamPhase("streaming");
         }
         resetWatchdog();
@@ -396,6 +453,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         });
       }
     } finally {
+      console.log("[sendMessage] finally — unlocking, response length:", fullResponse?.length || 0);
       setStreaming(false);
       setStreamPhase(null);
       setStreamStartedAt(null);
@@ -422,6 +480,22 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
           if (mountedRef.current) loadConversations();
         })
         .catch(() => {});
+
+      // Extract topics and save to conversation (fire-and-forget)
+      if (!isDev) {
+        try {
+          const currentMessages = [...messages, { role: "user", content: text }, { role: "assistant", content: fullResponse }];
+          const topics = extractTopics(currentMessages);
+          if (topics.length > 0) {
+            supabase
+              .from("conversations")
+              .update({ topics })
+              .eq("id", convId)
+              .then(() => {})
+              .catch(() => {});
+          }
+        } catch {}
+      }
 
       // Write-back artifacts
       if (!isDev) {

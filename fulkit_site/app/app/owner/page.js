@@ -42,6 +42,7 @@ const TABS = [
   { id: "og", label: "OG Creator", icon: Image },
   { id: "fabric", label: "Fabric", icon: Music },
   { id: "playground", label: "Playground", icon: GamepadDirectional },
+  { id: "notes", label: "Notes", icon: FileText },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -176,6 +177,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "og" && <PlaceholderTab title="OG Image Creator" description="Template editor with brand tokens. Coming soon." />}
         {tab === "fabric" && <FabricTab />}
         {tab === "playground" && <PlaygroundTab />}
+        {tab === "notes" && <NotesTab />}
       </div>
     </div>
   );
@@ -1417,6 +1419,82 @@ function DesignExportButton() {
     }}>
       {copied ? <><CheckIcon size={11} /> Copied</> : <><Copy size={11} /> Copy JSON</>}
     </button>
+  );
+}
+
+const OWNER_NOTES = [
+  {
+    category: "Email",
+    items: [
+      { name: "ImprovMX", url: "https://improvmx.com", note: "Email forwarding — *@fulkit.app catch-all → CollinGreenleaf@Gmail.com. Free tier. MX + SPF records in Vercel DNS." },
+    ],
+  },
+  {
+    category: "Hosting & DNS",
+    items: [
+      { name: "Vercel", url: "https://vercel.com", note: "Hosting, deployments, DNS for fulkit.app. Pro plan." },
+      { name: "Cloudflare", url: "https://dash.cloudflare.com", note: "Domain connected but DNS stays on Vercel. Don't move nameservers." },
+    ],
+  },
+  {
+    category: "Database & Auth",
+    items: [
+      { name: "Supabase", url: "https://supabase.com/dashboard", note: "Postgres + Auth + RLS. Project: zwezmthocrbavowrprzl." },
+    ],
+  },
+  {
+    category: "AI",
+    items: [
+      { name: "Anthropic", url: "https://console.anthropic.com", note: "Claude API — main chat engine." },
+      { name: "OpenAI", url: "https://platform.openai.com", note: "text-embedding-3-small — note embeddings for semantic search." },
+    ],
+  },
+  {
+    category: "Integrations",
+    items: [
+      { name: "Stripe", url: "https://dashboard.stripe.com", note: "Payments — account 'Fulkit'. sk_live_ key wired directly (no Connect OAuth yet)." },
+      { name: "Spotify", url: "https://developer.spotify.com", note: "Development Mode — only Collin's account. Needs Extended Quota Mode for other users." },
+      { name: "GitHub", url: "https://github.com/settings/developers", note: "OAuth app for repo access integration." },
+      { name: "Trello", url: "https://trello.com/power-ups/admin", note: "Power-Up for board integration." },
+    ],
+  },
+  {
+    category: "Domain",
+    items: [
+      { name: "GoDaddy", url: "https://www.godaddy.com", note: "Domain registrar for fulkit.app + fullkit.app. Nameservers pointed to Vercel." },
+    ],
+  },
+];
+
+function NotesTab() {
+  return (
+    <div>
+      <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-4)" }}>
+        Owner Notes
+      </h2>
+      <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
+        Service providers, credentials locations, and operational notes.
+      </p>
+      {OWNER_NOTES.map((cat) => (
+        <div key={cat.category} style={{ marginBottom: "var(--space-6)" }}>
+          <h3 style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "var(--space-3)" }}>
+            {cat.category}
+          </h3>
+          {cat.items.map((item) => (
+            <div key={item.name} style={{ padding: "var(--space-3) var(--space-4)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-1)" }}>
+                <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textDecoration: "none", borderBottom: "1px solid var(--color-border)" }}>
+                  {item.name}
+                </a>
+              </div>
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", margin: 0, lineHeight: "var(--line-height-relaxed)" }}>
+                {item.note}
+              </p>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 

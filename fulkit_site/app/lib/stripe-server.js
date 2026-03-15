@@ -8,7 +8,7 @@ const STRIPE_API = "https://api.stripe.com/v1";
 // Reuse authenticateUser from numbrly (same pattern)
 export { authenticateUser } from "./numbrly";
 
-// Get Stripe tokens from integrations table
+// Get Stripe tokens — check integrations table first, fall back to env var
 export async function getStripeToken(userId) {
   const { data } = await getSupabaseAdmin()
     .from("integrations")
@@ -16,10 +16,15 @@ export async function getStripeToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "stripe")
     .single();
-  return data || null;
+  if (data) return data;
+  // Fall back to env var (owner's own Stripe account)
+  if (process.env.STRIPE_CLIENT_SECRET) {
+    return { access_token: process.env.STRIPE_CLIENT_SECRET, metadata: {} };
+  }
+  return null;
 }
 
-// Stripe Connect tokens don't expire (unless deauthorized)
+// Stripe API calls — uses stored token or env var secret key
 export async function stripeFetch(userId, endpoint, options = {}) {
   const integration = await getStripeToken(userId);
   if (!integration) return { error: "Not connected", status: 401 };

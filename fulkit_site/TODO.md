@@ -54,14 +54,14 @@
 ## Phase 2.55: Privacy Transparency Dashboard
 
 - [x] Real counts from DB (notes, conversations, actions, preferences)
-- [ ] Expandable rows — click to see every item Fulkit knows
+- [x] Expandable rows — click to see every item Fulkit knows
   - Notes: title, source, date
-  - Conversations: title, date (after Phase 2.6)
-  - Learned preferences: key/value with toggle to forget
-  - Onboarding answers: view/edit what you told Fulkit
-- [ ] Real storage used (Supabase query)
-- [x] Export wires to real data (JSON vault export via /api/export)
-- [ ] Delete wires to real data (cascade with confirmation)
+  - Conversations: title, date
+  - Learned preferences: key/value with "Forget" button
+  - Onboarding answers: view what you told Fulkit
+- [x] Real storage used (Supabase query — notes + messages content size)
+- [x] Export wires to real data (JSON vault export via /api/export — now includes conversations, messages, preferences)
+- [x] Delete wires to real data (cascade with confirmation — type DELETE modal, /api/account/data + /api/account)
 
 ## Phase 2.6: Chat Persistence + Recall Rail
 
@@ -70,10 +70,11 @@
 - [x] Auto-save every message to DB as it streams
 - [x] Auto-title conversations (first message truncated to 60 chars)
 - [x] Click to resume any past conversation (History panel)
-- [ ] Right rail — contextual recall strip, not a conversation list
-  - Last ~10 topics as filter chips (auto-tagged from conversation content)
-  - Click a chip to surface every conversation where that topic came up
-  - Quick-reference for part numbers, addresses, names mentioned recently
+- [x] Right rail — contextual recall strip with topic filter chips
+  - Topics auto-extracted from user messages (keyword frequency, no API cost)
+  - Saved to conversations.topics column (text[] with GIN index)
+  - Top ~10 topics shown as filter chips above conversation list
+  - Click a chip to filter history to conversations containing that topic
   - Feeds into Phase 5 context engine (semantic tags, not folders)
 
 ## Phase 3: Action List (The dogfood tool)
@@ -108,9 +109,10 @@
 - [x] Claude reads uploaded files as conversation context (vault context injection)
 - [x] Cross-session context — recent conversation titles injected into system prompt
 - [x] Smart memory behavior — Claude auto-saves facts, uses memories naturally
-- [ ] File/note uploads with embedding (vector search via pgvector)
-- [ ] Codebase ingestion — feed repo files so Claude knows the project
-- [ ] RAG pipeline — semantic similarity search (requires embeddings)
+- [x] File/note uploads with embedding (vector search via pgvector) — embed route, auto-embed on create/update, batch embed endpoint
+- [x] RAG pipeline — semantic similarity search (match_notes RPC, notes_search uses vector first with keyword fallback)
+- [ ] Codebase ingestion — feed repo files so Claude knows the project (infrastructure ready — import + embed)
+- [x] Run pgvector-setup.sql in Supabase + add OPENAI_API_KEY to Vercel
 
 ## Phase 5.5: Pricing & Payments
 
@@ -121,7 +123,7 @@
 - [ ] Hot seat mechanic — 4 msgs/month threshold, 30-day auto-revoke
 - [ ] Referral credit system — $1/mo per active referral (credits not cash)
 - [ ] Referral page in settings — link, active referrals, credit balance
-- [ ] BYOK nudge whisper for heavy burners
+- [x] BYOK nudge whisper for heavy burners (system prompt injection at 80%+ usage)
 
 ## Phase 6: MCP Integrations (plug in everything)
 
@@ -146,11 +148,11 @@
 
 ## Fabric Isolation (Multi-API Music Player)
 
-- [ ] Abstract Spotify-specific calls behind a provider interface
+- [x] Abstract Spotify-specific calls behind a provider interface (Session 16 — SpotifyProvider class, fabric-server.js dispatcher, DB migration spotify_id → source_id + provider column)
+- [x] Unified player architecture — PlaybackEngine.js polymorphic wrapper, engines/SpotifyEngine.js, makeTrackUri/makePlaylistUri helpers, connectedProviders state
 - [ ] Isolate Fabric as standalone feature (like Threads) — own routes, own lib, own components
-- [ ] SoundCloud API integration
+- [ ] SoundCloud API integration (pending — Artist Pro account + API approval needed)
 - [ ] Apple Music API integration
-- [ ] Unified player that works across all music APIs
 
 ---
 
@@ -159,10 +161,10 @@
 - [x] Fül cap enforcement — monthly reset, client gate, gauge colors, Bestie voice copy
 - [ ] Stripe integration — subscriptions (Standard $7/mo, Pro $15/mo), webhook → flip seat_type, checkout/portal flow
 - [ ] Free trial flow — 30 days free (100 msgs/mo, all features), auto-prompt to subscribe at expiry
-- [ ] handle_new_user trigger — set seat_type='free' explicitly on signup (currently NULL → defaults to free via code)
-- [ ] Fabric auto-analyze (dev) — Mac launchd cron, every 5 min, processes pending tracks
+- [x] handle_new_user trigger — set seat_type='free' explicitly on signup (scripts/handle-new-user-trigger.sql)
+- [x] Fabric auto-analyze (dev) — launchd plist every 5 min, runs batch-analyze.mjs --limit 10
 - [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg, daemon watches for pending tracks. Shared DB = analyze once, serve all users.
-- [ ] Public mixes — ensure all tracks in a crate are analyzed before it can be published
+- [x] Public mixes — gate: all tracks must have status='complete' before publish
 - [ ] Spotify App — request Extended Quota Mode (currently Development Mode, only Collin's account)
 - [ ] Domain verification for Spotify OAuth redirect URI
 
