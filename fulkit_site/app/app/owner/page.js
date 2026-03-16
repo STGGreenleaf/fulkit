@@ -698,8 +698,10 @@ function DeveloperTab() {
     }
   };
 
-  const contextBroadcasts = broadcasts.filter(b => b.channel === "context");
-  const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement");
+  const [showInactive, setShowInactive] = useState(false);
+  const contextBroadcasts = broadcasts.filter(b => b.channel === "context" && (showInactive || b.active));
+  const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement" && (showInactive || b.active));
+  const inactiveCount = broadcasts.filter(b => !b.active).length;
 
   // ── Doc Import ──
   const [importing, setImporting] = useState(false);
@@ -985,6 +987,19 @@ function DeveloperTab() {
 
       {/* ── RIGHT: Outgoing ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+
+        {inactiveCount > 0 && (
+          <button
+            onClick={() => setShowInactive(!showInactive)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
+              textAlign: "right", padding: 0,
+            }}
+          >
+            {showInactive ? "Hide inactive" : `Show inactive (${inactiveCount})`}
+          </button>
+        )}
 
         {/* Context Docs */}
         <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>

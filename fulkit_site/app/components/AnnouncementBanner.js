@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Megaphone } from "lucide-react";
+import { useAuth } from "../lib/auth";
 
 const STORAGE_KEY = "fulkit.announcements.seen";
 
@@ -22,9 +23,16 @@ function markSeen(id) {
 }
 
 export default function AnnouncementBanner() {
+  const { isOnboarded, profile } = useAuth();
   const [announcement, setAnnouncement] = useState(null);
 
   useEffect(() => {
+    // Don't show announcements until onboarded + 48h grace period
+    if (!isOnboarded) return;
+    const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0;
+    const gracePeriod = 48 * 60 * 60 * 1000;
+    if (createdAt && Date.now() - createdAt < gracePeriod) return;
+
     fetch("/api/broadcasts/active")
       .then(r => r.ok ? r.json() : [])
       .then(items => {
@@ -33,7 +41,7 @@ export default function AnnouncementBanner() {
         if (unseen.length > 0) setAnnouncement(unseen[0]);
       })
       .catch(() => {});
-  }, []);
+  }, [isOnboarded, profile?.created_at]);
 
   const dismiss = () => {
     if (announcement) markSeen(announcement.id);
