@@ -3737,6 +3737,7 @@ function QuestionsTab() {
         if (tier.questions?.length > 0) {
           const rows = tier.questions.map((q, qi) => ({
             tier_id: newTier.id,
+            question_id: q.id || `q_${Date.now()}_${qi}`,
             text: q.text || "",
             why: q.why || "",
             type: q.type || "text_input",
@@ -3797,6 +3798,7 @@ function QuestionsTab() {
       .from("questions")
       .insert({
         tier_id: tierId,
+        question_id: `q_${Date.now()}`,
         text: "",
         why: "",
         type: "text_input",
@@ -4453,6 +4455,7 @@ function ImportModal({ tiers: existingTiers, onClose, onDone }) {
           const hasOptions = (t) => t === "single_select" || t === "multi_select" || t === "choice";
           const rows = tier.questions.map((q, qi) => ({
             tier_id: newTier.id,
+            question_id: q.id || `q_${Date.now()}_${qi}`,
             text: q.text || "",
             why: q.why || "",
             type: q.type || "text_input",
@@ -4578,7 +4581,7 @@ function ExportModal({ tiers, questions, onClose }) {
         .filter((q) => q.tier_id === t.id)
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
         .map((q) => ({
-          id: q.id,
+          id: q.question_id,
           text: q.text,
           why: q.why || "",
           type: q.type,
