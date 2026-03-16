@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./auth";
 
 const FabricContext = createContext(null);
@@ -78,6 +79,8 @@ function makePlaylistUri(id, provider = "spotify") {
 export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const isDev = user?.isDev;
+  const pathname = usePathname();
+  const onFabricPage = pathname === "/fabric" || pathname === "/fabricproto";
 
   const [connected, setConnected] = useState(isDev ? true : false);
   const [connectedProviders, setConnectedProviders] = useState(isDev ? { spotify: true } : {});
@@ -332,9 +335,10 @@ export function FabricProvider({ children }) {
     };
 
     fetchNowPlaying();
-    pollRef.current = setInterval(fetchNowPlaying, 4000);
+    const interval = onFabricPage ? 4000 : 30000;
+    pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [connected, accessToken, isDev, apiFetch]);
+  }, [connected, accessToken, isDev, apiFetch, onFabricPage]);
 
   // Smooth progress interpolation between polls
   useEffect(() => {

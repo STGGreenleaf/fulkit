@@ -878,7 +878,7 @@ function DeveloperTab() {
               cursor: !title.trim() || !content.trim() ? "default" : "pointer",
             }}
           >
-            Save
+            {channel === "announcement" ? "Send" : "Save"}
           </button>
         </div>
       </div>
@@ -912,7 +912,7 @@ function DeveloperTab() {
         title="Edit"
         style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
       >
-        <Code size={12} />
+        <FileText size={12} />
       </button>
       <button
         onClick={() => deleteBroadcast(b.id)}
