@@ -590,6 +590,17 @@ function DevSwitch({ label, description, on, onToggle }) {
 function DeveloperTab() {
   const { accessToken, compactMode, setCompactMode } = useAuth();
 
+  // ── Inspector switch ──
+  const [inspector, setInspectorState] = useState(false);
+  useEffect(() => {
+    setInspectorState(localStorage.getItem("fulkit-inspector") === "true");
+  }, []);
+  const setInspector = (val) => {
+    setInspectorState(val);
+    localStorage.setItem("fulkit-inspector", String(val));
+    window.dispatchEvent(new StorageEvent("storage", { key: "fulkit-inspector", newValue: String(val) }));
+  };
+
   // ── Tickets ──
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
@@ -1047,6 +1058,8 @@ function DeveloperTab() {
             Switches
           </div>
           <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
+          <div style={{ height: "var(--space-2)" }} />
+          <DevSwitch label="Inspector" description="CSS selector overlay + Ctrl+Shift+I" on={inspector} onToggle={() => setInspector(!inspector)} />
         </div>
 
         {/* Quick Facts */}

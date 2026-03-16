@@ -4,6 +4,7 @@ import { AuthProvider } from "../lib/auth";
 import { VaultProvider } from "../lib/vault";
 import { SandboxProvider } from "../lib/sandbox";
 import { FabricProvider } from "../lib/fabric";
+import DevInspector from "../components/DevInspector";
 import QuickCapture from "../components/QuickCapture";
 import InstallPrompt from "../components/InstallPrompt";
 import AnnouncementBanner from "../components/AnnouncementBanner";
@@ -84,6 +85,7 @@ export default function RootLayout({ children }) {
               <QuickCapture />
               <InstallPrompt />
               <AnnouncementBanner />
+              <DevInspector />
             </FabricProvider>
             </SandboxProvider>
           </VaultProvider>
