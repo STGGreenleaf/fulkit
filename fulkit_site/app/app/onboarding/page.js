@@ -394,7 +394,7 @@ export default function Onboarding() {
     } else {
       // All tiers complete
       if (user?.id && !user.isNew) {
-        await supabase
+        const { error: profileErr } = await supabase
           .from("profiles")
           .update({
             onboarded: true,
@@ -402,6 +402,11 @@ export default function Onboarding() {
             updated_at: new Date().toISOString(),
           })
           .eq("id", user.id);
+        if (profileErr) {
+          console.error("[onboarding] profile update failed:", profileErr.message);
+          // Retry once — this is critical
+          await supabase.from("profiles").update({ onboarded: true, current_tier: 5, updated_at: new Date().toISOString() }).eq("id", user.id);
+        }
         fetchProfile(user.id);
         track("onboarding_complete", { tiers_completed: tiers.length });
 
@@ -483,6 +488,11 @@ export default function Onboarding() {
   // ─── Voice input ───
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) return;
+    // Stop any existing recognition first to prevent listener accumulation
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -492,7 +502,8 @@ export default function Onboarding() {
       const transcript = Array.from(e.results).map((r) => r[0].transcript).join("");
       setTextVal(transcript);
     };
-    recognition.onend = () => setListening(false);
+    recognition.onend = () => { setListening(false); recognitionRef.current = null; };
+    recognition.onerror = () => { setListening(false); recognitionRef.current = null; };
     recognition.start();
     recognitionRef.current = recognition;
     setListening(true);
@@ -500,7 +511,7 @@ export default function Onboarding() {
 
   const stopListening = () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     setListening(false);

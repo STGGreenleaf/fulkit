@@ -56,6 +56,7 @@ export default function Dashboard() {
       .or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString())
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true })
+      .abortSignal(AbortSignal.timeout(5000))
       .then(({ data, error }) => {
         if (error) console.error("[home] actions query failed:", error.message);
         if (data) setActions(data);
@@ -68,6 +69,7 @@ export default function Dashboard() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5)
+      .abortSignal(AbortSignal.timeout(5000))
       .then(({ data, error }) => {
         if (error) console.error("[home] notes query failed:", error.message);
         if (data) setNotes(data);

@@ -31,15 +31,21 @@ export async function GET(request) {
     }
 
     // Gather context for generation
-    const [actionsRes, memoriesRes, convosRes] = await Promise.all([
-      admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString()).order("priority").limit(10),
-      admin.from("preferences").select("key, value").eq("user_id", user.id).like("key", "memory:%"),
-      admin.from("conversations").select("title, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5),
-    ]);
+    let actionsRes, memoriesRes, convosRes;
+    try {
+      [actionsRes, memoriesRes, convosRes] = await Promise.all([
+        admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString()).order("priority").limit(10),
+        admin.from("preferences").select("key, value").eq("user_id", user.id).like("key", "memory:%"),
+        admin.from("conversations").select("title, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5),
+      ]);
+    } catch (err) {
+      console.error("[whispers] context fetch failed:", err.message);
+      return Response.json({ whispers: [], cached: false });
+    }
 
-    const actions = (actionsRes.data || []).map(a => a.title);
-    const memories = (memoriesRes.data || []).map(m => `${m.key.replace("memory:", "")}: ${m.value}`);
-    const recentTopics = (convosRes.data || []).map(c => c.title);
+    const actions = (actionsRes?.data || []).map(a => a.title);
+    const memories = (memoriesRes?.data || []).map(m => `${m.key.replace("memory:", "")}: ${m.value}`);
+    const recentTopics = (convosRes?.data || []).map(c => c.title);
 
     // If no context at all, return empty
     if (actions.length === 0 && memories.length === 0 && recentTopics.length === 0) {
