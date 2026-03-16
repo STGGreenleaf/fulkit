@@ -33,12 +33,16 @@ export function AuthProvider({ children }) {
 
   // Fetch profile from DB + check for context (onboarded OR has notes)
   const fetchProfile = useCallback(async (userId) => {
-    const [{ data }, { count }, { data: progressRows }, { data: tierRows }] = await Promise.all([
+    const results = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num"),
-      supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num"),
+      supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num").then(r => r).catch(() => ({ data: null })),
+      supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num").then(r => r).catch(() => ({ data: null })),
     ]);
+    const { data } = results[0];
+    const { count } = results[1];
+    const progressRows = results[2]?.data;
+    const tierRows = results[3]?.data;
     if (data) {
       setProfile(data);
       setHasContext(data.onboarded === true || (count || 0) > 0);
@@ -79,18 +83,22 @@ export function AuthProvider({ children }) {
       }
 
       // Check for recently connected integrations (within last 24hr)
-      const { data: recentInteg } = await supabase
-        .from("integrations")
-        .select("provider, connected_at")
-        .eq("user_id", userId)
-        .gte("connected_at", new Date(Date.now() - 86400000).toISOString())
-        .order("connected_at", { ascending: false })
-        .limit(1);
-      if (recentInteg?.length > 0) {
-        const dismissed = localStorage.getItem(`fulkit-integ-tip-${recentInteg[0].provider}`);
-        if (!dismissed) {
-          setNewlyConnectedIntegration(recentInteg[0]);
+      try {
+        const { data: recentInteg } = await supabase
+          .from("integrations")
+          .select("provider, created_at")
+          .eq("user_id", userId)
+          .gte("created_at", new Date(Date.now() - 86400000).toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (recentInteg?.length > 0) {
+          const dismissed = localStorage.getItem(`fulkit-integ-tip-${recentInteg[0].provider}`);
+          if (!dismissed) {
+            setNewlyConnectedIntegration(recentInteg[0]);
+          }
         }
+      } catch {
+        // integrations table may not have expected columns — skip silently
       }
     }
     return data;
