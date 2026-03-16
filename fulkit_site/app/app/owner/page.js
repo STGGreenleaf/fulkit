@@ -814,7 +814,7 @@ function DeveloperTab() {
   const BroadcastEditor = ({ item, onSave, onCancel }) => {
     const [title, setTitle] = useState(item.title || "");
     const [content, setContent] = useState(item.content || "");
-    const [channel, setChannel] = useState(item.channel || "context");
+    const channel = item.channel || "context";
     return (
       <div style={{ padding: "var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", marginTop: "var(--space-2)" }}>
         <input
@@ -841,21 +841,7 @@ function DeveloperTab() {
             resize: "vertical", lineHeight: "var(--line-height-relaxed)",
           }}
         />
-        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-          <select
-            value={channel}
-            onChange={e => setChannel(e.target.value)}
-            style={{
-              padding: "var(--space-1) var(--space-2)",
-              background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
-              borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-              color: "var(--color-text)", fontFamily: "var(--font-mono)",
-            }}
-          >
-            <option value="context">Context</option>
-            <option value="announcement">Announcement</option>
-          </select>
-          <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", justifyContent: "flex-end" }}>
           <button
             onClick={onCancel}
             style={{
