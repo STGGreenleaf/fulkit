@@ -61,10 +61,6 @@ const TABS = [
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
 
-/* DevToggle removed — now lives in Developer tab Switches card */
-  );
-}
-
 /* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
 export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
   const { compactMode } = useAuth();
