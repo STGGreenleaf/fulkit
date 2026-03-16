@@ -6,6 +6,7 @@ import { SandboxProvider } from "../lib/sandbox";
 import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
 import QuickCapture from "../components/QuickCapture";
+import InstallPrompt from "../components/InstallPrompt";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
 const DEFAULTS = {
@@ -62,6 +63,11 @@ export async function generateMetadata() {
     },
     other: {
       "theme-color": "#EFEDE8",
+      "mobile-web-app-capable": "yes",
+      "apple-mobile-web-app-capable": "yes",
+      "apple-mobile-web-app-status-bar-style": "default",
+      "apple-mobile-web-app-title": "F\u00FClkit",
+      "application-name": "F\u00FClkit",
     },
   };
 }
@@ -76,11 +82,15 @@ export default function RootLayout({ children }) {
             <FabricProvider>
               {children}
               <QuickCapture />
+              <InstallPrompt />
               <DevInspector />
             </FabricProvider>
             </SandboxProvider>
           </VaultProvider>
         </AuthProvider>
+        <Script id="sw-register" strategy="afterInteractive">
+          {`if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`}
+        </Script>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-94X31TXJ2F" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-94X31TXJ2F');`}
