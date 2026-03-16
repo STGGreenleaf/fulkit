@@ -65,7 +65,7 @@ export default function InstallPrompt() {
   return (
     <div style={{
       position: "fixed",
-      bottom: "var(--space-4)",
+      top: "var(--space-4)",
       right: "var(--space-4)",
       width: 340,
       background: "var(--color-bg-elevated)",

@@ -7,6 +7,7 @@ import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
 import QuickCapture from "../components/QuickCapture";
 import InstallPrompt from "../components/InstallPrompt";
+import AnnouncementBanner from "../components/AnnouncementBanner";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
 const DEFAULTS = {
@@ -83,6 +84,7 @@ export default function RootLayout({ children }) {
               {children}
               <QuickCapture />
               <InstallPrompt />
+              <AnnouncementBanner />
               <DevInspector />
             </FabricProvider>
             </SandboxProvider>

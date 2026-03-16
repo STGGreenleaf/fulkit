@@ -2192,6 +2192,22 @@ export async function POST(request) {
       system += `\n\n## User's Notes & Context\n${contextIntro}\n<user-documents>\n${contextBlock}\n</user-documents>`;
     }
 
+    // Inject owner broadcast context docs (silent — users never see these, but Fülkit knows them)
+    try {
+      const { data: broadcasts } = await getSupabaseAdmin()
+        .from("vault_broadcasts")
+        .select("title, content")
+        .eq("channel", "context")
+        .eq("active", true)
+        .abortSignal(AbortSignal.timeout(5000));
+      if (broadcasts && broadcasts.length > 0) {
+        const broadcastBlock = broadcasts
+          .map(b => `### ${b.title}\n${b.content}`)
+          .join("\n\n");
+        system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
+      }
+    } catch { /* proceed without broadcasts */ }
+
     // Square inventory instructions
     if (sqToken) {
       system += `\n\n## Square Inventory Updates

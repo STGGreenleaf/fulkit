@@ -29,6 +29,10 @@ import {
   Code,
   Smartphone,
   Monitor,
+  Megaphone,
+  Eye,
+  EyeOff,
+  Send,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -635,6 +639,68 @@ function DeveloperTab() {
 
   const openCount = tickets.filter(t => t.status === "open").length;
 
+  // ── Broadcasts ──
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [broadcastsLoading, setBroadcastsLoading] = useState(true);
+  const [editingBroadcast, setEditingBroadcast] = useState(null);
+  const [newBroadcast, setNewBroadcast] = useState(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setBroadcasts(data || []))
+      .catch(() => {})
+      .finally(() => setBroadcastsLoading(false));
+  }, [accessToken]);
+
+  const saveBroadcast = async (broadcast) => {
+    const isNew = !broadcast.id;
+    const method = isNew ? "POST" : "PATCH";
+    const res = await fetch("/api/owner/broadcasts", {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(broadcast),
+    });
+    if (res.ok) {
+      const saved = await res.json();
+      if (isNew) {
+        setBroadcasts(prev => [saved, ...prev]);
+      } else {
+        setBroadcasts(prev => prev.map(b => b.id === saved.id ? saved : b));
+      }
+      setEditingBroadcast(null);
+      setNewBroadcast(null);
+    }
+  };
+
+  const toggleBroadcastActive = async (b) => {
+    const res = await fetch("/api/owner/broadcasts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ id: b.id, active: !b.active }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setBroadcasts(prev => prev.map(x => x.id === updated.id ? updated : x));
+    }
+  };
+
+  const deleteBroadcast = async (id) => {
+    const res = await fetch("/api/owner/broadcasts", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setBroadcasts(prev => prev.filter(b => b.id !== id));
+      if (editingBroadcast?.id === id) setEditingBroadcast(null);
+    }
+  };
+
+  const contextBroadcasts = broadcasts.filter(b => b.channel === "context");
+  const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement");
+
   // ── Doc Import ──
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -744,10 +810,124 @@ function DeveloperTab() {
     }
   };
 
+  // ── Broadcast editor inline ──
+  const BroadcastEditor = ({ item, onSave, onCancel }) => {
+    const [title, setTitle] = useState(item.title || "");
+    const [content, setContent] = useState(item.content || "");
+    const [channel, setChannel] = useState(item.channel || "context");
+    return (
+      <div style={{ padding: "var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", marginTop: "var(--space-2)" }}>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Title"
+          style={{
+            width: "100%", padding: "var(--space-2)", marginBottom: "var(--space-2)",
+            background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
+            color: "var(--color-text)", fontFamily: "var(--font-primary)",
+          }}
+        />
+        <textarea
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          placeholder="Markdown content..."
+          rows={5}
+          style={{
+            width: "100%", padding: "var(--space-2)", marginBottom: "var(--space-2)",
+            background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
+            borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+            color: "var(--color-text)", fontFamily: "var(--font-mono)",
+            resize: "vertical", lineHeight: "var(--line-height-relaxed)",
+          }}
+        />
+        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+          <select
+            value={channel}
+            onChange={e => setChannel(e.target.value)}
+            style={{
+              padding: "var(--space-1) var(--space-2)",
+              background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+              color: "var(--color-text)", fontFamily: "var(--font-mono)",
+            }}
+          >
+            <option value="context">Context</option>
+            <option value="announcement">Announcement</option>
+          </select>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "var(--space-1) var(--space-3)", background: "transparent",
+              border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave({ ...(item.id ? { id: item.id } : {}), title, content, channel })}
+            disabled={!title.trim() || !content.trim()}
+            style={{
+              padding: "var(--space-1) var(--space-3)",
+              background: !title.trim() || !content.trim() ? "var(--color-bg-elevated)" : "var(--color-text)",
+              color: !title.trim() || !content.trim() ? "var(--color-text-muted)" : "var(--color-bg)",
+              border: "none", borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+              cursor: !title.trim() || !content.trim() ? "default" : "pointer",
+            }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const BroadcastItem = ({ b }) => (
+    <div style={{
+      display: "flex", alignItems: "center", gap: "var(--space-2)",
+      padding: "var(--space-2) var(--space-2-5)",
+      borderBottom: "1px solid var(--color-border-light)",
+      opacity: b.active ? 1 : 0.5,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {b.title}
+        </div>
+        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+          {new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+        </div>
+      </div>
+      <button
+        onClick={() => toggleBroadcastActive(b)}
+        title={b.active ? "Deactivate" : "Activate"}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+      >
+        {b.active ? <Eye size={12} /> : <EyeOff size={12} />}
+      </button>
+      <button
+        onClick={() => setEditingBroadcast(editingBroadcast?.id === b.id ? null : b)}
+        title="Edit"
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+      >
+        <Code size={12} />
+      </button>
+      <button
+        onClick={() => deleteBroadcast(b.id)}
+        title="Delete"
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
+
   return (
-    <div>
-      {/* ── Tickets ── */}
-      <div style={{ marginBottom: "var(--space-6)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: "var(--space-4)", alignItems: "start" }}>
+      {/* ── LEFT: Tickets ── */}
+      <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
           <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
             Tickets
@@ -803,118 +983,193 @@ function DeveloperTab() {
         )}
       </div>
 
-      {/* ── Doc Import ── */}
-      <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-          <FileText size={13} strokeWidth={2} color="var(--color-text-muted)" />
-          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-            Doc Import
-          </span>
-        </div>
-        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
-          Discover and import project docs from GitHub so F\u00FClkit can reference them in chat.
-        </p>
+      {/* ── RIGHT: Outgoing ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
 
-        {!discovered ? (
-          <button
-            onClick={discoverDocs}
-            disabled={loadingFiles}
-            style={{
-              display: "flex", alignItems: "center", gap: "var(--space-2)",
-              padding: "var(--space-2) var(--space-4)",
-              background: loadingFiles ? "var(--color-bg-elevated)" : "var(--color-accent)",
-              color: loadingFiles ? "var(--color-text-muted)" : "var(--color-text-inverse)",
-              border: "none", borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
-              cursor: loadingFiles ? "wait" : "pointer",
-            }}
-          >
-            <RefreshCw size={14} strokeWidth={2} style={loadingFiles ? { animation: "spin 1s linear infinite" } : {}} />
-            {loadingFiles ? "Discovering..." : "Discover docs from GitHub"}
-          </button>
-        ) : (
-          <>
-            <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
-              <button
-                onClick={() => setSelectedFiles(new Set(mdFiles.map(f => f.path)))}
-                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer" }}
-              >
-                Select all
-              </button>
-              <button
-                onClick={() => setSelectedFiles(new Set())}
-                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer" }}
-              >
-                Deselect all
-              </button>
-              <button
-                onClick={discoverDocs}
-                disabled={loadingFiles}
-                style={{ padding: "var(--space-1) var(--space-3)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer", marginLeft: "auto" }}
-              >
-                <RefreshCw size={10} strokeWidth={2} style={{ marginRight: 4, verticalAlign: "middle", ...(loadingFiles ? { animation: "spin 1s linear infinite" } : {}) }} />
-                Refresh
-              </button>
-            </div>
-
-            <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: "var(--space-3)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
-              {mdFiles.map((file) => {
-                const name = file.path.split("/").pop();
-                const dir = file.path.includes("Audio_Crate") ? "Audio_Crate/" : file.path.includes("/md/") ? "md/" : "";
-                return (
-                  <label
-                    key={file.path}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "var(--space-2)",
-                      padding: "var(--space-2) var(--space-3)",
-                      borderBottom: "1px solid var(--color-border-light)",
-                      cursor: "pointer",
-                      background: selectedFiles.has(file.path) ? "var(--color-bg-elevated)" : "transparent",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFiles.has(file.path)}
-                      onChange={() => toggleFile(file.path)}
-                      style={{ accentColor: "var(--color-text-primary)" }}
-                    />
-                    <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-primary)", flex: 1 }}>
-                      {dir && <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)" }}>{dir}</span>}
-                      {name}
-                    </span>
-                    <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
-                      {file.size > 1024 ? `${Math.round(file.size / 1024)}KB` : `${file.size}B`}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-
+        {/* Context Docs */}
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <Eye size={12} strokeWidth={2} color="var(--color-text-muted)" />
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1 }}>
+              Context
+            </span>
             <button
-              onClick={importDocs}
-              disabled={importing || selectedFiles.size === 0}
+              onClick={() => { setNewBroadcast({ channel: "context" }); setEditingBroadcast(null); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
+            Silent docs injected into chat. Users never see them.
+          </p>
+          {broadcastsLoading ? (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+          ) : contextBroadcasts.length === 0 && !newBroadcast ? (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No context docs yet.</div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+              {contextBroadcasts.map(b => (
+                <div key={b.id}>
+                  <BroadcastItem b={b} />
+                  {editingBroadcast?.id === b.id && (
+                    <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {newBroadcast?.channel === "context" && (
+            <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />
+          )}
+        </div>
+
+        {/* Announcements */}
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <Megaphone size={12} strokeWidth={2} color="var(--color-text-muted)" />
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1 }}>
+              Announcements
+            </span>
+            <button
+              onClick={() => { setNewBroadcast({ channel: "announcement" }); setEditingBroadcast(null); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
+            Visible to users as a banner. Dismissible, delivered once.
+          </p>
+          {broadcastsLoading ? (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+          ) : announcementBroadcasts.length === 0 && !newBroadcast ? (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No announcements yet.</div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+              {announcementBroadcasts.map(b => (
+                <div key={b.id}>
+                  <BroadcastItem b={b} />
+                  {editingBroadcast?.id === b.id && (
+                    <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {newBroadcast?.channel === "announcement" && (
+            <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />
+          )}
+        </div>
+
+        {/* Doc Import */}
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <FileText size={12} strokeWidth={2} color="var(--color-text-muted)" />
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+              Doc Import
+            </span>
+          </div>
+          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
+            Import project docs from GitHub as notes.
+          </p>
+
+          {!discovered ? (
+            <button
+              onClick={discoverDocs}
+              disabled={loadingFiles}
               style={{
                 display: "flex", alignItems: "center", gap: "var(--space-2)",
-                padding: "var(--space-2) var(--space-4)",
-                background: importing || selectedFiles.size === 0 ? "var(--color-bg-elevated)" : "var(--color-accent)",
-                color: importing || selectedFiles.size === 0 ? "var(--color-text-muted)" : "var(--color-text-inverse)",
-                border: "none", borderRadius: "var(--radius-md)",
-                fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
-                cursor: importing || selectedFiles.size === 0 ? "default" : "pointer",
+                padding: "var(--space-1-5) var(--space-3)",
+                background: loadingFiles ? "var(--color-bg-elevated)" : "var(--color-text)",
+                color: loadingFiles ? "var(--color-text-muted)" : "var(--color-bg)",
+                border: "none", borderRadius: "var(--radius-sm)",
+                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                cursor: loadingFiles ? "wait" : "pointer",
               }}
             >
-              <Upload size={14} strokeWidth={2} />
-              {importing ? "Importing..." : `Import ${selectedFiles.size} doc${selectedFiles.size !== 1 ? "s" : ""}`}
+              <RefreshCw size={11} strokeWidth={2} style={loadingFiles ? { animation: "spin 1s linear infinite" } : {}} />
+              {loadingFiles ? "Discovering..." : "Discover from GitHub"}
             </button>
-          </>
-        )}
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setSelectedFiles(new Set(mdFiles.map(f => f.path)))}
+                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer" }}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setSelectedFiles(new Set())}
+                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer" }}
+                >
+                  None
+                </button>
+                <button
+                  onClick={discoverDocs}
+                  disabled={loadingFiles}
+                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer", marginLeft: "auto" }}
+                >
+                  <RefreshCw size={9} strokeWidth={2} style={{ marginRight: 2, verticalAlign: "middle", ...(loadingFiles ? { animation: "spin 1s linear infinite" } : {}) }} />
+                  Refresh
+                </button>
+              </div>
 
-        {importResult?.success && (
-          <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-success)" }}>{importResult.success}</div>
-        )}
-        {importResult?.error && (
-          <div style={{ marginTop: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-error)" }}>{importResult.error}</div>
-        )}
+              <div style={{ maxHeight: 160, overflowY: "auto", marginBottom: "var(--space-2)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)" }}>
+                {mdFiles.map((file) => {
+                  const name = file.path.split("/").pop();
+                  return (
+                    <label
+                      key={file.path}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+                        padding: "3px var(--space-2)",
+                        borderBottom: "1px solid var(--color-border-light)",
+                        cursor: "pointer", fontSize: "var(--font-size-xs)",
+                        background: selectedFiles.has(file.path) ? "var(--color-bg-elevated)" : "transparent",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(file.path)}
+                        onChange={() => toggleFile(file.path)}
+                        style={{ accentColor: "var(--color-text-primary)" }}
+                      />
+                      <span style={{ color: "var(--color-text-primary)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {name}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={importDocs}
+                disabled={importing || selectedFiles.size === 0}
+                style={{
+                  display: "flex", alignItems: "center", gap: "var(--space-2)",
+                  padding: "var(--space-1-5) var(--space-3)",
+                  background: importing || selectedFiles.size === 0 ? "var(--color-bg-elevated)" : "var(--color-text)",
+                  color: importing || selectedFiles.size === 0 ? "var(--color-text-muted)" : "var(--color-bg)",
+                  border: "none", borderRadius: "var(--radius-sm)",
+                  fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                  cursor: importing || selectedFiles.size === 0 ? "default" : "pointer",
+                }}
+              >
+                <Upload size={11} strokeWidth={2} />
+                {importing ? "Importing..." : `Import ${selectedFiles.size}`}
+              </button>
+            </>
+          )}
+
+          {importResult?.success && (
+            <div style={{ marginTop: "var(--space-2)", fontSize: 9, color: "var(--color-success)" }}>{importResult.success}</div>
+          )}
+          {importResult?.error && (
+            <div style={{ marginTop: "var(--space-2)", fontSize: 9, color: "var(--color-error)" }}>{importResult.error}</div>
+          )}
+        </div>
       </div>
     </div>
   );
