@@ -7,8 +7,28 @@ export function isFileSystemAccessSupported() {
   return typeof window !== "undefined" && "showDirectoryPicker" in window;
 }
 
+const REQUIRED_FOLDERS = [
+  "_FULKIT", "00-INBOX", "01-PERSONAL", "02-BUSINESS",
+  "03-PROJECTS", "04-DEV", "05-IDEAS", "06-LEARNING", "07-ARCHIVE",
+];
+
+// Validate vault structure — auto-create missing folders
+export async function validateVaultStructure(handle) {
+  const missing = [];
+  for (const folder of REQUIRED_FOLDERS) {
+    try {
+      await handle.getDirectoryHandle(folder);
+    } catch {
+      await handle.getDirectoryHandle(folder, { create: true });
+      missing.push(folder);
+    }
+  }
+  return missing;
+}
+
 export async function pickVaultDirectory() {
   const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+  await validateVaultStructure(handle);
   await saveHandle(handle);
   return handle;
 }
@@ -21,6 +41,7 @@ export async function restoreDirectoryHandle() {
   const permission = await handle.requestPermission({ mode: "readwrite" });
   if (permission !== "granted") return null;
 
+  await validateVaultStructure(handle);
   return handle;
 }
 
