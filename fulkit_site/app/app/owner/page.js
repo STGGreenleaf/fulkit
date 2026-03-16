@@ -1838,8 +1838,8 @@ const BINGO_CARDS = [
   { label: "Real side income", threshold: 500 },
   { label: "Real business", threshold: 750 },
   { label: "Four figures net", threshold: 1000 },
-  { label: "Quit your day job", threshold: 1500 },
-  { label: "Two thousand strong", threshold: 2000 },
+  { label: "Scaling", threshold: 1500 },
+  { label: "Quit your day job", threshold: 2000 },
 ];
 
 function getProgressPercent(userCount) {
