@@ -16,15 +16,7 @@ export async function GET(request) {
 
     // Check if GA4 is configured
     if (!process.env.GA_PROPERTY_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-      return Response.json({
-        configured: false,
-        _debug: {
-          hasPropId: !!process.env.GA_PROPERTY_ID,
-          hasKey: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
-          propIdLen: (process.env.GA_PROPERTY_ID || "").length,
-          keyLen: (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || "").length,
-        },
-      });
+      return Response.json({ configured: false });
     }
 
     const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
@@ -141,6 +133,6 @@ export async function GET(request) {
       browsers: parseRows(browsers, "name", ["users"]),
     });
   } catch (err) {
-    return Response.json({ error: err.message, stack: err.stack?.split("\n").slice(0, 3) }, { status: 500 });
+    return Response.json({ error: err.message }, { status: 500 });
   }
 }

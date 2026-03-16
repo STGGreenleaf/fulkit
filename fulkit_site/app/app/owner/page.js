@@ -253,8 +253,8 @@ function DashboardTab() {
       .catch(() => {});
 
     fetch("/api/owner/analytics", { headers })
-      .then(r => r.json())
-      .then(data => { setAnalytics(data); setLoadingAnalytics(false); })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setAnalytics(data); setLoadingAnalytics(false); })
       .catch(() => { setLoadingAnalytics(false); });
 
     fetch("/api/owner/events", { headers })
