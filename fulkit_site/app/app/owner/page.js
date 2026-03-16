@@ -600,10 +600,73 @@ function DashboardTab() {
   );
 }
 
+/* ─── Dev Switch ─── */
+
+function DevSwitch({ label, description, on, onToggle }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2-5)",
+        width: "100%",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        fontFamily: "var(--font-primary)",
+      }}
+    >
+      <div
+        style={{
+          width: 26,
+          height: 14,
+          borderRadius: 7,
+          border: "1px solid var(--color-text-muted)",
+          background: on ? "var(--color-text-muted)" : "transparent",
+          position: "relative",
+          transition: "all var(--duration-fast) var(--ease-default)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: on ? "var(--color-bg)" : "var(--color-text-muted)",
+            position: "absolute",
+            top: 1,
+            left: on ? 13 : 1,
+            transition: "left var(--duration-fast) var(--ease-default)",
+          }}
+        />
+      </div>
+      <div style={{ textAlign: "left" }}>
+        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{label}</div>
+        <div style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)" }}>{description}</div>
+      </div>
+    </button>
+  );
+}
+
 /* ─── Developer Tab ─── */
 
 function DeveloperTab() {
-  const { accessToken } = useAuth();
+  const { accessToken, compactMode, setCompactMode } = useAuth();
+
+  // ── Dev Switches ──
+  const [devMode, setDevModeState] = useState(false);
+  useEffect(() => {
+    setDevModeState(localStorage.getItem("fulkit-dev-mode") === "true");
+  }, []);
+  const setDevMode = (val) => {
+    setDevModeState(val);
+    localStorage.setItem("fulkit-dev-mode", String(val));
+    // Notify DevInspector via storage event (same-tab workaround)
+    window.dispatchEvent(new StorageEvent("storage", { key: "fulkit-dev-mode", newValue: String(val) }));
+  };
 
   // ── Tickets ──
   const [tickets, setTickets] = useState([]);
@@ -1055,6 +1118,16 @@ function DeveloperTab() {
 
       {/* ── RIGHT: Outgoing ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingTop: "var(--space-6)" }}>
+
+        {/* Dev Switches */}
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ fontSize: 9, fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+            Switches
+          </div>
+          <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
+          <div style={{ height: "var(--space-2)" }} />
+          <DevSwitch label="Dev Mode" description="Enable inspector overlay" on={devMode} onToggle={() => setDevMode(!devMode)} />
+        </div>
 
         {/* Quick Facts */}
         <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>

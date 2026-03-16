@@ -3,10 +3,23 @@
 import { useState, useEffect, useCallback } from "react";
 
 export default function DevInspector() {
+  const [enabled, setEnabled] = useState(false);
   const [active, setActive] = useState(false);
   const [info, setInfo] = useState(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [copied, setCopied] = useState(false);
+
+  // Only render when dev mode is enabled via Developer tab
+  useEffect(() => {
+    setEnabled(localStorage.getItem("fulkit-dev-mode") === "true");
+    const onStorage = (e) => {
+      if (e.key === "fulkit-dev-mode") setEnabled(e.newValue === "true");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  if (!enabled) return null;
 
   const getSelector = useCallback((el) => {
     if (el.id) return `#${el.id}`;

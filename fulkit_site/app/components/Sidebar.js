@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, MessageCircle, CheckSquare, LineSquiggle, Settings, PanelLeftClose } from "lucide-react";
+import { Home, MessageCircle, CheckSquare, LineSquiggle, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -20,7 +20,7 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { compactMode, setCompactMode } = useAuth();
+  const { compactMode } = useAuth();
 
   return (
     <nav
@@ -98,66 +98,10 @@ export default function Sidebar() {
             </Tooltip>
           );
         })}
-        {/* Compact toggle — below nav, available to all */}
-        <div style={{ margin: compactMode ? "var(--space-2) 0" : "var(--space-2) var(--space-2-5)", borderTop: "1px solid var(--color-border-light)" }} />
-        <CompactToggle compact={compactMode} onToggle={() => setCompactMode(!compactMode)} />
       </div>
 
       {/* Mini Player — bottom of sidebar */}
       <MiniPlayer compact={compactMode} />
     </nav>
-  );
-}
-
-function CompactToggle({ compact, onToggle }) {
-  const helperOn = !compact;
-  return (
-    <Tooltip label={compact ? "Expand" : null}>
-      <button
-        onClick={onToggle}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: compact ? "center" : "flex-start",
-          gap: "var(--space-2)",
-          padding: compact ? "var(--space-1)" : "var(--space-1) var(--space-2-5) var(--space-1) var(--space-8)",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "var(--font-size-2xs)",
-          color: "var(--color-text-muted)",
-          fontFamily: "var(--font-primary)",
-          width: "100%",
-        }}
-      >
-        {/* Pill switch */}
-        <div
-          style={{
-            width: 22,
-            height: 12,
-            borderRadius: 6,
-            border: "1px solid var(--color-text-muted)",
-            background: helperOn ? "var(--color-text-muted)" : "transparent",
-            position: "relative",
-            transition: "all var(--duration-fast) var(--ease-default)",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: helperOn ? "var(--color-bg)" : "var(--color-text-muted)",
-              position: "absolute",
-              top: 1,
-              left: helperOn ? 11 : 1,
-              transition: "left var(--duration-fast) var(--ease-default)",
-            }}
-          />
-        </div>
-        {!compact && <PanelLeftClose size={12} strokeWidth={1.8} />}
-      </button>
-    </Tooltip>
   );
 }

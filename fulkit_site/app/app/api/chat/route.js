@@ -15,6 +15,40 @@ import { getEmbedding } from "../embed/route";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Dynamic pricing cache — fetches from Stripe, refreshes every hour
+let _priceCache = null;
+let _priceCacheTime = 0;
+const PRICE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+async function getStripePrices() {
+  if (_priceCache && Date.now() - _priceCacheTime < PRICE_CACHE_TTL) return _priceCache;
+  const secret = process.env.STRIPE_CLIENT_SECRET;
+  if (!secret) return null;
+  try {
+    const params = new URLSearchParams();
+    params.append("lookup_keys[]", "fulkit_standard_monthly");
+    params.append("lookup_keys[]", "fulkit_pro_monthly");
+    params.append("lookup_keys[]", "fulkit_credits_100");
+    const res = await fetch(`https://api.stripe.com/v1/prices?${params}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const { data: prices } = await res.json();
+    const map = {};
+    for (const p of prices) {
+      if (p.lookup_key === "fulkit_standard_monthly") map.standard = `$${(p.unit_amount / 100).toFixed(0)}`;
+      if (p.lookup_key === "fulkit_pro_monthly") map.pro = `$${(p.unit_amount / 100).toFixed(0)}`;
+      if (p.lookup_key === "fulkit_credits_100") map.credits = `$${(p.unit_amount / 100).toFixed(0)}`;
+    }
+    _priceCache = map;
+    _priceCacheTime = Date.now();
+    return map;
+  } catch {
+    return null;
+  }
+}
+
 function getModelConfig(role, seatType, hasByok) {
   // BYOK+Owner → best tier
   if (hasByok && role === "owner") {
@@ -2201,9 +2235,25 @@ export async function POST(request) {
         .eq("active", true)
         .abortSignal(AbortSignal.timeout(5000));
       if (broadcasts && broadcasts.length > 0) {
-        const broadcastBlock = broadcasts
+        let broadcastBlock = broadcasts
           .map(b => `### ${b.title}\n${b.content}`)
           .join("\n\n");
+        // Dynamic pricing injection — replace {{placeholder}} tokens with live Stripe prices
+        if (broadcastBlock.includes("{{")) {
+          const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
+          const prices = await getStripePrices();
+          const replacements = {
+            "{{free_limit}}": String(SEAT_LIMITS.free),
+            "{{standard_limit}}": String(SEAT_LIMITS.standard),
+            "{{pro_limit}}": String(SEAT_LIMITS.pro),
+            "{{standard_price}}": prices?.standard || "$7",
+            "{{pro_price}}": prices?.pro || "$15",
+            "{{credits_price}}": prices?.credits || "$2",
+          };
+          for (const [token, value] of Object.entries(replacements)) {
+            broadcastBlock = broadcastBlock.replaceAll(token, value);
+          }
+        }
         system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
       }
     } catch { /* proceed without broadcasts */ }
