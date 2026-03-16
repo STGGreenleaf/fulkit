@@ -10,14 +10,8 @@ import { readFulkitNotes, readEncryptedNotes, updateContextMode, listNotes, sear
 
 const VaultContext = createContext(null);
 
-const DEV_NOTES = [
-  { title: "About Me", content: "I'm a demo user exploring Fulkit. I love building things and thinking out loud.", pinned: true },
-  { title: "Current Project", content: "Working on a new product that helps people organize their thoughts with AI.", pinned: false },
-];
-
 export function VaultProvider({ children }) {
   const { user, profile } = useAuth();
-  const isDev = user?.isDev;
   const vaultBudget = profile?.role === "owner" ? 100000 : 50000;
 
   const [storageMode, setStorageModeState] = useState("fulkit");
@@ -31,7 +25,7 @@ export function VaultProvider({ children }) {
 
   // Load storage_mode preference on mount
   useEffect(() => {
-    if (!user || isDev) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -71,7 +65,7 @@ export function VaultProvider({ children }) {
     }
 
     init();
-  }, [user, isDev]);
+  }, [user]);
 
   // Derived state
   const isSupported = storageMode === "local" ? isFileSystemAccessSupported() : true;
@@ -107,8 +101,6 @@ export function VaultProvider({ children }) {
 
   // Read context from active source, apply token budget with relevance scoring
   const getContext = useCallback(async (message) => {
-    if (isDev) return DEV_NOTES.map((n) => ({ title: n.title, content: n.content }));
-
     try {
       const notes = await getRawNotes();
       return selectContext(notes, message, vaultBudget);
@@ -116,15 +108,10 @@ export function VaultProvider({ children }) {
       console.error("[vault] getContext error:", err.message);
       return [];
     }
-  }, [getRawNotes, isDev, vaultBudget]);
+  }, [getRawNotes, vaultBudget]);
 
   // Same as getContext but returns metadata for the UI indicator
   const getContextWithMeta = useCallback(async (message) => {
-    if (isDev) {
-      const selected = DEV_NOTES.map((n) => ({ title: n.title, content: n.content }));
-      return { selected, metadata: { includedCount: selected.length, alwaysCount: 1, totalTokens: selected.reduce((t, n) => t + estimateTokens(n.content), 0) } };
-    }
-
     try {
       const notes = await getRawNotes();
       return selectContextWithMetadata(notes, message, vaultBudget);
@@ -132,20 +119,10 @@ export function VaultProvider({ children }) {
       console.error("[vault] getContextWithMeta error:", err.message);
       return { selected: [], metadata: { includedCount: 0, alwaysCount: 0, totalTokens: 0 } };
     }
-  }, [getRawNotes, isDev, vaultBudget]);
+  }, [getRawNotes, vaultBudget]);
 
   // Get note list for settings browser (metadata only, no content)
   const getNoteList = useCallback(async () => {
-    if (isDev) {
-      return DEV_NOTES.map((n, i) => ({
-        id: `dev-${i}`,
-        title: n.title,
-        context_mode: n.pinned ? "always" : "available",
-        source: "demo",
-        tokenEstimate: estimateTokens(n.content),
-      }));
-    }
-
     if (storageMode === "local" && directoryHandle) {
       const files = await readLocalVault(directoryHandle);
       return files.map((f, i) => ({
@@ -163,23 +140,19 @@ export function VaultProvider({ children }) {
     }
 
     return [];
-  }, [storageMode, directoryHandle, isDev]);
+  }, [storageMode, directoryHandle]);
 
   // Toggle context_mode for a note (Models B & C only)
   const updateNoteMode = useCallback(async (noteId, mode) => {
-    if (isDev || storageMode === "local") return;
+    if (storageMode === "local") return;
     await updateContextMode(noteId, mode, supabase, user?.id);
-  }, [isDev, storageMode]);
+  }, [storageMode]);
 
   // Search all notes (including off) by title/folder — for /recall
   const recallNotes = useCallback(async (query) => {
-    if (isDev) {
-      return DEV_NOTES.filter((n) => n.title.toLowerCase().includes(query.toLowerCase()))
-        .map((n, i) => ({ id: `dev-${i}`, title: n.title, content: n.content, context_mode: "available", folder: "", tokenEstimate: estimateTokens(n.content) }));
-    }
     if (storageMode === "local") return [];
     return await searchNotes(query, supabase, user?.id);
-  }, [isDev, storageMode]);
+  }, [storageMode]);
 
   // Model A: connect vault directory
   const connectVault = useCallback(async () => {
@@ -231,7 +204,7 @@ export function VaultProvider({ children }) {
 
   // Switch storage mode
   const setStorageMode = useCallback(async (mode) => {
-    if (!user || isDev) return;
+    if (!user) return;
     await supabase.from("preferences").upsert({
       user_id: user.id,
       key: "storage_mode",
@@ -239,7 +212,11 @@ export function VaultProvider({ children }) {
       updated_at: new Date().toISOString(),
     });
     setStorageModeState(mode);
-  }, [user, isDev]);
+    // Auto-resolve "vault" onboarding fallback action
+    supabase.from("actions").update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("user_id", user.id).eq("source", "onboarding").eq("feature_tag", "vault").eq("status", "active")
+      .then(() => {}).catch(() => {});
+  }, [user]);
 
   return (
     <VaultContext.Provider

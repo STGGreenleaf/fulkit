@@ -32,7 +32,7 @@ export async function GET(request) {
 
     // Gather context for generation
     const [actionsRes, memoriesRes, convosRes] = await Promise.all([
-      admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").order("priority").limit(10),
+      admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString()).order("priority").limit(10),
       admin.from("preferences").select("key, value").eq("user_id", user.id).like("key", "memory:%"),
       admin.from("conversations").select("title, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5),
     ]);

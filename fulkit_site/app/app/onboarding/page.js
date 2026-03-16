@@ -404,6 +404,57 @@ export default function Onboarding() {
           .eq("id", user.id);
         fetchProfile(user.id);
         track("onboarding_complete", { tiers_completed: tiers.length });
+
+        // Seed fallback actions for features the user didn't cover during onboarding
+        const FALLBACK_ACTIONS = [
+          { day: 0, feature_tag: "notes", title: "Save your first note", description: "Your vault is where Fülkit gets smart. Drop in a thought, a link, a plan — anything. The more it knows, the better it thinks with you." },
+          { day: 3, feature_tag: "chat", title: "Have your first conversation", description: "Ask Fülkit anything. It already knows what you've saved. Try 'what's on my plate?' or just say hi." },
+          { day: 6, feature_tag: "vault", title: "Choose your storage mode", description: "Your data, your rules. Pick how your notes are stored — local, encrypted, or Fülkit-managed. You can change this anytime in Settings." },
+          { day: 9, feature_tag: "actions", title: "Add something to your action list", description: "Actions are your to-do layer. Add a task, a reminder, a next step. Fülkit tracks them and nudges you when things pile up." },
+          { day: 12, feature_tag: "integrations", title: "Connect a tool you already use", description: "Spotify, GitHub, Square, Stripe — connect one and Fülkit pulls it into your world. Head to Settings > Sources." },
+        ];
+
+        try {
+          // Guard against duplicate seeding
+          const { count: existingCount } = await supabase
+            .from("actions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .eq("source", "onboarding");
+          if (existingCount > 0) throw new Error("skip — already seeded");
+
+          // Check which features the user already engaged with
+          const [notesRes, actionsRes, integrationsRes] = await Promise.all([
+            supabase.from("notes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+            supabase.from("actions").select("id", { count: "exact", head: true }).eq("user_id", user.id).neq("source", "onboarding"),
+            supabase.from("integrations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+          ]);
+
+          const covered = new Set();
+          if (notesRes.count > 0) covered.add("notes");
+          if (actionsRes.count > 0) covered.add("actions");
+          if (integrationsRes.count > 0) covered.add("integrations");
+
+          const now = new Date();
+          const toInsert = FALLBACK_ACTIONS
+            .filter((a) => !covered.has(a.feature_tag))
+            .map((a) => ({
+              user_id: user.id,
+              title: a.title,
+              description: a.description,
+              priority: "normal",
+              status: "active",
+              source: "onboarding",
+              feature_tag: a.feature_tag,
+              scheduled_for: new Date(now.getTime() + a.day * 24 * 60 * 60 * 1000).toISOString(),
+            }));
+
+          if (toInsert.length > 0) {
+            await supabase.from("actions").insert(toInsert);
+          }
+        } catch (e) {
+          console.error("[onboarding] fallback action seeding failed:", e.message);
+        }
       }
       setComplete(true);
     }

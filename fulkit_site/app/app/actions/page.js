@@ -114,10 +114,53 @@ export default function Actions() {
       .from("actions")
       .select("*")
       .eq("user_id", user.id)
+      .or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString())
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
     if (error) console.error("[actions] query failed:", error.message);
-    if (data) setActions(data);
+    if (data) {
+      setActions(data);
+      // Auto-resolve onboarding fallback actions when user has completed the feature
+      const onboarding = data.filter((a) => a.source === "onboarding" && a.status === "active");
+      if (onboarding.length > 0) autoResolveFallbacks(onboarding);
+    }
+  }
+
+  async function autoResolveFallbacks(onboarding) {
+    try {
+      const tags = onboarding.map((a) => a.feature_tag);
+      const resolved = new Set();
+
+      if (tags.includes("notes")) {
+        const { count } = await supabase.from("notes").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+        if (count > 0) resolved.add("notes");
+      }
+      if (tags.includes("actions")) {
+        // Check if user has any non-onboarding actions
+        const { count } = await supabase.from("actions").select("id", { count: "exact", head: true }).eq("user_id", user.id).neq("source", "onboarding");
+        if (count > 0) resolved.add("actions");
+      }
+      if (tags.includes("integrations")) {
+        const { count } = await supabase.from("integrations").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+        if (count > 0) resolved.add("integrations");
+      }
+      if (tags.includes("chat")) {
+        const { count } = await supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+        if (count > 0) resolved.add("chat");
+      }
+      if (tags.includes("vault")) {
+        const { data: pref } = await supabase.from("preferences").select("value").eq("key", "storage_mode").maybeSingle();
+        if (pref?.value) resolved.add("vault");
+      }
+
+      if (resolved.size === 0) return;
+      const toResolve = onboarding.filter((a) => resolved.has(a.feature_tag));
+      const ids = toResolve.map((a) => a.id);
+      setActions((prev) => prev.map((a) => ids.includes(a.id) ? { ...a, status: "done", completed_at: new Date().toISOString() } : a));
+      await supabase.from("actions").update({ status: "done", completed_at: new Date().toISOString() }).in("id", ids);
+    } catch (e) {
+      console.error("[actions] auto-resolve failed:", e.message);
+    }
   }
 
   const allActions = actions;

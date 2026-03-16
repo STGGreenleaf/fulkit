@@ -2290,6 +2290,16 @@ Never skip the preview step. The user must see and approve changes before they g
         .from("user_events")
         .insert({ user_id: userId, event: "chat_sent", page: "/chat", meta: { has_context: context.length > 0 } })
         .then(() => {}).catch(() => {});
+
+      // Auto-resolve "chat" onboarding fallback action (fire-and-forget)
+      getSupabaseAdmin()
+        .from("actions")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("source", "onboarding")
+        .eq("feature_tag", "chat")
+        .eq("status", "active")
+        .then(() => {}).catch(() => {});
     }
 
     const MAX_TOOL_ROUNDS = 5;
