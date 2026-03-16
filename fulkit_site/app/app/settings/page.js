@@ -25,6 +25,7 @@ import {
   Search,
   Crown,
   BookOpenText,
+  Bug,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -385,38 +386,144 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
           </div>
 
         {/* Footer — pinned to bottom, consistent across all tabs */}
-        {tab !== "owner" && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-4)",
-            padding: "var(--space-3) var(--space-6)",
-            borderTop: "1px solid var(--color-border-light)",
-          }}>
-            {[
-              { label: "Bluesky", href: "https://bsky.app/profile/fulkit.bsky.social" },
-            ].map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
+        {tab !== "owner" && <SettingsFooter />}
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+/* ─── Settings Footer ─── */
+
+function SettingsFooter() {
+  const { authFetch } = useAuth();
+  const [bugOpen, setBugOpen] = useState(false);
+  const [bugText, setBugText] = useState("");
+  const [bugSending, setBugSending] = useState(false);
+  const [bugSent, setBugSent] = useState(false);
+  const bugRef = useRef(null);
+
+  useEffect(() => {
+    if (bugOpen && bugRef.current) bugRef.current.focus();
+  }, [bugOpen]);
+
+  useEffect(() => {
+    if (bugSent) {
+      const t = setTimeout(() => { setBugSent(false); setBugOpen(false); }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [bugSent]);
+
+  const submitBug = async () => {
+    if (!bugText.trim()) return;
+    setBugSending(true);
+    try {
+      const res = await authFetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: bugText.trim(),
+          category: "bug",
+          page_url: window.location.href,
+        }),
+      });
+      if (res.ok) {
+        setBugText("");
+        setBugSent(true);
+      }
+    } catch {}
+    setBugSending(false);
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      {/* Bug report popover */}
+      {bugOpen && !bugSent && (
+        <div style={{
+          position: "absolute", bottom: "100%", left: "var(--space-6)", right: "var(--space-6)",
+          marginBottom: "var(--space-2)",
+          background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-md)", padding: "var(--space-3)",
+          boxShadow: "0 -2px 12px rgba(0,0,0,0.08)",
+        }}>
+          <textarea
+            ref={bugRef}
+            value={bugText}
+            onChange={e => setBugText(e.target.value)}
+            placeholder="What's broken or weird?"
+            rows={3}
+            style={{
+              width: "100%", resize: "none",
+              padding: "var(--space-2)", background: "var(--color-bg)",
+              border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)",
+              fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
+              color: "var(--color-text)", outline: "none",
+            }}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBug(); } }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
+            <button
+              onClick={submitBug}
+              disabled={!bugText.trim() || bugSending}
+              style={{
+                padding: "var(--space-1-5) var(--space-4)",
+                background: bugText.trim() ? "var(--color-text)" : "var(--color-border-light)",
+                color: bugText.trim() ? "var(--color-bg)" : "var(--color-text-dim)",
+                border: "none", borderRadius: "var(--radius-sm)",
+                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                cursor: bugText.trim() ? "pointer" : "default",
+              }}
+            >
+              {bugSending ? "Sending..." : "Send"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bugSent && (
+        <div style={{
+          position: "absolute", bottom: "100%", left: "var(--space-6)",
+          marginBottom: "var(--space-2)",
+          fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)",
+          fontStyle: "italic",
+        }}>
+          Sent — we'll look into it.
+        </div>
+      )}
+
+      {/* Footer bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "var(--space-4)",
+        padding: "var(--space-3) var(--space-6)",
+        borderTop: "1px solid var(--color-border-light)",
+      }}>
+        <a
+          href="https://bsky.app/profile/fulkit.bsky.social"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textDecoration: "none" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+        >
+          Bluesky
+        </a>
+
+        <Tooltip label="Report a bug">
+          <button
+            onClick={() => { setBugOpen(!bugOpen); setBugSent(false); }}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "var(--space-1)", display: "flex", alignItems: "center",
+              color: bugOpen ? "var(--color-text)" : "var(--color-text-muted)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
+            onMouseLeave={e => { if (!bugOpen) e.currentTarget.style.color = "var(--color-text-muted)"; }}
+          >
+            <Bug size={13} strokeWidth={1.8} />
+          </button>
+        </Tooltip>
+      </div>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import Settings from "../page";
 
 const VALID_TABS = ["account", "sources", "manual", "vault", "ai", "referrals", "billing", "privacy", "owner"];
-const VALID_OWNER_TABS = ["dashboard", "questions", "design", "users", "socials", "og", "fabric", "playground"];
+const VALID_OWNER_TABS = ["dashboard", "questions", "design", "users", "socials", "og", "fabric", "playground", "developer"];
 
 export default async function SettingsTabPage({ params }) {
   const { tab } = await params;

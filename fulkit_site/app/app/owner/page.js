@@ -26,6 +26,7 @@ import {
   CreditCard,
   Download,
   DatabaseSearch,
+  Code,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -46,7 +47,7 @@ const TABS = [
   { id: "fabric", label: "Fabric", icon: Music },
   { id: "playground", label: "Playground", icon: GamepadDirectional },
   { id: "notes", label: "Notes", icon: FileText },
-  { id: "dogfood", label: "Dogfood", icon: DatabaseSearch },
+  { id: "developer", label: "Developer", icon: Code },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -182,7 +183,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "fabric" && <FabricTab />}
         {tab === "playground" && <PlaygroundTab />}
         {tab === "notes" && <NotesTab />}
-        {tab === "dogfood" && <DogfoodTab />}
+        {tab === "developer" && <DeveloperTab />}
       </div>
     </div>
   );
@@ -590,10 +591,48 @@ function DashboardTab() {
   );
 }
 
-/* ─── Dogfood Tab ─── */
+/* ─── Developer Tab ─── */
 
-function DogfoodTab() {
+function DeveloperTab() {
   const { accessToken } = useAuth();
+
+  // ── Tickets ──
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/feedback", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTickets(data || []))
+      .catch(() => {})
+      .finally(() => setTicketsLoading(false));
+  }, [accessToken]);
+
+  const updateStatus = async (id, status) => {
+    const res = await fetch("/api/feedback", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTickets(prev => prev.map(t => t.id === id ? updated : t));
+    }
+  };
+
+  const STATUS_STYLES = {
+    open: { background: "var(--color-bg-alt)", color: "var(--color-text)" },
+    seen: { background: "var(--color-border-light)", color: "var(--color-text-secondary)" },
+    fixed: { background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)" },
+    wontfix: { background: "transparent", color: "var(--color-text-dim)", border: "1px solid var(--color-border-light)" },
+  };
+
+  const nextStatus = (s) => ({ open: "seen", seen: "fixed", fixed: "wontfix", wontfix: "open" }[s] || "open");
+
+  const openCount = tickets.filter(t => t.status === "open").length;
+
+  // ── Doc Import ──
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [mdFiles, setMdFiles] = useState([]);
@@ -704,6 +743,64 @@ function DogfoodTab() {
 
   return (
     <div>
+      {/* ── Tickets ── */}
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+            Tickets
+          </span>
+          {openCount > 0 && (
+            <span style={{
+              fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)",
+              background: "var(--color-text)", color: "var(--color-bg)",
+              padding: "1px 6px", borderRadius: "var(--radius-full)",
+            }}>
+              {openCount}
+            </span>
+          )}
+        </div>
+
+        {ticketsLoading ? (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+        ) : tickets.length === 0 ? (
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No tickets yet.</div>
+        ) : (
+          <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+            {tickets.map((t, i) => (
+              <div key={t.id} style={{
+                display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
+                padding: "var(--space-2-5) var(--space-3)",
+                borderBottom: i < tickets.length - 1 ? "1px solid var(--color-border-light)" : "none",
+                background: t.status === "open" ? "var(--color-bg-elevated)" : "transparent",
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)", wordBreak: "break-word" }}>
+                    {t.message}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                    {t.email || "unknown"} {"\u00b7"} {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {t.page_url ? ` \u00b7 ${t.page_url.replace(/^https?:\/\/[^/]+/, "")}` : ""}
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateStatus(t.id, nextStatus(t.status))}
+                  style={{
+                    padding: "2px 8px", borderRadius: "var(--radius-sm)",
+                    fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)",
+                    textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                    cursor: "pointer", border: "none", flexShrink: 0,
+                    ...STATUS_STYLES[t.status],
+                  }}
+                >
+                  {t.status}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Doc Import ── */}
       <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
           <FileText size={13} strokeWidth={2} color="var(--color-text-muted)" />

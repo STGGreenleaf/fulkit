@@ -387,6 +387,28 @@ export default function About() {
           >
             Terms
           </Link>
+          <a
+            href="https://bsky.app/profile/fulkit.bsky.social"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              textDecoration: "none",
+            }}
+          >
+            Bluesky
+          </a>
+          <Link
+            href="/settings/account"
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              textDecoration: "none",
+            }}
+          >
+            Report an issue
+          </Link>
         </div>
       </footer>
     </div>
