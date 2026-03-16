@@ -16,7 +16,15 @@ export async function GET(request) {
 
     // Check if GA4 is configured
     if (!process.env.GA_PROPERTY_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-      return Response.json({ configured: false });
+      return Response.json({
+        configured: false,
+        _debug: {
+          hasPropId: !!process.env.GA_PROPERTY_ID,
+          hasKey: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
+          propIdLen: (process.env.GA_PROPERTY_ID || "").length,
+          keyLen: (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || "").length,
+        },
+      });
     }
 
     const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
