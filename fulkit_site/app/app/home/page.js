@@ -8,6 +8,8 @@ import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
+import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
+import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
 
 // Placeholder data for ?auth=dev template mode
@@ -51,6 +53,7 @@ export default function Dashboard() {
   const isDev = user?.isDev;
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "home" }); }, []);
+  useOnboardingTrigger("home");
 
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);

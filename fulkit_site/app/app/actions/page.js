@@ -9,6 +9,7 @@ import Tooltip from "../../components/Tooltip";
 const TAB_ICON_SIZE = 14;
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
+import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
 
 const FILTERS = [
@@ -122,6 +123,7 @@ export default function Actions() {
   const isDev = user?.isDev;
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "actions" }); }, []);
+  useOnboardingTrigger("actions");
 
   const [actions, setActions] = useState([]);
   const [filter, setFilter] = useState("active");

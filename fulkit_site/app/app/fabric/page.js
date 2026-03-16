@@ -11,6 +11,7 @@ import MessageRenderer from "../../components/MessageRenderer";
 import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
+import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 
 const TAB_ICON_SIZE = 14;
 
@@ -1540,6 +1541,7 @@ export default function FabricPage() {
 
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "fabric" }); }, []);
+  useOnboardingTrigger("fabric");
 
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);

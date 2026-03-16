@@ -15,6 +15,8 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null);
   const [githubConnected, setGithubConnected] = useState(false);
   const [compactMode, setCompactModeState] = useState(true);
+  const [onboardingState, setOnboardingState] = useState(null);
+  const [newlyConnectedIntegration, setNewlyConnectedIntegration] = useState(null);
 
   // Initialize compact mode from localStorage (default: compact/minimal)
   useEffect(() => {
@@ -31,13 +33,65 @@ export function AuthProvider({ children }) {
 
   // Fetch profile from DB + check for context (onboarded OR has notes)
   const fetchProfile = useCallback(async (userId) => {
-    const [{ data }, { count }] = await Promise.all([
+    const [{ data }, { count }, { data: progressRows }, { data: tierRows }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num"),
+      supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num"),
     ]);
     if (data) {
       setProfile(data);
       setHasContext(data.onboarded === true || (count || 0) > 0);
+
+      // Build onboarding state (skip for owner in dev mode)
+      const tiers = tierRows || [];
+      const progress = progressRows || [];
+      if (data.role !== "owner" && tiers.length > 0) {
+        const tiersCompleted = progress.filter((p) => p.completed_at).length;
+        const currentTier = tiersCompleted + 1;
+        const isOnboardingDone = tiersCompleted >= 5;
+
+        const trialStarted = data.trial_started_at ? new Date(data.trial_started_at) : null;
+        const trialDay = trialStarted
+          ? Math.floor((Date.now() - trialStarted.getTime()) / 86400000) + 1
+          : 1;
+
+        // Find pending trigger: current tier where questions answered but assignment not done
+        let pendingTrigger = null;
+        if (!isOnboardingDone) {
+          const currentProgress = progress.find((p) => p.tier_num === currentTier);
+          if (currentProgress && !currentProgress.assignment_done) {
+            const tierDef = tiers.find((t) => t.tier_num === currentTier);
+            pendingTrigger = tierDef?.completion_trigger || null;
+          }
+        }
+
+        setOnboardingState({
+          currentTier: Math.min(currentTier, 6),
+          tiersCompleted,
+          trialDay,
+          trialDaysRemaining: Math.max(0, 30 - trialDay),
+          isInTrial: trialDay <= 30,
+          isOnboardingDone,
+          tierProgress: progress,
+          pendingTrigger,
+        });
+      }
+
+      // Check for recently connected integrations (within last 24hr)
+      const { data: recentInteg } = await supabase
+        .from("integrations")
+        .select("provider, connected_at")
+        .eq("user_id", id)
+        .gte("connected_at", new Date(Date.now() - 86400000).toISOString())
+        .order("connected_at", { ascending: false })
+        .limit(1);
+      if (recentInteg?.length > 0) {
+        const dismissed = localStorage.getItem(`fulkit-integ-tip-${recentInteg[0].provider}`);
+        if (!dismissed) {
+          setNewlyConnectedIntegration(recentInteg[0]);
+        }
+      }
     }
     return data;
   }, []);
@@ -199,6 +253,12 @@ export function AuthProvider({ children }) {
         checkGitHub,
         compactMode,
         setCompactMode,
+        onboardingState,
+        newlyConnectedIntegration,
+        dismissIntegrationTip: (provider) => {
+          localStorage.setItem(`fulkit-integ-tip-${provider}`, "1");
+          setNewlyConnectedIntegration(null);
+        },
       }}
     >
       {children}

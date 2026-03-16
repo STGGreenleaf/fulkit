@@ -3076,112 +3076,270 @@ function PlaceholderTab({ title, description }) {
 }
 
 function PlaygroundTab() {
+  const [tiers, setTiers] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tierIdx, setTierIdx] = useState(0);
+  const [qIdx, setQIdx] = useState(0);
+  const [showAssignment, setShowAssignment] = useState(false);
+  const [showCopy, setShowCopy] = useState(null); // copy_after_answer text
+  const [textVal, setTextVal] = useState("");
+  const [multiSel, setMultiSel] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      const [{ data: t }, { data: q }] = await Promise.all([
+        supabase.from("onboarding_tiers").select("*").order("sort_order"),
+        supabase.from("questions").select("*").order("sort_order"),
+      ]);
+      setTiers(t || []);
+      setQuestions(q || []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) return <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>Loading preview...</div>;
+  if (tiers.length === 0) return <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>No tiers configured. Add tiers in the Questions tab first.</div>;
+
+  const tier = tiers[tierIdx];
+  const tierQs = questions.filter((q) => q.tier_id === tier?.id).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const question = tierQs[qIdx];
+  const totalQ = tierQs.length;
+  const progressPct = ((tierIdx + (showAssignment ? 1 : (qIdx / Math.max(totalQ, 1)))) / tiers.length) * 100;
+
+  const advance = () => {
+    if (showCopy) { setShowCopy(null); return; }
+    if (question?.copy_after_answer) {
+      setShowCopy(question.copy_after_answer);
+      return;
+    }
+    goNext();
+  };
+
+  const goNext = () => {
+    setTextVal("");
+    setMultiSel([]);
+    setShowCopy(null);
+    if (qIdx + 1 < totalQ) {
+      setQIdx(qIdx + 1);
+    } else {
+      setShowAssignment(true);
+    }
+  };
+
+  const nextTier = () => {
+    setShowAssignment(false);
+    setQIdx(0);
+    if (tierIdx + 1 < tiers.length) setTierIdx(tierIdx + 1);
+    else setTierIdx(0); // loop back
+  };
+
+  const jumpToTier = (i) => {
+    setTierIdx(i);
+    setQIdx(0);
+    setShowAssignment(false);
+    setShowCopy(null);
+    setTextVal("");
+    setMultiSel([]);
+  };
+
+  const previewCard = {
+    background: "var(--color-bg)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--radius-lg)",
+    padding: "var(--space-6)",
+    maxWidth: 520,
+    margin: "0 auto",
+    minHeight: 300,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-      {/* ── PAYMENT GATEWAY ── */}
       <div>
-        <h3 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", margin: "0 0 var(--space-4)" }}>
-          Payment Gateway
-        </h3>
-        <div style={{
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          padding: "var(--space-6)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "var(--space-4)",
-        }}>
-          <div style={{
-            width: 120,
-            height: 120,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--color-bg)",
-            borderRadius: "var(--radius-md)",
-          }}>
-            <CreditCard size={50} strokeWidth={1} style={{ color: "var(--color-text-muted)" }} />
-          </div>
-          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", margin: 0, textAlign: "center" }}>
-            Full Stripe lifecycle mock — plan selection, checkout, webhooks, portal, cancellation.
-          </p>
-          <a
-            href="/payment-preview"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              width: "100%",
-              textAlign: "center",
-              padding: "var(--space-2-5) var(--space-4)",
-              background: "var(--color-text)",
-              color: "var(--color-bg)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-medium)",
-              fontFamily: "var(--font-primary)",
-              textDecoration: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Open Payment Preview
-          </a>
+        <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-1)" }}>
+          Onboarding Preview
+        </h2>
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+          Live preview of the onboarding flow. No data is saved.
+        </p>
+
+        {/* Tier selector */}
+        <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
+          {tiers.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => jumpToTier(i)}
+              style={{
+                ...btnSmall,
+                background: i === tierIdx ? "var(--color-text)" : "var(--color-bg-elevated)",
+                color: i === tierIdx ? "var(--color-bg)" : "var(--color-text-secondary)",
+                fontSize: "var(--font-size-2xs)",
+                padding: "var(--space-1) var(--space-2)",
+              }}
+            >
+              Tier {t.tier_num}: {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ height: 3, background: "var(--color-border-light)", borderRadius: 2, marginBottom: "var(--space-4)" }}>
+          <div style={{ height: "100%", background: "var(--color-text-dim)", borderRadius: 2, width: `${progressPct}%`, transition: "width 400ms ease" }} />
         </div>
       </div>
 
-      {/* ── LOADING PREVIEW ── */}
-      <div>
-        <h3 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", margin: "0 0 var(--space-4)" }}>
-          Loading Preview
-        </h3>
-        <div style={{
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          padding: "var(--space-6)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "var(--space-4)",
-        }}>
-          <div style={{
-            width: 120,
-            height: 120,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--color-bg)",
-            borderRadius: "var(--radius-md)",
-          }}>
-            <LoadingMark size={50} />
+      {/* Preview card */}
+      <div style={previewCard}>
+        {showCopy ? (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: "var(--font-size-md)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-6)" }}>
+              "{showCopy}"
+            </p>
+            <button onClick={goNext} style={btnPrimary}>Continue</button>
           </div>
-          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", margin: 0, textAlign: "center" }}>
-            Animated loading mark — rocks and winks. Plays on every auth-gated page load.
-          </p>
-          <a
-            href="/loading-preview"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              width: "100%",
-              textAlign: "center",
-              padding: "var(--space-2-5) var(--space-4)",
-              background: "var(--color-text)",
-              color: "var(--color-bg)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-medium)",
-              fontFamily: "var(--font-primary)",
-              textDecoration: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Open Full Preview
+        ) : showAssignment ? (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 40, height: 40, borderRadius: "var(--radius-full)", background: "var(--color-success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-4)" }}>
+              <CheckIcon size={18} strokeWidth={2.5} color="var(--color-success)" />
+            </div>
+            <p style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              Tier {tier.tier_num} Complete
+            </p>
+            {tier.assignment_copy && (
+              <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-4)" }}>
+                "{tier.assignment_copy}"
+              </p>
+            )}
+            {tier.primary_destination && (
+              <div style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) var(--space-4)", background: "var(--color-text)", color: "var(--color-bg)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", marginBottom: "var(--space-2)" }}>
+                Go to {tier.primary_destination}
+              </div>
+            )}
+            <button onClick={nextTier} style={{ ...btnSmall, marginTop: "var(--space-2)" }}>
+              {tierIdx < tiers.length - 1 ? "Next Tier" : "Back to Tier 1"}
+            </button>
+          </div>
+        ) : question ? (
+          <div>
+            {/* Phase label */}
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+              Tier {tier.tier_num} &middot; Q{qIdx + 1} of {totalQ}
+            </div>
+
+            {/* Trust line */}
+            {(qIdx === 0 && tier.trust_line) && (
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+                {tier.trust_line}
+              </p>
+            )}
+            {question.trust_line && (
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+                {question.trust_line}
+              </p>
+            )}
+
+            {/* Question */}
+            <h3 style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", marginBottom: "var(--space-2)" }}>
+              {question.text}
+            </h3>
+            {question.why && (
+              <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>
+                {question.why}
+              </p>
+            )}
+
+            {/* Renderer by type */}
+            {(question.type === "text_input" || question.type === "text") && (
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <input
+                  value={textVal}
+                  onChange={(e) => setTextVal(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && textVal.trim()) advance(); }}
+                  placeholder={question.placeholder || "Type here..."}
+                  style={{ flex: 1, padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                />
+                <button onClick={advance} disabled={!textVal.trim()} style={{ ...btnPrimary, opacity: textVal.trim() ? 1 : 0.4 }}>Go</button>
+              </div>
+            )}
+
+            {(question.type === "single_select" || (question.type === "choice" && !question.multi)) && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {(question.options || []).map((opt) => {
+                  const label = typeof opt === "string" ? opt : opt.label;
+                  return (
+                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {(question.type === "multi_select" || (question.type === "choice" && question.multi)) && (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                  {(question.options || []).map((opt) => {
+                    const label = typeof opt === "string" ? opt : opt.label;
+                    const sel = multiSel.includes(label);
+                    return (
+                      <button key={label} onClick={() => setMultiSel((p) => sel ? p.filter((x) => x !== label) : [...p, label])} style={{ padding: "var(--space-2-5) var(--space-4)", background: sel ? "var(--color-text)" : "var(--color-bg-elevated)", color: sel ? "var(--color-bg)" : "var(--color-text)", border: sel ? "1px solid var(--color-text)" : "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {multiSel.length > 0 && (
+                  <button onClick={advance} style={{ ...btnPrimary, marginTop: "var(--space-3)" }}>Continue</button>
+                )}
+              </>
+            )}
+
+            {question.type === "integration_picker" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {(question.options || [{ label: "Spotify" }, { label: "I'll do this later" }]).map((opt) => {
+                  const label = typeof opt === "string" ? opt : opt.label;
+                  return (
+                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {question.type === "feature_walkthrough" && (
+              <button onClick={advance} style={btnPrimary}>Got it</button>
+            )}
+
+            {/* Skip */}
+            {(question.skippable || question.type === "text_input" || question.type === "text") && (
+              <button onClick={goNext} style={{ marginTop: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)" }}>
+                Skip
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
+            No questions in this tier.
+          </div>
+        )}
+      </div>
+
+      {/* Other previews */}
+      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-4)" }}>
+        <p style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)" }}>
+          Other Previews
+        </p>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <a href="/payment-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
+            <CreditCard size={12} /> Payment
+          </a>
+          <a href="/loading-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
+            Loading
           </a>
         </div>
       </div>
@@ -3464,72 +3622,148 @@ const cardStyle = {
   marginBottom: "var(--space-2)",
 };
 
-/* ─── Questions Tab ─── */
+/* ─── Questions Tab (v2 — tier-based) ─── */
+const COMPLETION_TRIGGERS = [
+  "visited_inbox", "performed_search", "visited_threads", "visited_calendar",
+  "used_capture", "visited_action_list", "visited_settings", "visited_bsides",
+];
+
 function QuestionsTab() {
-  const [phases, setPhases] = useState([]);
+  const [tiers, setTiers] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedPhases, setExpandedPhases] = useState({});
+  const [expandedTiers, setExpandedTiers] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [editingPhase, setEditingPhase] = useState(null);
-  const [addingTo, setAddingTo] = useState(null); // phase_id currently adding to
+  const [editingTier, setEditingTier] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const fetchAll = useCallback(async () => {
-    const [{ data: p }, { data: q }] = await Promise.all([
-      supabase.from("question_phases").select("*").order("sort_order"),
+    const [{ data: t }, { data: q }] = await Promise.all([
+      supabase.from("onboarding_tiers").select("*").order("sort_order"),
       supabase.from("questions").select("*").order("sort_order"),
     ]);
-    setPhases(p || []);
+    setTiers(t || []);
     setQuestions(q || []);
-    // expand all phases by default on first load
-    if (Object.keys(expandedPhases).length === 0 && p?.length) {
+    if (Object.keys(expandedTiers).length === 0 && t?.length) {
       const exp = {};
-      p.forEach((ph) => (exp[ph.id] = true));
-      setExpandedPhases(exp);
+      t.forEach((tier) => (exp[tier.id] = true));
+      setExpandedTiers(exp);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const togglePhase = (id) =>
-    setExpandedPhases((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleTier = (id) =>
+    setExpandedTiers((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  /* ── Phase CRUD ── */
-  const savePhase = async (phase) => {
+  /* ── Tier CRUD ── */
+  const saveTier = async (tier) => {
     const { error } = await supabase
-      .from("question_phases")
-      .update({ label: phase.label, intro: phase.intro })
-      .eq("id", phase.id);
+      .from("onboarding_tiers")
+      .update({
+        label: tier.label,
+        intro: tier.intro,
+        trust_line: tier.trust_line || "",
+        assignment_copy: tier.assignment_copy || "",
+        primary_destination: tier.primary_destination || "",
+        secondary_destination: tier.secondary_destination || "",
+        secondary_condition: tier.secondary_condition || "",
+        completion_trigger: tier.completion_trigger || "",
+      })
+      .eq("id", tier.id);
     if (!error) {
-      setPhases((prev) => prev.map((p) => (p.id === phase.id ? { ...p, ...phase } : p)));
-      setEditingPhase(null);
+      setTiers((prev) => prev.map((t) => (t.id === tier.id ? { ...t, ...tier } : t)));
+      setEditingTier(null);
     }
   };
 
-  const addPhase = async () => {
-    const maxSort = phases.reduce((mx, p) => Math.max(mx, p.sort_order || 0), 0);
+  const addTier = async () => {
+    const maxSort = tiers.reduce((mx, t) => Math.max(mx, t.sort_order || 0), 0);
+    const maxNum = tiers.reduce((mx, t) => Math.max(mx, t.tier_num || 0), 0);
     const { data, error } = await supabase
-      .from("question_phases")
-      .insert({ label: "New Phase", intro: "", sort_order: maxSort + 1 })
+      .from("onboarding_tiers")
+      .insert({ tier_num: maxNum + 1, label: "New Tier", intro: "", sort_order: maxSort + 1 })
       .select()
       .single();
     if (!error && data) {
-      setPhases((prev) => [...prev, data]);
-      setExpandedPhases((prev) => ({ ...prev, [data.id]: true }));
-      setEditingPhase(data.id);
+      setTiers((prev) => [...prev, data]);
+      setExpandedTiers((prev) => ({ ...prev, [data.id]: true }));
+      setEditingTier(data.id);
     }
   };
 
-  const deletePhase = async (id) => {
-    const count = questions.filter((q) => q.phase_id === id).length;
-    if (count > 0 && !window.confirm(`Delete phase and its ${count} question(s)?`)) return;
-    await supabase.from("questions").delete().eq("phase_id", id);
-    await supabase.from("question_phases").delete().eq("id", id);
-    setPhases((prev) => prev.filter((p) => p.id !== id));
-    setQuestions((prev) => prev.filter((q) => q.phase_id !== id));
+  const deleteTier = async (id) => {
+    const count = questions.filter((q) => q.tier_id === id).length;
+    if (count > 0 && !window.confirm(`Delete tier and its ${count} question(s)?`)) return;
+    await supabase.from("questions").delete().eq("tier_id", id);
+    await supabase.from("onboarding_tiers").delete().eq("id", id);
+    setTiers((prev) => prev.filter((t) => t.id !== id));
+    setQuestions((prev) => prev.filter((q) => q.tier_id !== id));
+  };
+
+  /* ── Load V2 Defaults ── */
+  const loadDefaults = async () => {
+    if (!window.confirm("This will replace ALL existing tiers and questions with the v2 defaults. Continue?")) return;
+    setSeeding(true);
+    try {
+      const seedData = (await import("../../scripts/onboarding-v2-seed.json")).default;
+      // Wipe existing
+      await supabase.from("questions").delete().not("tier_id", "is", null);
+      await supabase.from("onboarding_tiers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      // Insert tiers + questions
+      const hasOptions = (t) => t === "single_select" || t === "multi_select" || t === "choice" || t === "integration_picker";
+      for (let ti = 0; ti < seedData.tiers.length; ti++) {
+        const tier = seedData.tiers[ti];
+        const { data: newTier, error: tErr } = await supabase
+          .from("onboarding_tiers")
+          .insert({
+            tier_num: tier.tier_num || ti + 1,
+            label: tier.label,
+            intro: tier.intro || "",
+            trust_line: tier.trust_line || "",
+            assignment_copy: tier.assignment_copy || "",
+            primary_destination: tier.primary_destination || "",
+            secondary_destination: tier.secondary_destination || "",
+            secondary_condition: tier.secondary_condition || "",
+            completion_trigger: tier.completion_trigger || "",
+            sort_order: ti + 1,
+          })
+          .select()
+          .single();
+        if (tErr) throw new Error(tErr.message);
+        if (tier.questions?.length > 0) {
+          const rows = tier.questions.map((q, qi) => ({
+            tier_id: newTier.id,
+            question_id: q.id || `q_${Date.now()}_${qi}`,
+            text: q.text || "",
+            why: q.why || "",
+            type: q.type || "text_input",
+            multi: q.type === "multi_select" || q.multi || false,
+            options: hasOptions(q.type) && q.options
+              ? q.options.map((o) => (typeof o === "string" ? { label: o, value: o.toLowerCase().replace(/\s+/g, "_") } : o))
+              : null,
+            placeholder: q.placeholder || "",
+            skippable: q.skippable || false,
+            trust_line: q.trust_line || "",
+            copy_after_answer: q.copy_after_answer || "",
+            allow_voice: q.allow_voice || false,
+            fulkit_action: q.fulkit_action || "",
+            follow_up: q.follow_up || null,
+            sort_order: qi,
+          }));
+          const { error: qErr } = await supabase.from("questions").insert(rows);
+          if (qErr) throw new Error(qErr.message);
+        }
+      }
+      setLoading(true);
+      await fetchAll();
+    } catch (err) {
+      alert("Seed failed: " + err.message);
+    }
+    setSeeding(false);
   };
 
   /* ── Question CRUD ── */
@@ -3543,7 +3777,12 @@ function QuestionsTab() {
         options: q.options,
         placeholder: q.placeholder,
         skippable: q.skippable,
-        multi: q.multi,
+        multi: q.type === "multi_select",
+        trust_line: q.trust_line || "",
+        copy_after_answer: q.copy_after_answer || "",
+        allow_voice: q.allow_voice || false,
+        fulkit_action: q.fulkit_action || "",
+        follow_up: q.follow_up || null,
       })
       .eq("id", q.id);
     if (!error) {
@@ -3552,17 +3791,17 @@ function QuestionsTab() {
     }
   };
 
-  const addQuestion = async (phaseId) => {
-    const phaseQs = questions.filter((q) => q.phase_id === phaseId);
-    const maxSort = phaseQs.reduce((mx, q) => Math.max(mx, q.sort_order || 0), 0);
+  const addQuestion = async (tierId) => {
+    const tierQs = questions.filter((q) => q.tier_id === tierId);
+    const maxSort = tierQs.reduce((mx, q) => Math.max(mx, q.sort_order || 0), 0);
     const { data, error } = await supabase
       .from("questions")
       .insert({
-        phase_id: phaseId,
+        tier_id: tierId,
         question_id: `q_${Date.now()}`,
         text: "",
         why: "",
-        type: "text",
+        type: "text_input",
         options: null,
         placeholder: "",
         skippable: true,
@@ -3574,7 +3813,6 @@ function QuestionsTab() {
     if (!error && data) {
       setQuestions((prev) => [...prev, data]);
       setEditingQuestion(data.id);
-      setAddingTo(null);
     }
   };
 
@@ -3600,21 +3838,24 @@ function QuestionsTab() {
             Onboarding Questions
           </h2>
           <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-            {phases.length} phases, {questions.length} questions
+            {tiers.length} tiers, {questions.length} questions
           </p>
         </div>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <button onClick={loadDefaults} disabled={seeding} style={{ ...btnSmall, background: seeding ? "var(--color-border-light)" : "var(--color-success-soft, var(--color-bg-elevated))", color: seeding ? "var(--color-text-dim)" : "var(--color-text)" }}>
+            {seeding ? "Seeding..." : "Load V2 Defaults"}
+          </button>
           <button onClick={() => setShowExport(true)} style={btnSmall}>Export</button>
           <button onClick={() => setShowImport(true)} style={btnSmall}>Import JSON</button>
-          <button onClick={addPhase} style={btnPrimary}>
-            <Plus size={12} /> Add Phase
+          <button onClick={addTier} style={btnPrimary}>
+            <Plus size={12} /> Add Tier
           </button>
         </div>
       </div>
 
       {showImport && (
         <ImportModal
-          phases={phases}
+          tiers={tiers}
           onClose={() => setShowImport(false)}
           onDone={() => { setShowImport(false); setLoading(true); fetchAll(); }}
         />
@@ -3622,21 +3863,21 @@ function QuestionsTab() {
 
       {showExport && (
         <ExportModal
-          phases={phases}
+          tiers={tiers}
           questions={questions}
           onClose={() => setShowExport(false)}
         />
       )}
 
-      {phases.map((phase) => {
-        const phaseQs = questions
-          .filter((q) => q.phase_id === phase.id)
+      {tiers.map((tier) => {
+        const tierQs = questions
+          .filter((q) => q.tier_id === tier.id)
           .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-        const expanded = expandedPhases[phase.id];
+        const expanded = expandedTiers[tier.id];
 
         return (
-          <div key={phase.id} style={{ ...cardStyle, marginBottom: "var(--space-4)" }}>
-            {/* Phase header */}
+          <div key={tier.id} style={{ ...cardStyle, marginBottom: "var(--space-4)" }}>
+            {/* Tier header */}
             <div
               style={{
                 display: "flex",
@@ -3645,46 +3886,37 @@ function QuestionsTab() {
                 padding: "var(--space-3) var(--space-4)",
                 cursor: "pointer",
               }}
-              onClick={() => togglePhase(phase.id)}
+              onClick={() => toggleTier(tier.id)}
             >
               {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              {editingPhase === phase.id ? (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "var(--space-2)" }} onClick={(e) => e.stopPropagation()}>
-                  <input
-                    value={phase.label}
-                    onChange={(e) => setPhases((prev) => prev.map((p) => p.id === phase.id ? { ...p, label: e.target.value } : p))}
-                    style={{ ...inputStyle, fontWeight: "var(--font-weight-semibold)" }}
-                    placeholder="Phase name"
-                  />
-                  <input
-                    value={phase.intro || ""}
-                    onChange={(e) => setPhases((prev) => prev.map((p) => p.id === phase.id ? { ...p, intro: e.target.value } : p))}
-                    style={inputStyle}
-                    placeholder="Intro text shown to user"
-                  />
-                  <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                    <button onClick={() => savePhase(phase)} style={btnPrimary}>Save</button>
-                    <button onClick={() => setEditingPhase(null)} style={btnSmall}>Cancel</button>
-                  </div>
-                </div>
+              {editingTier === tier.id ? (
+                <TierEditForm
+                  tier={tier}
+                  onUpdate={(field, val) => setTiers((prev) => prev.map((t) => t.id === tier.id ? { ...t, [field]: val } : t))}
+                  onSave={() => saveTier(tier)}
+                  onCancel={() => setEditingTier(null)}
+                />
               ) : (
                 <>
                   <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginRight: "var(--space-2)" }}>
+                      Tier {tier.tier_num}
+                    </span>
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                      {phase.label}
+                      {tier.label}
                     </span>
                     <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
-                      {phaseQs.length} question{phaseQs.length !== 1 ? "s" : ""}
+                      {tierQs.length} question{tierQs.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setEditingPhase(phase.id); }}
+                    onClick={(e) => { e.stopPropagation(); setEditingTier(tier.id); }}
                     style={{ ...btnSmall, padding: "var(--space-1) var(--space-2)" }}
                   >
                     Edit
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); deletePhase(phase.id); }}
+                    onClick={(e) => { e.stopPropagation(); deleteTier(tier.id); }}
                     style={{ ...btnDanger, padding: "var(--space-1) var(--space-2)" }}
                   >
                     <Trash2 size={12} />
@@ -3693,16 +3925,29 @@ function QuestionsTab() {
               )}
             </div>
 
-            {phase.intro && editingPhase !== phase.id && (
+            {tier.intro && editingTier !== tier.id && (
               <div style={{ padding: "0 var(--space-4) var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic" }}>
-                {phase.intro}
+                {tier.intro}
+              </div>
+            )}
+
+            {tier.completion_trigger && editingTier !== tier.id && (
+              <div style={{ padding: "0 var(--space-4) var(--space-2)", display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                {tier.primary_destination && (
+                  <span style={{ fontSize: "var(--font-size-2xs)", padding: "1px var(--space-1-5)", borderRadius: "var(--radius-sm)", background: "var(--color-bg-surface)", color: "var(--color-text-muted)" }}>
+                    {tier.primary_destination}
+                  </span>
+                )}
+                <span style={{ fontSize: "var(--font-size-2xs)", padding: "1px var(--space-1-5)", borderRadius: "var(--radius-sm)", background: "var(--color-bg-surface)", color: "var(--color-text-muted)" }}>
+                  {tier.completion_trigger}
+                </span>
               </div>
             )}
 
             {/* Questions list */}
             {expanded && (
               <div style={{ padding: "0 var(--space-4) var(--space-3)" }}>
-                {phaseQs.map((q, qi) => (
+                {tierQs.map((q, qi) => (
                   <QuestionRow
                     key={q.id}
                     q={q}
@@ -3716,7 +3961,7 @@ function QuestionsTab() {
                 ))}
 
                 <button
-                  onClick={() => addQuestion(phase.id)}
+                  onClick={() => addQuestion(tier.id)}
                   style={{ ...btnSmall, marginTop: "var(--space-2)" }}
                 >
                   <Plus size={12} /> Add Question
@@ -3730,7 +3975,84 @@ function QuestionsTab() {
   );
 }
 
-/* ─── Single question row ─── */
+/* ─── Tier edit form (expanded in-place) ─── */
+function TierEditForm({ tier, onUpdate, onSave, onCancel }) {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "var(--space-2)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <input
+          value={tier.label}
+          onChange={(e) => onUpdate("label", e.target.value)}
+          style={{ ...inputStyle, flex: 1, fontWeight: "var(--font-weight-semibold)" }}
+          placeholder="Tier label"
+        />
+      </div>
+      <textarea
+        value={tier.intro || ""}
+        onChange={(e) => onUpdate("intro", e.target.value)}
+        style={{ ...inputStyle, resize: "vertical" }}
+        rows={2}
+        placeholder="Tier intro / opener copy"
+      />
+      <textarea
+        value={tier.trust_line || ""}
+        onChange={(e) => onUpdate("trust_line", e.target.value)}
+        style={{ ...inputStyle, resize: "vertical" }}
+        rows={2}
+        placeholder="Trust line (privacy copy)"
+      />
+      <textarea
+        value={tier.assignment_copy || ""}
+        onChange={(e) => onUpdate("assignment_copy", e.target.value)}
+        style={{ ...inputStyle, resize: "vertical" }}
+        rows={2}
+        placeholder="Feature assignment copy"
+      />
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <input
+          value={tier.primary_destination || ""}
+          onChange={(e) => onUpdate("primary_destination", e.target.value)}
+          style={{ ...inputStyle, flex: 1 }}
+          placeholder="Primary destination (e.g. /home)"
+        />
+        <input
+          value={tier.secondary_destination || ""}
+          onChange={(e) => onUpdate("secondary_destination", e.target.value)}
+          style={{ ...inputStyle, flex: 1 }}
+          placeholder="Secondary destination"
+        />
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <input
+          value={tier.secondary_condition || ""}
+          onChange={(e) => onUpdate("secondary_condition", e.target.value)}
+          style={{ ...inputStyle, flex: 1 }}
+          placeholder="Secondary condition (e.g. spotify_connected)"
+        />
+        <select
+          value={tier.completion_trigger || ""}
+          onChange={(e) => onUpdate("completion_trigger", e.target.value)}
+          style={{ ...inputStyle, flex: 1 }}
+        >
+          <option value="">Completion trigger...</option>
+          {COMPLETION_TRIGGERS.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <button onClick={onSave} style={btnPrimary}>Save</button>
+        <button onClick={onCancel} style={btnSmall}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Single question row (v2) ─── */
+const Q_TYPES = ["text_input", "single_select", "multi_select", "integration_picker", "feature_walkthrough"];
+const Q_TYPE_LABELS = { text_input: "Text", single_select: "Single Select", multi_select: "Multi Select", integration_picker: "Integration", feature_walkthrough: "Walkthrough" };
+const Q_LABEL_STYLE = { fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" };
+
 function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) {
   const [draft, setDraft] = useState(q);
 
@@ -3738,15 +4060,16 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
 
   const update = (field, value) => setDraft((prev) => ({ ...prev, [field]: value }));
 
-  const toggleType = () => {
-    if (draft.type === "text") {
-      update("type", "choice");
-      if (!draft.options || draft.options.length === 0) {
-        setDraft((prev) => ({ ...prev, type: "choice", options: [{ label: "A", value: "a" }, { label: "B", value: "b" }] }));
-      }
-    } else {
-      setDraft((prev) => ({ ...prev, type: "text", options: null }));
-    }
+  const setType = (newType) => {
+    const needsOptions = newType === "single_select" || newType === "multi_select";
+    setDraft((prev) => ({
+      ...prev,
+      type: newType,
+      multi: newType === "multi_select",
+      options: needsOptions && (!prev.options || prev.options.length === 0)
+        ? [{ label: "Option A", value: "a" }, { label: "Option B", value: "b" }]
+        : needsOptions ? prev.options : null,
+    }));
   };
 
   const addOption = () => {
@@ -3767,6 +4090,9 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
     }));
   };
 
+  // Map legacy types for display
+  const displayType = q.type === "choice" ? (q.multi ? "multi_select" : "single_select") : (q.type === "text" ? "text_input" : q.type);
+
   if (!editing) {
     return (
       <div
@@ -3785,21 +4111,27 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
           <div style={{ fontSize: "var(--font-size-sm)", lineHeight: "var(--line-height-normal)" }}>
             {q.text || <span style={{ color: "var(--color-text-dim)", fontStyle: "italic" }}>Empty question</span>}
           </div>
-          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)", flexWrap: "wrap" }}>
             <span style={{
               fontSize: "var(--font-size-2xs)",
               padding: "1px var(--space-1-5)",
               borderRadius: "var(--radius-sm)",
-              background: q.type === "choice" ? "var(--color-accent-dim, rgba(99,102,241,0.1))" : "var(--color-bg-surface)",
+              background: "var(--color-bg-surface)",
               color: "var(--color-text-muted)",
               textTransform: "uppercase",
               fontWeight: "var(--font-weight-semibold)",
               letterSpacing: "var(--letter-spacing-wider)",
             }}>
-              {q.type === "choice" ? `${q.options?.length || 0} choices` : "text"}
+              {Q_TYPE_LABELS[displayType] || displayType}
             </span>
             {q.skippable && (
               <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>skippable</span>
+            )}
+            {q.allow_voice && (
+              <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>voice</span>
+            )}
+            {q.fulkit_action && (
+              <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{q.fulkit_action}</span>
             )}
           </div>
         </div>
@@ -3810,6 +4142,9 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
       </div>
     );
   }
+
+  const showOptions = draft.type === "single_select" || draft.type === "multi_select" || draft.type === "choice";
+  const showPlaceholder = draft.type === "text_input" || draft.type === "text";
 
   // Editing mode
   return (
@@ -3826,9 +4161,7 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
     >
       {/* Question text */}
       <div>
-        <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" }}>
-          Question
-        </label>
+        <label style={Q_LABEL_STYLE}>Question</label>
         <textarea
           value={draft.text}
           onChange={(e) => update("text", e.target.value)}
@@ -3840,9 +4173,7 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
 
       {/* Why */}
       <div>
-        <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" }}>
-          Why we ask (shown to user)
-        </label>
+        <label style={Q_LABEL_STYLE}>Why we ask (shown to user)</label>
         <input
           value={draft.why || ""}
           onChange={(e) => update("why", e.target.value)}
@@ -3851,21 +4182,33 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
         />
       </div>
 
-      {/* Type toggle + placeholder */}
-      <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-end" }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" }}>
-            Type
-          </label>
-          <button onClick={toggleType} style={{ ...btnSmall, width: "100%", justifyContent: "center" }}>
-            {draft.type === "choice" ? "Multiple Choice" : "Free Text"}
-          </button>
+      {/* Type selector (5 options) */}
+      <div>
+        <label style={Q_LABEL_STYLE}>Type</label>
+        <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap" }}>
+          {Q_TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => setType(t)}
+              style={{
+                ...btnSmall,
+                background: (draft.type === t) ? "var(--color-text)" : "var(--color-bg-elevated)",
+                color: (draft.type === t) ? "var(--color-bg)" : "var(--color-text-secondary)",
+                fontSize: "var(--font-size-2xs)",
+                padding: "var(--space-1) var(--space-2)",
+              }}
+            >
+              {Q_TYPE_LABELS[t]}
+            </button>
+          ))}
         </div>
-        {draft.type === "text" && (
+      </div>
+
+      {/* Row: placeholder + skip + voice */}
+      <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-end" }}>
+        {showPlaceholder && (
           <div style={{ flex: 2 }}>
-            <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" }}>
-              Placeholder
-            </label>
+            <label style={Q_LABEL_STYLE}>Placeholder</label>
             <input
               value={draft.placeholder || ""}
               onChange={(e) => update("placeholder", e.target.value)}
@@ -3875,9 +4218,7 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
           </div>
         )}
         <div>
-          <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)", display: "block" }}>
-            Skip
-          </label>
+          <label style={Q_LABEL_STYLE}>Skip</label>
           <button
             onClick={() => update("skippable", !draft.skippable)}
             style={{ ...btnSmall, width: "100%", justifyContent: "center", background: draft.skippable ? "var(--color-bg-surface)" : "var(--color-bg-elevated)" }}
@@ -3885,21 +4226,65 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
             {draft.skippable ? "Yes" : "No"}
           </button>
         </div>
+        {showPlaceholder && (
+          <div>
+            <label style={Q_LABEL_STYLE}>Voice</label>
+            <button
+              onClick={() => update("allow_voice", !draft.allow_voice)}
+              style={{ ...btnSmall, width: "100%", justifyContent: "center", background: draft.allow_voice ? "var(--color-bg-surface)" : "var(--color-bg-elevated)" }}
+            >
+              {draft.allow_voice ? "On" : "Off"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Trust line */}
+      <div>
+        <label style={Q_LABEL_STYLE}>Trust line (privacy copy)</label>
+        <textarea
+          value={draft.trust_line || ""}
+          onChange={(e) => update("trust_line", e.target.value)}
+          rows={2}
+          style={{ ...inputStyle, resize: "vertical" }}
+          placeholder="Privacy/trust copy shown with this question (optional)"
+        />
+      </div>
+
+      {/* Copy after answer */}
+      <div>
+        <label style={Q_LABEL_STYLE}>Copy after answer</label>
+        <textarea
+          value={draft.copy_after_answer || ""}
+          onChange={(e) => update("copy_after_answer", e.target.value)}
+          rows={2}
+          style={{ ...inputStyle, resize: "vertical" }}
+          placeholder="What Fülkit says after they answer (optional)"
+        />
+      </div>
+
+      {/* Fulkit action (read-only) */}
+      <div>
+        <label style={Q_LABEL_STYLE}>Fulkit action (structural)</label>
+        <input
+          value={draft.fulkit_action || ""}
+          onChange={(e) => update("fulkit_action", e.target.value)}
+          style={{ ...inputStyle, color: "var(--color-text-dim)" }}
+          placeholder="e.g. create_identity_file, set_whisper_frequency"
+        />
       </div>
 
       {/* Choice options editor */}
-      {draft.type === "choice" && (
+      {showOptions && (
         <div>
-          <label style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)", display: "block" }}>
-            Options
-          </label>
+          <label style={Q_LABEL_STYLE}>Options</label>
           {(draft.options || []).map((opt, i) => (
             <div key={i} style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-1-5)", alignItems: "center" }}>
               <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text-muted)", minWidth: 16 }}>
                 {String.fromCharCode(65 + i)}
               </span>
               <input
-                value={opt.label}
+                value={typeof opt === "string" ? opt : opt.label}
                 onChange={(e) => updateOption(i, "label", e.target.value)}
                 style={{ ...inputStyle, flex: 1 }}
                 placeholder="Option label"
@@ -3964,35 +4349,46 @@ function Modal({ children, onClose }) {
 
 /* ─── JSON template shown in import modal ─── */
 const TEMPLATE_JSON = `{
-  "phases": [
+  "tiers": [
     {
-      "label": "Phase Name",
-      "intro": "Intro text shown before questions.",
+      "tier_num": 1,
+      "label": "Tier Name",
+      "intro": "Tier opener copy.",
+      "trust_line": "Privacy copy shown at tier start.",
+      "assignment_copy": "Feature assignment copy after questions.",
+      "primary_destination": "/home",
+      "secondary_destination": "/fabric",
+      "secondary_condition": "spotify_connected",
+      "completion_trigger": "visited_inbox",
       "questions": [
         {
-          "id": "unique_id",
+          "id": "q1",
           "text": "Your question here?",
           "why": "Why we ask this.",
-          "type": "text",
+          "type": "text_input",
           "placeholder": "Optional placeholder",
-          "skippable": false
+          "skippable": false,
+          "allow_voice": false,
+          "trust_line": null,
+          "copy_after_answer": null,
+          "fulkit_action": "create_identity_file"
         },
         {
-          "id": "choice_example",
+          "id": "q2",
           "text": "Pick one:",
           "why": "Reason for asking.",
-          "type": "choice",
-          "multi": false,
+          "type": "single_select",
           "options": ["Option A", "Option B", "Option C"],
-          "skippable": false
+          "skippable": false,
+          "fulkit_action": ""
         }
       ]
     }
   ]
 }`;
 
-/* ─── Import Modal ─── */
-function ImportModal({ phases, onClose, onDone }) {
+/* ─── Import Modal (v2 — tier-based) ─── */
+function ImportModal({ tiers: existingTiers, onClose, onDone }) {
   const [json, setJson] = useState("");
   const [replaceAll, setReplaceAll] = useState(false);
   const [error, setError] = useState(null);
@@ -4014,49 +4410,66 @@ function ImportModal({ phases, onClose, onDone }) {
       setError("Invalid JSON. Check syntax and try again.");
       return;
     }
-    if (!parsed.phases || !Array.isArray(parsed.phases)) {
-      setError('JSON must have a "phases" array at the top level.');
+    if (!parsed.tiers || !Array.isArray(parsed.tiers)) {
+      setError('JSON must have a "tiers" array at the top level.');
       return;
     }
-    for (const p of parsed.phases) {
-      if (!p.label || !Array.isArray(p.questions)) {
-        setError("Each phase needs a label and a questions array.");
+    for (const t of parsed.tiers) {
+      if (!t.label || !Array.isArray(t.questions)) {
+        setError("Each tier needs a label and a questions array.");
         return;
       }
     }
 
     setImporting(true);
     try {
-      // If replace all, wipe existing
       if (replaceAll) {
-        await supabase.from("questions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        await supabase.from("question_phases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        // Wipe questions that have tier_id, then wipe tiers
+        await supabase.from("questions").delete().not("tier_id", "is", null);
+        await supabase.from("onboarding_tiers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       }
 
-      const maxSort = replaceAll ? 0 : phases.reduce((mx, p) => Math.max(mx, p.sort_order || 0), 0);
+      const maxSort = replaceAll ? 0 : (existingTiers || []).reduce((mx, t) => Math.max(mx, t.sort_order || 0), 0);
 
-      for (let pi = 0; pi < parsed.phases.length; pi++) {
-        const ph = parsed.phases[pi];
-        const { data: newPhase, error: phErr } = await supabase
-          .from("question_phases")
-          .insert({ label: ph.label, intro: ph.intro || "", sort_order: maxSort + pi + 1 })
+      for (let ti = 0; ti < parsed.tiers.length; ti++) {
+        const tier = parsed.tiers[ti];
+        const { data: newTier, error: tErr } = await supabase
+          .from("onboarding_tiers")
+          .insert({
+            tier_num: tier.tier_num || ti + 1,
+            label: tier.label,
+            intro: tier.intro || "",
+            trust_line: tier.trust_line || "",
+            assignment_copy: tier.assignment_copy || "",
+            primary_destination: tier.primary_destination || "",
+            secondary_destination: tier.secondary_destination || "",
+            secondary_condition: tier.secondary_condition || "",
+            completion_trigger: tier.completion_trigger || "",
+            sort_order: maxSort + ti + 1,
+          })
           .select()
           .single();
-        if (phErr) throw new Error(phErr.message);
+        if (tErr) throw new Error(tErr.message);
 
-        if (ph.questions.length > 0) {
-          const rows = ph.questions.map((q, qi) => ({
-            phase_id: newPhase.id,
+        if (tier.questions.length > 0) {
+          const hasOptions = (t) => t === "single_select" || t === "multi_select" || t === "choice";
+          const rows = tier.questions.map((q, qi) => ({
+            tier_id: newTier.id,
             question_id: q.id || `q_${Date.now()}_${qi}`,
             text: q.text || "",
             why: q.why || "",
-            type: q.type || "text",
-            multi: q.multi || false,
-            options: q.type === "choice" && q.options
-              ? q.options.map((o) => (typeof o === "string" ? { label: o, value: o.toLowerCase() } : o))
+            type: q.type || "text_input",
+            multi: q.type === "multi_select" || q.multi || false,
+            options: hasOptions(q.type) && q.options
+              ? q.options.map((o) => (typeof o === "string" ? { label: o, value: o.toLowerCase().replace(/\s+/g, "_") } : o))
               : null,
             placeholder: q.placeholder || "",
             skippable: q.skippable || false,
+            trust_line: q.trust_line || "",
+            copy_after_answer: q.copy_after_answer || "",
+            allow_voice: q.allow_voice || false,
+            fulkit_action: q.fulkit_action || "",
+            follow_up: q.follow_up || null,
             sort_order: qi,
           }));
           const { error: qErr } = await supabase.from("questions").insert(rows);
@@ -4115,7 +4528,7 @@ function ImportModal({ phases, onClose, onDone }) {
             onChange={(e) => { setJson(e.target.value); setError(null); }}
             rows={10}
             style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: "var(--font-size-xs)" }}
-            placeholder='{"phases": [...]}'
+            placeholder='{"tiers": [...]}'
           />
         </div>
 
@@ -4149,26 +4562,37 @@ function ImportModal({ phases, onClose, onDone }) {
   );
 }
 
-/* ─── Export Modal ─── */
-function ExportModal({ phases, questions, onClose }) {
+/* ─── Export Modal (v2) ─── */
+function ExportModal({ tiers, questions, onClose }) {
   const [copied, setCopied] = useState(false);
 
   const exportData = {
-    phases: phases.map((p) => ({
-      label: p.label,
-      intro: p.intro || "",
+    tiers: tiers.map((t) => ({
+      tier_num: t.tier_num,
+      label: t.label,
+      intro: t.intro || "",
+      trust_line: t.trust_line || "",
+      assignment_copy: t.assignment_copy || "",
+      primary_destination: t.primary_destination || "",
+      secondary_destination: t.secondary_destination || "",
+      secondary_condition: t.secondary_condition || "",
+      completion_trigger: t.completion_trigger || "",
       questions: questions
-        .filter((q) => q.phase_id === p.id)
+        .filter((q) => q.tier_id === t.id)
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
         .map((q) => ({
           id: q.question_id,
           text: q.text,
           why: q.why || "",
           type: q.type,
-          ...(q.multi ? { multi: true } : {}),
-          ...(q.type === "choice" && q.options ? { options: q.options.map((o) => (typeof o === "string" ? o : o.label)) } : {}),
+          ...(q.options ? { options: q.options.map((o) => (typeof o === "string" ? o : o.label)) } : {}),
           ...(q.placeholder ? { placeholder: q.placeholder } : {}),
           skippable: q.skippable || false,
+          allow_voice: q.allow_voice || false,
+          trust_line: q.trust_line || "",
+          copy_after_answer: q.copy_after_answer || "",
+          fulkit_action: q.fulkit_action || "",
+          ...(q.follow_up ? { follow_up: q.follow_up } : {}),
         })),
     })),
   };

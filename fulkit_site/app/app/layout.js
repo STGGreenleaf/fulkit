@@ -5,6 +5,7 @@ import { VaultProvider } from "../lib/vault";
 import { SandboxProvider } from "../lib/sandbox";
 import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
+import QuickCapture from "../components/QuickCapture";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
 const DEFAULTS = {
@@ -74,6 +75,7 @@ export default function RootLayout({ children }) {
             <SandboxProvider>
             <FabricProvider>
               {children}
+              <QuickCapture />
               <DevInspector />
             </FabricProvider>
             </SandboxProvider>

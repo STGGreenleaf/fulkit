@@ -1,0 +1,472 @@
+{
+  "tiers": [
+    {
+      "tier_num": 1,
+      "label": "Let's get you set up",
+      "intro": "Teaches: voice/text capture, inbox, how Fulkit files things, first integration.",
+      "trust_line": "Everything you tell me stays in your files unless you decide otherwise. I don't build a profile on you \u2014 you're building one for yourself. I just read what you let me read. That's the deal.",
+      "assignment_copy": "I just filed what you told me into your inbox. Go take a look \u2014 you'll see how I organize things so you don't have to.",
+      "primary_destination": "/home",
+      "secondary_destination": "/fabric",
+      "secondary_condition": "spotify_connected",
+      "completion_trigger": "visited_inbox",
+      "questions": [
+        {
+          "id": "q0",
+          "text": "Before we start \u2014 what brought you here? Just curious.",
+          "why": "No wrong answer. Just helps me understand what you're looking for.",
+          "type": "text_input",
+          "placeholder": "What made you try F\u00fclkit?",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "save_motivation"
+        },
+        {
+          "id": "q1",
+          "text": "What should I call you?",
+          "why": "Creates identity file. Everything starts with a name.",
+          "type": "text_input",
+          "placeholder": "Your name",
+          "skippable": false,
+          "allow_voice": false,
+          "fulkit_action": "create_identity_file"
+        },
+        {
+          "id": "q2",
+          "text": "Where are you based?",
+          "why": "Time zones, local context, recommendations.",
+          "type": "text_input",
+          "placeholder": "City or region",
+          "skippable": true,
+          "allow_voice": false,
+          "fulkit_action": "set_location"
+        },
+        {
+          "id": "q3",
+          "text": "What do you do?",
+          "why": "Shapes whether Fulkit thinks in terms of bosses, clients, customers, or professors.",
+          "type": "single_select",
+          "options": ["Employee", "Self-employed", "Student", "Between things", "Retired", "Something else"],
+          "skippable": false,
+          "fulkit_action": "set_work_context",
+          "follow_up": {
+            "trigger_value": "Self-employed",
+            "text": "What's the business?",
+            "type": "text_input",
+            "fulkit_action": "set_business_context"
+          }
+        },
+        {
+          "id": "q3b",
+          "text": "Quick preference \u2014 do you like being asked questions, or would you rather I just figure things out on my own?",
+          "why": "Shapes how I interact with you going forward.",
+          "type": "single_select",
+          "options": ["Ask me \u2014 I like being involved", "Figure it out \u2014 just show me results", "Mix of both"],
+          "skippable": false,
+          "fulkit_action": "set_interaction_style"
+        },
+        {
+          "id": "q4",
+          "text": "What are you working on right now? Give me two or three things \u2014 messy is fine.",
+          "why": "This is the first real capture. Teaches you the product works.",
+          "type": "text_input",
+          "placeholder": "Whatever's on your plate...",
+          "skippable": true,
+          "allow_voice": true,
+          "trust_line": "Whatever you say here becomes a note in YOUR files. Not mine. Yours. Delete it anytime and it's gone \u2014 I don't keep a copy.",
+          "fulkit_action": "create_first_notes"
+        },
+        {
+          "id": "q5",
+          "text": "Connect something so I can show you what I do.",
+          "why": "Unlocks a live feature demo.",
+          "type": "integration_picker",
+          "options": ["Spotify", "Google Calendar", "Apple Calendar", "I'll do this later"],
+          "skippable": false,
+          "copy_after_answer": "Nice. You just unlocked something. Go check it out when you're ready.",
+          "fulkit_action": "connect_integration"
+        }
+      ]
+    },
+    {
+      "tier_num": 2,
+      "label": "How your brain works",
+      "intro": "Teaches: search, the filing system, threads, Context Control settings.",
+      "trust_line": "Quick reminder \u2014 this is burn-after-reading technology. Everything lives locally in your files. I process what you share with me to be helpful, then the conversation is done. I'm not building a dossier. You are building a brain \u2014 and you hold every key to it.",
+      "assignment_copy": "Try searching for one of the things you told me in Tier 1. Just a word or two. See what comes back. Also check your task list \u2014 I set something up based on what keeps falling through your cracks.",
+      "primary_destination": "/threads",
+      "secondary_destination": "",
+      "secondary_condition": "",
+      "completion_trigger": "visited_threads",
+      "questions": [
+        {
+          "id": "q5b",
+          "text": "Real talk \u2014 how do you feel about AI knowing your stuff?",
+          "why": "There's no wrong answer. This shapes how I handle your data.",
+          "type": "single_select",
+          "options": ["Totally fine", "A little weird but worth it", "I'm cautious \u2014 show me the controls", "I don't know yet"],
+          "skippable": false,
+          "trust_line": "Honest answer only. There's no wrong one \u2014 and it changes how I handle your stuff.",
+          "fulkit_action": "set_trust_comfort"
+        },
+        {
+          "id": "q6",
+          "text": "When you save something, how do you usually try to find it later?",
+          "why": "Shapes how Fulkit prioritizes search results.",
+          "type": "single_select",
+          "options": ["I search for what it was about", "I try to remember when I saved it", "I scroll until I see it", "I usually can't find it"],
+          "skippable": false,
+          "fulkit_action": "set_search_preference"
+        },
+        {
+          "id": "q7",
+          "text": "What keeps falling through the cracks?",
+          "why": "Tells Fulkit where to focus whispers and what to watch for.",
+          "type": "multi_select",
+          "options": ["Follow-ups", "Ideas I had but forgot", "Tasks I said I'd do", "Links and articles", "Personal errands", "Projects I started"],
+          "skippable": false,
+          "fulkit_action": "set_whisper_focus"
+        },
+        {
+          "id": "q8",
+          "text": "Here's where your stuff lives.",
+          "why": "This is your file system. I built it, I maintain it, and I file things here for you automatically. You don't need to organize anything \u2014 that's my job. You've got four ways to see it: a Board for dragging things around, a List for scanning, a Calendar for due dates, and a Table for details.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "trust_line": "Every file here is yours. It's all markdown \u2014 plain text you can open anywhere. Export it, delete it, take it somewhere else. No lock-in.",
+          "fulkit_action": "show_threads"
+        },
+        {
+          "id": "q9",
+          "text": "Go check your Context Control.",
+          "why": "This is how you control what I can see. You can see exactly what I know about you and dial each thing up or down.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "trust_line": "Most apps don't let you see what they know about you, let alone turn it off. This is yours to control. Always.",
+          "fulkit_action": "show_context_control"
+        },
+        {
+          "id": "q9b",
+          "text": "Your data lives in one of three places \u2014 your device only, encrypted in the cloud, or on F\u00fclkit's servers. Want to pick now or decide later?",
+          "why": "This is your vault. It controls where your files are stored and who can access them.",
+          "type": "single_select",
+          "options": ["My device only \u2014 maximum privacy", "Encrypted cloud \u2014 sync across devices", "F\u00fclkit's servers \u2014 simplest option", "I'll decide later"],
+          "skippable": false,
+          "fulkit_action": "set_storage_preference"
+        }
+      ]
+    },
+    {
+      "tier_num": 3,
+      "label": "What matters to you",
+      "intro": "Teaches: calendar integration, reminders, personal/work coexistence, whispers.",
+      "trust_line": "I'm about to ask some personal stuff. Not because I need it \u2014 because the more I understand what your actual life looks like, the better I don't let things slip. Skip anything. The skips tell me something too. And same deal: this all lives in your files. Not ours. Yours.",
+      "assignment_copy": "If you told me a goal, check your calendar \u2014 I put a check-in there. If you told me what you're into, go look at your threads \u2014 it has its own space now.",
+      "primary_destination": "/threads",
+      "secondary_destination": "/fabric",
+      "secondary_condition": "spotify_connected",
+      "completion_trigger": "visited_threads",
+      "questions": [
+        {
+          "id": "q9c",
+          "text": "Anything you want to make sure I never bring up? Certain topics, people, situations \u2014 some things are better left alone.",
+          "why": "If you tell me, I won't go there. Ever.",
+          "type": "text_input",
+          "placeholder": "Topics, names, situations...",
+          "skippable": true,
+          "allow_voice": false,
+          "trust_line": "This one matters. If you tell me, I won't go there. Ever.",
+          "fulkit_action": "set_boundaries"
+        },
+        {
+          "id": "q10",
+          "text": "Outside of work, what are you into right now?",
+          "why": "Seeds personal context so Fulkit isn't a work-only tool.",
+          "type": "text_input",
+          "placeholder": "Hobbies, interests, side quests...",
+          "skippable": true,
+          "allow_voice": true,
+          "copy_after_answer": "I just gave that its own space in your brain. Drop stuff in there anytime \u2014 I'll keep it separate from work.",
+          "fulkit_action": "create_personal_thread"
+        },
+        {
+          "id": "q11",
+          "text": "Is there something you're working toward this year?",
+          "why": "If you answer, Fulkit creates a milestone note with a gentle recurring check-in.",
+          "type": "text_input",
+          "placeholder": "A goal, a milestone, a target...",
+          "skippable": true,
+          "allow_voice": false,
+          "copy_after_answer": "Check your calendar. I left something there for you.",
+          "fulkit_action": "create_goal_note"
+        },
+        {
+          "id": "q12",
+          "text": "Who comes up a lot? Just first names \u2014 so I know who 'Mike' is when you mention him.",
+          "why": "Context seeding. Not a contacts list \u2014 just names Fulkit can recognize.",
+          "type": "text_input",
+          "placeholder": "First names, separated by commas",
+          "skippable": true,
+          "allow_voice": false,
+          "trust_line": "I'm not storing contacts or phone numbers. Just names so I don't ask 'who's Mike?' every time you mention him. Delete any of these from your files anytime.",
+          "fulkit_action": "seed_people_context"
+        },
+        {
+          "id": "q13",
+          "text": "How often do you want me checking in?",
+          "why": "Sets whisper frequency from day one.",
+          "type": "single_select",
+          "options": ["A couple times a day", "Once a day is plenty", "Only when I ask", "Surprise me \u2014 I'll tell you if it's too much"],
+          "skippable": false,
+          "fulkit_action": "set_whisper_frequency"
+        },
+        {
+          "id": "q13b",
+          "text": "How's this going so far? Too personal? Not personal enough? Just right?",
+          "why": "Calibrates the rest of your onboarding.",
+          "type": "single_select",
+          "options": ["Just right", "A little too personal", "You could go deeper", "I just want to finish"],
+          "skippable": false,
+          "copy_after_answer": null,
+          "fulkit_action": "calibrate_onboarding"
+        }
+      ]
+    },
+    {
+      "tier_num": 4,
+      "label": "Show me how you work",
+      "intro": "Teaches: quick capture, whisper behavior, the action list, the write-back loop.",
+      "trust_line": "Almost dialed in. These last few shape how we actually work together day to day. Same rules \u2014 your files, your device, your call. Everything I learn here makes me faster at helping you. Nothing leaves unless you send it.",
+      "assignment_copy": "Try capturing something right now. Say it out loud or type it \u2014 whatever you picked. Watch where it goes. Also check your action list \u2014 I built it from everything you've told me so far.",
+      "primary_destination": "/hum",
+      "secondary_destination": "/actions",
+      "secondary_condition": "",
+      "completion_trigger": "used_capture",
+      "questions": [
+        {
+          "id": "q14",
+          "text": "How do you capture ideas right now?",
+          "why": "Determines whether Fulkit pushes voice capture, quick text, or meets you where you are.",
+          "type": "single_select",
+          "options": ["Notes app on my phone", "Voice memos", "I don't \u2014 they disappear", "Paper / journal", "A specific app"],
+          "skippable": false,
+          "fulkit_action": "set_capture_preference",
+          "follow_up": {
+            "trigger_value": "A specific app",
+            "text": "Which one?",
+            "type": "text_input",
+            "fulkit_action": "set_capture_app"
+          }
+        },
+        {
+          "id": "q15",
+          "text": "Are you more of a morning person or night owl?",
+          "why": "Determines when whispers arrive and when Fulkit checks in.",
+          "type": "single_select",
+          "options": ["Early bird", "Night owl", "Depends on the day"],
+          "skippable": false,
+          "fulkit_action": "set_chronotype"
+        },
+        {
+          "id": "q16",
+          "text": "Want a morning briefing? Scores, news, weather \u2014 or just your stuff?",
+          "why": "Tells Fulkit whether to be a morning dashboard or stay focused on the brain.",
+          "type": "multi_select",
+          "options": ["Weather", "Sports scores", "News headlines", "Just my stuff \u2014 no briefing"],
+          "skippable": false,
+          "fulkit_action": "set_briefing_config"
+        },
+        {
+          "id": "q16b",
+          "text": "Here's what your morning could look like.",
+          "why": "This is your bestie briefing \u2014 a personalized snapshot assembled from everything you've told me so far.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_briefing_preview"
+        },
+        {
+          "id": "q17",
+          "text": "What's one thing you wish an app could do for you that none of them do?",
+          "why": "This is the gold. Tells Fulkit what magic moment to create for you specifically.",
+          "type": "text_input",
+          "placeholder": "Dream feature...",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "save_magic_wish"
+        },
+        {
+          "id": "q17b",
+          "text": "Compact or comfortable? Some people want the sidebar tight and minimal. Others want labels on everything.",
+          "why": "Sets your sidebar preference right now.",
+          "type": "single_select",
+          "options": ["Compact \u2014 just icons", "Comfortable \u2014 show me labels"],
+          "skippable": false,
+          "fulkit_action": "set_compact_mode"
+        }
+      ]
+    },
+    {
+      "tier_num": 5,
+      "label": "The real stuff",
+      "intro": "The full power of a second brain that knows you. This is the 'holy shit' tier.",
+      "trust_line": "You've been here a minute now. I know how you think, what you're working on, and what you care about. This last round isn't about setup \u2014 it's about letting me actually help. Your files. Your brain. I'm just the one paying attention.",
+      "assignment_copy": "Go check your action list. Go check your threads. Look at your calendar. Everything you've told me across all five tiers is in there \u2014 organized, connected, and working for you. This is your brain now.",
+      "primary_destination": "/actions",
+      "secondary_destination": "/threads",
+      "secondary_condition": "",
+      "completion_trigger": "visited_action_list",
+      "questions": [
+        {
+          "id": "q18",
+          "text": "What's the thing you keep meaning to get to but never do?",
+          "why": "Fulkit breaks it into a first step and puts it on the action list.",
+          "type": "text_input",
+          "placeholder": "That thing you keep putting off...",
+          "skippable": true,
+          "allow_voice": true,
+          "copy_after_answer": "Check your tasks. I didn't plan the whole thing \u2014 just the first move.",
+          "fulkit_action": "create_first_step"
+        },
+        {
+          "id": "q19",
+          "text": "What stresses you out most right now?",
+          "why": "Fulkit becomes aware without adding pressure. Won't pile on in these areas.",
+          "type": "single_select",
+          "options": ["Money", "Health", "Relationships", "Work", "Time \u2014 never enough", "Nothing major", "Rather not say"],
+          "skippable": true,
+          "trust_line": "I'm not a therapist and I won't pretend to be. But if money stresses you out, I'm not going to send you a whisper about your budget at 11pm. Context matters.",
+          "fulkit_action": "set_stress_awareness"
+        },
+        {
+          "id": "q19b",
+          "text": "Your brain can talk to other tools. Here's a taste of what's possible.",
+          "why": "These are integrations you can connect anytime from Settings. No setup needed to browse \u2014 just see what's possible.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_integration_preview"
+        },
+        {
+          "id": "q20",
+          "text": "What does a really good day look like for you?",
+          "why": "This is Fulkit's north star. Shapes long-term whisper direction.",
+          "type": "text_input",
+          "placeholder": "Paint the picture...",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "create_good_day_note"
+        },
+        {
+          "id": "q21",
+          "text": "If I could magically handle one recurring annoyance in your life, what would it be?",
+          "why": "Fulkit proposes an automation or recurring workflow based on this.",
+          "type": "text_input",
+          "placeholder": "That thing that keeps bugging you...",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "create_automation_suggestion"
+        }
+      ]
+    },
+    {
+      "tier_num": 6,
+      "label": "Power Tools",
+      "intro": "Now that you're dialed in, here's the full toolkit.",
+      "trust_line": "These are power features. They're optional \u2014 but once you see them, you'll want them.",
+      "assignment_copy": "Your power tools are set up. Go explore.",
+      "primary_destination": "/settings",
+      "secondary_destination": "",
+      "secondary_condition": "",
+      "completion_trigger": "visited_settings",
+      "paid_only": true,
+      "questions": [
+        {
+          "id": "q22",
+          "text": "Want unlimited messages? Plug in your own Anthropic API key and the meter disappears.",
+          "why": "If you have a Claude API key, you can use it here for unlimited conversations.",
+          "type": "single_select",
+          "options": ["Tell me more", "I have a key \u2014 let's do it", "I'm good with what I've got"],
+          "skippable": false,
+          "copy_after_answer": "Head to Settings \u2192 Privacy to plug it in. Once it's connected, you're unlimited.",
+          "fulkit_action": "show_byok_info"
+        },
+        {
+          "id": "q23",
+          "text": "Got files you want me to know about? Drag them in or paste text \u2014 I'll read it all.",
+          "why": "Your vault can ingest markdown, text, and notes from anywhere.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_manual_import"
+        },
+        {
+          "id": "q24",
+          "text": "Share your link \u2014 you and a friend both get extra credits.",
+          "why": "Referrals earn you and your friend bonus messages every month.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_referral"
+        }
+      ]
+    },
+    {
+      "tier_num": 7,
+      "label": "Your Integrations",
+      "intro": "Your brain can connect to the tools you already use.",
+      "trust_line": "Every integration is optional. Connect what makes sense. Disconnect anytime.",
+      "assignment_copy": "Check your connected tools. See what you can ask me now.",
+      "primary_destination": "/settings",
+      "secondary_destination": "",
+      "secondary_condition": "",
+      "completion_trigger": "visited_settings",
+      "paid_only": true,
+      "questions": [
+        {
+          "id": "q25",
+          "text": "Here's what your connected tools can do.",
+          "why": "Each integration unlocks new commands. Here's a preview of what you can ask.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_connected_commands"
+        },
+        {
+          "id": "q26",
+          "text": "Want to connect something new?",
+          "why": "Browse available integrations and connect the ones that make sense for you.",
+          "type": "integration_picker",
+          "options": ["Square", "Numbrly", "TrueGauge", "Shopify", "Stripe", "Toast", "Trello", "GitHub", "I'm good for now"],
+          "skippable": false,
+          "fulkit_action": "connect_advanced_integration"
+        }
+      ]
+    },
+    {
+      "tier_num": 8,
+      "label": "Make It Yours",
+      "intro": "Final touches. Make this space feel like yours.",
+      "trust_line": "You own everything here. Every file, every note, every setting. Take it all with you if you ever leave.",
+      "assignment_copy": "Your workspace is ready. Everything is organized, connected, and yours.",
+      "primary_destination": "/threads",
+      "secondary_destination": "/settings",
+      "secondary_condition": "",
+      "completion_trigger": "visited_threads",
+      "paid_only": true,
+      "questions": [
+        {
+          "id": "q27",
+          "text": "Your threads have custom folders and views. Want to set up your workspace?",
+          "why": "Create folders for your projects, switch between Board, List, Calendar, and Table views.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_workspace_setup"
+        },
+        {
+          "id": "q28",
+          "text": "Your data is yours. You can export everything anytime.",
+          "why": "No lock-in. Settings \u2192 Privacy \u2192 Export gives you all your data in plain text.",
+          "type": "feature_walkthrough",
+          "skippable": false,
+          "fulkit_action": "show_data_export"
+        }
+      ]
+    }
+  ]
+}

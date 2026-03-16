@@ -13,6 +13,7 @@ import ThreadTable from "../../components/ThreadTable";
 import ThreadDetail from "../../components/ThreadDetail";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
+import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
 
 const TAB_ICON_SIZE = 14;
@@ -79,6 +80,7 @@ function ThreadsContent({ initialFolder, initialView }) {
   const isDev = user?.isDev;
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "threads" }); }, []);
+  useOnboardingTrigger("threads");
 
   // --- Core state ---
   const [notes, setNotes] = useState([]);
