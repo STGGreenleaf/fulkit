@@ -70,6 +70,7 @@ export async function GET(request) {
       return NextResponse.redirect(new URL(`/settings/sources?shopify=error&reason=db_${dbError.code}`, request.url));
     }
 
+    getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "shopify" } }).then(() => {}).catch(() => {});
     return NextResponse.redirect(new URL("/settings/sources?shopify=connected", request.url));
   } catch (err) {
     console.error("[shopify/callback]", err.message);

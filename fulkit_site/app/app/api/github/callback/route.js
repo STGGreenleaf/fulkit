@@ -66,6 +66,9 @@ export async function GET(request) {
       return NextResponse.redirect(new URL("/settings/sources?gh=error", request.url));
     }
 
+    // Track integration connected event (fire-and-forget)
+    getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "github" } }).then(() => {}).catch(() => {});
+
     // Clear the temporary auth cookie and redirect to settings
     const response = NextResponse.redirect(new URL("/settings/sources?gh=connected", request.url));
     response.cookies.delete("gh_auth_token");

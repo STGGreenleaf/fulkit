@@ -70,6 +70,7 @@ export async function GET(request) {
       return NextResponse.redirect(new URL(`/settings/sources?stripe=error&reason=db_${dbError.code}`, request.url));
     }
 
+    getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "stripe" } }).then(() => {}).catch(() => {});
     return NextResponse.redirect(new URL("/settings/sources?stripe=connected", request.url));
   } catch (err) {
     console.error("[stripe/callback]", err.message);

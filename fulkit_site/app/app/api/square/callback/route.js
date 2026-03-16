@@ -76,6 +76,7 @@ export async function GET(request) {
       return NextResponse.redirect(new URL(`/settings/sources?sq=error&reason=db_${dbError.code}`, request.url));
     }
 
+    getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "square" } }).then(() => {}).catch(() => {});
     return NextResponse.redirect(new URL("/settings/sources?sq=connected", request.url));
   } catch (err) {
     console.error("[square/callback]", err.message);

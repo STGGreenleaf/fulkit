@@ -29,5 +29,6 @@ export async function POST(request) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
+  getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "numbrly" } }).then(() => {}).catch(() => {});
   return Response.json({ ok: true });
 }

@@ -72,6 +72,7 @@ export async function GET(request) {
       return NextResponse.redirect(new URL(`/settings/sources?toast=error&reason=db_${dbError.code}`, request.url));
     }
 
+    getSupabaseAdmin().from("user_events").insert({ user_id: userId, event: "integration_connected", page: "/settings", meta: { provider: "toast" } }).then(() => {}).catch(() => {});
     return NextResponse.redirect(new URL("/settings/sources?toast=connected", request.url));
   } catch (err) {
     console.error("[toast/callback]", err.message);

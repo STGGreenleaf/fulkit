@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Check, SkipForward } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import { useAuth } from "../../lib/auth";
+import { useTrack } from "../../lib/track";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
 export default function Onboarding() {
   const { user, fetchProfile } = useAuth();
+  const track = useTrack();
   const router = useRouter();
   const [phases, setPhases] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -117,6 +119,7 @@ export default function Onboarding() {
           await supabase.from("preferences").insert(prefs);
         }
         fetchProfile(user.id);
+        track("onboarding_complete", { phases_completed: phaseIdx + 1 });
       }
       setComplete(true);
     }
