@@ -10,6 +10,7 @@ import Tooltip from "../../components/Tooltip";
 import MessageRenderer from "../../components/MessageRenderer";
 import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
+import { useTrack } from "../../lib/track";
 
 const TAB_ICON_SIZE = 14;
 
@@ -1536,6 +1537,9 @@ export default function FabricPage() {
     toggleMusicChat,
     reconnectSpotify,
   } = useFabric();
+
+  const track = useTrack();
+  useEffect(() => { track("page_view", { feature: "fabric" }); }, []);
 
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);

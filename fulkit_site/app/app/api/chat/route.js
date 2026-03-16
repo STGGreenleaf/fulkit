@@ -2203,6 +2203,14 @@ Never skip the preview step. The user must see and approve changes before they g
         .then(() => {}).catch(() => {});
     }
 
+    // Track chat_sent event (fire-and-forget)
+    if (userId) {
+      getSupabaseAdmin()
+        .from("user_events")
+        .insert({ user_id: userId, event: "chat_sent", page: "/chat", meta: { has_context: context.length > 0 } })
+        .then(() => {}).catch(() => {});
+    }
+
     const MAX_TOOL_ROUNDS = 5;
     const TOOL_TIMEOUT_MS = 15000; // 15s per tool call
     const MAX_TOOL_RESULT_CHARS = 50000; // ~12.5K tokens — prevent context overflow

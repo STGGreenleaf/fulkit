@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import { useTrack } from "../../lib/track";
 import StorageModeSelector from "../../components/StorageModeSelector";
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
@@ -276,6 +277,8 @@ const REFERRALS = [
 
 export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const { compactMode, isOwner } = useAuth();
+  const track = useTrack();
+  useEffect(() => { track("page_view", { feature: "settings" }); }, []);
   const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
 

@@ -6,6 +6,7 @@ import { Mic, X, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AuthGuard from "../../components/AuthGuard";
 import LogoMark from "../../components/LogoMark";
+import { useTrack } from "../../lib/track";
 
 const CONFIGS = {
   idle: {
@@ -84,6 +85,8 @@ function smoothNoise(x, y, z) {
 }
 
 export default function Hum() {
+  const track = useTrack();
+  useEffect(() => { track("page_view", { feature: "hum" }); }, []);
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const [mode, setMode] = useState("idle");

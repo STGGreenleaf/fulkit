@@ -8,6 +8,7 @@ import Tooltip from "../../components/Tooltip";
 
 const TAB_ICON_SIZE = 14;
 import { useAuth } from "../../lib/auth";
+import { useTrack } from "../../lib/track";
 import { supabase } from "../../lib/supabase";
 
 const FILTERS = [
@@ -119,6 +120,8 @@ const fieldInputStyle = {
 export default function Actions() {
   const { user, compactMode } = useAuth();
   const isDev = user?.isDev;
+  const track = useTrack();
+  useEffect(() => { track("page_view", { feature: "actions" }); }, []);
 
   const [actions, setActions] = useState([]);
   const [filter, setFilter] = useState("active");

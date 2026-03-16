@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
+import { useTrack } from "../../lib/track";
 import { supabase } from "../../lib/supabase";
 
 // Placeholder data for ?auth=dev template mode
@@ -48,6 +49,8 @@ export default function Dashboard() {
   const { user, profile, hasContext, accessToken, compactMode } = useAuth();
   const router = useRouter();
   const isDev = user?.isDev;
+  const track = useTrack();
+  useEffect(() => { track("page_view", { feature: "home" }); }, []);
 
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);

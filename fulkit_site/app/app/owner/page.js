@@ -239,20 +239,28 @@ function DashboardTab() {
   const { accessToken } = useAuth();
   const [siteMetrics, setSiteMetrics] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [events, setEvents] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
     if (!accessToken) return;
-    // Fetch both in parallel
-    fetch("/api/owner/metrics", { headers: { Authorization: `Bearer ${accessToken}` } })
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    fetch("/api/owner/metrics", { headers })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setSiteMetrics(data); })
       .catch(() => {});
 
-    fetch("/api/owner/analytics", { headers: { Authorization: `Bearer ${accessToken}` } })
+    fetch("/api/owner/analytics", { headers })
       .then(r => r.ok ? r.json() : null)
       .then(data => { setAnalytics(data); setLoadingAnalytics(false); })
       .catch(() => { setLoadingAnalytics(false); });
+
+    fetch("/api/owner/events", { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setEvents(data); setLoadingEvents(false); })
+      .catch(() => { setLoadingEvents(false); });
   }, [accessToken]);
 
   const paying = siteMetrics ? siteMetrics.standard + siteMetrics.pro : 0;
@@ -325,6 +333,120 @@ function DashboardTab() {
           </div>
         </div>
       )}
+
+      {/* ─── Feature Usage + Funnel + Integrations (Phase 2) ─── */}
+      <div style={{ marginTop: "var(--space-6)" }}>
+        <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+          Product Usage
+        </div>
+        {loadingEvents ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-6)" }}>
+            <LoadingMark size={24} />
+          </div>
+        ) : !events ? (
+          <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+            Event tracking not configured. Create the user_events table in Supabase.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+            {/* Feature Usage */}
+            {events.featureUsage?.length > 0 ? (
+              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                  Feature Usage (30d)
+                </div>
+                {events.featureUsage.map((f, i) => {
+                  const max = events.featureUsage[0]?.visits || 1;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 70, textTransform: "capitalize" }}>
+                        {f.feature}
+                      </span>
+                      <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: `${(f.visits / max) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 60, textAlign: "right" }}>
+                        {f.visits} / {f.uniqueUsers}u
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                Collecting feature usage data...
+              </div>
+            )}
+
+            {/* User Funnel */}
+            {events.funnel ? (
+              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                  User Funnel
+                </div>
+                {[
+                  { label: "Signed Up", count: events.funnel.signedUp },
+                  { label: "Onboarded", count: events.funnel.onboarded },
+                  { label: "First Chat", count: events.funnel.firstChat },
+                  { label: "Active/mo", count: events.funnel.activeThisMonth },
+                  { label: "Paid", count: events.funnel.paid },
+                ].map((stage, i) => {
+                  const base = events.funnel.signedUp || 1;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 70 }}>
+                        {stage.label}
+                      </span>
+                      <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: `${(stage.count / base) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 32, textAlign: "right" }}>
+                        {stage.count}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {/* Chat Depth */}
+            {events.chatDepth?.totalMessages > 0 ? (
+              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                  Chat Depth (30d)
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
+                  {[
+                    { label: "Messages", value: events.chatDepth.totalMessages },
+                    { label: "With Tools", value: events.chatDepth.withTools },
+                    { label: "With Context", value: events.chatDepth.withContext },
+                  ].map((m, i) => (
+                    <div key={i} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{m.value}</div>
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Integration Adoption */}
+            {events.integrations?.length > 0 ? (
+              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                  Integration Adoption
+                </div>
+                {events.integrations.map((int, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>{int.provider}</span>
+                    <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{int.connected} connected</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
