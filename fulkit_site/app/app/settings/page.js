@@ -382,39 +382,38 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
             {tab === "billing" && <BillingTab />}
             {tab === "privacy" && <PrivacyTab />}
             {tab === "owner" && isOwner && <OwnerPanel initialTab={initialOwnerTab} urlPrefix="/settings/owner" />}
-
-            {/* Social links */}
-            {tab !== "owner" && (
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-4)",
-                paddingTop: "var(--space-6)",
-                marginTop: "var(--space-6)",
-                borderTop: "1px solid var(--color-border-light)",
-              }}>
-                {[
-                  { label: "Bluesky", href: "https://bsky.app/profile/fulkit.bsky.social" },
-                ].map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-muted)",
-                      textDecoration: "none",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
-                    onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
+
+        {/* Footer — pinned to bottom, consistent across all tabs */}
+        {tab !== "owner" && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-4)",
+            padding: "var(--space-3) var(--space-6)",
+            borderTop: "1px solid var(--color-border-light)",
+          }}>
+            {[
+              { label: "Bluesky", href: "https://bsky.app/profile/fulkit.bsky.social" },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-muted)",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
         </div>
       </div>
     </AuthGuard>
