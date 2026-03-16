@@ -1835,10 +1835,10 @@ const BINGO_CARDS = [
   { label: "Ramen profitable", threshold: 75 },
   { label: "First $500/mo", threshold: 150 },
   { label: "$1K/mo club", threshold: 300 },
-  { label: "Quit your day job", threshold: 500 },
+  { label: "Real side income", threshold: 500 },
   { label: "Real business", threshold: 750 },
   { label: "Four figures net", threshold: 1000 },
-  { label: "Scaling", threshold: 1500 },
+  { label: "Quit your day job", threshold: 1500 },
   { label: "Two thousand strong", threshold: 2000 },
 ];
 
@@ -1948,13 +1948,13 @@ function UsersTab() {
         </div>
       </div>
 
-      {/* ── BINGO CARD ── */}
-      <div style={cardStyle}>
+      {/* ── MILESTONES ── */}
+      <div style={{ marginBottom: "var(--space-4)" }}>
         <div style={sectionLabel}>Milestones</div>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "var(--space-2)",
+          gridTemplateColumns: "repeat(6, 1fr)",
+          gap: "var(--space-1-5)",
         }}>
           {BINGO_CARDS.map((card) => {
             const achieved = currentTotal >= card.threshold;
@@ -1962,27 +1962,27 @@ function UsersTab() {
               <div
                 key={card.label}
                 style={{
-                  padding: "var(--space-3)",
-                  borderRadius: "var(--radius-md)",
-                  textAlign: "center",
+                  padding: "var(--space-1-5) var(--space-2)",
+                  borderRadius: "var(--radius-sm)",
                   background: achieved ? "var(--color-bg-inverse)" : "transparent",
                   border: achieved ? "1px solid var(--color-bg-inverse)" : "1px dashed var(--color-border-light)",
                   color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
                 }}
               >
                 <div style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  marginBottom: 2,
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-medium)",
+                  lineHeight: "var(--line-height-tight)",
                 }}>
                   {card.label}
                 </div>
                 <div style={{
                   fontSize: 9,
                   fontFamily: "var(--font-mono)",
-                  opacity: 0.6,
+                  opacity: 0.5,
+                  marginTop: 1,
                 }}>
-                  {card.threshold >= 1000 ? `~${(card.threshold / 1000).toFixed(0)}K` : `~${card.threshold}`} users
+                  {card.threshold >= 1000 ? `${(card.threshold / 1000).toFixed(0)}K` : card.threshold}
                 </div>
               </div>
             );
