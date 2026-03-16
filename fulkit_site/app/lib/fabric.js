@@ -6,35 +6,6 @@ import { useAuth } from "./auth";
 
 const FabricContext = createContext(null);
 
-// Mock data for dev mode
-const MOCK_TRACKS = [
-  { id: "1", title: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", duration: 243, art: null },
-  { id: "2", title: "Tadow", artist: "Masego, FKJ", album: "Tadow", duration: 295, art: null },
-  { id: "3", title: "Breathe", artist: "Télépopmusik", album: "Genetic World", duration: 258, art: null },
-  { id: "4", title: "Intro", artist: "The xx", album: "xx", duration: 128, art: null },
-  { id: "5", title: "Nikes", artist: "Frank Ocean", album: "Blonde", duration: 313, art: null },
-  { id: "6", title: "Be Quiet and Drive", artist: "Deftones", album: "Around the Fur", duration: 310, art: null },
-  { id: "7", title: "Dissolve", artist: "Absofacto", album: "Thousand Peaces", duration: 227, art: null },
-  { id: "8", title: "Lost in the Light", artist: "Bahamas", album: "Barchords", duration: 209, art: null },
-];
-
-const MOCK_PLAYLISTS = [
-  { id: "p1", name: "Deep Work", tracks: 24, description: "Focus without friction" },
-  { id: "p2", name: "Night Drive", tracks: 18, description: "Windows down, volume up" },
-  { id: "p3", name: "Sunday Morning", tracks: 31, description: "Slow start, no rush" },
-];
-
-const MOCK_FEATURES = {
-  "1": { bpm: 105, key: "Am", energy: 78, danceability: 62, valence: 45, loudness: -8, acousticness: 15 },
-  "2": { bpm: 98, key: "Fm", energy: 65, danceability: 71, valence: 58, loudness: -10, acousticness: 25 },
-  "3": { bpm: 112, key: "C", energy: 42, danceability: 55, valence: 38, loudness: -14, acousticness: 60 },
-  "4": { bpm: 120, key: "Dm", energy: 35, danceability: 48, valence: 30, loudness: -16, acousticness: 70 },
-  "5": { bpm: 130, key: "Eb", energy: 55, danceability: 60, valence: 25, loudness: -12, acousticness: 10 },
-  "6": { bpm: 138, key: "Em", energy: 88, danceability: 45, valence: 35, loudness: -5, acousticness: 5 },
-  "7": { bpm: 100, key: "G", energy: 50, danceability: 65, valence: 70, loudness: -11, acousticness: 40 },
-  "8": { bpm: 92, key: "D", energy: 38, danceability: 52, valence: 72, loudness: -13, acousticness: 55 },
-};
-
 // --- Taste Signal Utilities ---
 function normalizeForMatch(str) {
   if (!str) return "";
@@ -78,16 +49,15 @@ function makePlaylistUri(id, provider = "spotify") {
 
 export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
-  const isDev = user?.isDev;
   const pathname = usePathname();
   const onFabricPage = pathname === "/fabric" || pathname === "/fabricproto";
 
-  const [connected, setConnected] = useState(isDev ? true : false);
-  const [connectedProviders, setConnectedProviders] = useState(isDev ? { spotify: true } : {});
-  const [statusChecked, setStatusChecked] = useState(isDev ? true : false);
+  const [connected, setConnected] = useState(false);
+  const [connectedProviders, setConnectedProviders] = useState({});
+  const [statusChecked, setStatusChecked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(isDev ? MOCK_TRACKS[0] : null);
-  const [queue, setQueue] = useState(isDev ? MOCK_TRACKS.slice(1, 5) : []);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [queue, setQueue] = useState([]);
   // Seed data — pre-populated sets for fresh installs
   const SEED_SETS = {
     activeId: "set-1",
@@ -165,10 +135,10 @@ export function FabricProvider({ children }) {
   // Derived: active set's tracks (backwards-compatible with old `flagged`)
   const activeSet = setsData.sets.find(s => s.id === setsData.activeId) || setsData.sets[0];
   const flagged = activeSet?.tracks || [];
-  const [playlists, setPlaylists] = useState(isDev ? MOCK_PLAYLISTS : []);
+  const [playlists, setPlaylists] = useState([]);
   const [progress, setProgress] = useState(0);
   const [volume, setVolumeState] = useState(null);
-  const [audioFeatures, setAudioFeatures] = useState(isDev ? MOCK_FEATURES : {});
+  const [audioFeatures, setAudioFeatures] = useState({});
   const [timeline, setTimeline] = useState(null); // Fabric per-second data
   const [timelineResolution, setTimelineResolution] = useState(500);
   const timelineRequested = useRef(new Set());
@@ -227,7 +197,7 @@ export function FabricProvider({ children }) {
 
   // Check connection status
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
       if (data) {
         setConnected(data.connected);
@@ -235,19 +205,19 @@ export function FabricProvider({ children }) {
       }
       setStatusChecked(true);
     }).catch(() => setStatusChecked(true));
-  }, [accessToken, isDev, apiFetch]);
+  }, [accessToken, apiFetch]);
 
   // Fetch playlists when connected
   useEffect(() => {
-    if (isDev || !connected || !accessToken) return;
+    if (!connected || !accessToken) return;
     apiFetch("/api/fabric/playlists").then((data) => {
       if (data?.playlists) setPlaylists(data.playlists);
     });
-  }, [connected, accessToken, isDev, apiFetch]);
+  }, [connected, accessToken, apiFetch]);
 
   // Poll now playing every 4s when connected
   useEffect(() => {
-    if (isDev || !connected || !accessToken) return;
+    if (!connected || !accessToken) return;
 
     let failCount = 0;
     const fetchNowPlaying = async () => {
@@ -338,7 +308,7 @@ export function FabricProvider({ children }) {
     const interval = onFabricPage ? 4000 : 30000;
     pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [connected, accessToken, isDev, apiFetch, onFabricPage]);
+  }, [connected, accessToken, apiFetch, onFabricPage]);
 
   // Smooth progress interpolation between polls
   useEffect(() => {
@@ -354,12 +324,11 @@ export function FabricProvider({ children }) {
 
   // Controls — send to API
   const sendControl = useCallback(async (action) => {
-    if (isDev) return;
     await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action }),
     });
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
 
   const play = useCallback(() => {
     setIsPlaying(true);
@@ -379,14 +348,6 @@ export function FabricProvider({ children }) {
   }, [sendControl]);
 
   const skip = useCallback(() => {
-    if (isDev) {
-      if (queue.length === 0) return;
-      setCurrentTrack(queue[0]);
-      setQueue((q) => q.slice(1));
-      setProgress(0);
-      setIsPlaying(true);
-      return;
-    }
     // Record skip signal if early (<50% through) and matches a BTC rec
     if (progress < 0.5 && currentTrack && findHistoryMatchRef.current) {
       const match = findHistoryMatchRef.current(currentTrack.id, currentTrack.title, currentTrack.artist);
@@ -413,13 +374,9 @@ export function FabricProvider({ children }) {
     } else {
       sendControl("next");
     }
-  }, [isDev, queue, sendControl, progress, currentTrack]);
+  }, [sendControl, progress, currentTrack]);
 
   const prev = useCallback(() => {
-    if (isDev) {
-      setProgress(0);
-      return;
-    }
     // If we jumped to a track manually, go back to what was playing
     const saved = prevTrackRef.current;
     if (saved) {
@@ -434,14 +391,13 @@ export function FabricProvider({ children }) {
       return;
     }
     sendControl("previous");
-  }, [isDev, sendControl, apiFetch]);
+  }, [sendControl, apiFetch]);
 
   const setVolume = useCallback((val) => {
     const v = Math.max(0, Math.min(100, Math.round(val)));
     setVolumeState(v);
     // Suppress poll-based volume updates for 5s so the slider doesn't snap back
     volumeLockedUntil.current = Date.now() + 5000;
-    if (isDev) return;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
       apiFetch("/api/fabric/controls", {
@@ -449,16 +405,16 @@ export function FabricProvider({ children }) {
         body: JSON.stringify({ action: "volume", value: v }),
       });
     }, 300);
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
 
   // Save track to Spotify Liked Songs (fire-and-forget)
   const likeTrack = useCallback((track) => {
-    if (!track?.id || isDev) return;
+    if (!track?.id) return;
     apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "save_track", value: { id: track.id } }),
     }).catch(() => {});
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
 
   // Seek to position (fraction 0-1)
   const seekTo = useCallback((fraction) => {
@@ -466,17 +422,16 @@ export function FabricProvider({ children }) {
     const ms = Math.round(fraction * currentTrack.duration * 1000);
     setProgress(fraction);
     pollSuppressedUntil.current = Date.now() + 3000;
-    if (isDev) return;
     apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "seek", value: ms }),
     });
-  }, [currentTrack, isDev, apiFetch]);
+  }, [currentTrack, apiFetch]);
 
   // Fetch Fabric timeline when track changes
   const prevTimelineTrack = useRef(null);
   useEffect(() => {
-    if (isDev || !connected || !accessToken || !currentTrack?.id) return;
+    if (!connected || !accessToken || !currentTrack?.id) return;
     if (prevTimelineTrack.current === currentTrack.id) return;
     prevTimelineTrack.current = currentTrack.id;
     setTimeline(null); // clear old data first
@@ -491,7 +446,7 @@ export function FabricProvider({ children }) {
         setTimeline(null);
       }
     }).catch(() => setTimeline(null));
-  }, [currentTrack?.id, connected, accessToken, isDev, apiFetch]);
+  }, [currentTrack?.id, connected, accessToken, apiFetch]);
 
   // Snapshot interpolator: progress → current snapshot data
   const getSnapshot = useCallback((progressFraction) => {
@@ -532,7 +487,7 @@ export function FabricProvider({ children }) {
 
   // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
   useEffect(() => {
-    if (isDev || !connected || !accessToken) return;
+    if (!connected || !accessToken) return;
     const ids = [];
     if (currentTrack?.id && !audioFeatures[currentTrack.id] && !featuresRequested.current.has(currentTrack.id)) {
       ids.push(currentTrack.id);
@@ -547,7 +502,7 @@ export function FabricProvider({ children }) {
         setAudioFeatures((prev) => ({ ...prev, ...data.features }));
       }
     });
-  }, [currentTrack?.id, flagged, connected, accessToken, isDev, apiFetch, audioFeatures]);
+  }, [currentTrack?.id, flagged, connected, accessToken, apiFetch, audioFeatures]);
 
   const reorderFlagged = useCallback((fromIndex, toIndex) => {
     setSetsData((prev) => {
@@ -809,7 +764,6 @@ export function FabricProvider({ children }) {
     pollSuppressedUntil.current = Date.now() + 5000;
     // Reset lastPollState so first non-suppressed poll starts fresh (avoids stale trackGone)
     lastPollState.current = { isPlaying: true, trackId: track.id, progress: 0 };
-    if (isDev) return;
 
     // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
     let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
@@ -865,7 +819,7 @@ export function FabricProvider({ children }) {
         }
       } catch {}
     }
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
   playTrackRef.current = playTrack;
 
   // Play a track with context for auto-continue
@@ -981,7 +935,6 @@ export function FabricProvider({ children }) {
   autoAdvanceRef.current = autoAdvance;
 
   const playPlaylist = useCallback(async (playlistId, startTrackUri) => {
-    if (isDev) return;
     await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({
@@ -993,26 +946,25 @@ export function FabricProvider({ children }) {
       }),
     });
     setIsPlaying(true);
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
 
   // Cache for fetched playlist tracks
   const mixTracksCacheRef = useRef({});
 
   const fetchPlaylistTracks = useCallback(async (playlistId) => {
     if (mixTracksCacheRef.current[playlistId]) return mixTracksCacheRef.current[playlistId];
-    if (isDev) return MOCK_TRACKS;
     const data = await apiFetch(`/api/fabric/playlists/${playlistId}/tracks`);
     const tracks = data?.tracks || [];
     mixTracksCacheRef.current[playlistId] = tracks;
     return tracks;
-  }, [isDev, apiFetch]);
+  }, [apiFetch]);
 
   // ═══ Published sets (featured mixes) ═══
   const [publishedSets, setPublishedSets] = useState({}); // { setName: crateId }
 
   // Fetch published sets on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     apiFetch("/api/fabric/featured").then((data) => {
       if (!data?.crates) return;
       const map = {};
@@ -1021,7 +973,7 @@ export function FabricProvider({ children }) {
       }
       setPublishedSets(map);
     });
-  }, [accessToken, isDev, apiFetch]);
+  }, [accessToken, apiFetch]);
 
   const publishSet = useCallback(async (setId) => {
     const set = setsData.sets.find(s => s.id === setId);
@@ -1069,7 +1021,7 @@ export function FabricProvider({ children }) {
 
   // Fetch ticker fact when track changes
   useEffect(() => {
-    if (isDev || !accessToken || !currentTrack?.id) return;
+    if (!accessToken || !currentTrack?.id) return;
     if (tickerTrackId === currentTrack.id) return;
     setTickerTrackId(currentTrack.id);
     apiFetch("/api/fabric/ticker", {
@@ -1084,7 +1036,7 @@ export function FabricProvider({ children }) {
       if (data?.fact) setTickerFact(data.fact);
       else setTickerFact(null);
     }).catch(() => setTickerFact(null));
-  }, [currentTrack?.id, accessToken, isDev, apiFetch, tickerTrackId]);
+  }, [currentTrack?.id, accessToken, apiFetch, tickerTrackId]);
 
   // Build taste summary for the API (computed per message, not stored)
   const buildTasteSummary = useCallback(() => {
@@ -1208,7 +1160,7 @@ export function FabricProvider({ children }) {
         flagged,
         playlists,
         progress,
-        allTracks: isDev ? MOCK_TRACKS : [],
+        allTracks: [],
         audioFeatures,
         play,
         pause,

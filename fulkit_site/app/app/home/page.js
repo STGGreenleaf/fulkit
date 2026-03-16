@@ -12,21 +12,6 @@ import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
 
-// Placeholder data for ?auth=dev template mode
-const DEV_WHISPERS = [
-  "You mentioned wanting to follow up with Sarah this week — it's Thursday.",
-  "Your Obsidian vault has 3 untagged notes from yesterday.",
-];
-const DEV_ACTIONS = [
-  { id: "1", title: "Review Q1 budget draft", source: "Obsidian" },
-  { id: "2", title: "Send Mike the revised proposal", source: "Chat" },
-  { id: "3", title: "Book dentist appointment", source: "Whisper" },
-];
-const DEV_NOTES = [
-  { id: "1", title: "Meeting notes — product roadmap", source: "Obsidian", created_at: "2h ago" },
-  { id: "2", title: "Voice capture: meal planning ideas", source: "Hum", created_at: "Yesterday" },
-  { id: "3", title: "Startup reading list", source: "Google Drive", created_at: "2 days ago" },
-];
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -50,7 +35,6 @@ const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
 export default function Dashboard() {
   const { user, profile, hasContext, accessToken, compactMode } = useAuth();
   const router = useRouter();
-  const isDev = user?.isDev;
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "home" }); }, []);
   useOnboardingTrigger("home");
@@ -61,7 +45,7 @@ export default function Dashboard() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   useEffect(() => {
-    if (!user || isDev) return;
+    if (!user) return;
 
     // Fetch real actions (parents + children)
     supabase
@@ -87,20 +71,20 @@ export default function Dashboard() {
         if (error) console.error("[home] notes query failed:", error.message);
         if (data) setNotes(data);
       });
-  }, [user, isDev]);
+  }, [user]);
 
   // Fetch whispers (proactive suggestions from Claude)
   useEffect(() => {
-    if (!accessToken || isDev) return;
+    if (!accessToken) return;
     fetch("/api/whispers", {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.whispers) setWhispers(data.whispers); })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
-  const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
+  const messagesUsed = profile?.messages_this_month || 0;
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
   const gaugeRemaining = seatLimit - messagesUsed;
   const gaugeLow = gaugeRemaining <= Math.ceil(seatLimit * 0.1);
@@ -114,9 +98,9 @@ export default function Dashboard() {
       .eq("id", id);
   };
 
-  const displayActions = isDev ? DEV_ACTIONS : actions;
-  const displayNotes = isDev ? DEV_NOTES : notes;
-  const displayWhispers = isDev ? DEV_WHISPERS : whispers;
+  const displayActions = actions;
+  const displayNotes = notes;
+  const displayWhispers = whispers;
 
   return (
     <AuthGuard>
@@ -169,7 +153,7 @@ export default function Dashboard() {
                     margin: 0,
                   }}
                 >
-                  {getGreeting()}, {(user?.name || profile?.name || "friend").split(" ")[0]}.
+                  {getGreeting()}, {(profile?.name || user?.name || "friend").split(" ")[0]}.
                 </h1>
                 <div style={{ flex: 1, minWidth: 0, marginBottom: 10 }}>
                   <div style={{
@@ -213,7 +197,7 @@ export default function Dashboard() {
               </p>
 
               {/* Context nudge — show when user has no context and hasn't dismissed */}
-              {!isDev && !hasContext && !nudgeDismissed && (
+              {!hasContext && !nudgeDismissed && (
                 <div
                   style={{
                     padding: "var(--space-4) var(--space-5)",
@@ -435,7 +419,7 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                            {isDev ? note.created_at : timeAgo(note.created_at)}
+                            {timeAgo(note.created_at)}
                           </span>
                         </div>
                       ))}

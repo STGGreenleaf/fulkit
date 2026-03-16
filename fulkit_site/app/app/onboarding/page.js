@@ -45,7 +45,7 @@ export default function Onboarding() {
         supabase.from("onboarding_tiers").select("*").order("sort_order"),
         supabase.from("questions").select("*").order("sort_order"),
       ];
-      if (user?.id && !user.isNew && !user.isDev) {
+      if (user?.id && !user.isNew) {
         queries.push(supabase.from("onboarding_progress").select("*").eq("user_id", user.id).order("tier_num"));
       }
 
@@ -115,7 +115,7 @@ export default function Onboarding() {
       }
 
       // Set trial_started_at if not set
-      if (user?.id && !user.isNew && !user.isDev) {
+      if (user?.id && !user.isNew) {
         supabase
           .from("profiles")
           .select("trial_started_at")
@@ -157,7 +157,7 @@ export default function Onboarding() {
 
   // ─── Save progress to DB ───
   const saveProgress = useCallback(async (tierNum, questionId, answer) => {
-    if (!user?.id || user.isNew || user.isDev) return;
+    if (!user?.id || user.isNew) return;
 
     const existing = progressMap[tierNum];
     const done = existing?.questions_done || [];

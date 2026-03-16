@@ -172,9 +172,6 @@ const SOURCE_LOGOS = {
   ),
 };
 
-// Mock connected state — will come from DB
-const INITIAL_CONNECTED = [];
-
 const SUGGESTED_SOURCES = [];
 
 const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
@@ -262,20 +259,6 @@ const ALL_SOURCES = [
   { id: "linear", name: "Linear", cat: "Tasks" },
 ];
 
-const PREFERENCES = [
-  { key: "Tone", value: "Warm and conversational", learned: true },
-  { key: "Whisper frequency", value: "2x per day", learned: false },
-  { key: "Morning briefing", value: "Enabled — work focus", learned: true },
-  { key: "Fitness nudges", value: "Disabled", learned: true },
-  { key: "Meal suggestions", value: "Afternoons only", learned: true },
-  { key: "Follow-up timing", value: "Fridays", learned: true },
-];
-
-const REFERRALS = [
-  { name: "Sarah M.", status: "active", since: "Jan 2026" },
-  { name: "Mike R.", status: "active", since: "Feb 2026" },
-  { name: "Pending invite", status: "pending", since: "—" },
-];
 
 export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const { compactMode, isOwner } = useAuth();
@@ -686,7 +669,7 @@ function AccountTab() {
     <div>
       <SectionTitle>Profile</SectionTitle>
       <Card>
-        <Row label="Name" value={user?.name || profile?.name || "—"} />
+        <Row label="Name" value={profile?.name || user?.name || "—"} />
         <Row label="Email" value={user?.email || "—"} />
         <Row label="Role" value={isOwner ? "Owner" : (profile?.role || "Member")} />
         <Row label="Member since" value={memberSince} />
@@ -790,8 +773,7 @@ function AccountTab() {
 
 function SourcesTab() {
   const { user, accessToken, githubConnected, setGithubConnected, checkGitHub } = useAuth();
-  const isDev = user?.isDev;
-  const [connected, setConnected] = useState(isDev ? INITIAL_CONNECTED : []);
+  const [connected, setConnected] = useState([]);
   const [githubRepos, setGithubRepos] = useState([]);
   const [githubActiveRepos, setGithubActiveRepos] = useState([]);
   const [githubDisconnecting, setGithubDisconnecting] = useState(false);
@@ -851,7 +833,6 @@ function SourcesTab() {
 
   // Fetch vault inventory counts
   useEffect(() => {
-    if (isDev) { setVaultCounts({ notes: 12, actions: 8 }); return; }
     if (!accessToken) return;
     Promise.all([
       supabase.from("notes").select("id", { count: "exact", head: true }),
@@ -861,13 +842,13 @@ function SourcesTab() {
       const ac = a.count || 0;
       if (nc > 0 || ac > 0) setVaultCounts({ notes: nc, actions: ac });
     }).catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Fetch repos and active state on mount
   useEffect(() => {
-    if (isDev || !accessToken || !githubConnected) return;
+    if (!accessToken || !githubConnected) return;
     fetchGithubRepos();
-  }, [githubConnected, accessToken, isDev]);
+  }, [githubConnected, accessToken]);
 
   // Refresh GitHub/Fabric status if we just came back from OAuth
   useEffect(() => {
@@ -895,75 +876,75 @@ function SourcesTab() {
 
   // Check Fabric connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/fabric/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setFabricConnected(data.connected); })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Numbrly connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setNumbrlyConnected(data.connected); if (data.lastSynced) setNumbrlyLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check TrueGauge connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setTgConnected(data.connected); if (data.lastSynced) setTgLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Square connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/square/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setSquareConnected(data.connected); if (data.lastSynced) setSquareLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Shopify connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/shopify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setShopifyConnected(data.connected); if (data.lastSynced) setShopifyLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Stripe connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/stripe/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setStripeConnected(data.connected); if (data.lastSynced) setStripeLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Toast connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/toast/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setToastConnected(data.connected); if (data.lastSynced) setToastLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   // Check Trello connection status on mount
   useEffect(() => {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     fetch("/api/trello/status", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) { setTrelloConnected(data.connected); if (data.lastSynced) setTrelloLastSynced(data.lastSynced); } })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   async function fetchGithubRepos() {
     try {
@@ -997,13 +978,12 @@ function SourcesTab() {
   }
 
   function connectGitHub() {
-    if (isDev || !accessToken) return;
+    if (!accessToken) return;
     document.cookie = `gh_auth_token=${accessToken}; path=/; max-age=300; SameSite=Lax`;
     window.open("/api/github/connect", "_blank");
   }
 
   function connectFabric() {
-    if (isDev) { setFabricConnected(true); return; }
     if (accessToken) {
       window.open("/api/fabric/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -1121,7 +1101,6 @@ function SourcesTab() {
   }
 
   function connectSquare() {
-    if (isDev) { setSquareConnected(true); return; }
     if (accessToken) {
       window.open("/api/square/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -1151,7 +1130,6 @@ function SourcesTab() {
   }
 
   function connectShopify(shop) {
-    if (isDev) { setShopifyConnected(true); return; }
     if (!shop) return;
     const cleanShop = shop.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
     if (accessToken) {
@@ -1179,7 +1157,6 @@ function SourcesTab() {
   }
 
   function connectStripe() {
-    if (isDev) { setStripeConnected(true); return; }
     if (accessToken) {
       window.open("/api/stripe/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -1205,7 +1182,6 @@ function SourcesTab() {
   }
 
   function connectToast() {
-    if (isDev) { setToastConnected(true); return; }
     if (accessToken) {
       window.open("/api/toast/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -1231,7 +1207,6 @@ function SourcesTab() {
   }
 
   function connectTrello() {
-    if (isDev) { setTrelloConnected(true); return; }
     if (accessToken) {
       window.open("/api/trello/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -2643,8 +2618,7 @@ function ManualTab() {
 
 function AITab() {
   const { user, accessToken } = useAuth();
-  const isDev = user?.isDev;
-  const prefs = isDev ? PREFERENCES : [];
+  const prefs = [];
 
   // ─── BYOK state ──────────────────────────────────────────
   const [byokKey, setByokKey] = useState("");
@@ -2653,14 +2627,14 @@ function AITab() {
   const [byokVerifying, setByokVerifying] = useState(false);
 
   useEffect(() => {
-    if (!accessToken || isDev) return;
+    if (!accessToken) return;
     fetch("/api/byok", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((r) => r.json())
       .then((data) => {
         if (data.connected) setByokStatus("connected");
       })
       .catch(() => {});
-  }, [accessToken, isDev]);
+  }, [accessToken]);
 
   async function handleByokConnect() {
     if (!byokKey.trim() || !accessToken) return;
@@ -2926,7 +2900,7 @@ function AITab() {
           >
             <span style={{ color: "var(--color-text-secondary)" }}>Current frequency</span>
             <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>
-              {isDev ? "2x / day" : "Not set"}
+              {"Not set"}
             </span>
           </div>
         </Card>
@@ -2937,8 +2911,7 @@ function AITab() {
 
 function ReferralsTab() {
   const { user } = useAuth();
-  const isDev = user?.isDev;
-  const refs = isDev ? REFERRALS : [];
+  const refs = [];
   const activeRefs = refs.filter((r) => r.status === "active").length;
   const credit = activeRefs * 1;
 
@@ -3088,13 +3061,12 @@ function ReferralsTab() {
 
 function BillingTab() {
   const { user, profile, isOwner, accessToken } = useAuth();
-  const isDev = user?.isDev;
   const [loading, setLoading] = useState(null); // "pro" | "standard" | "credits" | "portal"
 
   const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
-  const seatType = isDev ? "standard" : (profile?.seat_type || "free");
+  const seatType = profile?.seat_type || "free";
   const seatLimit = SEAT_LIMITS[seatType] || 450;
-  const messagesUsed = isDev ? 138 : (profile?.messages_this_month || 0);
+  const messagesUsed = profile?.messages_this_month || 0;
   const remaining = seatLimit - messagesUsed;
   const gaugeLow = remaining <= Math.ceil(seatLimit * 0.1);
   const gaugeCapped = remaining <= 0;
@@ -3103,7 +3075,7 @@ function BillingTab() {
   const PLAN_PRICES = { standard: "$7/mo", pro: "$15/mo", free: "Free" };
 
   async function handleCheckout(plan) {
-    if (!accessToken || isDev) return;
+    if (!accessToken) return;
     setLoading(plan);
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -3117,7 +3089,7 @@ function BillingTab() {
   }
 
   async function handlePortal() {
-    if (!accessToken || isDev) return;
+    if (!accessToken) return;
     setLoading("portal");
     try {
       const res = await fetch("/api/stripe/portal", {
@@ -3130,7 +3102,7 @@ function BillingTab() {
   }
 
   // Owner with own API key = unlimited
-  if (!isDev && isOwner) {
+  if (isOwner) {
     return (
       <div>
         <SectionTitle>Your plan</SectionTitle>
@@ -3259,9 +3231,9 @@ function BillingTab() {
           </div>
         </div>
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-          {isDev ? "Resets Mar 15. ~10 messages/day remaining." : `${remaining} messages remaining this period.`}
+          {`${remaining} messages remaining this period.`}
         </div>
-        {seatType !== "free" && !isDev && (
+        {seatType !== "free" && (
           <button
             onClick={handlePortal}
             disabled={!!loading}
@@ -3316,25 +3288,9 @@ function BillingTab() {
 
       <SectionTitle>Referral credits</SectionTitle>
       <Card>
-        {isDev ? (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-                2 active referrals
-              </span>
-              <span style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)", color: "var(--color-success)" }}>
-                -$2/mo
-              </span>
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
-              You pay $5/mo after credits. 5 more referrals for free.
-            </div>
-          </>
-        ) : (
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
-            No referral credits yet.
-          </div>
-        )}
+        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+          No referral credits yet.
+        </div>
       </Card>
     </div>
   );
@@ -3385,7 +3341,6 @@ function formatTokens(n) {
 function VaultTab() {
   const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode, cryptoKey } = useVaultContext();
   const { user, accessToken } = useAuth();
-  const isDev = user?.isDev;
 
   const [notes, setNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -3403,7 +3358,7 @@ function VaultTab() {
   const canUpload = storageMode === "fulkit" || (storageMode === "encrypted" && isUnlocked);
 
   async function handleFiles(files) {
-    if (!user || isDev || !canUpload) return;
+    if (!user || !canUpload) return;
     const { importNote, importEncryptedNote } = await import("../../lib/vault-fulkit");
     setImporting(true);
     setImportError("");
@@ -3435,7 +3390,7 @@ function VaultTab() {
     }
   }
 
-  const noteCount = isDev ? 12 : notes.length;
+  const noteCount = notes.length;
 
   const filteredNotes = notes.filter((n) => {
     if (modeFilter !== "all" && n.context_mode !== modeFilter) return false;
@@ -3446,9 +3401,9 @@ function VaultTab() {
 
   // Load notes list — re-fires when auth token refreshes
   useEffect(() => {
-    if (!isDev && !accessToken) return;
+    if (!accessToken) return;
     loadNotes();
-  }, [storageMode, vaultConnected, isUnlocked, isDev, accessToken]);
+  }, [storageMode, vaultConnected, isUnlocked, accessToken]);
 
   async function loadNotes() {
     setNotesLoading(true);
@@ -3855,7 +3810,6 @@ function ConfirmDeleteModal({ type, onCancel, onConfirm, loading }) {
 
 function PrivacyTab() {
   const { user, accessToken, signOut } = useAuth();
-  const isDev = user?.isDev;
 
   const [counts, setCounts] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
@@ -3866,7 +3820,7 @@ function PrivacyTab() {
   const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
-    if (!user || isDev) return;
+    if (!user) return;
 
     async function fetchCounts() {
       const [notes, actions, conversations, prefsResult, notesContent, messagesContent] = await Promise.all([
@@ -3902,7 +3856,7 @@ function PrivacyTab() {
       });
     }
     fetchCounts();
-  }, [user, isDev]);
+  }, [user]);
 
   function formatBytes(bytes) {
     if (!bytes || bytes === 0) return "0 B";
@@ -4151,25 +4105,12 @@ function PrivacyTab() {
     <div>
       <SectionTitle>Your data</SectionTitle>
       <Card>
-        {isDev ? (
-          <>
-            <Row label="Notes stored" value="1,247 notes across 4 sources" />
-            <Row label="AI conversations" value="34 conversations" />
-            <Row label="Memories" value="12 memories" />
-            <Row label="Onboarding answers" value="3 answers" />
-            <Row label="Action items" value="18 actions tracked" />
-            <Row label="Storage used" value="12.4 MB" />
-          </>
-        ) : (
-          <>
-            {renderExpandableRow("Notes stored", counts?.notes, "note", "notes")}
-            {renderExpandableRow("Conversations", counts?.conversations, "conversation", "conversations")}
-            {renderExpandableRow("Memories", counts?.memories, "memory", "memories", "memories")}
-            {renderExpandableRow("Onboarding answers", counts?.onboarding, "answer", "onboarding")}
-            <Row label="Action items" value={counts ? `${counts.actions} action${counts.actions !== 1 ? "s" : ""}` : "Loading..."} />
-            <Row label="Storage used" value={counts ? formatBytes(counts.storageBytes) : "Loading..."} />
-          </>
-        )}
+        {renderExpandableRow("Notes stored", counts?.notes, "note", "notes")}
+        {renderExpandableRow("Conversations", counts?.conversations, "conversation", "conversations")}
+        {renderExpandableRow("Memories", counts?.memories, "memory", "memories", "memories")}
+        {renderExpandableRow("Onboarding answers", counts?.onboarding, "answer", "onboarding")}
+        <Row label="Action items" value={counts ? `${counts.actions} action${counts.actions !== 1 ? "s" : ""}` : "Loading..."} />
+        <Row label="Storage used" value={counts ? formatBytes(counts.storageBytes) : "Loading..."} />
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>

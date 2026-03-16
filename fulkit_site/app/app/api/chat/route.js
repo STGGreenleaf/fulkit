@@ -1760,6 +1760,11 @@ async function executeMemoryTool(name, input, userId) {
       { onConflict: "user_id,key" }
     );
     if (error) throw new Error(error.message);
+    // If the user told us their name, update profiles.name so the hero reflects it
+    const nameKeys = ["name", "display_name", "first_name", "my_name", "call_me"];
+    if (nameKeys.includes(key.toLowerCase())) {
+      admin.from("profiles").update({ name: value }).eq("id", userId).then(() => {}).catch(() => {});
+    }
     return { saved: true, key, value };
   }
 

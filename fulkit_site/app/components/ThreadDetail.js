@@ -22,7 +22,7 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose, allLabels, columns, detailMode, onToggleDetailMode }) {
+export default function ThreadDetail({ note, onUpdate, onDelete, onClose, allLabels, columns, detailMode, onToggleDetailMode }) {
   const [checklistItems, setChecklistItems] = useState([]);
   const [newItemText, setNewItemText] = useState("");
   const [labelInput, setLabelInput] = useState("");
@@ -33,7 +33,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose,
 
   // Load checklist items (actions linked to this thread)
   useEffect(() => {
-    if (isDev || !note?.id) {
+    if (!note?.id) {
       setChecklistItems([]);
       return;
     }
@@ -45,7 +45,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose,
       .then(({ data }) => {
         if (data) setChecklistItems(data);
       });
-  }, [note?.id, isDev]);
+  }, [note?.id]);
 
   const updateField = useCallback((field, value) => {
     onUpdate(note.id, field, value);
@@ -61,23 +61,16 @@ export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose,
     setChecklistItems((prev) =>
       prev.map((a) => a.id === actionId ? { ...a, status: newStatus } : a)
     );
-    if (!isDev) {
-      const updates = { status: newStatus };
-      if (newStatus === "done") updates.completed_at = new Date().toISOString();
-      await supabase.from("actions").update(updates).eq("id", actionId);
-    }
-  }, [isDev]);
+    const updates = { status: newStatus };
+    if (newStatus === "done") updates.completed_at = new Date().toISOString();
+    await supabase.from("actions").update(updates).eq("id", actionId);
+  }, []);
 
   // Add checklist item
   const addChecklistItem = useCallback(async () => {
     const title = newItemText.trim();
     if (!title) return;
     setNewItemText("");
-
-    if (isDev) {
-      setChecklistItems((prev) => [...prev, { id: String(Date.now()), title, status: "active" }]);
-      return;
-    }
 
     const { data } = await supabase
       .from("actions")
@@ -92,7 +85,7 @@ export default function ThreadDetail({ note, isDev, onUpdate, onDelete, onClose,
       .select("id, title, status, priority")
       .single();
     if (data) setChecklistItems((prev) => [...prev, data]);
-  }, [newItemText, note?.id, note?.user_id, isDev]);
+  }, [newItemText, note?.id, note?.user_id]);
 
   // Add label
   const addLabel = useCallback((label) => {

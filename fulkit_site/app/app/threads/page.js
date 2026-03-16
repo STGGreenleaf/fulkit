@@ -41,20 +41,6 @@ const VIEWS = [
   { key: "table", label: "Table", Icon: Table2 },
 ];
 
-const DEV_NOTES = [
-  { id: "1", title: "Meeting notes — product roadmap", content: "Discussed Q2 priorities:\n\n- Ship vault sync by end of month\n- Numbrly integration blocked on API key provisioning\n- Whispers MVP ready for internal testing\n- Need to finalize pricing tiers before launch", source: "Obsidian", folder: "work", status: "active", labels: ["roadmap"], due_date: new Date(Date.now() - 2 * 86400000).toISOString(), position: 0, created_at: "2024-01-15T10:00:00Z", actions: [] },
-  { id: "5", title: "Standup recap — March 10", content: "What shipped:\n- Compact mode toggle across all tabs\n- Spotify OAuth flow wired up\n- Drag-and-drop on Fabric sets\n\nBlocked:\n- Numbrly API key provisioning still pending", source: "Chat", folder: "work", status: "active", labels: ["standup"], due_date: new Date(Date.now() + 1 * 86400000).toISOString(), position: 1, created_at: "2024-01-14T09:00:00Z", actions: [{ id: "a1", title: "Fix Numbrly API key", status: "active" }] },
-  { id: "6", title: "Pricing tier notes", content: "Free: 25 messages/day, local vault only\nPro ($15/mo): unlimited messages, encrypted sync, BYOK\nTeam ($29/seat): shared vaults, admin panel, audit log", source: "Obsidian", folder: "work", status: "in-progress", labels: ["pricing", "launch"], due_date: new Date(Date.now() + 2 * 86400000).toISOString(), position: 0, created_at: "2024-01-11T16:00:00Z", actions: [{ id: "a2", title: "Finalize Pro tier", status: "done" }, { id: "a3", title: "Set up Stripe", status: "active" }] },
-  { id: "2", title: "Voice capture: meal planning ideas", content: "Try the lemon chicken recipe. Marinade: lemon juice, garlic, olive oil, oregano, salt. 400°F for 25 min.", source: "Hum", folder: "personal", status: "inbox", labels: [], due_date: null, position: 0, created_at: "2024-01-14T15:30:00Z", actions: [] },
-  { id: "7", title: "Weekend trip packing list", content: "Clothes:\n- 2 shirts, 1 hoodie, jeans\n- Running shoes + flip flops\n\nGear:\n- Laptop + charger\n- AirPods\n- Kindle", source: "Hum", folder: "personal", status: "in-progress", labels: ["travel"], due_date: new Date(Date.now() + 4 * 86400000).toISOString(), position: 0, created_at: "2024-01-13T20:00:00Z", actions: [] },
-  { id: "8", title: "Gift ideas — Mom's birthday", content: "She mentioned wanting:\n- A nice candle (not vanilla)\n- That cookbook from the farmer's market guy\n- New garden gloves", source: "Chat", folder: "personal", status: "inbox", labels: ["gift"], due_date: new Date(Date.now() + 10 * 86400000).toISOString(), position: 1, created_at: "2024-01-10T11:00:00Z", actions: [] },
-  { id: "4", title: "API key rotation checklist", content: "Steps:\n1. Generate new key in Anthropic console\n2. Update .env.local locally\n3. Update Vercel env vars\n4. Restart local dev server\n5. Verify chat works\n6. Push to trigger Vercel redeploy\n7. Verify production\n8. Revoke old key", source: "Chat", folder: "ideas", status: "review", labels: ["ops"], due_date: new Date(Date.now() - 5 * 86400000).toISOString(), position: 0, created_at: "2024-01-12T14:00:00Z", actions: [] },
-  { id: "9", title: "Hats — context profiles concept", content: "What if users could switch 'hats' in chat?\n\nEach hat = a filtered vault context.\n- Work hat: only pulls from /work folder\n- Creative hat: pulls from /ideas + /reference\n- Personal hat: pulls from /personal, excludes work", source: "Obsidian", folder: "ideas", status: "inbox", labels: ["feature"], due_date: null, position: 0, created_at: "2024-01-11T22:00:00Z", actions: [] },
-  { id: "10", title: "Whispers — ambient capture UX", content: "Core loop: phone mic picks up ambient conversation → transcribes → extracts actionable items → saves to vault.\n\nMVP: tap to start, single speaker, 5 min max, auto-stop on silence.", source: "Hum", folder: "ideas", status: "active", labels: ["feature", "mvp"], due_date: new Date(Date.now() + 3 * 86400000).toISOString(), position: 1, created_at: "2024-01-09T18:00:00Z", actions: [] },
-  { id: "3", title: "Startup reading list", content: "1. Zero to One — Peter Thiel\n2. The Mom Test — Rob Fitzpatrick\n3. Inspired — Marty Cagan\n4. Shape Up — Ryan Singer (free online)\n5. Obviously Awesome — April Dunford", source: "Google Drive", folder: "reference", status: "done", labels: [], due_date: null, position: 0, created_at: "2024-01-13T09:00:00Z", actions: [] },
-  { id: "11", title: "Supabase RLS cheat sheet", content: "Read own rows:\n  USING (auth.uid() = user_id)\n\nInsert own rows:\n  WITH CHECK (auth.uid() = user_id)\n\nService role bypasses RLS — never expose in client.", source: "Google Drive", folder: "reference", status: "inbox", labels: ["security"], due_date: null, position: 0, created_at: "2024-01-08T13:00:00Z", actions: [] },
-  { id: "12", title: "Design tokens reference", content: "Warm monochrome palette:\n- bg: #EFEDE8\n- bg-elevated: #F5F3EE\n- bg-alt: #E7E4DF\n- text: #2A2826\n- text-muted: #6B6560\n- text-dim: #9B958E\n- border-light: #D6D3CC", source: "Obsidian", folder: "reference", status: "inbox", labels: ["design"], due_date: null, position: 1, created_at: "2024-01-07T10:00:00Z", actions: [] },
-];
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -77,7 +63,6 @@ export default function ThreadsPage({ initialFolder, initialView }) {
 function ThreadsContent({ initialFolder, initialView }) {
   const { user, compactMode } = useAuth();
   const searchParams = useSearchParams();
-  const isDev = user?.isDev;
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "threads" }); }, []);
   useOnboardingTrigger("threads");
@@ -205,11 +190,9 @@ function ThreadsContent({ initialFolder, initialView }) {
     persistCustomFolders(customFolders.filter((f) => f.key !== key));
     // Move notes in deleted folder to "work"
     setNotes((prev) => prev.map((n) => n.folder === key ? { ...n, folder: "work" } : n));
-    if (!isDev) {
-      supabase.from("notes").update({ folder: "work" }).eq("folder", key);
-    }
+    supabase.from("notes").update({ folder: "work" }).eq("folder", key);
     if (folder === key) setFolder("all");
-  }, [customFolders, persistCustomFolders, isDev, folder]);
+  }, [customFolders, persistCustomFolders, folder]);
 
   // --- Persist columns ---
   const persistColumns = useCallback((next) => {
@@ -227,17 +210,11 @@ function ThreadsContent({ initialFolder, initialView }) {
     persistColumns(customColumns.filter((c) => c.key !== key));
     // Move notes in deleted column back to inbox
     setNotes((prev) => prev.map((n) => n.status === key ? { ...n, status: "inbox" } : n));
-    if (!isDev) {
-      supabase.from("notes").update({ status: "inbox" }).eq("status", key);
-    }
-  }, [customColumns, persistColumns, isDev]);
+    supabase.from("notes").update({ status: "inbox" }).eq("status", key);
+  }, [customColumns, persistColumns]);
 
   // --- Load notes ---
   useEffect(() => {
-    if (isDev) {
-      setNotes(DEV_NOTES);
-      return;
-    }
     if (!user) return;
     supabase
       .from("notes")
@@ -248,7 +225,7 @@ function ThreadsContent({ initialFolder, initialView }) {
         if (error) console.error("[threads] notes query failed:", error.message);
         if (data) setNotes(data);
       });
-  }, [user, isDev]);
+  }, [user]);
 
   // --- URL param selection ---
   useEffect(() => {
@@ -284,7 +261,6 @@ function ThreadsContent({ initialFolder, initialView }) {
   // --- Note CRUD ---
   const addNote = useCallback(async (status = "inbox", dueDate = null) => {
     const newNote = {
-      id: isDev ? String(Date.now()) : undefined,
       title: "Untitled thread",
       content: "",
       source: "Manual",
@@ -296,42 +272,33 @@ function ThreadsContent({ initialFolder, initialView }) {
       created_at: new Date().toISOString(),
       actions: [],
     };
-    if (isDev) {
-      setNotes((prev) => [newNote, ...prev]);
-      setSelectedId(newNote.id);
-    } else {
-      const { id: _id, actions: _actions, ...insertData } = newNote;
-      const { data } = await supabase
-        .from("notes")
-        .insert({ ...insertData, user_id: user.id })
-        .select()
-        .single();
-      if (data) {
-        setNotes((prev) => [data, ...prev]);
-        setSelectedId(data.id);
-      }
+    const { id: _id, actions: _actions, ...insertData } = newNote;
+    const { data } = await supabase
+      .from("notes")
+      .insert({ ...insertData, user_id: user.id })
+      .select()
+      .single();
+    if (data) {
+      setNotes((prev) => [data, ...prev]);
+      setSelectedId(data.id);
     }
-  }, [isDev, folder, user]);
+  }, [folder, user]);
 
   const updateNote = useCallback((id, field, value) => {
     setNotes((prev) => prev.map((n) => String(n.id) === String(id) ? { ...n, [field]: value } : n));
-    if (!isDev) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        supabase.from("notes").update({ [field]: value }).eq("id", id);
-      }, 800);
-    }
-  }, [isDev]);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      supabase.from("notes").update({ [field]: value }).eq("id", id);
+    }, 800);
+  }, []);
 
   const deleteNote = useCallback(async (id) => {
     setNotes((prev) => prev.filter((n) => String(n.id) !== String(id)));
     if (String(selectedId) === String(id)) setSelectedId(null);
-    if (!isDev) {
-      // Delete linked actions first, then the note
-      await supabase.from("actions").delete().eq("thread_id", id);
-      await supabase.from("notes").delete().eq("id", id);
-    }
-  }, [isDev, selectedId]);
+    // Delete linked actions first, then the note
+    await supabase.from("actions").delete().eq("thread_id", id);
+    await supabase.from("notes").delete().eq("id", id);
+  }, [selectedId]);
 
   // Move a note to a column at a specific position (handles both cross-column and within-column reorder)
   const moveNote = useCallback((noteId, toStatus, toPosition) => {
@@ -364,13 +331,11 @@ function ThreadsContent({ initialFolder, initialView }) {
     });
 
     // Persist to DB
-    if (!isDev) {
-      setTimeout(() => {
-        // Fetch fresh positions from state after update
-        supabase.from("notes").update({ status: toStatus, position: toPosition }).eq("id", noteId);
-      }, 100);
-    }
-  }, [isDev]);
+    setTimeout(() => {
+      // Fetch fresh positions from state after update
+      supabase.from("notes").update({ status: toStatus, position: toPosition }).eq("id", noteId);
+    }, 100);
+  }, []);
 
   // --- Folder editing (name + icon) ---
   const commitFolderEdit = useCallback((folderKey) => {
@@ -452,16 +417,14 @@ function ThreadsContent({ initialFolder, initialView }) {
     const noteId = listDragNoteId.current;
     setNotes((prev) => prev.map((n) => String(n.id) === String(noteId) ? { ...n, folder: folderKey } : n));
     setSelectedId(null);
-    if (!isDev) {
-      supabase.from("notes").update({ folder: folderKey }).eq("id", noteId);
-    }
+    supabase.from("notes").update({ folder: folderKey }).eq("id", noteId);
     setListDragIdx(null);
     setListDragOverIdx(null);
     setDragOverFolder(null);
     if (listDragNode.current) listDragNode.current.style.opacity = "1";
     if (listDragGhost.current) { listDragGhost.current.remove(); listDragGhost.current = null; }
     listDragNoteId.current = null;
-  }, [isDev]);
+  }, []);
 
   // Urgency helper for list view
   const safeDate = (str) => {
@@ -929,7 +892,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   }}>
                     <ThreadDetail
                       note={selectedNote}
-                      isDev={isDev}
+
                       onUpdate={updateNote}
                       onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
@@ -1042,7 +1005,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   {selectedNote ? (
                     <ThreadDetail
                       note={selectedNote}
-                      isDev={isDev}
+
                       onUpdate={updateNote}
                       onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
@@ -1096,7 +1059,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   }}>
                     <ThreadDetail
                       note={selectedNote}
-                      isDev={isDev}
+
                       onUpdate={updateNote}
                       onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}
@@ -1140,7 +1103,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   }}>
                     <ThreadDetail
                       note={selectedNote}
-                      isDev={isDev}
+
                       onUpdate={updateNote}
                       onDelete={deleteNote}
                       onClose={() => setSelectedId(null)}

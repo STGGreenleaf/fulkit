@@ -5,8 +5,6 @@ import { supabase } from "./supabase";
 
 const AuthContext = createContext(null);
 
-const DEV_NEW_USER = { id: "new", email: "new@fulkit.app", name: "", isNew: true };
-const DEV_TEMPLATE_USER = { id: "dev", email: "dev@fulkit.app", name: "Demo User", isDev: true };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -105,28 +103,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Dev mode overrides — only on localhost (never in production)
-    const isLocalDev = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get("auth");
-    if (mode === "none" && isLocalDev) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    if (mode === "new" && isLocalDev) {
-      setUser(DEV_NEW_USER);
-      setLoading(false);
-      return;
-    }
-    if (mode === "dev" && isLocalDev) {
-      setUser(DEV_TEMPLATE_USER);
-      setProfile({ role: "owner", onboarded: true, seat_type: "standard", messages_this_month: 138 });
-      setHasContext(true);
-      setLoading(false);
-      return;
-    }
-
     // Skip auth init on the callback page — it handles its own exchange
     if (window.location.pathname === "/auth/callback") {
       setLoading(false);
@@ -144,6 +120,11 @@ export function AuthProvider({ children }) {
         });
         setAccessToken(session.access_token);
         await fetchProfile(u.id);
+        // Seed profiles.name from Google if not already set
+        const googleName = u.user_metadata?.full_name;
+        if (googleName) {
+          supabase.from("profiles").update({ name: googleName }).eq("id", u.id).is("name", null).then(() => {});
+        }
       }
       setLoading(false);
     });

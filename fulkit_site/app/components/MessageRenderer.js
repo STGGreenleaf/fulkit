@@ -18,23 +18,8 @@ class MarkdownErrorBoundary extends Component {
   }
   render() {
     if (this.state.hasError) {
-      const isDev = typeof window !== "undefined" && window.location.search.includes("auth=dev");
       return (
         <div style={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
-          {isDev && this.state.error && (
-            <div style={{
-              border: "1px solid #c44",
-              background: "#2a2826",
-              color: "#c44",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontFamily: "var(--font-mono)",
-            }}>
-              [MD Error] {this.state.error.message || String(this.state.error)}
-            </div>
-          )}
           {this.props.fallback || ""}
         </div>
       );
