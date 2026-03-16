@@ -2382,8 +2382,8 @@ function SocialsTab() {
               <input value={author} onChange={e => setAuthor(e.target.value)} style={inputStyle} placeholder="Collin Greenleaf" />
             </div>
             <div>
-              <div style={labelStyle}>Twitter Handle</div>
-              <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit" />
+              <div style={labelStyle}>Bluesky Handle</div>
+              <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} style={inputStyle} placeholder="@fulkit.bsky.social" />
             </div>
           </div>
 
@@ -2438,7 +2438,7 @@ function SocialsTab() {
 
           {/* Twitter/X Card */}
           <div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>X / Twitter</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-1)" }}>Bluesky</div>
             <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
               <div style={{
                 width: "100%",
@@ -2451,7 +2451,7 @@ function SocialsTab() {
                 overflow: "hidden",
               }}>
                 {pTwitterImage ? (
-                  <img src={pTwitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={pTwitterImage} alt="Social card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No image set</span>
                 )}
@@ -2652,7 +2652,7 @@ function SocialsTab() {
 
           {/* RIGHT: Twitter/X Image */}
           <div>
-            <div style={sectionLabel}>Twitter / X Image</div>
+            <div style={sectionLabel}>Social Card Image</div>
             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
               Optional. Falls back to OG image if not set. 1200 {"\u00D7"} 630px.
             </div>
@@ -2670,7 +2670,7 @@ function SocialsTab() {
                 position: "relative",
               }}>
                 {twitterImage ? (
-                  <img src={twitterImage} alt="Twitter card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={twitterImage} alt="Social card" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                     {uploading === "twitter" ? "Uploading\u2026" : "Uses OG image"}
