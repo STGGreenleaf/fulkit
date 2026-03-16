@@ -1966,23 +1966,23 @@ function UsersTab() {
                   borderRadius: "var(--radius-sm)",
                   background: achieved ? "var(--color-bg-inverse)" : "transparent",
                   border: achieved ? "1px solid var(--color-bg-inverse)" : "1px dashed var(--color-border-light)",
-                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text)",
                 }}
               >
                 <div style={{
                   fontSize: "var(--font-size-xs)",
                   fontWeight: "var(--font-weight-medium)",
                   lineHeight: "var(--line-height-tight)",
-                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text)",
                 }}>
                   {card.label}
                 </div>
                 <div style={{
                   fontSize: 9,
                   fontFamily: "var(--font-mono)",
-                  opacity: achieved ? 0.7 : 0.5,
+                  opacity: achieved ? 0.7 : 0.6,
                   marginTop: 1,
-                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text)",
                 }}>
                   {card.threshold >= 1000 ? `${(card.threshold / 1000).toFixed(0)}K` : card.threshold}
                 </div>
