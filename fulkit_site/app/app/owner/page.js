@@ -1973,14 +1973,16 @@ function UsersTab() {
                   fontSize: "var(--font-size-xs)",
                   fontWeight: "var(--font-weight-medium)",
                   lineHeight: "var(--line-height-tight)",
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
                 }}>
                   {card.label}
                 </div>
                 <div style={{
                   fontSize: 9,
                   fontFamily: "var(--font-mono)",
-                  opacity: 0.5,
+                  opacity: achieved ? 0.7 : 0.5,
                   marginTop: 1,
+                  color: achieved ? "var(--color-text-inverse)" : "var(--color-text-dim)",
                 }}>
                   {card.threshold >= 1000 ? `${(card.threshold / 1000).toFixed(0)}K` : card.threshold}
                 </div>
