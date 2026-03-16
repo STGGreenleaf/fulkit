@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
-// GET /api/owner/analytics — GA4 analytics data (owner only)
+// GET /api/owner/analytics?period=30 — GA4 analytics data (owner only)
 export async function GET(request) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -19,6 +19,9 @@ export async function GET(request) {
       return Response.json({ configured: false });
     }
 
+    const url = new URL(request.url);
+    const days = Math.min(parseInt(url.searchParams.get("period") || "30", 10), 90);
+
     const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
 
     const credentials = JSON.parse(
@@ -27,10 +30,10 @@ export async function GET(request) {
     const client = new BetaAnalyticsDataClient({ credentials });
     const property = `properties/${process.env.GA_PROPERTY_ID}`;
 
-    const dateRange = { startDate: "30daysAgo", endDate: "today" };
+    const dateRange = { startDate: `${days}daysAgo`, endDate: "today" };
 
     // Run all queries in parallel
-    const [overview, pages, countries, cities, referrers, devices, browsers] = await Promise.all([
+    const [overview, daily, pages, countries, cities, referrers, devices, browsers] = await Promise.all([
       // Overview totals
       client.runReport({
         property,
@@ -40,7 +43,20 @@ export async function GET(request) {
           { name: "sessions" },
           { name: "screenPageViews" },
           { name: "averageSessionDuration" },
+          { name: "newUsers" },
         ],
+      }),
+      // Daily time series
+      client.runReport({
+        property,
+        dateRanges: [dateRange],
+        dimensions: [{ name: "date" }],
+        metrics: [
+          { name: "activeUsers" },
+          { name: "sessions" },
+          { name: "screenPageViews" },
+        ],
+        orderBys: [{ dimension: { dimensionName: "date" }, desc: false }],
       }),
       // Top pages
       client.runReport({
@@ -117,14 +133,31 @@ export async function GET(request) {
         return obj;
       });
 
+    // Parse daily series — fill gaps with zeros
+    const dailyRaw = parseRows(daily, "date", ["visitors", "sessions", "pageviews"]);
+    const dailyMap = {};
+    for (const d of dailyRaw) dailyMap[d.date] = d;
+    const dailySeries = [];
+    const now = new Date();
+    for (let i = days; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10).replace(/-/g, "");
+      const entry = dailyMap[key] || { date: key, visitors: 0, sessions: 0, pageviews: 0 };
+      dailySeries.push(entry);
+    }
+
     return Response.json({
       configured: true,
+      period: days,
       overview: {
         visitors: parseInt(ov[0]?.value || "0", 10),
         sessions: parseInt(ov[1]?.value || "0", 10),
         pageviews: parseInt(ov[2]?.value || "0", 10),
-        avgDuration: avgSec > 0 ? `${mins}m ${secs}s` : "—",
+        avgDuration: avgSec > 0 ? `${mins}m ${secs}s` : "\u2014",
+        newUsers: parseInt(ov[4]?.value || "0", 10),
       },
+      daily: dailySeries,
       topPages: parseRows(pages, "path", ["views", "users"]),
       countries: parseRows(countries, "name", ["users"]),
       cities: parseRows(cities, "name", ["users"]),

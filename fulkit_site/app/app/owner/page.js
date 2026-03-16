@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   BarChart3,
@@ -209,27 +209,126 @@ export default function Owner({ initialTab }) {
   );
 }
 
-// Reusable bar-list card for analytics sections
-function AnalyticsCard({ title, items, valueKey, labelKey, maxItems = 10 }) {
-  if (!items || items.length === 0) return null;
-  const max = Math.max(...items.slice(0, maxItems).map(i => i[valueKey] || 0), 1);
+/* ─── Sparkline — inline SVG mini chart ─── */
+function Sparkline({ data, width = 80, height = 24, color = "var(--color-text-muted)" }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const pad = 1;
+  const w = width - pad * 2;
+  const h = height - pad * 2;
+  const points = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * w;
+    const y = pad + h - ((v - min) / range) * h;
+    return `${x},${y}`;
+  });
+  const fillPoints = `${pad},${pad + h} ${points.join(" ")} ${pad + w},${pad + h}`;
   return (
-    <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-      <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-        {title}
+    <svg width={width} height={height} style={{ display: "block" }}>
+      <polygon points={fillPoints} fill={color} opacity="0.1" />
+      <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─── Area Chart — full-width traffic visualization ─── */
+function AreaChart({ data, metricKey, label, height = 120, color = "#8A8784" }) {
+  if (!data || data.length < 2) return null;
+  const values = data.map(d => d[metricKey] || 0);
+  const max = Math.max(...values, 1);
+  const w = 100; // viewBox percentage
+  const h = height;
+  const pad = { top: 4, bottom: 16, left: 0, right: 0 };
+  const plotH = h - pad.top - pad.bottom;
+  const plotW = w;
+
+  const points = values.map((v, i) => {
+    const x = pad.left + (i / (values.length - 1)) * plotW;
+    const y = pad.top + plotH - (v / max) * plotH;
+    return { x, y, v };
+  });
+  const line = points.map(p => `${p.x},${p.y}`).join(" ");
+  const fill = `${pad.left},${pad.top + plotH} ${line} ${pad.left + plotW},${pad.top + plotH}`;
+
+  // Date labels (first, middle, last)
+  const formatDate = (d) => {
+    if (!d?.date) return "";
+    const s = d.date;
+    return `${s.slice(4, 6)}/${s.slice(6, 8)}`;
+  };
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: "100%", height }}>
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75].map(frac => (
+          <line key={frac} x1={pad.left} y1={pad.top + plotH * (1 - frac)} x2={pad.left + plotW} y2={pad.top + plotH * (1 - frac)} stroke="#E5E2DD" strokeWidth="0.3" />
+        ))}
+        <polygon points={fill} fill={color} opacity="0.08" />
+        <polyline points={line} fill="none" stroke={color} strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots on peaks */}
+        {points.map((p, i) => p.v === max ? (
+          <circle key={i} cx={p.x} cy={p.y} r="1" fill={color} />
+        ) : null)}
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>
+        <span>{formatDate(data[0])}</span>
+        <span>{formatDate(data[Math.floor(data.length / 2)])}</span>
+        <span>{formatDate(data[data.length - 1])}</span>
       </div>
-      {items.slice(0, maxItems).map((item, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {item[labelKey] || "(not set)"}
-          </span>
-          <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ width: `${(item[valueKey] / max) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
-          </div>
-          <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 32, textAlign: "right" }}>
-            {item[valueKey]}
-          </span>
-        </div>
+    </div>
+  );
+}
+
+/* ─── Card wrapper ─── */
+const CARD = { padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" };
+const DASH_LABEL = { fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" };
+
+/* ─── Bar list ─── */
+function BarList({ items, labelKey, valueKey, maxItems = 10, suffix = "", labelStyle = {} }) {
+  if (!items || items.length === 0) return <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>No data yet</div>;
+  const max = Math.max(...items.slice(0, maxItems).map(i => i[valueKey] || 0), 1);
+  return items.slice(0, maxItems).map((item, i) => (
+    <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...labelStyle }}>
+        {item[labelKey] || "(not set)"}
+      </span>
+      <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ width: `${(item[valueKey] / max) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3, transition: "width var(--duration-slow) var(--ease-default)" }} />
+      </div>
+      <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 36, textAlign: "right" }}>
+        {item[valueKey]}{suffix}
+      </span>
+    </div>
+  ));
+}
+
+/* ─── Period toggle ─── */
+const PERIODS = [{ label: "7d", value: 7 }, { label: "30d", value: 30 }, { label: "90d", value: 90 }];
+
+function PeriodToggle({ period, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 2, background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)", padding: 2 }}>
+      {PERIODS.map(p => (
+        <button
+          key={p.value}
+          onClick={() => onChange(p.value)}
+          style={{
+            padding: "var(--space-1) var(--space-2-5)",
+            fontSize: "var(--font-size-2xs)",
+            fontFamily: "var(--font-mono)",
+            fontWeight: period === p.value ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+            color: period === p.value ? "var(--color-text)" : "var(--color-text-muted)",
+            background: period === p.value ? "var(--color-bg-elevated)" : "transparent",
+            border: "none",
+            borderRadius: "var(--radius-xs)",
+            cursor: "pointer",
+            transition: "all var(--duration-fast) var(--ease-default)",
+          }}
+        >
+          {p.label}
+        </button>
       ))}
     </div>
   );
@@ -240,213 +339,253 @@ function DashboardTab() {
   const [siteMetrics, setSiteMetrics] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [events, setEvents] = useState(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState(30);
 
-  useEffect(() => {
+  const fetchData = useCallback((p) => {
     if (!accessToken) return;
+    setLoading(true);
     const headers = { Authorization: `Bearer ${accessToken}` };
 
-    fetch("/api/owner/metrics", { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setSiteMetrics(data); })
-      .catch(() => {});
-
-    fetch("/api/owner/analytics", { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setAnalytics(data); setLoadingAnalytics(false); })
-      .catch(() => { setLoadingAnalytics(false); });
-
-    fetch("/api/owner/events", { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { setEvents(data); setLoadingEvents(false); })
-      .catch(() => { setLoadingEvents(false); });
+    Promise.all([
+      fetch("/api/owner/metrics", { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/owner/analytics?period=${p}`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/owner/events?period=${p}`, { headers }).then(r => r.ok ? r.json() : null),
+    ]).then(([m, a, e]) => {
+      if (m) setSiteMetrics(m);
+      if (a) setAnalytics(a);
+      if (e) setEvents(e);
+      setLoading(false);
+    }).catch(() => { setLoading(false); });
   }, [accessToken]);
+
+  useEffect(() => { fetchData(period); }, [period, fetchData]);
+
+  const handlePeriod = (p) => { setPeriod(p); };
 
   const paying = siteMetrics ? siteMetrics.standard + siteMetrics.pro : 0;
   const mrr = siteMetrics ? (siteMetrics.standard * 7) + (siteMetrics.pro * 15) : 0;
+  const daily = analytics?.daily || [];
 
-  const metrics = [
-    { label: "Total Users", value: siteMetrics ? String(siteMetrics.total) : "\u2014", sub: siteMetrics?.total === 1 ? "You" : "" },
-    { label: "Visitors (30d)", value: analytics?.overview ? String(analytics.overview.visitors) : "\u2014", sub: !analytics?.configured ? "GA4 not configured" : "" },
-    { label: "Avg Session", value: analytics?.overview?.avgDuration || "\u2014", sub: "" },
-    { label: "Messages/mo", value: siteMetrics ? String(siteMetrics.messagesThisMonth) : "\u2014", sub: "" },
-    { label: "MRR", value: siteMetrics ? `$${mrr}` : "\u2014", sub: mrr === 0 ? "Pre-launch" : "" },
-  ];
+  // KPI tiles with sparkline data extracted from daily series
+  const kpis = useMemo(() => [
+    {
+      label: "Visitors",
+      value: analytics?.overview ? String(analytics.overview.visitors) : "\u2014",
+      sub: analytics?.overview?.newUsers ? `${analytics.overview.newUsers} new` : "\u00A0",
+      spark: daily.map(d => d.visitors),
+    },
+    {
+      label: "Sessions",
+      value: analytics?.overview ? String(analytics.overview.sessions) : "\u2014",
+      sub: "\u00A0",
+      spark: daily.map(d => d.sessions),
+    },
+    {
+      label: "Pageviews",
+      value: analytics?.overview ? String(analytics.overview.pageviews) : "\u2014",
+      sub: "\u00A0",
+      spark: daily.map(d => d.pageviews),
+    },
+    {
+      label: "Messages/mo",
+      value: siteMetrics ? String(siteMetrics.messagesThisMonth) : "\u2014",
+      sub: siteMetrics?.total ? `${siteMetrics.total} user${siteMetrics.total === 1 ? "" : "s"}` : "\u00A0",
+      spark: null,
+    },
+    {
+      label: "MRR",
+      value: siteMetrics ? `$${mrr}` : "\u2014",
+      sub: paying > 0 ? `${paying} paying` : "Pre-launch",
+      spark: null,
+    },
+  ], [analytics, siteMetrics, daily, mrr, paying]);
+
+  if (loading && !analytics && !siteMetrics) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)" }}>
+        <LoadingMark size={32} />
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Overview Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-6)" }}>
-        {metrics.map((m, i) => (
-          <div key={i} style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-              {m.label}
+      {/* Period toggle */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+          Command Center
+        </div>
+        <PeriodToggle period={period} onChange={handlePeriod} />
+      </div>
+
+      {/* KPI Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+        {kpis.map((k, i) => (
+          <div key={i} style={{ ...CARD, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 90 }}>
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+              {k.label}
             </div>
-            <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>
-              {m.value}
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "var(--space-2)" }}>
+              <div>
+                <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", lineHeight: 1 }}>
+                  {k.value}
+                </div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>{k.sub}</div>
+              </div>
+              {k.spark?.length > 1 && <Sparkline data={k.spark} width={60} height={28} />}
             </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)", minHeight: "1.2em" }}>{m.sub || "\u00A0"}</div>
           </div>
         ))}
       </div>
 
-      {/* Analytics Sections */}
-      {loadingAnalytics ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
-          <LoadingMark size={32} />
+      {/* Traffic chart — full width */}
+      {daily.length > 1 && (
+        <div style={{ ...CARD, marginBottom: "var(--space-4)" }}>
+          <div style={DASH_LABEL}>Traffic ({period}d)</div>
+          <AreaChart data={daily} metricKey="visitors" label="Visitors" height={100} />
         </div>
-      ) : !analytics?.configured ? (
-        <div style={{ padding: "var(--space-6)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
-          <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-primary)", marginBottom: "var(--space-2)" }}>
-            Connect Google Analytics
-          </div>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", maxWidth: 400, margin: "0 auto" }}>
-            Set GA_PROPERTY_ID and GOOGLE_SERVICE_ACCOUNT_KEY in your environment to see traffic, geographic, and engagement data here.
-          </div>
+      )}
+
+      {/* Main grid: Feature Usage + Funnel */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+        {/* Feature Usage */}
+        <div style={CARD}>
+          <div style={DASH_LABEL}>Feature Usage ({period}d)</div>
+          {events?.featureUsage?.length > 0 ? (
+            <BarList items={events.featureUsage} labelKey="feature" valueKey="visits" labelStyle={{ textTransform: "capitalize" }} />
+          ) : (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2) 0" }}>Collecting data...</div>
+          )}
+          {events?.featureUsage?.length > 0 && (
+            <div style={{ display: "flex", gap: "var(--space-4)", marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>
+              {events.featureUsage.slice(0, 3).map((f, i) => (
+                <div key={i} style={{ textAlign: "center", flex: 1 }}>
+                  <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{f.uniqueUsers}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{f.feature} users</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      ) : analytics?.overview?.visitors === 0 ? (
-        <div style={{ padding: "var(--space-6)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center" }}>
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-            Data will appear after your first visitors.
-          </div>
+
+        {/* User Funnel */}
+        <div style={CARD}>
+          <div style={DASH_LABEL}>User Funnel</div>
+          {events?.funnel ? (
+            <>
+              {[
+                { label: "Signed Up", count: events.funnel.signedUp },
+                { label: "Onboarded", count: events.funnel.onboarded },
+                { label: "First Chat", count: events.funnel.firstChat },
+                { label: "Active/mo", count: events.funnel.activeThisMonth },
+                { label: "Paid", count: events.funnel.paid },
+              ].map((stage, i) => {
+                const base = events.funnel.signedUp || 1;
+                const pct = Math.round((stage.count / base) * 100);
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 70 }}>
+                      {stage.label}
+                    </span>
+                    <div style={{ flex: 1, height: 8, background: "var(--color-border-light)", borderRadius: 4, overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 4, transition: "width var(--duration-slow) var(--ease-default)" }} />
+                    </div>
+                    <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 44, textAlign: "right" }}>
+                      {stage.count} <span style={{ opacity: 0.5 }}>{pct}%</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </>
+          ) : <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>No data yet</div>}
         </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-          <AnalyticsCard title="Top Pages" items={analytics.topPages} labelKey="path" valueKey="views" />
-          <div>
-            <AnalyticsCard title="Geographic" items={analytics.countries} labelKey="name" valueKey="users" maxItems={8} />
+      </div>
+
+      {/* Second grid: Pages + Geo + Referrers + Chat Depth */}
+      {analytics?.configured && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+          {/* Top Pages */}
+          <div style={CARD}>
+            <div style={DASH_LABEL}>Top Pages</div>
+            <BarList items={analytics.topPages} labelKey="path" valueKey="views" />
+          </div>
+
+          {/* Geographic */}
+          <div style={CARD}>
+            <div style={DASH_LABEL}>Geographic</div>
+            <BarList items={analytics.countries} labelKey="name" valueKey="users" maxItems={6} />
             {analytics.cities?.length > 0 && (
-              <div style={{ marginTop: "var(--space-3)" }}>
-                <AnalyticsCard title="US Cities" items={analytics.cities} labelKey="name" valueKey="users" maxItems={8} />
-              </div>
+              <>
+                <div style={{ ...DASH_LABEL, marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>US Cities</div>
+                <BarList items={analytics.cities} labelKey="name" valueKey="users" maxItems={5} />
+              </>
             )}
           </div>
-          <AnalyticsCard title="Referrers" items={analytics.referrers} labelKey="source" valueKey="sessions" maxItems={8} />
-          <div>
-            <AnalyticsCard title="Devices" items={analytics.devices} labelKey="type" valueKey="users" />
+
+          {/* Referrers */}
+          <div style={CARD}>
+            <div style={DASH_LABEL}>Referrers</div>
+            <BarList items={analytics.referrers} labelKey="source" valueKey="sessions" maxItems={6} />
+          </div>
+
+          {/* Devices + Browsers + Chat Depth */}
+          <div style={CARD}>
+            <div style={DASH_LABEL}>Devices</div>
+            <BarList items={analytics.devices} labelKey="type" valueKey="users" />
             {analytics.browsers?.length > 0 && (
-              <div style={{ marginTop: "var(--space-3)" }}>
-                <AnalyticsCard title="Browsers" items={analytics.browsers} labelKey="name" valueKey="users" />
-              </div>
+              <>
+                <div style={{ ...DASH_LABEL, marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>Browsers</div>
+                <BarList items={analytics.browsers} labelKey="name" valueKey="users" maxItems={4} />
+              </>
+            )}
+            {events?.chatDepth?.totalMessages > 0 && (
+              <>
+                <div style={{ ...DASH_LABEL, marginTop: "var(--space-3)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-light)" }}>Chat Depth</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+                  {[
+                    { label: "Messages", value: events.chatDepth.totalMessages },
+                    { label: "Tools", value: events.chatDepth.withTools },
+                    { label: "Context", value: events.chatDepth.withContext },
+                  ].map((m, i) => (
+                    <div key={i} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{m.value}</div>
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
       )}
 
-      {/* ─── Feature Usage + Funnel + Integrations (Phase 2) ─── */}
-      <div style={{ marginTop: "var(--space-6)" }}>
-        <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-          Product Usage
+      {/* Integrations row (if any) */}
+      {events?.integrations?.length > 0 && (
+        <div style={{ ...CARD, marginBottom: "var(--space-4)" }}>
+          <div style={DASH_LABEL}>Integration Adoption</div>
+          <div style={{ display: "flex", gap: "var(--space-6)" }}>
+            {events.integrations.map((int, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>{int.provider}</span>
+                <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", background: "var(--color-bg-alt)", padding: "2px 6px", borderRadius: "var(--radius-xs)", color: "var(--color-text-muted)" }}>{int.connected}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        {loadingEvents ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-6)" }}>
-            <LoadingMark size={24} />
-          </div>
-        ) : !events ? (
-          <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-            Event tracking not configured. Create the user_events table in Supabase.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-            {/* Feature Usage */}
-            {events.featureUsage?.length > 0 ? (
-              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                  Feature Usage (30d)
-                </div>
-                {events.featureUsage.map((f, i) => {
-                  const max = events.featureUsage[0]?.visits || 1;
-                  return (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 70, textTransform: "capitalize" }}>
-                        {f.feature}
-                      </span>
-                      <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ width: `${(f.visits / max) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 60, textAlign: "right" }}>
-                        {f.visits} / {f.uniqueUsers}u
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)", textAlign: "center", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                Collecting feature usage data...
-              </div>
-            )}
+      )}
 
-            {/* User Funnel */}
-            {events.funnel ? (
-              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                  User Funnel
-                </div>
-                {[
-                  { label: "Signed Up", count: events.funnel.signedUp },
-                  { label: "Onboarded", count: events.funnel.onboarded },
-                  { label: "First Chat", count: events.funnel.firstChat },
-                  { label: "Active/mo", count: events.funnel.activeThisMonth },
-                  { label: "Paid", count: events.funnel.paid },
-                ].map((stage, i) => {
-                  const base = events.funnel.signedUp || 1;
-                  return (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: 70 }}>
-                        {stage.label}
-                      </span>
-                      <div style={{ flex: 1, height: 6, background: "var(--color-border-light)", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ width: `${(stage.count / base) * 100}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", minWidth: 32, textAlign: "right" }}>
-                        {stage.count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {/* Chat Depth */}
-            {events.chatDepth?.totalMessages > 0 ? (
-              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                  Chat Depth (30d)
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
-                  {[
-                    { label: "Messages", value: events.chatDepth.totalMessages },
-                    { label: "With Tools", value: events.chatDepth.withTools },
-                    { label: "With Context", value: events.chatDepth.withContext },
-                  ].map((m, i) => (
-                    <div key={i} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{m.value}</div>
-                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Integration Adoption */}
-            {events.integrations?.length > 0 ? (
-              <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                  Integration Adoption
-                </div>
-                {events.integrations.map((int, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
-                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>{int.provider}</span>
-                    <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{int.connected} connected</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+      {/* GA4 not configured fallback */}
+      {!analytics?.configured && !loading && (
+        <div style={{ ...CARD, textAlign: "center", padding: "var(--space-8)" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-2)" }}>
+            Connect Google Analytics
           </div>
-        )}
-      </div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", maxWidth: 400, margin: "0 auto" }}>
+            Set GA_PROPERTY_ID and GOOGLE_SERVICE_ACCOUNT_KEY in your environment to unlock traffic, geographic, and engagement data.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
