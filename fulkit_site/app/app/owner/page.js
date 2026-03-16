@@ -2203,7 +2203,7 @@ function SocialsTab() {
     setSaved(false);
     try {
       const activeUrl = ogSlots[ogSlot - 1];
-      await fetch("/api/owner/site-metadata", {
+      const res = await fetch("/api/owner/site-metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
@@ -2213,6 +2213,12 @@ function SocialsTab() {
           keywords, author, og_site_name: ogSiteName, twitter_handle: twitterHandle,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert("Save failed: " + (err.error || res.statusText));
+        setSaving(false);
+        return;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {}
@@ -2754,7 +2760,7 @@ function SocialsTab() {
           Ready-to-use designs across 3 sizes. Download as PNG.
         </div>
         {[
-          { key: "og", label: "OG / Twitter", dims: "1200 \u00D7 630", aspect: "1200/630", thumbW: 300 },
+          { key: "og", label: "OG / Bluesky", dims: "1200 \u00D7 630", aspect: "1200/630", thumbW: 300 },
           { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbW: 300 },
           { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbW: 300 },
         ].map(row => (
@@ -2821,7 +2827,7 @@ function SocialsTab() {
       {previewTemplate && (() => {
         const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
         const sizes = [
-          { key: "og", label: "OG / Twitter", aspect: "1200/630" },
+          { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
           { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
           { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
         ];
