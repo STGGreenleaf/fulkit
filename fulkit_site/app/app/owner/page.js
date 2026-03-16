@@ -61,66 +61,7 @@ const TABS = [
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
 
-/* ─── DevToggle (pill switch for dev mode) ─── */
-function DevToggle({ compact }) {
-  const [on, setOn] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("fulkit-dev-mode") === "true";
-    }
-    return false;
-  });
-
-  const toggle = () => {
-    const next = !on;
-    setOn(next);
-    localStorage.setItem("fulkit-dev-mode", String(next));
-    window.location.reload();
-  };
-
-  return (
-    <button
-      onClick={toggle}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        padding: "var(--space-1)",
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "var(--font-size-2xs)",
-        color: "var(--color-text-muted)",
-        fontFamily: "var(--font-primary)",
-      }}
-      title="Dev mode"
-    >
-      {!compact && <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Dev</span>}
-      <div
-        style={{
-          width: 22,
-          height: 12,
-          borderRadius: 6,
-          border: "1px solid var(--color-text-muted)",
-          background: on ? "var(--color-text-muted)" : "transparent",
-          position: "relative",
-          transition: "all var(--duration-fast) var(--ease-default)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: on ? "var(--color-bg)" : "var(--color-text-muted)",
-            position: "absolute",
-            top: 1,
-            left: on ? 11 : 1,
-            transition: "left var(--duration-fast) var(--ease-default)",
-          }}
-        />
-      </div>
-    </button>
+/* DevToggle removed — now lives in Developer tab Switches card */
   );
 }
 
@@ -135,7 +76,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
-      {/* Sub-tab bar + DevToggle right-justified */}
+      {/* Sub-tab bar */}
       <div
         style={{
           display: "flex",
@@ -176,9 +117,6 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
             </Tooltip>
           );
         })}
-        <div style={{ marginLeft: "auto" }}>
-          <DevToggle compact={compactMode} />
-        </div>
       </div>
 
       {/* Sub-tab content — full width */}
