@@ -1761,9 +1761,11 @@ async function executeMemoryTool(name, input, userId) {
     );
     if (error) throw new Error(error.message);
     // If the user told us their name, update profiles.name so the hero reflects it
-    const nameKeys = ["name", "display_name", "first_name", "my_name", "call_me"];
-    if (nameKeys.includes(key.toLowerCase())) {
-      admin.from("profiles").update({ name: value }).eq("id", userId).then(() => {}).catch(() => {});
+    const lk = key.toLowerCase();
+    if (lk.includes("name") || lk.includes("call_me")) {
+      // Extract the actual name from the value (e.g., "Wants to be called Batman" → "Batman")
+      const nameValue = value.replace(/^(wants to be called|prefers to be called|goes by|call (?:me|them))\s+/i, "").trim();
+      admin.from("profiles").update({ name: nameValue }).eq("id", userId).then(() => {}).catch(() => {});
     }
     return { saved: true, key, value };
   }
