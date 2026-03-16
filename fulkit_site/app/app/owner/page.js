@@ -253,7 +253,7 @@ function DashboardTab() {
       .catch(() => {});
 
     fetch("/api/owner/analytics", { headers })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => r.json())
       .then(data => { setAnalytics(data); setLoadingAnalytics(false); })
       .catch(() => { setLoadingAnalytics(false); });
 
