@@ -698,10 +698,8 @@ function DeveloperTab() {
     }
   };
 
-  const [showInactive, setShowInactive] = useState(false);
-  const contextBroadcasts = broadcasts.filter(b => b.channel === "context" && (showInactive || b.active));
-  const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement" && (showInactive || b.active));
-  const inactiveCount = broadcasts.filter(b => !b.active).length;
+  const contextBroadcasts = broadcasts.filter(b => b.channel === "context");
+  const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement");
 
   // ── Doc Import ──
   const [importing, setImporting] = useState(false);
@@ -895,8 +893,15 @@ function DeveloperTab() {
       opacity: b.active ? 1 : 0.5,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {b.title}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {b.title}
+          </span>
+          {!b.active && (
+            <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>
+              off
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
           {new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -987,19 +992,6 @@ function DeveloperTab() {
 
       {/* ── RIGHT: Outgoing ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-
-        {inactiveCount > 0 && (
-          <button
-            onClick={() => setShowInactive(!showInactive)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
-              textAlign: "right", padding: 0,
-            }}
-          >
-            {showInactive ? "Hide inactive" : `Show inactive (${inactiveCount})`}
-          </button>
-        )}
 
         {/* Context Docs */}
         <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
