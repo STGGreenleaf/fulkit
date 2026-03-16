@@ -140,19 +140,19 @@ export function VaultProvider({ children }) {
     }
 
     return [];
-  }, [storageMode, directoryHandle]);
+  }, [storageMode, directoryHandle, user]);
 
   // Toggle context_mode for a note (Models B & C only)
   const updateNoteMode = useCallback(async (noteId, mode) => {
     if (storageMode === "local") return;
     await updateContextMode(noteId, mode, supabase, user?.id);
-  }, [storageMode]);
+  }, [storageMode, user]);
 
   // Search all notes (including off) by title/folder — for /recall
   const recallNotes = useCallback(async (query) => {
     if (storageMode === "local") return [];
     return await searchNotes(query, supabase, user?.id);
-  }, [storageMode]);
+  }, [storageMode, user]);
 
   // Model A: connect vault directory
   const connectVault = useCallback(async () => {

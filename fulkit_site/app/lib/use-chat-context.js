@@ -9,7 +9,7 @@ import { supabase } from "./supabase";
  * Owns: GitHub context, Numbrly context, TrueGauge context, attached files, recalled notes.
  * Provides assembleContext() for useChat's sendMessage.
  */
-export function useChatContext({ user, isDev, accessToken, authFetch, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
+export function useChatContext({ user, accessToken, authFetch, githubConnected, getContextWithMeta, recallNotes, isReady, sandbox }) {
   const [ghContext, setGhContext] = useState([]);
   const [nblContext, setNblContext] = useState(null);
   const [nblError, setNblError] = useState(false);
@@ -33,7 +33,7 @@ export function useChatContext({ user, isDev, accessToken, authFetch, githubConn
   // ─── Load GitHub repos ────────────────────────────────────
 
   useEffect(() => {
-    if (!accessToken || !githubConnected || isDev) return;
+    if (!accessToken || !githubConnected ) return;
     async function load() {
       try {
         const res = await authFetch("/api/github/active");
@@ -44,12 +44,12 @@ export function useChatContext({ user, isDev, accessToken, authFetch, githubConn
       } catch {}
     }
     load();
-  }, [accessToken, authFetch, githubConnected, isDev]);
+  }, [accessToken, authFetch, githubConnected]);
 
   // ─── Load Numbrly context ─────────────────────────────────
 
   useEffect(() => {
-    if (!accessToken || isDev) return;
+    if (!accessToken ) return;
     authFetch("/api/numbrly/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -61,12 +61,12 @@ export function useChatContext({ user, isDev, accessToken, authFetch, githubConn
         if (data?.message) setNblContext(data.message);
       })
       .catch(() => setNblError(true));
-  }, [accessToken, authFetch, isDev]);
+  }, [accessToken, authFetch]);
 
   // ─── Load TrueGauge context ───────────────────────────────
 
   useEffect(() => {
-    if (!accessToken || isDev) return;
+    if (!accessToken ) return;
     authFetch("/api/truegauge/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -78,12 +78,12 @@ export function useChatContext({ user, isDev, accessToken, authFetch, githubConn
         if (data?.message) setTgContext(data.message);
       })
       .catch(() => setTgError(true));
-  }, [accessToken, authFetch, isDev]);
+  }, [accessToken, authFetch]);
 
   // ─── Fetch alerts ─────────────────────────────────────────
 
   useEffect(() => {
-    if (!accessToken || isDev) return;
+    if (!accessToken ) return;
     async function fetchAlerts() {
       try {
         const res = await authFetch("/api/numbrly/alerts");
@@ -103,7 +103,7 @@ export function useChatContext({ user, isDev, accessToken, authFetch, githubConn
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [accessToken, authFetch, isDev]);
+  }, [accessToken, authFetch]);
 
   // ─── File handling ────────────────────────────────────────
 

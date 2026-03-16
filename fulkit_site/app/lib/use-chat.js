@@ -57,7 +57,7 @@ function extractTopics(messages) {
  * Owns: messages, streaming, conversations, send flow, DB persistence.
  * Does NOT own: context assembly, file attachments, UI state.
  */
-export function useChat({ user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox, onMessageSent }) {
+export function useChat({ user, accessToken, authFetch, storageMode, directoryHandle, sandbox, onMessageSent }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -76,7 +76,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
   // ─── Conversations ────────────────────────────────────────
 
   const loadConversations = useCallback(async () => {
-    if (!user || isDev) return;
+    if (!user) return;
     const { data } = await supabase
       .from("conversations")
       .select("id, title, updated_at, topics")
@@ -84,7 +84,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
       .order("updated_at", { ascending: false })
       .limit(50);
     if (data) setConversations(data);
-  }, [user, isDev]);
+  }, [user]);
 
   useEffect(() => {
     loadConversations();
@@ -97,7 +97,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
   // response save completes.
 
   useEffect(() => {
-    if (!conversationId || isDev || streamingRef.current) return;
+    if (!conversationId || streamingRef.current) return;
     let cancelled = false;
     async function load() {
       const { data } = await supabase
@@ -113,13 +113,12 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
     }
     load();
     return () => { cancelled = true; };
-  }, [conversationId, isDev]);
+  }, [conversationId]);
 
   // ─── DB helpers ───────────────────────────────────────────
 
   async function ensureConversation(firstMessage) {
     if (conversationId) return conversationId;
-    if (isDev) return null;
 
     const title = firstMessage.length > 60
       ? firstMessage.slice(0, 57) + "..."
@@ -145,7 +144,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
   }
 
   async function saveMessage(convId, role, content) {
-    if (!convId || isDev) return null;
+    if (!convId) return null;
     try {
       const { data } = await supabase
         .from("messages")
@@ -482,24 +481,21 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         .catch(() => {});
 
       // Extract topics and save to conversation (fire-and-forget)
-      if (!isDev) {
-        try {
-          const currentMessages = [...messages, { role: "user", content: text }, { role: "assistant", content: fullResponse }];
-          const topics = extractTopics(currentMessages);
-          if (topics.length > 0) {
-            supabase
-              .from("conversations")
-              .update({ topics })
-              .eq("id", convId)
-              .then(() => {})
-              .catch(() => {});
-          }
-        } catch {}
-      }
+      try {
+        const currentMessages = [...messages, { role: "user", content: text }, { role: "assistant", content: fullResponse }];
+        const topics = extractTopics(currentMessages);
+        if (topics.length > 0) {
+          supabase
+            .from("conversations")
+            .update({ topics })
+            .eq("id", convId)
+            .then(() => {})
+            .catch(() => {});
+        }
+      } catch {}
 
       // Write-back artifacts
-      if (!isDev) {
-        try {
+      try {
           const artifacts = extractArtifacts(fullResponse);
           if (artifacts.actionItems.length > 0) {
             const title = text.slice(0, 60) || "Chat";
@@ -510,7 +506,6 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
             }
           }
         } catch {}
-      }
 
       // Sandbox: track turn in current chapter
       if (sandboxMode && sandbox.addTurnToChapter) {
@@ -527,7 +522,7 @@ export function useChat({ user, isDev, accessToken, authFetch, storageMode, dire
         try { onMessageSent(); } catch {}
       }
     }
-  }, [input, streaming, messages, conversationId, user, isDev, accessToken, authFetch,
+  }, [input, streaming, messages, conversationId, user, accessToken, authFetch,
     loadConversations, storageMode, directoryHandle, sandbox, onMessageSent]);
 
   // ─── Actions ──────────────────────────────────────────────

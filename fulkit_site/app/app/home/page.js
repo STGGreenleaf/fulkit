@@ -53,6 +53,7 @@ export default function Dashboard() {
       .select("*")
       .eq("user_id", user.id)
       .eq("status", "active")
+      .or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString())
       .order("priority", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true })
       .then(({ data, error }) => {

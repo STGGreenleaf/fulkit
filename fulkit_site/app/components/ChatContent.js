@@ -82,15 +82,14 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 
 export default function ChatContent({ isPopout = false }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
-  const isDev = user?.isDev;
 
   // ─── Fül cap state ──────────────────────────────────────
   const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = Math.max(0, seatLimit - messagesUsed);
-  const isLow = !isOwner && !isDev && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);
-  const isCapped = !isOwner && !isDev && remaining <= 0;
+  const isLow = !isOwner && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);
+  const isCapped = !isOwner && remaining <= 0;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
 
   // ─── Sandbox hook ────────────────────────────────────────
@@ -98,13 +97,13 @@ export default function ChatContent({ isPopout = false }) {
 
   // ─── Core chat hook ───────────────────────────────────────
   const chat = useChat({
-    user, isDev, accessToken, authFetch, storageMode, directoryHandle, sandbox,
+    user, accessToken, authFetch, storageMode, directoryHandle, sandbox,
     onMessageSent: () => { if (user?.id) fetchProfile(user.id); },
   });
 
   // ─── Context hook ─────────────────────────────────────────
   const ctx = useChatContext({
-    user, isDev, accessToken, authFetch, githubConnected,
+    user, accessToken, authFetch, githubConnected,
     getContextWithMeta, recallNotes, isReady, sandbox,
   });
 
@@ -129,9 +128,9 @@ export default function ChatContent({ isPopout = false }) {
   // ─── Pinned messages ──────────────────────────────────────
 
   useEffect(() => {
-    if (!user || isDev) return;
+    if (!user) return;
     loadPinnedMessages();
-  }, [user, isDev]);
+  }, [user]);
 
   async function loadPinnedMessages() {
     try {
@@ -334,7 +333,7 @@ export default function ChatContent({ isPopout = false }) {
 
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Sandbox toggle + chapter indicator */}
-              {!isDev && (
+              {(
                 <>
                   {sandbox.sandboxActive ? (
                     <>
@@ -431,7 +430,7 @@ export default function ChatContent({ isPopout = false }) {
               )}
 
               {/* Pins toggle */}
-              {!isDev && (
+              {(
                 <button
                   onClick={() => setShowPins(!showPins)}
                   style={{
@@ -454,7 +453,7 @@ export default function ChatContent({ isPopout = false }) {
               )}
 
               {/* History toggle */}
-              {!isDev && chat.conversations.length > 0 && (
+              {chat.conversations.length > 0 && (
                 <button
                   onClick={() => setShowHistory(!showHistory)}
                   style={{
@@ -614,7 +613,7 @@ export default function ChatContent({ isPopout = false }) {
                     </p>
 
                     {/* Context nudge */}
-                    {!isDev && !hasContext && (
+                    {!hasContext && (
                       <div style={{
                         display: "flex", alignItems: "center", gap: "var(--space-3)",
                         padding: "var(--space-3) var(--space-4)",
