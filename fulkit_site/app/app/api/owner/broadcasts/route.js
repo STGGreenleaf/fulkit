@@ -31,14 +31,17 @@ export async function POST(request) {
   const owner = await getOwner(request);
   if (!owner) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { title, content, channel } = await request.json();
+  const { title, content, channel, subtype } = await request.json();
   if (!title || !content || !["context", "announcement"].includes(channel)) {
     return Response.json({ error: "Missing title, content, or valid channel" }, { status: 400 });
   }
 
+  const row = { title, content, channel };
+  if (subtype) row.subtype = subtype;
+
   const { data, error } = await getSupabaseAdmin()
     .from("vault_broadcasts")
-    .insert({ title, content, channel })
+    .insert(row)
     .select()
     .single();
 
@@ -58,6 +61,7 @@ export async function PATCH(request) {
   if (updates.content !== undefined) allowed.content = updates.content;
   if (updates.channel !== undefined) allowed.channel = updates.channel;
   if (updates.active !== undefined) allowed.active = updates.active;
+  if (updates.subtype !== undefined) allowed.subtype = updates.subtype;
   allowed.updated_at = new Date().toISOString();
 
   const { data, error } = await getSupabaseAdmin()
