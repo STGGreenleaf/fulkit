@@ -1927,64 +1927,24 @@ function UsersTab() {
   return (
     <div>
       {/* ── PROGRESS METER ── */}
-      <div style={cardStyle}>
-        <div style={sectionLabel}>Progress</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-          <span style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>
-            {currentTotal}
-          </span>
-          <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>
-            / 2,000 users
-          </span>
+      <div style={{ marginBottom: "var(--space-3)" }}>
+        <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)", color: "var(--color-text)" }}>
+          {currentTotal} <span style={{ color: "var(--color-text-dim)" }}>|</span> 2,000
         </div>
-
-        {/* Track */}
-        <div style={{ position: "relative", marginBottom: "var(--space-6)" }}>
+        <div style={{
+          height: 3,
+          background: "var(--color-border-light)",
+          borderRadius: 2,
+          overflow: "hidden",
+          marginTop: "var(--space-1-5)",
+        }}>
           <div style={{
-            height: 8,
-            background: "var(--color-border-light)",
-            borderRadius: "var(--radius-full)",
-            overflow: "hidden",
-          }}>
-            <div style={{
-              height: "100%",
-              width: `${Math.max(progressPct, 1)}%`,
-              background: "var(--color-text)",
-              borderRadius: "var(--radius-full)",
-              transition: "width 0.6s ease",
-            }} />
-          </div>
-
-          {/* Milestone ticks */}
-          <div style={{ position: "relative", height: 28, marginTop: 4 }}>
-            {MILESTONES.map((m, i) => {
-              const left = ((i + 1) / MILESTONES.length) * 100;
-              const showLabel = labelMilestones.includes(m);
-              const passed = currentTotal >= m;
-              return (
-                <div key={m} style={{ position: "absolute", left: `${left}%`, transform: "translateX(-50%)" }}>
-                  <div style={{
-                    width: 1,
-                    height: 6,
-                    background: passed ? "var(--color-text)" : "var(--color-border)",
-                    margin: "0 auto",
-                  }} />
-                  {showLabel && (
-                    <div style={{
-                      fontSize: 9,
-                      fontFamily: "var(--font-mono)",
-                      color: passed ? "var(--color-text)" : "var(--color-text-dim)",
-                      marginTop: 2,
-                      textAlign: "center",
-                      whiteSpace: "nowrap",
-                    }}>
-                      {m >= 1000 ? `${m / 1000}K` : m}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            height: "100%",
+            width: `${Math.max(progressPct, 1)}%`,
+            background: "var(--color-text-dim)",
+            borderRadius: 2,
+            transition: "width 0.6s ease",
+          }} />
         </div>
       </div>
 
