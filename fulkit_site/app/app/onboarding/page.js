@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowRight, Check, SkipForward, Mic, MicOff } from "lucide-react";
+import { ArrowRight, Check, SkipForward, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
@@ -196,6 +196,13 @@ export default function Onboarding() {
       case "create_identity_file":
         if (typeof value === "string" && value.trim()) {
           supabase.from("profiles").update({ name: value.trim() }).eq("id", uid).then(() => {}).catch(() => {});
+        }
+        break;
+      case "setup_vault":
+        if (value === "fulkit_managed") {
+          savePref("storage_preference", "fulkit");
+        } else {
+          savePref("storage_preference", "local");
         }
         break;
       case "set_location":
@@ -836,6 +843,11 @@ export default function Onboarding() {
           </div>
         )}
 
+        {/* ─── Vault setup ─── */}
+        {qType === "vault_setup" && (
+          <VaultSetupStep onAdvance={advance} />
+        )}
+
         {/* ─── Feature walkthrough ─── */}
         {qType === "feature_walkthrough" && (
           <div>
@@ -932,6 +944,172 @@ function SkipLink() {
     >
       I'll do this later
     </a>
+  );
+}
+
+const VAULT_TREE = [
+  { name: "_FULKIT/", desc: "your brain (always loaded)", icon: Folder },
+  { name: "00-INBOX/", desc: "unsorted, we file it for you", icon: Folder },
+  { name: "01-PERSONAL/", desc: null, icon: Folder },
+  { name: "02-BUSINESS/", desc: null, icon: Folder },
+  { name: "03-PROJECTS/", desc: null, icon: Folder },
+  { name: "04-DEV/", desc: null, icon: Folder },
+  { name: "05-IDEAS/", desc: null, icon: Folder },
+  { name: "06-LEARNING/", desc: null, icon: Folder },
+  { name: "07-ARCHIVE/", desc: null, icon: Folder },
+];
+
+function VaultSetupStep({ onAdvance }) {
+  const [downloadState, setDownloadState] = useState(null); // null | "downloaded"
+  const downloadRef = useRef(null);
+
+  const handleDownload = () => {
+    if (downloadRef.current) downloadRef.current.click();
+    setDownloadState("downloaded");
+  };
+
+  return (
+    <div>
+      {/* File tree preview */}
+      <div style={{
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        borderRadius: "var(--radius-md)",
+        padding: "var(--space-4)",
+        marginBottom: "var(--space-4)",
+        fontFamily: "var(--font-mono)",
+        fontSize: "var(--font-size-xs)",
+        lineHeight: 1.8,
+      }}>
+        <div style={{ color: "var(--color-text)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+          fulkit-vault/
+        </div>
+        {VAULT_TREE.map((item) => (
+          <div key={item.name} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", paddingLeft: "var(--space-4)" }}>
+            <Folder size={12} strokeWidth={1.5} color="var(--color-text-dim)" style={{ flexShrink: 0 }} />
+            <span style={{ color: "var(--color-text)" }}>{item.name}</span>
+            {item.desc && (
+              <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)" }}>
+                {"\u2190"} {item.desc}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Recommendation */}
+      <p style={{
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-muted)",
+        lineHeight: "var(--line-height-relaxed)",
+        marginBottom: "var(--space-4)",
+      }}>
+        We recommend our structure — it&apos;s clean and F{"\u00FC"}lkit knows how to use it. Have your own folders? We&apos;ll help you migrate.
+      </p>
+
+      {/* Hidden download link */}
+      <a ref={downloadRef} href="/fulkit-vault.zip" download="fulkit-vault.zip" style={{ display: "none" }} />
+
+      {downloadState === "downloaded" ? (
+        /* Post-download confirmation */
+        <div>
+          <p style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
+            lineHeight: "var(--line-height-relaxed)",
+            marginBottom: "var(--space-4)",
+          }}>
+            Unzip it wherever you like — Desktop, Documents, Finder favorites. When you&apos;re ready:
+          </p>
+          <button
+            onClick={() => onAdvance("download")}
+            style={{
+              width: "100%",
+              padding: "var(--space-3) var(--space-4)",
+              background: "var(--color-accent)",
+              color: "var(--color-text-inverse)",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-base)",
+              fontWeight: "var(--font-weight-semibold)",
+              fontFamily: "var(--font-primary)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-2)",
+            }}
+          >
+            Done, let&apos;s go
+            <ArrowRight size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+      ) : (
+        /* Three options */
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <button
+            onClick={handleDownload}
+            style={{
+              padding: "var(--space-3) var(--space-4)",
+              background: "var(--color-bg-elevated)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-base)",
+              fontFamily: "var(--font-primary)",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+            }}
+          >
+            <FolderDown size={18} strokeWidth={1.5} color="var(--color-text-dim)" />
+            Download F{"\u00FC"}lkit vault
+          </button>
+          <button
+            onClick={() => onAdvance("existing")}
+            style={{
+              padding: "var(--space-3) var(--space-4)",
+              background: "var(--color-bg-elevated)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-base)",
+              fontFamily: "var(--font-primary)",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+            }}
+          >
+            <FolderOpen size={18} strokeWidth={1.5} color="var(--color-text-dim)" />
+            I have my own folder
+          </button>
+          <button
+            onClick={() => onAdvance("fulkit_managed")}
+            style={{
+              padding: "var(--space-3) var(--space-4)",
+              background: "transparent",
+              color: "var(--color-text-dim)",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-xs)",
+              fontFamily: "var(--font-primary)",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+            }}
+          >
+            <Cloud size={16} strokeWidth={1.5} />
+            I&apos;ll use F{"\u00FC"}lkit storage
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

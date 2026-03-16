@@ -2302,12 +2302,12 @@ function DownloadAppCard() {
         <div style={{ display: "flex", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
           <div style={{ flexShrink: 0 }}>
             <div style={{
-              width: 56, height: 56, borderRadius: 14,
+              width: 76, height: 76, borderRadius: 18,
               background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
               display: "flex", alignItems: "center", justifyContent: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
             }}>
-              <LogoMark size={32} />
+              <LogoMark size={60} />
             </div>
             <div style={{
               fontSize: 9, color: "var(--color-text-dim)", textAlign: "center", marginTop: 3,
@@ -3390,6 +3390,18 @@ function PlaygroundTab() {
           Live preview of the onboarding flow. No data is saved.
         </p>
 
+        {/* Other previews */}
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <a href="/payment-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
+              <CreditCard size={12} /> Payment
+            </a>
+            <a href="/loading-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
+              Loading
+            </a>
+          </div>
+        </div>
+
         {/* Tier selector */}
         <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
           {tiers.map((t, i) => (
@@ -3523,7 +3535,20 @@ function PlaygroundTab() {
 
             {question.type === "integration_picker" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {(question.options || [{ label: "Spotify" }, { label: "I'll do this later" }]).map((opt) => {
+                {(question.options || [{ label: "Spotify" }, { label: "Google Calendar" }, { label: "Apple Calendar" }, { label: "Add another" }, { label: "I'll do this later" }]).map((opt) => {
+                  const label = typeof opt === "string" ? opt : opt.label;
+                  return (
+                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {question.type === "vault_setup" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {(question.options || []).map((opt) => {
                   const label = typeof opt === "string" ? opt : opt.label;
                   return (
                     <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
@@ -3552,20 +3577,6 @@ function PlaygroundTab() {
         )}
       </div>
 
-      {/* Other previews */}
-      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-4)" }}>
-        <p style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)" }}>
-          Other Previews
-        </p>
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <a href="/payment-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-            <CreditCard size={12} /> Payment
-          </a>
-          <a href="/loading-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-            Loading
-          </a>
-        </div>
-      </div>
     </div>
   );
 }

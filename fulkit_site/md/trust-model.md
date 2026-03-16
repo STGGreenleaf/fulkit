@@ -510,7 +510,7 @@ Just awareness. Not interactive for V1. The user knows what Claude is seeing rig
 
 ### For Model A (local vault):
 
-Folder structure IS the control. `_CHAPPIE/` files = always. Everything else = available. No database column needed.
+Folder structure IS the control. `_FULKIT/` files = always. Everything else = available. No database column needed.
 
 ### For Models B & C (cloud storage):
 
@@ -819,13 +819,13 @@ function selectContext(vaultFiles, message, budget = TOKEN_BUDGET) {
   // Step 1: Filter out 'off' notes entirely — they don't exist to Claude
   const active = vaultFiles.filter(f => f.context_mode !== 'off');
 
-  // Step 2: 'always' notes + _CHAPPIE/ path → priority tier (always included)
+  // Step 2: 'always' notes + _FULKIT/ path → priority tier (always included)
   const always = active.filter(f =>
-    f.context_mode === 'always' || f.path.includes('_CHAPPIE/'));
+    f.context_mode === 'always' || f.path.includes('_FULKIT/'));
 
   // Step 3: 'available' notes → scored by relevance to current message
   const available = active.filter(f =>
-    f.context_mode === 'available' && !f.path.includes('_CHAPPIE/'));
+    f.context_mode === 'available' && !f.path.includes('_FULKIT/'));
 
   const scored = available.map(f => ({
     ...f,

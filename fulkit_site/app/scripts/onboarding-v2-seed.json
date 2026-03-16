@@ -12,6 +12,21 @@
       "completion_trigger": "visited_inbox",
       "questions": [
         {
+          "id": "q_vault",
+          "text": "First things first \u2014 let's set up your vault.",
+          "why": "This is where your stuff lives. A set of folders on your machine that F\u00fclkit reads from and writes to. You own every file.",
+          "type": "vault_setup",
+          "skippable": false,
+          "trust_line": "Your vault is just a folder on your computer. Plain markdown files you can open anywhere. We never see it unless you show it to us.",
+          "fulkit_action": "setup_vault",
+          "sort_order": -1,
+          "options": [
+            {"label": "Download F\u00fclkit vault", "value": "download"},
+            {"label": "I have my own folder", "value": "existing"},
+            {"label": "I'll use F\u00fclkit storage", "value": "fulkit_managed"}
+          ]
+        },
+        {
           "id": "q0",
           "text": "Before we start \u2014 what brought you here? Just curious.",
           "why": "No wrong answer. Just helps me understand what you're looking for.",
@@ -81,7 +96,7 @@
           "text": "Connect something so I can show you what I do.",
           "why": "Unlocks a live feature demo.",
           "type": "integration_picker",
-          "options": ["Spotify", "Google Calendar", "Apple Calendar", "I'll do this later"],
+          "options": ["Spotify", "Google Calendar", "Apple Calendar", "Add another", "I'll do this later"],
           "skippable": false,
           "copy_after_answer": "Nice. You just unlocked something. Go check it out when you're ready.",
           "fulkit_action": "connect_integration"

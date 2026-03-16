@@ -151,7 +151,7 @@ export function VaultProvider({ children }) {
       return files.map((f, i) => ({
         id: `local-${i}`,
         title: f.title,
-        context_mode: f.path && f.path.includes("_CHAPPIE/") ? "always" : "available",
+        context_mode: f.path && (f.path.includes("_FULKIT/") || f.path.includes("_CHAPPIE/")) ? "always" : "available",
         source: "local",
         folder: f.path,
         tokenEstimate: estimateTokens(f.content),

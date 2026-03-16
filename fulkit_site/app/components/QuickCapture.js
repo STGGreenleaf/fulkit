@@ -82,7 +82,7 @@ export default function QuickCapture() {
   // Don't render for unauthenticated, new, or dev users
   if (!user || user.isNew || !user.id) return null;
 
-  const fabSize = 44;
+  const fabSize = 33;
 
   // Collapsed FAB
   if (!open) {
@@ -96,20 +96,20 @@ export default function QuickCapture() {
           width: fabSize,
           height: fabSize,
           borderRadius: "var(--radius-full)",
-          background: "var(--color-accent)",
-          border: "none",
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           zIndex: 1000,
           transition: "transform var(--duration-fast) var(--ease-default)",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
         onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
-        <PenLine size={18} strokeWidth={2} color="var(--color-text-inverse)" />
+        <PenLine size={14} strokeWidth={2} color="var(--color-text-dim)" />
       </button>
     );
   }

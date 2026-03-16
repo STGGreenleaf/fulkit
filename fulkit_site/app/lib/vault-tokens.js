@@ -34,18 +34,18 @@ export function selectContext(notes, message, budget = TOKEN_BUDGET) {
   // Step 1: Filter out 'off' notes entirely
   const active = notes.filter((n) => n.context_mode !== "off");
 
-  // Step 2: 'always' notes + _CHAPPIE/ path → priority tier
+  // Step 2: 'always' notes + _FULKIT/ path → priority tier
   const priority = active.filter(
     (n) =>
       n.context_mode === "always" ||
       n.pinned ||
-      (n.path && n.path.includes("_CHAPPIE/"))
+      (n.path && n.path.includes("_FULKIT/") || n.path.includes("_CHAPPIE/"))
   );
   const rest = active.filter(
     (n) =>
       n.context_mode !== "always" &&
       !n.pinned &&
-      !(n.path && n.path.includes("_CHAPPIE/"))
+      !(n.path && n.path.includes("_FULKIT/") || n.path.includes("_CHAPPIE/"))
   );
 
   // Score rest by relevance to current message, then by recency (array order)
@@ -86,18 +86,18 @@ export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET)
   // Step 1: Filter out 'off' notes entirely
   const active = notes.filter((n) => n.context_mode !== "off");
 
-  // Step 2: 'always' notes + _CHAPPIE/ path → priority tier
+  // Step 2: 'always' notes + _FULKIT/ path → priority tier
   const priority = active.filter(
     (n) =>
       n.context_mode === "always" ||
       n.pinned ||
-      (n.path && n.path.includes("_CHAPPIE/"))
+      (n.path && n.path.includes("_FULKIT/") || n.path.includes("_CHAPPIE/"))
   );
   const rest = active.filter(
     (n) =>
       n.context_mode !== "always" &&
       !n.pinned &&
-      !(n.path && n.path.includes("_CHAPPIE/"))
+      !(n.path && n.path.includes("_FULKIT/") || n.path.includes("_CHAPPIE/"))
   );
 
   // Score rest by relevance to current message, then by recency
