@@ -2242,6 +2242,227 @@ const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "One-Liners"
 
 /* ─── Socials Tab ─── */
 
+/* ─── PWA Blueprint (collapsible reference) ─── */
+
+function PwaBlueprint() {
+  const [open, setOpen] = useState(false);
+
+  const sectionLabel = {
+    fontSize: 9,
+    fontFamily: "var(--font-mono)",
+    fontWeight: "var(--font-weight-medium)",
+    textTransform: "uppercase",
+    letterSpacing: "var(--letter-spacing-widest)",
+    color: "var(--color-text-dim)",
+  };
+
+  const codeBlock = {
+    background: "var(--color-bg)",
+    border: "1px solid var(--color-border-light)",
+    borderRadius: "var(--radius-sm)",
+    padding: "var(--space-3)",
+    fontSize: 11,
+    fontFamily: "var(--font-mono)",
+    color: "var(--color-text-secondary)",
+    overflow: "auto",
+    whiteSpace: "pre",
+    lineHeight: 1.5,
+    marginBottom: "var(--space-3)",
+  };
+
+  const h3Style = {
+    fontSize: "var(--font-size-sm)",
+    fontWeight: "var(--font-weight-semibold)",
+    color: "var(--color-text)",
+    marginBottom: "var(--space-2)",
+    marginTop: "var(--space-4)",
+  };
+
+  const bodyStyle = {
+    fontSize: "var(--font-size-xs)",
+    color: "var(--color-text-secondary)",
+    lineHeight: "var(--line-height-relaxed)",
+    marginBottom: "var(--space-3)",
+  };
+
+  const PIECES = [
+    {
+      title: "1. manifest.json",
+      desc: "Tells the browser this is an installable app. Place in public/.",
+      code: `{
+  "name": "F\u00FClkit",
+  "short_name": "F\u00FClkit",
+  "description": "Your second brain that talks back.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#EFEDE8",
+  "theme_color": "#EFEDE8",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ],
+  "shortcuts": [
+    { "name": "Home", "url": "/home", "icons": [{ "src": "/pwa-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chat", "url": "/chat", "icons": [{ "src": "/pwa-icon-192.png", "sizes": "192x192" }] }
+  ]
+}`,
+    },
+    {
+      title: "2. sw.js (Service Worker)",
+      desc: "Caches images/fonts only. Never caches JS/CSS (prevents stale-cache white-screen bugs).",
+      code: `const CACHE_NAME = "fulkit-v1";
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(["/", "/index.html"]).catch(() => {})
+    )
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.pathname.endsWith(".js") || url.pathname.endsWith(".css")) return;
+  if (url.pathname.match(/\\.(png|jpg|svg|webp|ico|woff|woff2|ttf)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) =>
+        cached || fetch(event.request).then((res) => {
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+          return res;
+        })
+      ).catch(() => new Response("", { status: 404 }))
+    );
+  }
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.map((n) => n !== CACHE_NAME ? caches.delete(n) : undefined))
+    ).then(() => self.clients.claim())
+  );
+});`,
+    },
+    {
+      title: "3. HTML Meta Tags",
+      desc: "Add to <head> in layout.js. Already have manifest link \u2014 add iOS-specific tags.",
+      code: `<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="F\u00FClkit" />
+<link rel="apple-touch-icon" href="/pwa-icon-192.png" />`,
+    },
+    {
+      title: "4. SW Registration",
+      desc: "Add to layout.js or a client component that mounts once.",
+      code: `if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then((reg) => console.log("SW registered"))
+      .catch((err) => console.warn("SW failed:", err));
+  });
+}`,
+    },
+    {
+      title: "5. Install Prompt Component",
+      desc: "Floating banner. Detects Android (beforeinstallprompt) and iOS (manual instructions). Dismiss for 7 days via localStorage.",
+      code: `// Key behaviors:
+// - Skip if display-mode: standalone (already installed)
+// - Android: listen beforeinstallprompt, show after 3s delay
+// - iOS: detect via userAgent, show Share \u2192 Add to Home
+// - Dismiss: localStorage "fulkit.pwa.dismissed" = Date.now()
+// - Re-show after 7 days, or force with ?showInstall=1
+// - Position: fixed bottom-4 left-4 right-4 (mobile full),
+//   md:right-4 md:w-96 (desktop card)`,
+    },
+    {
+      title: "6. Icon Files Needed",
+      desc: "Place in public/. Generate from logo.",
+      code: `pwa-icon-192.png   192\u00D7192   Home screen, PWA install
+pwa-icon-512.png   512\u00D7512   Android splash screen
+favicon.ico        32\u00D732    Browser tab
+
+# Generate from logo (macOS):
+sips -z 192 192 logo.png --out public/pwa-icon-192.png
+sips -z 512 512 logo.png --out public/pwa-icon-512.png`,
+    },
+  ];
+
+  const WHAT_IT_REMOVES = [
+    ["display: standalone", "Hides URL bar, tabs, browser navigation"],
+    ["apple-mobile-web-app-capable", "Same effect for iOS Safari"],
+    ["theme-color", "Colors the phone status bar to match your app"],
+    ["Service worker", "Caches assets \u2014 loads faster than a normal website"],
+    ["Home screen icon", "Launches like any other app, not from a bookmark"],
+    ["Install prompt", "\"Install\" button feels like downloading from an app store"],
+  ];
+
+  const CHECKLIST = [
+    "Chrome DevTools \u2192 Application \u2192 Manifest \u2192 verify \"Installable\"",
+    "Click install icon in Chrome address bar \u2014 confirm it installs",
+    "Open installed app \u2014 confirm no URL bar or browser chrome",
+    "Test on real iPhone \u2014 Safari \u2192 Share \u2192 Add to Home Screen",
+    "Test on real Android \u2014 Chrome menu \u2192 Install app",
+    "Dismiss prompt \u2192 confirm it doesn\u2019t reappear for 7 days",
+    "Add ?showInstall=1 \u2192 confirm prompt reappears",
+  ];
+
+  return (
+    <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex", alignItems: "center", gap: "var(--space-2)",
+          background: "none", border: "none", cursor: "pointer", padding: 0,
+          ...sectionLabel, marginBottom: open ? "var(--space-4)" : 0,
+        }}
+      >
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        PWA Blueprint
+      </button>
+
+      {open && (
+        <div>
+          <p style={bodyStyle}>
+            Make the website feel like an app. Install on phones and desktops (no app store needed), hide browser chrome, cache assets, show install prompt.
+          </p>
+
+          {PIECES.map((piece) => (
+            <div key={piece.title}>
+              <div style={h3Style}>{piece.title}</div>
+              <p style={bodyStyle}>{piece.desc}</p>
+              <pre style={codeBlock}>{piece.code}</pre>
+            </div>
+          ))}
+
+          <div style={h3Style}>What removes the "website feel"</div>
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            {WHAT_IT_REMOVES.map(([feature, desc]) => (
+              <div key={feature} style={{ display: "flex", gap: "var(--space-3)", padding: "3px 0", fontSize: "var(--font-size-xs)" }}>
+                <span style={{ color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", minWidth: 180, flexShrink: 0 }}>{feature}</span>
+                <span style={{ color: "var(--color-text-muted)" }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={h3Style}>Testing Checklist</div>
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            {CHECKLIST.map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: "var(--space-2)", padding: "2px 0", fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+                <span style={{ color: "var(--color-text-dim)" }}>{"\u25A1"}</span>
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SocialsTab() {
   const { accessToken } = useAuth();
   const [meta, setMeta] = useState(null);
@@ -2849,6 +3070,9 @@ function SocialsTab() {
       }}>
         {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
       </button>
+
+      {/* ── PWA BLUEPRINT ── */}
+      <PwaBlueprint />
 
       {/* ── SOCIAL TEMPLATES ── */}
       <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
