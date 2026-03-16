@@ -706,30 +706,50 @@ function DeveloperTab() {
   const [selectedDocId, setSelectedDocId] = useState(null);
   const [docTitle, setDocTitle] = useState("");
   const [docContent, setDocContent] = useState("");
+  const [docTag, setDocTag] = useState("all");
   const [docSaving, setDocSaving] = useState(false);
+  const [kbOpen, setKbOpen] = useState(true);
+  const [kbFilter, setKbFilter] = useState("all");
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
+  const DEFAULT_KB_TAGS = [
+    { key: "all", label: "All" },
+    { key: "brand", label: "Brand" },
+    { key: "product", label: "Product" },
+    { key: "support", label: "Support" },
+    { key: "policy", label: "Policy" },
+  ];
+
+  // Derive custom tags from existing docs
+  const customTags = [...new Set(knowledgeDocs.map(d => d.tag).filter(t => t && !DEFAULT_KB_TAGS.some(dt => dt.key === t)))];
+  const allTags = [...DEFAULT_KB_TAGS, ...customTags.map(t => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))];
+
+  const filteredDocs = kbFilter === "all" ? knowledgeDocs : knowledgeDocs.filter(d => d.tag === kbFilter);
   const selectedDoc = knowledgeDocs.find(d => d.id === selectedDocId);
 
   const selectDoc = (doc) => {
     setSelectedDocId(doc.id);
     setDocTitle(doc.title);
     setDocContent(doc.content);
+    setDocTag(doc.tag || "all");
   };
 
   const newDoc = () => {
     setSelectedDocId("new");
     setDocTitle("");
     setDocContent("");
+    setDocTag(kbFilter !== "all" ? kbFilter : "brand");
   };
 
   const saveDoc = async () => {
     if (!docTitle.trim() || !docContent.trim()) return;
     setDocSaving(true);
-    const payload = { title: docTitle, content: docContent, channel: "context", subtype: "doc" };
+    const tag = docTag === "all" ? null : docTag;
+    const payload = { title: docTitle, content: docContent, channel: "context", subtype: "doc", tag };
     if (selectedDocId !== "new") payload.id = selectedDocId;
     await saveBroadcast(payload);
     if (selectedDocId === "new") {
-      // Refresh to get the new doc's ID
       const res = await fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } });
       if (res.ok) {
         const data = await res.json();
@@ -747,6 +767,15 @@ function DeveloperTab() {
     setSelectedDocId(null);
     setDocTitle("");
     setDocContent("");
+  };
+
+  const addCustomTag = () => {
+    const key = newTagName.trim().toLowerCase().replace(/\s+/g, "-");
+    if (key && !allTags.some(t => t.key === key)) {
+      setKbFilter(key);
+      setNewTagName("");
+      setAddingTag(false);
+    }
   };
 
   // ── Doc Import ──
@@ -1213,158 +1242,253 @@ function DeveloperTab() {
         </div>
       </div>
 
-      {/* ── KNOWLEDGE BASE (full width below) ── */}
+      {/* ── KNOWLEDGE BASE (full width, collapsible) ── */}
       <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)" }}>
         <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {/* Header — click to collapse */}
+          <button
+            onClick={() => setKbOpen(!kbOpen)}
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
+              background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: kbOpen ? "var(--space-2)" : 0,
+            }}
+          >
             <BookOpen size={13} strokeWidth={2} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1 }}>
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>
               Knowledge Base
             </span>
-            <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
+            <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", marginRight: "var(--space-2)" }}>
               {knowledgeDocs.filter(d => d.active).length} active
             </span>
-          </div>
-          <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
-            Full documents injected into every chat. Brand voice, policies, guides. Users never see these.
-          </p>
+            {kbOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+          </button>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-4)", minHeight: 300 }}>
-            {/* Doc list */}
-            <div>
-              <button
-                onClick={newDoc}
-                style={{
-                  display: "flex", alignItems: "center", gap: "var(--space-2)",
-                  width: "100%", padding: "var(--space-2) var(--space-3)",
-                  background: "var(--color-text)", color: "var(--color-bg)",
-                  border: "none", borderRadius: "var(--radius-sm)",
-                  fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                  cursor: "pointer", marginBottom: "var(--space-2)",
-                }}
-              >
-                <Plus size={12} /> New document
-              </button>
-              {broadcastsLoading ? (
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-              ) : knowledgeDocs.length === 0 ? (
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2)" }}>No documents yet.</div>
-              ) : (
-                <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-                  {knowledgeDocs.map(d => (
+          {kbOpen && (
+            <>
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
+                Full documents injected into every chat. Brand voice, policies, guides. Users never see these.
+              </p>
+
+              {/* Tag pills */}
+              <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+                {allTags.map(tag => {
+                  const active = kbFilter === tag.key;
+                  const count = tag.key === "all" ? knowledgeDocs.length : knowledgeDocs.filter(d => d.tag === tag.key).length;
+                  return (
                     <button
-                      key={d.id}
-                      onClick={() => selectDoc(d)}
+                      key={tag.key}
+                      onClick={() => { setKbFilter(tag.key); setSelectedDocId(null); }}
                       style={{
-                        display: "block", width: "100%", textAlign: "left",
-                        padding: "var(--space-2) var(--space-3)",
-                        background: selectedDocId === d.id ? "var(--color-bg-alt)" : "transparent",
-                        border: "none", borderBottom: "1px solid var(--color-border-light)",
-                        cursor: "pointer", opacity: d.active ? 1 : 0.5,
+                        display: "flex", alignItems: "center", gap: "var(--space-1)",
+                        padding: "var(--space-1) var(--space-2-5)",
+                        border: "none", outline: "none",
+                        background: active ? "var(--color-bg-alt)" : "transparent",
+                        borderRadius: "var(--radius-md)",
+                        color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                        fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                        fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                        cursor: "pointer", transition: "all 100ms ease",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {d.title}
-                        </span>
-                        {!d.active && (
-                          <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
-                        {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </div>
+                      {tag.label}
+                      {count > 0 && tag.key !== "all" && (
+                        <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", opacity: 0.6 }}>{count}</span>
+                      )}
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Editor */}
-            <div>
-              {selectedDocId ? (
-                <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <input
-                    value={docTitle}
-                    onChange={e => setDocTitle(e.target.value)}
-                    placeholder="Document title"
-                    style={{
-                      width: "100%", padding: "var(--space-2) var(--space-3)",
-                      background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
-                      borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
-                      color: "var(--color-text)", fontFamily: "var(--font-primary)",
-                      fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)",
-                    }}
-                  />
-                  <textarea
-                    value={docContent}
-                    onChange={e => setDocContent(e.target.value)}
-                    placeholder="Write your document in markdown..."
-                    style={{
-                      width: "100%", flex: 1, minHeight: 240, padding: "var(--space-3)",
-                      background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
-                      borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text)", fontFamily: "var(--font-mono)",
-                      resize: "vertical", lineHeight: "var(--line-height-relaxed)",
-                      marginBottom: "var(--space-2)",
-                    }}
-                  />
-                  <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-                    {selectedDocId !== "new" && selectedDoc && (
-                      <button
-                        onClick={() => toggleBroadcastActive(selectedDoc)}
-                        style={{
-                          padding: "var(--space-1) var(--space-3)", background: "transparent",
-                          border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                          fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                        }}
-                      >
-                        {selectedDoc.active ? <><EyeOff size={11} /> Deactivate</> : <><Eye size={11} /> Activate</>}
-                      </button>
-                    )}
-                    <div style={{ flex: 1 }} />
-                    {selectedDocId !== "new" && (
-                      <button
-                        onClick={deleteDoc}
-                        style={{
-                          padding: "var(--space-1) var(--space-3)", background: "transparent",
-                          border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                          fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                        }}
-                      >
-                        <Trash2 size={11} /> Delete
-                      </button>
-                    )}
-                    <button
-                      onClick={saveDoc}
-                      disabled={!docTitle.trim() || !docContent.trim() || docSaving}
+                  );
+                })}
+                {addingTag ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                    <input
+                      value={newTagName}
+                      onChange={e => setNewTagName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addCustomTag(); if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); } }}
+                      placeholder="Tag name"
+                      autoFocus
                       style={{
-                        padding: "var(--space-1-5) var(--space-4)",
-                        background: !docTitle.trim() || !docContent.trim() ? "var(--color-bg-alt)" : "var(--color-text)",
-                        color: !docTitle.trim() || !docContent.trim() ? "var(--color-text-muted)" : "var(--color-bg)",
-                        border: "none", borderRadius: "var(--radius-sm)",
-                        fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                        cursor: !docTitle.trim() || !docContent.trim() ? "default" : "pointer",
+                        width: 80, padding: "var(--space-1) var(--space-2)",
+                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-xs)", color: "var(--color-text)",
+                        background: "var(--color-bg)", fontFamily: "var(--font-primary)",
                       }}
-                    >
-                      {docSaving ? "Saving..." : "Save"}
-                    </button>
+                    />
                   </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingTag(true)}
+                    style={{
+                      display: "flex", alignItems: "center",
+                      padding: "var(--space-1) var(--space-2)",
+                      border: "none", background: "transparent",
+                      color: "var(--color-text-dim)", cursor: "pointer",
+                      fontSize: "var(--font-size-xs)",
+                    }}
+                  >
+                    <Plus size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-4)", minHeight: 280 }}>
+                {/* Doc list */}
+                <div>
+                  <button
+                    onClick={newDoc}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-2)",
+                      width: "100%", padding: "var(--space-2) var(--space-3)",
+                      background: "var(--color-text)", color: "var(--color-bg)",
+                      border: "none", borderRadius: "var(--radius-sm)",
+                      fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                      cursor: "pointer", marginBottom: "var(--space-2)",
+                    }}
+                  >
+                    <Plus size={12} /> New document
+                  </button>
+                  {broadcastsLoading ? (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+                  ) : filteredDocs.length === 0 ? (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2)" }}>
+                      {knowledgeDocs.length === 0 ? "No documents yet." : "No docs in this tag."}
+                    </div>
+                  ) : (
+                    <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+                      {filteredDocs.map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => selectDoc(d)}
+                          style={{
+                            display: "block", width: "100%", textAlign: "left",
+                            padding: "var(--space-2) var(--space-3)",
+                            background: selectedDocId === d.id ? "var(--color-bg-alt)" : "transparent",
+                            border: "none", borderBottom: "1px solid var(--color-border-light)",
+                            cursor: "pointer", opacity: d.active ? 1 : 0.5,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {d.title}
+                            </span>
+                            {!d.active && (
+                              <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                            {d.tag && <span style={{ marginRight: 4 }}>{d.tag}</span>}
+                            {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  height: "100%", minHeight: 300,
-                  border: "1px dashed var(--color-border-light)", borderRadius: "var(--radius-md)",
-                  color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)",
-                }}>
-                  Select or create a document
+
+                {/* Editor */}
+                <div>
+                  {selectedDocId ? (
+                    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                      <input
+                        value={docTitle}
+                        onChange={e => setDocTitle(e.target.value)}
+                        placeholder="Document title"
+                        style={{
+                          width: "100%", padding: "var(--space-2) var(--space-3)",
+                          background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
+                          color: "var(--color-text)", fontFamily: "var(--font-primary)",
+                          fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)",
+                        }}
+                      />
+                      {/* Tag selector for this doc */}
+                      <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)", flexWrap: "wrap" }}>
+                        {allTags.filter(t => t.key !== "all").map(tag => (
+                          <button
+                            key={tag.key}
+                            onClick={() => setDocTag(tag.key)}
+                            style={{
+                              padding: "2px var(--space-2)",
+                              border: docTag === tag.key ? "1px solid var(--color-text)" : "1px solid var(--color-border-light)",
+                              background: docTag === tag.key ? "var(--color-bg-alt)" : "transparent",
+                              borderRadius: "var(--radius-sm)", fontSize: 9,
+                              color: docTag === tag.key ? "var(--color-text)" : "var(--color-text-dim)",
+                              fontFamily: "var(--font-mono)", cursor: "pointer",
+                            }}
+                          >
+                            {tag.label}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={docContent}
+                        onChange={e => setDocContent(e.target.value)}
+                        placeholder="Write your document in markdown..."
+                        style={{
+                          width: "100%", flex: 1, minHeight: 200, padding: "var(--space-3)",
+                          background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+                          color: "var(--color-text)", fontFamily: "var(--font-mono)",
+                          resize: "vertical", lineHeight: "var(--line-height-relaxed)",
+                          marginBottom: "var(--space-2)",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                        {selectedDocId !== "new" && selectedDoc && (
+                          <button
+                            onClick={() => toggleBroadcastActive(selectedDoc)}
+                            style={{
+                              padding: "var(--space-1) var(--space-3)", background: "transparent",
+                              border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                              fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            }}
+                          >
+                            {selectedDoc.active ? <><EyeOff size={11} /> Deactivate</> : <><Eye size={11} /> Activate</>}
+                          </button>
+                        )}
+                        <div style={{ flex: 1 }} />
+                        {selectedDocId !== "new" && (
+                          <button
+                            onClick={deleteDoc}
+                            style={{
+                              padding: "var(--space-1) var(--space-3)", background: "transparent",
+                              border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                              fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            }}
+                          >
+                            <Trash2 size={11} /> Delete
+                          </button>
+                        )}
+                        <button
+                          onClick={saveDoc}
+                          disabled={!docTitle.trim() || !docContent.trim() || docSaving}
+                          style={{
+                            padding: "var(--space-1-5) var(--space-4)",
+                            background: !docTitle.trim() || !docContent.trim() ? "var(--color-bg-alt)" : "var(--color-text)",
+                            color: !docTitle.trim() || !docContent.trim() ? "var(--color-text-muted)" : "var(--color-bg)",
+                            border: "none", borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                            cursor: !docTitle.trim() || !docContent.trim() ? "default" : "pointer",
+                          }}
+                        >
+                          {docSaving ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      height: "100%", minHeight: 280,
+                      border: "1px dashed var(--color-border-light)", borderRadius: "var(--radius-md)",
+                      color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)",
+                    }}>
+                      Select or create a document
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
