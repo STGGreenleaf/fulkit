@@ -395,7 +395,6 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
               }}>
                 {[
                   { label: "Bluesky", href: "https://bsky.app/profile/fulkit.bsky.social" },
-                  { label: "GitHub", href: "https://github.com/STGGreenleaf/fulkit" },
                 ].map((link) => (
                   <a
                     key={link.label}
