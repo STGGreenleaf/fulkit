@@ -39,6 +39,13 @@ export default function Dashboard() {
   useEffect(() => { track("page_view", { feature: "home" }); }, []);
   useOnboardingTrigger("home");
 
+  // Auto-redirect to onboarding if user hasn't completed it
+  useEffect(() => {
+    if (profile && profile.onboarded !== true && profile.role !== "owner") {
+      router.replace("/onboarding");
+    }
+  }, [profile, router]);
+
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);
   const [whispers, setWhispers] = useState([]);

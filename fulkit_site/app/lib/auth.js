@@ -37,10 +37,21 @@ export function AuthProvider({ children }) {
       supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num").then(r => r).catch(() => ({ data: null })),
       supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num").then(r => r).catch(() => ({ data: null })),
     ]);
-    const { data } = results[0];
+    let { data } = results[0];
     const { count } = results[1];
     const progressRows = results[2]?.data;
     const tierRows = results[3]?.data;
+
+    // Safety net: create profile if it doesn't exist (new user, trigger may not have fired)
+    if (!data) {
+      const { data: created } = await supabase
+        .from("profiles")
+        .upsert({ id: userId, seat_type: "free", onboarded: false, messages_this_month: 0, updated_at: new Date().toISOString() }, { onConflict: "id" })
+        .select("*")
+        .single();
+      if (created) data = created;
+    }
+
     if (data) {
       setProfile(data);
       setHasContext(data.onboarded === true || (count || 0) > 0);
