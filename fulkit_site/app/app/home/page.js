@@ -153,7 +153,7 @@ export default function Dashboard() {
                     margin: 0,
                   }}
                 >
-                  {getGreeting()}, {(profile?.name || user?.name || "friend").split(" ")[0]}.
+                  {getGreeting()}, {profile?.name || user?.name || "friend"}.
                 </h1>
                 <div style={{ flex: 1, minWidth: 0, marginBottom: 10 }}>
                   <div style={{
