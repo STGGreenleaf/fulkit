@@ -9,7 +9,7 @@ export default function DevInspector() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [copied, setCopied] = useState(false);
 
-  // Only render when dev mode is enabled via Developer tab
+  // Sync with dev mode localStorage flag
   useEffect(() => {
     setEnabled(localStorage.getItem("fulkit-dev-mode") === "true");
     const onStorage = (e) => {
@@ -18,8 +18,6 @@ export default function DevInspector() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-
-  if (!enabled) return null;
 
   const getSelector = useCallback((el) => {
     if (el.id) return `#${el.id}`;
@@ -49,7 +47,7 @@ export default function DevInspector() {
   }, []);
 
   useEffect(() => {
-    if (!active) return;
+    if (!enabled || !active) return;
 
     let hovered = null;
     let outline = "";
@@ -91,10 +89,11 @@ export default function DevInspector() {
       document.removeEventListener("mousemove", onMove, true);
       document.removeEventListener("click", onClick, true);
     };
-  }, [active, getSelector, getStyles]);
+  }, [enabled, active, getSelector, getStyles]);
 
-  // Toggle with Ctrl+Shift+I
+  // Toggle with Ctrl+Shift+I (only when dev mode enabled)
   useEffect(() => {
+    if (!enabled) return;
     const onKey = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === "I") {
         e.preventDefault();
@@ -104,7 +103,14 @@ export default function DevInspector() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [enabled]);
+
+  // Reset active state when disabled
+  useEffect(() => {
+    if (!enabled) { setActive(false); setInfo(null); }
+  }, [enabled]);
+
+  if (!enabled) return null;
 
   if (!active) {
     return (

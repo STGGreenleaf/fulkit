@@ -1126,7 +1126,7 @@ function DeveloperTab() {
           </div>
           <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
           <div style={{ height: "var(--space-2)" }} />
-          <DevSwitch label="Dev Mode" description="Enable inspector overlay" on={devMode} onToggle={() => setDevMode(!devMode)} />
+          <DevSwitch label="Inspector" description="CSS inspector overlay + Ctrl+Shift+I" on={devMode} onToggle={() => setDevMode(!devMode)} />
         </div>
 
         {/* Quick Facts */}
