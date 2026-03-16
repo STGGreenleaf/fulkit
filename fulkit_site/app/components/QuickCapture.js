@@ -15,9 +15,6 @@ export default function QuickCapture() {
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Don't render for unauthenticated, new, or dev users
-  if (!user || user.isNew || !user.id) return null;
-
   const submit = async () => {
     const text = value.trim();
     if (!text || !user?.id) return;
@@ -81,6 +78,9 @@ export default function QuickCapture() {
       inputRef.current.focus();
     }
   }, [open, mode]);
+
+  // Don't render for unauthenticated, new, or dev users
+  if (!user || user.isNew || !user.id) return null;
 
   const fabSize = 44;
 

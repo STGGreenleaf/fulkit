@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
       const { data: recentInteg } = await supabase
         .from("integrations")
         .select("provider, connected_at")
-        .eq("user_id", id)
+        .eq("user_id", userId)
         .gte("connected_at", new Date(Date.now() - 86400000).toISOString())
         .order("connected_at", { ascending: false })
         .limit(1);
