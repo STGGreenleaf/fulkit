@@ -1054,7 +1054,7 @@ function DeveloperTab() {
       </div>
 
       {/* ── RIGHT: Outgoing ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingTop: "var(--space-6)" }}>
 
         {/* Quick Facts */}
         <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
