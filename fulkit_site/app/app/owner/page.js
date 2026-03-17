@@ -1310,194 +1310,14 @@ function DeveloperTab() {
   };
 
   const quickFacts = broadcasts.filter(b => b.channel === "context" && b.subtype !== "doc");
-  const knowledgeDocs = broadcasts.filter(b => b.channel === "context" && b.subtype === "doc");
+  const userDocs = broadcasts.filter(b => b.channel === "context" && b.subtype === "doc");
+  const fulkitDocs = broadcasts.filter(b => b.channel === "owner-context" && b.subtype === "doc");
   const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement");
-  const [selectedDocId, setSelectedDocId] = useState(null);
-  const [docTitle, setDocTitle] = useState("");
-  const [docContent, setDocContent] = useState("");
-  const [docTag, setDocTag] = useState("all");
-  const [docSaving, setDocSaving] = useState(false);
-  const [kbOpen, setKbOpen] = useState(true);
-  const [kbFilter, setKbFilter] = useState("all");
-  const [addingTag, setAddingTag] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [editingTagKey, setEditingTagKey] = useState(null);
-  const [editingTagLabel, setEditingTagLabel] = useState("");
-  const [dragTagKey, setDragTagKey] = useState(null);
-  const [dragOverTagKey, setDragOverTagKey] = useState(null);
-  const [fileDragOver, setFileDragOver] = useState(false);
-  const [fileImporting, setFileImporting] = useState(false);
-  const [dragDocId, setDragDocId] = useState(null);
-  const [dragOverDocTag, setDragOverDocTag] = useState(null);
 
-  // Persistent KB tags — stored in localStorage, editable, reorderable
-  const KB_STORAGE_KEY = "fulkit-kb-tags";
-  const SEED_TAGS = [
-    { key: "brand", label: "Brand" },
-    { key: "product", label: "Product" },
-    { key: "support", label: "Support" },
-    { key: "policy", label: "Policy" },
-    { key: "ful_system", label: "Ful_System" },
-  ];
-
-  const [kbTags, setKbTags] = useState(() => {
-    if (typeof window === "undefined") return SEED_TAGS;
-    try {
-      const stored = localStorage.getItem(KB_STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return SEED_TAGS;
-  });
-
-  // Persist tags to localStorage on change
-  useEffect(() => {
-    try { localStorage.setItem(KB_STORAGE_KEY, JSON.stringify(kbTags)); } catch {}
-  }, [kbTags]);
-
-  // Merge in any tags from existing docs that aren't in the list
-  const docOnlyTags = [...new Set(knowledgeDocs.map(d => d.tag).filter(t => t && !kbTags.some(kt => kt.key === t)))];
-  const allTags = [{ key: "all", label: "All" }, ...kbTags, ...docOnlyTags.map(t => ({ key: t, label: t }))];
-
-  const addCustomTag = () => {
-    const raw = newTagName.trim();
-    if (!raw) return;
-    const key = raw.toLowerCase().replace(/\s+/g, "_");
-    if (kbTags.some(t => t.key === key)) return;
-    setKbTags(prev => [...prev, { key, label: raw }]);
-    setKbFilter(key);
-    setNewTagName("");
-    setAddingTag(false);
-  };
-
-  const renameTag = (oldKey, newLabel) => {
-    const newKey = newLabel.trim().toLowerCase().replace(/\s+/g, "_");
-    if (!newLabel.trim() || (newKey !== oldKey && kbTags.some(t => t.key === newKey))) return;
-    setKbTags(prev => prev.map(t => t.key === oldKey ? { key: newKey, label: newLabel.trim() } : t));
-    // Update all docs that had the old tag
-    if (newKey !== oldKey) {
-      knowledgeDocs.filter(d => d.tag === oldKey).forEach(d => {
-        saveBroadcast({ id: d.id, title: d.title, content: d.content, channel: "context", subtype: "doc", tag: newKey });
-      });
-      if (kbFilter === oldKey) setKbFilter(newKey);
-      if (docTag === oldKey) setDocTag(newKey);
-    }
-    setEditingTagKey(null);
-    setEditingTagLabel("");
-  };
-
-  const deleteTag = (key) => {
-    setKbTags(prev => prev.filter(t => t.key !== key));
-    if (kbFilter === key) setKbFilter("all");
-    // Docs with this tag keep their tag value — they'll show under "All" or can be reassigned
-  };
-
-  const handleTagDragStart = (key) => { setDragTagKey(key); };
-  const handleTagDragOver = (e, key) => { e.preventDefault(); setDragOverTagKey(key); };
-  const handleTagDrop = (targetKey) => {
-    if (!dragTagKey || dragTagKey === targetKey) { setDragTagKey(null); setDragOverTagKey(null); return; }
-    setKbTags(prev => {
-      const list = [...prev];
-      const fromIdx = list.findIndex(t => t.key === dragTagKey);
-      const toIdx = list.findIndex(t => t.key === targetKey);
-      if (fromIdx < 0 || toIdx < 0) return prev;
-      const [moved] = list.splice(fromIdx, 1);
-      list.splice(toIdx, 0, moved);
-      return list;
-    });
-    setDragTagKey(null);
-    setDragOverTagKey(null);
-  };
-  const handleTagDragEnd = () => { setDragTagKey(null); setDragOverTagKey(null); };
-
-  // Doc-to-tag drag — drag a doc from the list onto a tag pill to reassign it
-  const handleDocDragStart = (e, docId) => {
-    setDragDocId(docId);
-    e.dataTransfer.setData("text/plain", docId); // needed for drag to work
-  };
-  const handleDocDropOnTag = async (tagKey) => {
-    if (!dragDocId) return;
-    const doc = knowledgeDocs.find(d => d.id === dragDocId);
-    if (!doc || doc.tag === tagKey) { setDragDocId(null); setDragOverDocTag(null); return; }
-    const newTag = tagKey === "all" ? null : tagKey;
-    await saveBroadcast({ id: doc.id, title: doc.title, content: doc.content, channel: "context", subtype: "doc", tag: newTag });
-    setDragDocId(null);
-    setDragOverDocTag(null);
-  };
-  const handleDocDragEnd = () => { setDragDocId(null); setDragOverDocTag(null); };
-
-  // File drop — drag .md/.txt files from Finder into the doc list
-  const handleFileDrop = async (e) => {
-    e.preventDefault();
-    setFileDragOver(false);
-    const files = Array.from(e.dataTransfer.files).filter(f =>
-      f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
-    );
-    if (files.length === 0) return;
-
-    setFileImporting(true);
-    const tag = kbFilter !== "all" ? kbFilter : null;
-
-    for (const file of files) {
-      try {
-        const content = await file.text();
-        const title = file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-        await saveBroadcast({ title, content, channel: "context", subtype: "doc", tag });
-      } catch (err) {
-        console.error("[kb] file import error:", err);
-      }
-    }
-
-    // Refresh broadcasts
-    try {
-      const res = await fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (res.ok) setBroadcasts(await res.json());
-    } catch {}
-    setFileImporting(false);
-  };
-
-  const filteredDocs = kbFilter === "all" ? knowledgeDocs : knowledgeDocs.filter(d => d.tag === kbFilter);
-  const selectedDoc = knowledgeDocs.find(d => d.id === selectedDocId);
-
-  const selectDoc = (doc) => {
-    setSelectedDocId(doc.id);
-    setDocTitle(doc.title);
-    setDocContent(doc.content);
-    setDocTag(doc.tag || "all");
-  };
-
-  const newDoc = () => {
-    setSelectedDocId("new");
-    setDocTitle("");
-    setDocContent("");
-    setDocTag(kbFilter !== "all" ? kbFilter : kbTags[0]?.key || "brand");
-  };
-
-  const saveDoc = async () => {
-    if (!docTitle.trim() || !docContent.trim()) return;
-    setDocSaving(true);
-    const tag = docTag === "all" ? null : docTag;
-    const payload = { title: docTitle, content: docContent, channel: "context", subtype: "doc", tag };
-    if (selectedDocId !== "new") payload.id = selectedDocId;
-    await saveBroadcast(payload);
-    if (selectedDocId === "new") {
-      const res = await fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setBroadcasts(data || []);
-        const newest = data.find(d => d.channel === "context" && d.subtype === "doc" && d.title === docTitle);
-        if (newest) setSelectedDocId(newest.id);
-      }
-    }
-    setDocSaving(false);
-  };
-
-  const deleteDoc = async () => {
-    if (!selectedDocId || selectedDocId === "new") return;
-    await deleteBroadcast(selectedDocId);
-    setSelectedDocId(null);
-    setDocTitle("");
-    setDocContent("");
-  };
+  const refreshBroadcasts = useCallback(async () => {
+    const res = await fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (res.ok) setBroadcasts(await res.json());
+  }, [accessToken]);
 
   // ── Doc Import ──
   const [importing, setImporting] = useState(false);
@@ -1714,6 +1534,523 @@ function DeveloperTab() {
       </button>
     </div>
   );
+
+  // ── Reusable Knowledge Base Card ──
+  const KnowledgeBaseCard = ({ title, description, icon: CardIcon, channel, seedTags, storageKey, docs, defaultOpen = true }) => {
+    const [selectedDocId, setSelectedDocId] = useState(null);
+    const [docTitle, setDocTitle] = useState("");
+    const [docContent, setDocContent] = useState("");
+    const [docTag, setDocTag] = useState("all");
+    const [docSaving, setDocSaving] = useState(false);
+    const [kbOpen, setKbOpen] = useState(defaultOpen);
+    const [kbFilter, setKbFilter] = useState("all");
+    const [addingTag, setAddingTag] = useState(false);
+    const [newTagName, setNewTagName] = useState("");
+    const [editingTagKey, setEditingTagKey] = useState(null);
+    const [editingTagLabel, setEditingTagLabel] = useState("");
+    const [dragTagKey, setDragTagKey] = useState(null);
+    const [dragOverTagKey, setDragOverTagKey] = useState(null);
+    const [fileDragOver, setFileDragOver] = useState(false);
+    const [fileImporting, setFileImporting] = useState(false);
+    const [dragDocId, setDragDocId] = useState(null);
+    const [dragOverDocTag, setDragOverDocTag] = useState(null);
+
+    const [kbTags, setKbTags] = useState(() => {
+      if (typeof window === "undefined") return seedTags;
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+      return seedTags;
+    });
+
+    useEffect(() => {
+      try { localStorage.setItem(storageKey, JSON.stringify(kbTags)); } catch {}
+    }, [kbTags, storageKey]);
+
+    const docOnlyTags = [...new Set(docs.map(d => d.tag).filter(t => t && !kbTags.some(kt => kt.key === t)))];
+    const allTags = [{ key: "all", label: "All" }, ...kbTags, ...docOnlyTags.map(t => ({ key: t, label: t }))];
+    const filteredDocs = kbFilter === "all" ? docs : docs.filter(d => d.tag === kbFilter);
+    const selectedDoc = docs.find(d => d.id === selectedDocId);
+
+    const addCustomTag = () => {
+      const raw = newTagName.trim();
+      if (!raw) return;
+      const key = raw.toLowerCase().replace(/\s+/g, "_");
+      if (kbTags.some(t => t.key === key)) return;
+      setKbTags(prev => [...prev, { key, label: raw }]);
+      setKbFilter(key);
+      setNewTagName("");
+      setAddingTag(false);
+    };
+
+    const renameTag = (oldKey, newLabel) => {
+      const newKey = newLabel.trim().toLowerCase().replace(/\s+/g, "_");
+      if (!newLabel.trim() || (newKey !== oldKey && kbTags.some(t => t.key === newKey))) return;
+      setKbTags(prev => prev.map(t => t.key === oldKey ? { key: newKey, label: newLabel.trim() } : t));
+      if (newKey !== oldKey) {
+        docs.filter(d => d.tag === oldKey).forEach(d => {
+          saveBroadcast({ id: d.id, title: d.title, content: d.content, channel, subtype: "doc", tag: newKey });
+        });
+        if (kbFilter === oldKey) setKbFilter(newKey);
+        if (docTag === oldKey) setDocTag(newKey);
+      }
+      setEditingTagKey(null);
+      setEditingTagLabel("");
+    };
+
+    const deleteTag = (key) => {
+      setKbTags(prev => prev.filter(t => t.key !== key));
+      if (kbFilter === key) setKbFilter("all");
+    };
+
+    const handleTagDragStart = (key) => { setDragTagKey(key); };
+    const handleTagDragOver = (e, key) => { e.preventDefault(); setDragOverTagKey(key); };
+    const handleTagDrop = (targetKey) => {
+      if (!dragTagKey || dragTagKey === targetKey) { setDragTagKey(null); setDragOverTagKey(null); return; }
+      setKbTags(prev => {
+        const list = [...prev];
+        const fromIdx = list.findIndex(t => t.key === dragTagKey);
+        const toIdx = list.findIndex(t => t.key === targetKey);
+        if (fromIdx < 0 || toIdx < 0) return prev;
+        const [moved] = list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, moved);
+        return list;
+      });
+      setDragTagKey(null);
+      setDragOverTagKey(null);
+    };
+    const handleTagDragEnd = () => { setDragTagKey(null); setDragOverTagKey(null); };
+
+    const handleDocDragStart = (e, docId) => {
+      setDragDocId(docId);
+      e.dataTransfer.setData("text/plain", docId);
+    };
+    const handleDocDropOnTag = async (tagKey) => {
+      if (!dragDocId) return;
+      const doc = docs.find(d => d.id === dragDocId);
+      if (!doc || doc.tag === tagKey) { setDragDocId(null); setDragOverDocTag(null); return; }
+      const newTag = tagKey === "all" ? null : tagKey;
+      await saveBroadcast({ id: doc.id, title: doc.title, content: doc.content, channel, subtype: "doc", tag: newTag });
+      setDragDocId(null);
+      setDragOverDocTag(null);
+    };
+    const handleDocDragEnd = () => { setDragDocId(null); setDragOverDocTag(null); };
+
+    const handleFileDrop = async (e) => {
+      e.preventDefault();
+      setFileDragOver(false);
+      const files = Array.from(e.dataTransfer.files).filter(f =>
+        f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
+      );
+      if (files.length === 0) return;
+      setFileImporting(true);
+      const tag = kbFilter !== "all" ? kbFilter : null;
+      for (const file of files) {
+        try {
+          const content = await file.text();
+          const fileTitle = file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+          await saveBroadcast({ title: fileTitle, content, channel, subtype: "doc", tag });
+        } catch (err) {
+          console.error("[kb] file import error:", err);
+        }
+      }
+      await refreshBroadcasts();
+      setFileImporting(false);
+    };
+
+    const selectDoc = (doc) => {
+      setSelectedDocId(doc.id);
+      setDocTitle(doc.title);
+      setDocContent(doc.content);
+      setDocTag(doc.tag || "all");
+    };
+
+    const newDoc = () => {
+      setSelectedDocId("new");
+      setDocTitle("");
+      setDocContent("");
+      setDocTag(kbFilter !== "all" ? kbFilter : kbTags[0]?.key || seedTags[0]?.key || "general");
+    };
+
+    const saveDoc = async () => {
+      if (!docTitle.trim() || !docContent.trim()) return;
+      setDocSaving(true);
+      const tag = docTag === "all" ? null : docTag;
+      const payload = { title: docTitle, content: docContent, channel, subtype: "doc", tag };
+      if (selectedDocId !== "new") payload.id = selectedDocId;
+      await saveBroadcast(payload);
+      if (selectedDocId === "new") {
+        await refreshBroadcasts();
+        // Find the newest doc matching our title in the refreshed broadcasts
+        const freshDocs = broadcasts.filter(b => b.channel === channel && b.subtype === "doc" && b.title === docTitle);
+        if (freshDocs.length > 0) setSelectedDocId(freshDocs[0].id);
+      }
+      setDocSaving(false);
+    };
+
+    const deleteDoc = async () => {
+      if (!selectedDocId || selectedDocId === "new") return;
+      await deleteBroadcast(selectedDocId);
+      setSelectedDocId(null);
+      setDocTitle("");
+      setDocContent("");
+    };
+
+    return (
+      <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
+        <button
+          onClick={() => setKbOpen(!kbOpen)}
+          style={{
+            display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
+            background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: kbOpen ? "var(--space-2)" : 0,
+          }}
+        >
+          <CardIcon size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>
+            {title}
+          </span>
+          <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", marginRight: "var(--space-2)" }}>
+            {docs.filter(d => d.active).length} active
+          </span>
+          {kbOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+
+        {kbOpen && (
+          <>
+            <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
+              {description}
+            </p>
+
+            {/* Tag pills */}
+            <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", marginBottom: "var(--space-3)", alignItems: "center" }}>
+              {allTags.map(tag => {
+                const active = kbFilter === tag.key;
+                const count = tag.key === "all" ? docs.length : docs.filter(d => d.tag === tag.key).length;
+                const isDraggable = tag.key !== "all";
+                const isEditing = editingTagKey === tag.key;
+                const isDragOver = dragOverTagKey === tag.key && dragTagKey !== tag.key;
+
+                if (isEditing) {
+                  return (
+                    <div key={tag.key} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <input
+                        value={editingTagLabel}
+                        onChange={e => setEditingTagLabel(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") renameTag(tag.key, editingTagLabel);
+                          if (e.key === "Escape") { setEditingTagKey(null); setEditingTagLabel(""); }
+                        }}
+                        onBlur={() => renameTag(tag.key, editingTagLabel)}
+                        autoFocus
+                        style={{
+                          width: Math.max(60, editingTagLabel.length * 7 + 20),
+                          padding: "var(--space-1) var(--space-2)",
+                          border: "1px solid var(--color-text)", borderRadius: "var(--radius-sm)",
+                          fontSize: "var(--font-size-xs)", color: "var(--color-text)",
+                          background: "var(--color-bg)", fontFamily: "var(--font-primary)",
+                        }}
+                      />
+                      <button
+                        onClick={() => deleteTag(tag.key)}
+                        title="Delete tag"
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          width: 18, height: 18, border: "none", background: "transparent",
+                          color: "var(--color-text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)",
+                        }}
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  );
+                }
+
+                const isDocTarget = dragDocId && dragOverDocTag === tag.key;
+
+                return (
+                  <button
+                    key={tag.key}
+                    draggable={isDraggable && !dragDocId}
+                    onDragStart={() => isDraggable && !dragDocId && handleTagDragStart(tag.key)}
+                    onDragOver={e => {
+                      e.preventDefault();
+                      if (dragDocId) { setDragOverDocTag(tag.key); }
+                      else if (isDraggable) { handleTagDragOver(e, tag.key); }
+                    }}
+                    onDragLeave={() => { if (dragDocId) setDragOverDocTag(null); }}
+                    onDrop={() => {
+                      if (dragDocId) { handleDocDropOnTag(tag.key); }
+                      else if (isDraggable) { handleTagDrop(tag.key); }
+                    }}
+                    onDragEnd={handleTagDragEnd}
+                    onClick={() => { setKbFilter(tag.key); setSelectedDocId(null); }}
+                    onDoubleClick={() => {
+                      if (tag.key === "all") return;
+                      setEditingTagKey(tag.key);
+                      setEditingTagLabel(tag.label);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-1)",
+                      padding: "var(--space-1) var(--space-2-5)",
+                      border: (isDragOver || isDocTarget) ? "1px dashed var(--color-text-muted)" : "none",
+                      outline: "none",
+                      background: isDocTarget ? "var(--color-bg-alt)" : active ? "var(--color-bg-alt)" : "transparent",
+                      borderRadius: "var(--radius-md)",
+                      color: active ? "var(--color-text)" : "var(--color-text-muted)",
+                      fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                      fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                      cursor: isDraggable ? "grab" : "pointer",
+                      transition: "all 100ms ease",
+                      opacity: dragTagKey === tag.key ? 0.4 : 1,
+                      transform: isDocTarget ? "scale(1.08)" : "none",
+                    }}
+                  >
+                    {isDraggable && active && !dragDocId && <GripVertical size={10} style={{ opacity: 0.4, marginLeft: -4 }} />}
+                    {tag.label}
+                    {count > 0 && tag.key !== "all" && (
+                      <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", opacity: 0.6 }}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
+              {addingTag ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                  <input
+                    value={newTagName}
+                    onChange={e => setNewTagName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") addCustomTag(); if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); } }}
+                    placeholder="Tag name"
+                    autoFocus
+                    style={{
+                      width: 100, padding: "var(--space-1) var(--space-2)",
+                      border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                      fontSize: "var(--font-size-xs)", color: "var(--color-text)",
+                      background: "var(--color-bg)", fontFamily: "var(--font-primary)",
+                    }}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingTag(true)}
+                  title="Add tag"
+                  style={{
+                    display: "flex", alignItems: "center",
+                    padding: "var(--space-1) var(--space-2)",
+                    border: "none", background: "transparent",
+                    color: "var(--color-text-dim)", cursor: "pointer",
+                    fontSize: "var(--font-size-xs)",
+                  }}
+                >
+                  <Plus size={12} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-4)", minHeight: 280 }}>
+              {/* Doc list */}
+              <div
+                onDragOver={e => { e.preventDefault(); if (e.dataTransfer.types.includes("Files")) setFileDragOver(true); }}
+                onDragLeave={() => setFileDragOver(false)}
+                onDrop={handleFileDrop}
+                style={{
+                  border: fileDragOver ? "2px dashed var(--color-text-muted)" : "none",
+                  borderRadius: fileDragOver ? "var(--radius-md)" : undefined,
+                  padding: fileDragOver ? "var(--space-2)" : undefined,
+                  transition: "all 150ms ease",
+                }}
+              >
+                <button
+                  onClick={newDoc}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-2)",
+                    width: "100%", padding: "var(--space-2) var(--space-3)",
+                    background: "var(--color-text)", color: "var(--color-bg)",
+                    border: "none", borderRadius: "var(--radius-sm)",
+                    fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                    cursor: "pointer", marginBottom: "var(--space-2)",
+                  }}
+                >
+                  <Plus size={12} /> {fileImporting ? "Importing..." : "New document"}
+                </button>
+                {fileDragOver ? (
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "var(--space-6)", fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-secondary)", fontStyle: "italic",
+                  }}>
+                    Drop .md files here
+                  </div>
+                ) : broadcastsLoading ? (
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+                ) : filteredDocs.length === 0 ? (
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2)" }}>
+                    {docs.length === 0 ? "No documents yet. Drag .md files here or click New." : "No docs in this tag."}
+                  </div>
+                ) : (
+                  <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+                    {filteredDocs.map(d => (
+                      <button
+                        key={d.id}
+                        draggable
+                        onDragStart={e => handleDocDragStart(e, d.id)}
+                        onDragEnd={handleDocDragEnd}
+                        onClick={() => selectDoc(d)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-2)",
+                          width: "100%", textAlign: "left",
+                          padding: "var(--space-2) var(--space-3)",
+                          background: selectedDocId === d.id ? "var(--color-bg-alt)" : "transparent",
+                          border: "none", borderBottom: "1px solid var(--color-border-light)",
+                          cursor: "grab", opacity: dragDocId === d.id ? 0.4 : d.active ? 1 : 0.5,
+                        }}
+                      >
+                        <GripVertical size={10} style={{ opacity: 0.3, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {d.title}
+                            </span>
+                            {!d.active && (
+                              <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                            {d.tag && <span style={{ marginRight: 4 }}>{d.tag}</span>}
+                            {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Editor */}
+              <div>
+                {selectedDocId ? (
+                  <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                    <input
+                      value={docTitle}
+                      onChange={e => setDocTitle(e.target.value)}
+                      placeholder="Document title"
+                      style={{
+                        width: "100%", padding: "var(--space-2) var(--space-3)",
+                        background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
+                        color: "var(--color-text)", fontFamily: "var(--font-primary)",
+                        fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)",
+                      }}
+                    />
+                    {/* Tag selector */}
+                    <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+                      {allTags.filter(t => t.key !== "all").map(tag => (
+                        <button
+                          key={tag.key}
+                          onClick={() => setDocTag(tag.key)}
+                          style={{
+                            padding: "2px var(--space-2)",
+                            border: docTag === tag.key ? "1px solid var(--color-text)" : "1px solid var(--color-border-light)",
+                            background: docTag === tag.key ? "var(--color-bg-alt)" : "transparent",
+                            borderRadius: "var(--radius-sm)", fontSize: 9,
+                            color: docTag === tag.key ? "var(--color-text)" : "var(--color-text-dim)",
+                            fontFamily: "var(--font-mono)", cursor: "pointer",
+                          }}
+                        >
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={docContent}
+                      onChange={e => setDocContent(e.target.value)}
+                      placeholder="Write your document in markdown — or drag a .md file here..."
+                      onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--color-text-muted)"; }}
+                      onDragLeave={e => { e.currentTarget.style.borderColor = "var(--color-border-light)"; }}
+                      onDrop={async e => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = "var(--color-border-light)";
+                        const file = Array.from(e.dataTransfer.files).find(f =>
+                          f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
+                        );
+                        if (!file) return;
+                        const content = await file.text();
+                        setDocContent(content);
+                        if (!docTitle.trim()) {
+                          setDocTitle(file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
+                        }
+                      }}
+                      style={{
+                        width: "100%", flex: 1, minHeight: 200, padding: "var(--space-3)",
+                        background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text)", fontFamily: "var(--font-mono)",
+                        resize: "vertical", lineHeight: "var(--line-height-relaxed)",
+                        marginBottom: "var(--space-2)",
+                        transition: "border-color 150ms ease",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                      {selectedDocId !== "new" && selectedDoc && (
+                        <button
+                          onClick={() => toggleBroadcastActive(selectedDoc)}
+                          style={{
+                            padding: "var(--space-1) var(--space-3)", background: "transparent",
+                            border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer",
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          }}
+                        >
+                          {selectedDoc.active ? <><EyeOff size={11} /> Deactivate</> : <><Eye size={11} /> Activate</>}
+                        </button>
+                      )}
+                      <div style={{ flex: 1 }} />
+                      {selectedDocId !== "new" && (
+                        <button
+                          onClick={deleteDoc}
+                          style={{
+                            padding: "var(--space-1) var(--space-3)", background: "transparent",
+                            border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", cursor: "pointer",
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          }}
+                        >
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={saveDoc}
+                        disabled={!docTitle.trim() || !docContent.trim() || docSaving}
+                        style={{
+                          padding: "var(--space-1-5) var(--space-4)",
+                          background: !docTitle.trim() || !docContent.trim() ? "var(--color-bg-alt)" : "var(--color-text)",
+                          color: !docTitle.trim() || !docContent.trim() ? "var(--color-text-muted)" : "var(--color-bg)",
+                          border: "none", borderRadius: "var(--radius-sm)",
+                          fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                          cursor: !docTitle.trim() || !docContent.trim() ? "default" : "pointer",
+                        }}
+                      >
+                        {docSaving ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    height: "100%", minHeight: 280,
+                    border: "1px dashed var(--color-border-light)", borderRadius: "var(--radius-md)",
+                    color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)",
+                  }}>
+                    Select or create a document
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: "var(--space-4)", alignItems: "start" }}>
@@ -1973,360 +2310,41 @@ function DeveloperTab() {
         </div>
       </div>
 
-      {/* ── KNOWLEDGE BASE (full width, collapsible) ── */}
+      {/* ── USER KNOWLEDGE BASE ── */}
       <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)" }}>
-        <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
-          {/* Header — click to collapse */}
-          <button
-            onClick={() => setKbOpen(!kbOpen)}
-            style={{
-              display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
-              background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: kbOpen ? "var(--space-2)" : 0,
-            }}
-          >
-            <BookOpen size={13} strokeWidth={2} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>
-              Knowledge Base
-            </span>
-            <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", marginRight: "var(--space-2)" }}>
-              {knowledgeDocs.filter(d => d.active).length} active
-            </span>
-            {kbOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
-          </button>
+        <KnowledgeBaseCard
+          title="User Knowledge Base"
+          description="What users see in chat. Product info, pricing, support, brand voice."
+          icon={Users}
+          channel="context"
+          seedTags={[
+            { key: "brand", label: "Brand" },
+            { key: "product", label: "Product" },
+            { key: "support", label: "Support" },
+            { key: "policy", label: "Policy" },
+          ]}
+          storageKey="fulkit-kb-tags-user"
+          docs={userDocs}
+          defaultOpen={true}
+        />
+      </div>
 
-          {kbOpen && (
-            <>
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
-                Full documents injected into every chat. Brand voice, policies, guides. Users never see these.
-              </p>
-
-              {/* Tag pills — draggable, editable, deletable */}
-              <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", marginBottom: "var(--space-3)", alignItems: "center" }}>
-                {allTags.map(tag => {
-                  const active = kbFilter === tag.key;
-                  const count = tag.key === "all" ? knowledgeDocs.length : knowledgeDocs.filter(d => d.tag === tag.key).length;
-                  const isDraggable = tag.key !== "all";
-                  const isEditing = editingTagKey === tag.key;
-                  const isDragOver = dragOverTagKey === tag.key && dragTagKey !== tag.key;
-
-                  if (isEditing) {
-                    return (
-                      <div key={tag.key} style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <input
-                          value={editingTagLabel}
-                          onChange={e => setEditingTagLabel(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === "Enter") renameTag(tag.key, editingTagLabel);
-                            if (e.key === "Escape") { setEditingTagKey(null); setEditingTagLabel(""); }
-                          }}
-                          onBlur={() => renameTag(tag.key, editingTagLabel)}
-                          autoFocus
-                          style={{
-                            width: Math.max(60, editingTagLabel.length * 7 + 20),
-                            padding: "var(--space-1) var(--space-2)",
-                            border: "1px solid var(--color-text)", borderRadius: "var(--radius-sm)",
-                            fontSize: "var(--font-size-xs)", color: "var(--color-text)",
-                            background: "var(--color-bg)", fontFamily: "var(--font-primary)",
-                          }}
-                        />
-                        <button
-                          onClick={() => deleteTag(tag.key)}
-                          title="Delete tag"
-                          style={{
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            width: 18, height: 18, border: "none", background: "transparent",
-                            color: "var(--color-text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)",
-                          }}
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  const isDocTarget = dragDocId && dragOverDocTag === tag.key;
-
-                  return (
-                    <button
-                      key={tag.key}
-                      draggable={isDraggable && !dragDocId}
-                      onDragStart={() => isDraggable && !dragDocId && handleTagDragStart(tag.key)}
-                      onDragOver={e => {
-                        e.preventDefault();
-                        if (dragDocId) { setDragOverDocTag(tag.key); }
-                        else if (isDraggable) { handleTagDragOver(e, tag.key); }
-                      }}
-                      onDragLeave={() => { if (dragDocId) setDragOverDocTag(null); }}
-                      onDrop={() => {
-                        if (dragDocId) { handleDocDropOnTag(tag.key); }
-                        else if (isDraggable) { handleTagDrop(tag.key); }
-                      }}
-                      onDragEnd={handleTagDragEnd}
-                      onClick={() => { setKbFilter(tag.key); setSelectedDocId(null); }}
-                      onDoubleClick={() => {
-                        if (tag.key === "all") return;
-                        setEditingTagKey(tag.key);
-                        setEditingTagLabel(tag.label);
-                      }}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-1)",
-                        padding: "var(--space-1) var(--space-2-5)",
-                        border: (isDragOver || isDocTarget) ? "1px dashed var(--color-text-muted)" : "none",
-                        outline: "none",
-                        background: isDocTarget ? "var(--color-bg-alt)" : active ? "var(--color-bg-alt)" : "transparent",
-                        borderRadius: "var(--radius-md)",
-                        color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                        fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                        fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
-                        cursor: isDraggable ? "grab" : "pointer",
-                        transition: "all 100ms ease",
-                        opacity: dragTagKey === tag.key ? 0.4 : 1,
-                        transform: isDocTarget ? "scale(1.08)" : "none",
-                      }}
-                    >
-                      {isDraggable && active && !dragDocId && <GripVertical size={10} style={{ opacity: 0.4, marginLeft: -4 }} />}
-                      {tag.label}
-                      {count > 0 && tag.key !== "all" && (
-                        <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", opacity: 0.6 }}>{count}</span>
-                      )}
-                    </button>
-                  );
-                })}
-                {addingTag ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      value={newTagName}
-                      onChange={e => setNewTagName(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") addCustomTag(); if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); } }}
-                      placeholder="Tag name"
-                      autoFocus
-                      style={{
-                        width: 100, padding: "var(--space-1) var(--space-2)",
-                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                        fontSize: "var(--font-size-xs)", color: "var(--color-text)",
-                        background: "var(--color-bg)", fontFamily: "var(--font-primary)",
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAddingTag(true)}
-                    title="Add tag"
-                    style={{
-                      display: "flex", alignItems: "center",
-                      padding: "var(--space-1) var(--space-2)",
-                      border: "none", background: "transparent",
-                      color: "var(--color-text-dim)", cursor: "pointer",
-                      fontSize: "var(--font-size-xs)",
-                    }}
-                  >
-                    <Plus size={12} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-4)", minHeight: 280 }}>
-                {/* Doc list — drop zone for .md files */}
-                <div
-                  onDragOver={e => { e.preventDefault(); if (e.dataTransfer.types.includes("Files")) setFileDragOver(true); }}
-                  onDragLeave={() => setFileDragOver(false)}
-                  onDrop={handleFileDrop}
-                  style={{
-                    border: fileDragOver ? "2px dashed var(--color-text-muted)" : "none",
-                    borderRadius: fileDragOver ? "var(--radius-md)" : undefined,
-                    padding: fileDragOver ? "var(--space-2)" : undefined,
-                    transition: "all 150ms ease",
-                  }}
-                >
-                  <button
-                    onClick={newDoc}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "var(--space-2)",
-                      width: "100%", padding: "var(--space-2) var(--space-3)",
-                      background: "var(--color-text)", color: "var(--color-bg)",
-                      border: "none", borderRadius: "var(--radius-sm)",
-                      fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                      cursor: "pointer", marginBottom: "var(--space-2)",
-                    }}
-                  >
-                    <Plus size={12} /> {fileImporting ? "Importing..." : "New document"}
-                  </button>
-                  {fileDragOver ? (
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      padding: "var(--space-6)", fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-secondary)", fontStyle: "italic",
-                    }}>
-                      Drop .md files here
-                    </div>
-                  ) : broadcastsLoading ? (
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-                  ) : filteredDocs.length === 0 ? (
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2)" }}>
-                      {knowledgeDocs.length === 0 ? "No documents yet. Drag .md files here or click New." : "No docs in this tag."}
-                    </div>
-                  ) : (
-                    <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-                      {filteredDocs.map(d => (
-                        <button
-                          key={d.id}
-                          draggable
-                          onDragStart={e => handleDocDragStart(e, d.id)}
-                          onDragEnd={handleDocDragEnd}
-                          onClick={() => selectDoc(d)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: "var(--space-2)",
-                            width: "100%", textAlign: "left",
-                            padding: "var(--space-2) var(--space-3)",
-                            background: selectedDocId === d.id ? "var(--color-bg-alt)" : "transparent",
-                            border: "none", borderBottom: "1px solid var(--color-border-light)",
-                            cursor: "grab", opacity: dragDocId === d.id ? 0.4 : d.active ? 1 : 0.5,
-                          }}
-                        >
-                          <GripVertical size={10} style={{ opacity: 0.3, flexShrink: 0 }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {d.title}
-                              </span>
-                              {!d.active && (
-                                <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
-                              {d.tag && <span style={{ marginRight: 4 }}>{d.tag}</span>}
-                              {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Editor */}
-                <div>
-                  {selectedDocId ? (
-                    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                      <input
-                        value={docTitle}
-                        onChange={e => setDocTitle(e.target.value)}
-                        placeholder="Document title"
-                        style={{
-                          width: "100%", padding: "var(--space-2) var(--space-3)",
-                          background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
-                          color: "var(--color-text)", fontFamily: "var(--font-primary)",
-                          fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)",
-                        }}
-                      />
-                      {/* Tag selector for this doc */}
-                      <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)", flexWrap: "wrap" }}>
-                        {allTags.filter(t => t.key !== "all").map(tag => (
-                          <button
-                            key={tag.key}
-                            onClick={() => setDocTag(tag.key)}
-                            style={{
-                              padding: "2px var(--space-2)",
-                              border: docTag === tag.key ? "1px solid var(--color-text)" : "1px solid var(--color-border-light)",
-                              background: docTag === tag.key ? "var(--color-bg-alt)" : "transparent",
-                              borderRadius: "var(--radius-sm)", fontSize: 9,
-                              color: docTag === tag.key ? "var(--color-text)" : "var(--color-text-dim)",
-                              fontFamily: "var(--font-mono)", cursor: "pointer",
-                            }}
-                          >
-                            {tag.label}
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={docContent}
-                        onChange={e => setDocContent(e.target.value)}
-                        placeholder="Write your document in markdown — or drag a .md file here..."
-                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--color-text-muted)"; }}
-                        onDragLeave={e => { e.currentTarget.style.borderColor = "var(--color-border-light)"; }}
-                        onDrop={async e => {
-                          e.preventDefault();
-                          e.currentTarget.style.borderColor = "var(--color-border-light)";
-                          const file = Array.from(e.dataTransfer.files).find(f =>
-                            f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
-                          );
-                          if (!file) return;
-                          const content = await file.text();
-                          setDocContent(content);
-                          if (!docTitle.trim()) {
-                            setDocTitle(file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
-                          }
-                        }}
-                        style={{
-                          width: "100%", flex: 1, minHeight: 200, padding: "var(--space-3)",
-                          background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
-                          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-                          color: "var(--color-text)", fontFamily: "var(--font-mono)",
-                          resize: "vertical", lineHeight: "var(--line-height-relaxed)",
-                          marginBottom: "var(--space-2)",
-                          transition: "border-color 150ms ease",
-                        }}
-                      />
-                      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-                        {selectedDocId !== "new" && selectedDoc && (
-                          <button
-                            onClick={() => toggleBroadcastActive(selectedDoc)}
-                            style={{
-                              padding: "var(--space-1) var(--space-3)", background: "transparent",
-                              border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                              fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", cursor: "pointer",
-                              display: "flex", alignItems: "center", gap: "var(--space-1)",
-                            }}
-                          >
-                            {selectedDoc.active ? <><EyeOff size={11} /> Deactivate</> : <><Eye size={11} /> Activate</>}
-                          </button>
-                        )}
-                        <div style={{ flex: 1 }} />
-                        {selectedDocId !== "new" && (
-                          <button
-                            onClick={deleteDoc}
-                            style={{
-                              padding: "var(--space-1) var(--space-3)", background: "transparent",
-                              border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                              fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", cursor: "pointer",
-                              display: "flex", alignItems: "center", gap: "var(--space-1)",
-                            }}
-                          >
-                            <Trash2 size={11} /> Delete
-                          </button>
-                        )}
-                        <button
-                          onClick={saveDoc}
-                          disabled={!docTitle.trim() || !docContent.trim() || docSaving}
-                          style={{
-                            padding: "var(--space-1-5) var(--space-4)",
-                            background: !docTitle.trim() || !docContent.trim() ? "var(--color-bg-alt)" : "var(--color-text)",
-                            color: !docTitle.trim() || !docContent.trim() ? "var(--color-text-muted)" : "var(--color-bg)",
-                            border: "none", borderRadius: "var(--radius-sm)",
-                            fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                            cursor: !docTitle.trim() || !docContent.trim() ? "default" : "pointer",
-                          }}
-                        >
-                          {docSaving ? "Saving..." : "Save"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      height: "100%", minHeight: 280,
-                      border: "1px dashed var(--color-border-light)", borderRadius: "var(--radius-md)",
-                      color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)",
-                    }}>
-                      Select or create a document
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+      {/* ── FÜLKIT KNOWLEDGE BASE (owner only) ── */}
+      <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)" }}>
+        <KnowledgeBaseCard
+          title={`F\u00fclkit Knowledge Base`}
+          description="Internal docs. Dev specs, business ops, margins. Only your chat sees these."
+          icon={BookOpen}
+          channel="owner-context"
+          seedTags={[
+            { key: "ful_system", label: "Ful_System" },
+            { key: "dev", label: "Dev" },
+            { key: "ops", label: "Ops" },
+          ]}
+          storageKey="fulkit-kb-tags-fulkit"
+          docs={fulkitDocs}
+          defaultOpen={false}
+        />
       </div>
     </div>
   );
@@ -3619,7 +3637,7 @@ const SITE_ASSETS = [
 ];
 
 const PITCHES = [
-  { cat: "Value Props", text: `${TIERS.pro.priceLabel} instead of Claude or OpenAI \u2014 and it knows you.` },
+  { cat: "Value Props", text: `${TIERS.pro.priceLabel} for a personal AI that actually knows you.` },
   { cat: "Value Props", text: `You\u2019re paying $88/mo for 10 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
   { cat: "Value Props", text: `F\u00FClkit pays for itself 12x over. $${(88 - TIERS.standard.price) * 12}/year in savings.` },
   { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
@@ -5909,9 +5927,9 @@ function QuestionRow({ q, index, editing, onEdit, onSave, onCancel, onDelete }) 
         />
       </div>
 
-      {/* Fulkit action (read-only) */}
+      {/* F\u00FClkit action (read-only) */}
       <div>
-        <label style={Q_LABEL_STYLE}>Fulkit action (structural)</label>
+        <label style={Q_LABEL_STYLE}>F\u00FClkit action (structural)</label>
         <input
           value={draft.fulkit_action || ""}
           onChange={(e) => update("fulkit_action", e.target.value)}

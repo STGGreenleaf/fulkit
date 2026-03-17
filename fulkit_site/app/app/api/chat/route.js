@@ -2280,6 +2280,39 @@ export async function POST(request) {
       }
     } catch { /* proceed without broadcasts */ }
 
+    // Inject owner-only knowledge base docs (kitchen — never for regular users)
+    if (profile?.role === "owner") {
+      try {
+        const { data: ownerDocs } = await getSupabaseAdmin()
+          .from("vault_broadcasts")
+          .select("title, content")
+          .eq("channel", "owner-context")
+          .eq("active", true)
+          .abortSignal(AbortSignal.timeout(5000));
+        if (ownerDocs && ownerDocs.length > 0) {
+          let ownerBlock = ownerDocs
+            .map(b => `### ${b.title}\n${b.content}`)
+            .join("\n\n");
+          // Dynamic pricing injection — same as user-facing knowledge
+          if (ownerBlock.includes("{{")) {
+            const prices = await getStripePrices();
+            const replacements = {
+              "{{free_limit}}": String(SEAT_LIMITS.free),
+              "{{standard_limit}}": String(SEAT_LIMITS.standard),
+              "{{pro_limit}}": String(SEAT_LIMITS.pro),
+              "{{standard_price}}": prices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
+              "{{pro_price}}": prices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
+              "{{credits_price}}": prices?.credits || CREDITS.priceLabel,
+            };
+            for (const [token, value] of Object.entries(replacements)) {
+              ownerBlock = ownerBlock.replaceAll(token, value);
+            }
+          }
+          system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${ownerBlock}\n</owner-knowledge>`;
+        }
+      } catch { /* proceed without owner knowledge */ }
+    }
+
     // Referral whisper context — inject stats so AI can surface referral CTAs naturally
     if (userId && !config.isByok && profile?.role !== "owner") {
       try {
