@@ -1543,7 +1543,22 @@ function DeveloperTab() {
     const [docContent, setDocContent] = useState("");
     const [docTag, setDocTag] = useState("all");
     const [docSaving, setDocSaving] = useState(false);
-    const [kbOpen, setKbOpen] = useState(defaultOpen);
+    const openKey = `${storageKey}-open`;
+    const [kbOpen, setKbOpen] = useState(() => {
+      if (typeof window === "undefined") return defaultOpen;
+      try {
+        const stored = localStorage.getItem(openKey);
+        if (stored !== null) return stored === "true";
+      } catch {}
+      return defaultOpen;
+    });
+    const toggleKbOpen = useCallback(() => {
+      setKbOpen(prev => {
+        const next = !prev;
+        try { localStorage.setItem(openKey, String(next)); } catch {}
+        return next;
+      });
+    }, [openKey]);
     const [kbFilter, setKbFilter] = useState("all");
     const [addingTag, setAddingTag] = useState(false);
     const [newTagName, setNewTagName] = useState("");
@@ -1701,10 +1716,12 @@ function DeveloperTab() {
     return (
       <div style={{ padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" }}>
         <button
-          onClick={() => setKbOpen(!kbOpen)}
+          onClick={toggleKbOpen}
           style={{
             display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
-            background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: kbOpen ? "var(--space-2)" : 0,
+            background: "none", border: "none", cursor: "pointer",
+            padding: "var(--space-2) 0", marginBottom: kbOpen ? "var(--space-1)" : 0,
+            position: "relative", zIndex: 1,
           }}
         >
           <CardIcon size={13} strokeWidth={2} color="var(--color-text-muted)" />
@@ -2349,7 +2366,7 @@ function DeveloperTab() {
       </div>
 
       {/* ── FABRIC KNOWLEDGE BASE (B-Side's island) ── */}
-      <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)" }}>
+      <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)", paddingBottom: "var(--space-16)" }}>
         <KnowledgeBaseCard
           title="Fabric Knowledge Base"
           description="B-Side's world. Music specs, audio analysis, crate system. Only /fabric chat sees these."
