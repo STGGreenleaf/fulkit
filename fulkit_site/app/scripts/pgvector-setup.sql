@@ -1,8 +1,8 @@
 -- Enable pgvector extension (run once in Supabase SQL editor)
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Add embedding column to notes (1536 dimensions = text-embedding-3-small)
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS embedding vector(1536);
+-- Add embedding column to notes (1024 dimensions = voyage-3.5-lite)
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS embedding vector(1024);
 
 -- Index for fast similarity search
 CREATE INDEX IF NOT EXISTS idx_notes_embedding ON notes
@@ -11,7 +11,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_embedding ON notes
 
 -- Semantic search function — returns notes ranked by cosine similarity
 CREATE OR REPLACE FUNCTION match_notes(
-  query_embedding vector(1536),
+  query_embedding vector(1024),
   match_user_id uuid,
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 10

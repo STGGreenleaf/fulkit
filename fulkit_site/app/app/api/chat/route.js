@@ -11,7 +11,7 @@ import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
 import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
-import { getEmbedding } from "../embed/route";
+import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
 import { SEAT_LIMITS, TIERS, OWNER, BYOK as BYOK_CONFIG, LOW_FUEL_THRESHOLD, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
 import { checkUserBudget, estimateCost, trackApiSpend } from "../../../lib/cost-guard";
@@ -1801,13 +1801,13 @@ async function executeNoteSearch(input, userId) {
   if (!sanitized.trim()) throw new Error("Search query is required");
   const limit = Math.min(input.limit || 5, 20);
 
-  // Try semantic search first (requires OPENAI_API_KEY + pgvector)
+  // Try semantic search first (requires VOYAGE_API_KEY + pgvector)
   let results = [];
   let searchMethod = "keyword";
 
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.VOYAGE_API_KEY) {
     try {
-      const queryEmbedding = await getEmbedding(sanitized);
+      const queryEmbedding = await getQueryEmbedding(sanitized);
       const { data, error } = await admin.rpc("match_notes", {
         query_embedding: JSON.stringify(queryEmbedding),
         match_user_id: userId,

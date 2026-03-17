@@ -1,16 +1,17 @@
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 
-const OPENAI_API_URL = "https://api.openai.com/v1/embeddings";
-const EMBEDDING_MODEL = "text-embedding-3-small";
+const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
+const EMBEDDING_MODEL = "voyage-3.5-lite";
+const EMBEDDING_DIMENSIONS = 1024;
 
 async function getEmbedding(text) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) throw new Error("VOYAGE_API_KEY not set");
 
-  // Truncate to ~8000 tokens (~32000 chars) to stay within model limits
+  // Truncate to ~32000 chars — voyage-3.5-lite supports 32K tokens
   const truncated = text.slice(0, 32000);
 
-  const res = await fetch(OPENAI_API_URL, {
+  const res = await fetch(VOYAGE_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,12 +20,42 @@ async function getEmbedding(text) {
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: truncated,
+      input_type: "document",
     }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `OpenAI API error: ${res.status}`);
+    throw new Error(err.error?.message || `Voyage API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.data[0].embedding;
+}
+
+// For semantic search queries — uses "query" input_type for better retrieval
+async function getQueryEmbedding(text) {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) throw new Error("VOYAGE_API_KEY not set");
+
+  const truncated = text.slice(0, 32000);
+
+  const res = await fetch(VOYAGE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: EMBEDDING_MODEL,
+      input: truncated,
+      input_type: "query",
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Voyage API error: ${res.status}`);
   }
 
   const data = await res.json();
@@ -125,4 +156,4 @@ export async function PUT(request) {
   }
 }
 
-export { getEmbedding };
+export { getEmbedding, getQueryEmbedding, EMBEDDING_DIMENSIONS };
