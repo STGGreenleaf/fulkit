@@ -3049,35 +3049,35 @@ function ReferralsTab() {
         {adminStats ? (
           <>
             {/* ── P&L Hero ── */}
-            <Card style={{ marginBottom: "var(--space-3)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none", padding: "var(--space-6)" }}>
+            <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-6)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
                 <div>
-                  <div style={{ ...kpiStyle, color: "var(--color-text-dim)" }}>MRR</div>
+                  <div style={kpiStyle}>MRR</div>
                   <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
                 </div>
                 <div>
-                  <div style={{ ...kpiStyle, color: "var(--color-text-dim)" }}>Net</div>
-                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text-inverse)" : "#C43B2E" }}>
+                  <div style={kpiStyle}>Net</div>
+                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>
                     {adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}
                   </div>
                 </div>
                 <div>
-                  <div style={{ ...kpiStyle, color: "var(--color-text-dim)" }}>Margin</div>
+                  <div style={kpiStyle}>Margin</div>
                   <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{adminStats.margin}%</div>
                 </div>
               </div>
-              <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-3)" }} />
+              <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-3)" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div>
-                  <span style={{ fontSize: "var(--font-size-2xs)", opacity: 0.5 }}>API cost </span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>API cost </span>
                   <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${adminStats.actualApiCost}</span>
                 </div>
                 <div>
-                  <span style={{ fontSize: "var(--font-size-2xs)", opacity: 0.5 }}>Referral payouts </span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Referral payouts </span>
                   <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${adminStats.totalMonthlyDollars}</span>
                 </div>
                 <div>
-                  <span style={{ fontSize: "var(--font-size-2xs)", opacity: 0.5 }}>ARR </span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>ARR </span>
                   <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${adminStats.mrr * 12}</span>
                 </div>
               </div>
@@ -3105,13 +3105,14 @@ function ReferralsTab() {
             {/* ── Subscribers breakdown ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
               <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Subscribers</div>
-              <div style={{ display: "flex", gap: "var(--space-6)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
                 {[
                   { label: "Free", count: adminStats.subscribers.free },
                   { label: "Standard", count: adminStats.subscribers.standard },
                   { label: "Pro", count: adminStats.subscribers.pro },
+                  { label: "Total", count: adminStats.totalUsers },
                 ].map((s, i) => (
-                  <div key={i}>
+                  <div key={i} style={{ flex: 1 }}>
                     <div style={smallNumStyle}>{s.count}</div>
                     <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{s.label}</div>
                   </div>
