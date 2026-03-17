@@ -2975,8 +2975,7 @@ function ReferralsTab() {
     { refs: 3, ful: 300, label: "Pay less" },
     { refs: REFERRALS.freeAtStandard, ful: REFERRALS.freeAtStandard * 100, label: "Standard = free" },
     { refs: REFERRALS.freeAtPro, ful: REFERRALS.freeAtPro * 100, label: "Pro = free" },
-    { refs: "25+", ful: "2,750+", label: "Free + $12/mo" },
-    { refs: "100+", ful: "12,000+", label: "Free + $105/mo" },
+    { refs: "25+", ful: "2,750+", label: "Free + cash" },
   ];
 
   const tierNames = REFERRALS.tiers || [];
@@ -3144,7 +3143,7 @@ function ReferralsTab() {
         {/* 4-column progression */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "var(--space-2)",
           marginBottom: "var(--space-5)",
         }}>
