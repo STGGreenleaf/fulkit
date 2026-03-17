@@ -3210,7 +3210,7 @@ function ReferralsTab() {
           { refs: "25+", tier: "Builder", monthly: "$12.50", yearly: "$150/yr", note: "Cash unlocks" },
           { refs: "100+", tier: "Architect", monthly: "$105", yearly: "$1,260/yr", note: "120 F\u00FCl/ref" },
           { refs: "250+", tier: "Ambassador", monthly: "$310", yearly: "$3,720/yr", note: "130 F\u00FCl/ref" },
-          { refs: "2,000+", tier: "Ambassador", monthly: "$2,585", yearly: "$31,020/yr", note: null },
+          { refs: "2,000+", tier: "", monthly: "$2,585", yearly: "$31,020/yr", note: "Do the math" },
         ].map((row, i) => (
           <div key={i} style={{
             display: "flex",
