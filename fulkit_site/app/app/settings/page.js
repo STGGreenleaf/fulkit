@@ -2975,7 +2975,8 @@ function ReferralsTab() {
     { refs: 3, ful: 300, label: "Pay less" },
     { refs: REFERRALS.freeAtStandard, ful: REFERRALS.freeAtStandard * 100, label: "Standard = free" },
     { refs: REFERRALS.freeAtPro, ful: REFERRALS.freeAtPro * 100, label: "Pro = free" },
-    { refs: "25+", ful: "2,750+", label: "Free + cash" },
+    { refs: "25+", ful: "2,750+", label: "Free + $12/mo" },
+    { refs: "100+", ful: "12,000+", label: "Free + $105/mo" },
   ];
 
   const tierNames = REFERRALS.tiers || [];
@@ -3143,7 +3144,7 @@ function ReferralsTab() {
         {/* 4-column progression */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(5, 1fr)",
           gap: "var(--space-2)",
           marginBottom: "var(--space-5)",
         }}>
@@ -3193,10 +3194,10 @@ function ReferralsTab() {
         marginBottom: "var(--space-4)",
       }}>
         {[
-          { scenario: "3 friends join", result: "$3/mo off", detail: "Standard drops to $6" },
-          { scenario: "9 friends join", result: "$0/mo", detail: "Standard is free" },
-          { scenario: "15 friends join", result: "$0/mo", detail: "Pro is free" },
-          { scenario: "30 friends join", result: "+$15/mo", detail: "Free + cash in your pocket" },
+          { scenario: "3 friends join", result: "$3/mo off", detail: "Standard drops to $6/mo" },
+          { scenario: "9 friends join", result: "$0/mo", detail: "Standard fully covered" },
+          { scenario: "25 friends join", result: "+$12.50/mo", detail: "Pro free + cash payout" },
+          { scenario: "100 friends join", result: "+$105/mo", detail: "Pro free + $1,260/yr cash" },
         ].map((ex, i) => (
           <Card key={i} style={{ padding: "var(--space-3)" }}>
             <div style={{
