@@ -3204,7 +3204,7 @@ function ReferralsTab() {
           color: "var(--color-text-muted)",
           padding: "var(--space-3) var(--space-4) var(--space-2)",
         }}>
-          Show me the money
+          F{"\u00FC"}lkit your brains out
         </div>
         {[
           { refs: "25+", tier: "Builder", monthly: "$12.50", yearly: "$150/yr", note: "Cash unlocks" },
