@@ -3270,7 +3270,7 @@ const OWNER_NOTES = [
     category: "AI",
     items: [
       { name: "Anthropic", url: "https://console.anthropic.com", note: "Claude API — main chat engine." },
-      { name: "OpenAI", url: "https://platform.openai.com", note: "text-embedding-3-small — note embeddings for semantic search." },
+      { name: "Voyage AI", url: "https://dash.voyageai.com", note: "voyage-3.5-lite — note embeddings for semantic search. 1024d, $0.02/M tokens." },
     ],
   },
   {

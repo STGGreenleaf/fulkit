@@ -3636,6 +3636,7 @@ function BillingTab() {
   const [billingInfo, setBillingInfo] = useState(null);
   const [sampleKey, setSampleKey] = useState("standard");
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
   const seatType = profile?.seat_type || "free";
   const seatLimit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
@@ -4357,6 +4358,28 @@ function BillingTab() {
         </button>
       </div>
 
+      {/* ── Past due alert ── */}
+      {billingInfo?.subscription?.status === "past_due" && (
+        <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-error-soft)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", color: "var(--color-error)", marginBottom: "var(--space-0.5)" }}>Payment failed</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Update your payment method to keep your subscription active.</div>
+          </div>
+          <button onClick={handlePortal} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", flexShrink: 0 }}>
+            {loading === "portal" ? "..." : "Update payment"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Canceling notice ── */}
+      {billingInfo?.subscription?.cancelAtPeriodEnd && billingInfo.subscription.currentPeriodEnd && (
+        <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-warning-soft)", border: "1px solid var(--color-warning)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+            Your subscription is canceling. You have full access until <strong>{new Date(billingInfo.subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>.
+          </div>
+        </div>
+      )}
+
       {/* ── Plan hero (white-white) ── */}
       <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
@@ -4380,8 +4403,8 @@ function BillingTab() {
               {loading === "pro" ? "..." : "Upgrade to Pro"}
             </button>
           ) : seatType === "pro" ? (
-            <button onClick={handlePortal} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "portal" ? 0.6 : 1 }}>
-              {loading === "portal" ? "..." : "Downgrade to Standard"}
+            <button onClick={() => setShowDowngradeModal(true)} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>
+              Downgrade to Standard
             </button>
           ) : null}
         </div>
@@ -4520,6 +4543,34 @@ function BillingTab() {
         )}
       </Card>
 
+      {/* ── Payouts: connect CTA for Builder+ without Stripe Connect ── */}
+      {payoutStats && !payoutStats.hasConnect && payoutStats.tier >= REFERRALS.payoutMinTier && (
+        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Payouts</div>
+          <div style={{ textAlign: "center", padding: "var(--space-2) 0" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>Cash payouts unlocked</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+              Builder tier and above can convert F{"\u00FC"}l to cash via Stripe. Connect your account to start receiving payouts.
+            </div>
+            <button
+              onClick={async () => {
+                if (!accessToken) return;
+                setLoading("connect");
+                try {
+                  const res = await fetch("/api/referrals/connect", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                } catch {} finally { setLoading(null); }
+              }}
+              disabled={!!loading}
+              style={{ display: "block", width: "100%", padding: "var(--space-2)", background: "var(--color-accent)", color: "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "connect" ? 0.6 : 1 }}
+            >
+              {loading === "connect" ? "..." : "Connect Stripe"}
+            </button>
+          </div>
+        </Card>
+      )}
+
       {/* ── Payouts (if tier 4+ with connect) ── */}
       {payoutStats && payoutStats.hasConnect && (
         <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
@@ -4556,10 +4607,10 @@ function BillingTab() {
       )}
 
       {/* ── Invoices ── */}
-      {billingInfo?.invoices && billingInfo.invoices.length > 0 && (
-        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Invoices</div>
-          {billingInfo.invoices.map((inv, i) => (
+      <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+        <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Invoices</div>
+        {billingInfo?.invoices && billingInfo.invoices.length > 0 ? (
+          billingInfo.invoices.map((inv, i) => (
             <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < billingInfo.invoices.length - 1 ? "1px solid var(--color-border-light)" : "none" }}>
               <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
                 {new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -4583,9 +4634,13 @@ function BillingTab() {
                 )}
               </div>
             </div>
-          ))}
-        </Card>
-      )}
+          ))
+        ) : (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-2) 0" }}>
+            No invoices yet
+          </div>
+        )}
+      </Card>
 
       {/* ── Account ── */}
       <Card style={{ padding: "var(--space-4)" }}>
@@ -4615,6 +4670,32 @@ function BillingTab() {
           </button>
         )}
       </Card>
+
+      {/* Downgrade confirmation modal */}
+      {showDowngradeModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={() => setShowDowngradeModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+          <div style={{ position: "relative", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-md)", padding: "var(--space-6)", maxWidth: 420, width: "90%", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-3)" }}>Downgrade to Standard?</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: 1.6, marginBottom: "var(--space-3)" }}>
+              You{"\u2019"}ll lose:
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", lineHeight: 1.8, marginBottom: "var(--space-4)", paddingLeft: "var(--space-3)" }}>
+              {"\u2022"} {SEAT_LIMITS.pro - SEAT_LIMITS.standard} fewer messages per month ({SEAT_LIMITS.pro} {"\u2192"} {SEAT_LIMITS.standard})<br />
+              {"\u2022"} Max tokens reduced (4,096 {"\u2192"} 2,048)<br />
+              {"\u2022"} Price drops from {PLAN_PRICES.pro} to {PLAN_PRICES.standard}
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <button onClick={() => setShowDowngradeModal(false)} style={{ flex: 1, padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "var(--color-text-secondary)", cursor: "pointer" }}>
+                Keep Pro
+              </button>
+              <button onClick={() => { setShowDowngradeModal(false); handlePortal(); }} disabled={!!loading} style={{ flex: 1, padding: "var(--space-2)", background: "var(--color-text-secondary)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "#fff", cursor: loading ? "wait" : "pointer" }}>
+                {loading === "portal" ? "..." : "Downgrade"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel confirmation modal */}
       {showCancelModal && (

@@ -1897,7 +1897,7 @@ async function executeNoteCreate(input, userId, conversationId) {
   if (error) throw new Error(error.message);
 
   // Fire-and-forget: embed the new note for semantic search
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.VOYAGE_API_KEY) {
     const embText = `${title}\n\n${content}`.trim();
     getEmbedding(embText).then(emb => {
       admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch((err) => {
@@ -1929,7 +1929,7 @@ async function executeNoteUpdate(input, userId) {
   if (!data) throw new Error("Note not found or not owned by user");
 
   // Fire-and-forget: re-embed the updated note
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.VOYAGE_API_KEY) {
     const embText = `${data.title || ""}\n\n${content}`.trim();
     getEmbedding(embText).then(emb => {
       admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch((err) => {
