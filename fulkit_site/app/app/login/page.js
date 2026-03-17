@@ -34,7 +34,11 @@ export default function Login() {
     }
   };
 
-  if (loading || user) return null;
+  if (loading || user) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg)" }}>
+      <LogoMark size={32} style={{ opacity: 0.3 }} />
+    </div>
+  );
 
   return (
     <div
@@ -157,7 +161,7 @@ export default function Login() {
             Check your inbox
           </div>
           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-            We sent a magic link to {email}
+            Magic link sent to {email}
           </div>
         </div>
       ) : (

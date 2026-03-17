@@ -2,6 +2,11 @@
 
 > "The line should feel like it's breathing the same air as you."
 
+### Implementation Status
+- **Built:** Spotify playback integration, basic audio features (bpm, key, energy, valence, danceability, loudness, acousticness), fabric_tracks + fabric_timelines tables, simplex-noise visualization
+- **Not yet built:** Essentia deep analysis pipeline, Signal Terrain named visualization, 11x17 poster export, "understood music" library/search, source-agnostic analysis
+- Content below describes the full vision. Features marked above as "not yet built" are roadmap items.
+
 ---
 
 ## North Star

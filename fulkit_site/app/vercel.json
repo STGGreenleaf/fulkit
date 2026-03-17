@@ -1,3 +1,13 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/payout",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/tax-check",
+      "schedule": "0 6 15 1 *"
+    }
+  ]
 }

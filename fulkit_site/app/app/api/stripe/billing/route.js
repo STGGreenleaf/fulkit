@@ -84,6 +84,6 @@ export async function GET(request) {
       billingEmail: user.email,
     });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Failed to load billing info" }, { status: 500 });
   }
 }

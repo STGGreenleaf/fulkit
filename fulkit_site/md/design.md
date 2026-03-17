@@ -286,11 +286,13 @@ Consistent rhythm. No random values. Every gap, padding, and margin pulls from t
 
 ```
 --space-0:    0px
---space-0.5:  2px     /* Hairline gaps */
+--space-0-5:  2px     /* Hairline gaps */
 --space-1:    4px     /* Tight internal padding */
---space-1.5:  6px     /* Icon-to-text gaps */
+--space-1-5:  6px     /* Icon-to-text gaps */
 --space-2:    8px     /* Compact padding, small gaps */
+--space-2-5:  10px    /* Mid padding, comfortable gaps */
 --space-3:    12px    /* Standard internal padding */
+--space-3-5:  14px    /* Between standard and card padding */
 --space-4:    16px    /* Card padding, section gaps */
 --space-5:    20px    /* Comfortable padding */
 --space-6:    24px    /* Page margins (mobile), section spacing */
@@ -422,7 +424,7 @@ transition:    all var(--duration-normal) var(--ease-default)
 ```
 background:    var(--color-bg-alt)
 color:         var(--color-text-secondary)
-padding:       var(--space-0.5) var(--space-2)
+padding:       var(--space-0-5) var(--space-2)
 border-radius: var(--radius-xs)
 font-size:     var(--font-size-xs)
 font-weight:   var(--font-weight-medium)
@@ -449,7 +451,7 @@ exit-animation: fadeOut var(--duration-slowest) var(--ease-in)
 background:    var(--color-accent)
 color:         var(--color-text-inverse)
 border-radius: var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg)
-padding:       var(--space-2.5) var(--space-3.5)
+padding:       var(--space-2-5) var(--space-3-5)
 font-size:     var(--font-size-base)
 line-height:   var(--line-height-normal)
 max-width:     80%
@@ -461,7 +463,7 @@ background:    var(--color-bg-alt)
 color:         var(--color-text)
 border:        1px solid var(--color-border-light)
 border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)
-padding:       var(--space-2.5) var(--space-3.5)
+padding:       var(--space-2-5) var(--space-3-5)
 font-size:     var(--font-size-base)
 line-height:   var(--line-height-loose)
 max-width:     80%
@@ -471,7 +473,7 @@ max-width:     80%
 
 **Nav item:**
 ```
-padding:       var(--space-2) var(--space-2.5)
+padding:       var(--space-2) var(--space-2-5)
 border-radius: var(--radius-sm)
 color:         var(--color-text-muted)
 font-size:     var(--font-size-base)

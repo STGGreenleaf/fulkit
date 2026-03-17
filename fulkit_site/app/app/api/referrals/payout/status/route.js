@@ -39,10 +39,18 @@ export async function GET(request) {
     .filter(p => p.status === "paid")
     .reduce((sum, p) => sum + (p.amount_usd || 0), 0);
 
+  const rolloverBalance = (payouts || [])
+    .filter(p => p.status === "rollover")
+    .reduce((sum, p) => sum + (p.amount_usd || 0), 0);
+
+  // Filter out rollover records from display — show accumulated balance separately
+  const displayPayouts = (payouts || []).filter(p => p.status !== "rollover");
+
   return Response.json({
     hasConnect: !!profile?.stripe_connect_account_id,
     tier: profile?.referral_tier || 0,
-    payouts: payouts || [],
+    payouts: displayPayouts,
     totalPaid,
+    rolloverBalance,
   });
 }

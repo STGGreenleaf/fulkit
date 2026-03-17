@@ -62,7 +62,7 @@ All three emitters check for `?auth` query param. If present (dev mode), signals
 | `chat_timeout` | error | Stream times out (30s no chunk / 120s total) | phase, elapsed, conversationId, messageCount, firstChunkReceived |
 | `chat_abort` | info | User stops streaming | conversationId, streamPhase |
 | `message_save_failed` | error | User or assistant message DB insert fails | role, conversationId, error |
-| `conversation_save_failed` | error | Conversation creation fails | conversationId, error |
+| `conversation_save_failed` | error | Conversation creation fails (PLANNED — not yet emitted) | conversationId, error |
 | `writeback_failed` | warning | Artifact writeback (actions/decisions/plans) fails | storageMode, error |
 | `topic_extract_failed` | info | Conversation topic update fails | conversationId, error |
 | `profile_refresh_failed` | info | `onMessageSent` callback fails | error |
@@ -77,6 +77,7 @@ All three emitters check for `?auth` query param. If present (dev mode), signals
 | `message_count_failed` | error | Ful cap increment fails | error, seat, used |
 | `token_refresh_failed` | warning | Integration OAuth refresh fails | provider (numbrly/truegauge/square/etc), error |
 | `note_embed_failed` | warning | Note embedding or update fails | phase (embedding/update), noteId, error |
+| `cost_ceiling` | warning | User hits message cost ceiling | seat, used, limit |
 
 ---
 

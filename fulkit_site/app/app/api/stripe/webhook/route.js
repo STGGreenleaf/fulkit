@@ -16,7 +16,7 @@ const PRICE_TO_SEAT = {
 };
 
 function verifySignature(payload, signature, secret) {
-  if (!secret) return true; // Skip in dev if no secret set
+  if (!secret) return process.env.NODE_ENV !== "production"; // block in prod if secret missing
   const elements = signature.split(",");
   const timestamp = elements.find((e) => e.startsWith("t="))?.split("=")[1];
   const sigs = elements.filter((e) => e.startsWith("v1=")).map((e) => e.split("=")[1]);

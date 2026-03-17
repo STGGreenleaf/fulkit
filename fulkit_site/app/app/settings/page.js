@@ -824,6 +824,7 @@ function AccountTab() {
 
 function SourcesTab() {
   const { user, accessToken, githubConnected, setGithubConnected, checkGitHub } = useAuth();
+  const [connectError, setConnectError] = useState(null);
   const [connected, setConnected] = useState([]);
   const [githubRepos, setGithubRepos] = useState([]);
   const [githubActiveRepos, setGithubActiveRepos] = useState([]);
@@ -922,6 +923,18 @@ function SourcesTab() {
     }
     if (params.get("toast") === "connected") {
       setToastConnected(true);
+    }
+    // Check for OAuth errors
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello"];
+    for (const src of errorSources) {
+      if (params.get(src) === "error") {
+        setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src} account.`);
+        const url = new URL(window.location);
+        url.searchParams.delete(src);
+        url.searchParams.delete("reason");
+        window.history.replaceState({}, "", url);
+        break;
+      }
     }
   }, [accessToken, checkGitHub]);
 
@@ -1464,6 +1477,13 @@ function SourcesTab() {
 
   return (
     <div>
+      {/* OAuth error banner */}
+      {connectError && (
+        <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-error-soft)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-error)" }}>{connectError}</div>
+          <button onClick={() => setConnectError(null)} style={{ background: "none", border: "none", color: "var(--color-error)", cursor: "pointer", padding: "var(--space-1)", lineHeight: 0 }}><X size={14} /></button>
+        </div>
+      )}
       {/* Connected header — always visible */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
         <SectionTitle style={{ marginBottom: 0 }}>Connected</SectionTitle>
@@ -2804,21 +2824,11 @@ function AITab() {
           </div>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button
-              style={{
-                padding: "var(--space-1-5) var(--space-3)",
-                background: "transparent",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--color-text-secondary)",
-                fontSize: "var(--font-size-xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)",
-                cursor: "pointer",
+              onClick={async () => {
+                if (!confirm("Clear all learned preferences? This cannot be undone.")) return;
+                const { error } = await supabase.from("preferences").delete().eq("user_id", user?.id);
+                if (!error) { setPrefs([]); }
               }}
-            >
-              View all memories
-            </button>
-            <button
               style={{
                 padding: "var(--space-1-5) var(--space-3)",
                 background: "transparent",
@@ -3637,6 +3647,23 @@ function BillingTab() {
   const [sampleKey, setSampleKey] = useState("standard");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Check for checkout success redirect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      setShowSuccess(true);
+      // Clean URL without reload
+      const url = new URL(window.location);
+      url.searchParams.delete("success");
+      window.history.replaceState({}, "", url);
+      // Auto-dismiss after 6s
+      const t = setTimeout(() => setShowSuccess(false), 6000);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const seatType = profile?.seat_type || "free";
   const seatLimit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
@@ -3864,9 +3891,9 @@ function BillingTab() {
                       <span style={{
                         fontFamily: "var(--font-mono)",
                         fontWeight: "var(--font-weight-bold)",
-                        color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)",
+                        color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : p.status === "rollover" ? "var(--color-warning)" : "var(--color-text-muted)",
                       }}>
-                        {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : "PENDING "}${p.amount_usd}
+                        {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : p.status === "rollover" ? "ROLLOVER " : "PENDING "}${p.amount_usd}
                       </span>
                     </div>
                   ))}
@@ -4358,6 +4385,14 @@ function BillingTab() {
         </button>
       </div>
 
+      {/* ── Checkout success banner ── */}
+      {showSuccess && (
+        <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-success-soft)", border: "1px solid var(--color-success)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-success)" }}>Payment received {"\u2014"} you{"\u2019"}re all set.</div>
+          <button onClick={() => setShowSuccess(false)} style={{ background: "none", border: "none", color: "var(--color-success)", cursor: "pointer", padding: "var(--space-1)", lineHeight: 0 }}><X size={14} /></button>
+        </div>
+      )}
+
       {/* ── Past due alert ── */}
       {billingInfo?.subscription?.status === "past_due" && (
         <div style={{ marginBottom: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-error-soft)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -4442,7 +4477,7 @@ function BillingTab() {
                 </span>
               </div>
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textAlign: "right" }}>
-                {billingInfo.subscription.cancelAtPeriodEnd
+                {billingInfo.subscription.cancelAtPeriodEnd && billingInfo.subscription.currentPeriodEnd
                   ? `Ends ${new Date(billingInfo.subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
                   : billingInfo.subscription.currentPeriodEnd
                     ? `Renews ${new Date(billingInfo.subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })} \u00B7 $${billingInfo.subscription.amount || TIERS[seatType]?.price || 0}`
@@ -4585,6 +4620,14 @@ function BillingTab() {
               <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
             </div>
           </div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", textAlign: "center", marginBottom: "var(--space-2)" }}>
+            Payouts process on the 1st of each month. $10 minimum.
+          </div>
+          {payoutStats.rolloverBalance > 0 && (
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-warning)", textAlign: "center", marginBottom: "var(--space-2)", fontWeight: "var(--font-weight-medium)" }}>
+              ${payoutStats.rolloverBalance.toFixed(2)} accumulating {"\u2014"} pays out when it reaches $10
+            </div>
+          )}
           {payoutStats.payouts && payoutStats.payouts.length > 0 && (
             <>
               <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
@@ -4595,9 +4638,9 @@ function BillingTab() {
                   <span style={{
                     fontFamily: "var(--font-mono)",
                     fontWeight: "var(--font-weight-bold)",
-                    color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)",
+                    color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : p.status === "rollover" ? "var(--color-warning)" : "var(--color-text-muted)",
                   }}>
-                    {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : "PENDING "}${p.amount_usd}
+                    {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : p.status === "rollover" ? "ROLLOVER " : "PENDING "}${p.amount_usd}
                   </span>
                 </div>
               ))}

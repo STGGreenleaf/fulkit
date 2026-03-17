@@ -152,7 +152,7 @@ export default function About() {
       {/* ─── THE NAME ─── */}
       <Section>
         <SectionTitle>The Name</SectionTitle>
-        <Body>Yes. We know what it sounds like.</Body>
+        <Body>Yes. You know what it sounds like.</Body>
         <Body>
           The umlaut makes it German. The meaning makes it real. The double-take makes it memorable.
         </Body>
@@ -286,7 +286,7 @@ export default function About() {
           ))}
         </div>
         <Body>
-          When we aren{"\u2019"}t sure what to do, we ask: <em>what would Rams do?</em>
+          When in doubt: <em>what would Rams do?</em>
         </Body>
         <Body>The answer is always: remove something.</Body>
       </Section>

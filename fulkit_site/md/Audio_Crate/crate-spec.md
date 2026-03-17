@@ -2,6 +2,11 @@
 
 > "Give me what you have. Let me show you how to make it better for you."
 
+### Implementation Status
+- **Built:** Basic crate/set UI in /fabric, Spotify playlist import/push, song rows with add-to-set, B-Side persona integration
+- **Not yet built:** Database tables (crates, crate_tracks, user_song_preferences, music_taste_profile), discovery integrations (Last.fm, MusicBrainz, Bandcamp, SoundCloud, Discogs), DJ Mode (BPM graph, key compatibility, energy arc), AI "Fill This Crate", permanent blacklist persistence
+- Content below describes the full vision. Features marked above as "not yet built" are roadmap items.
+
 ---
 
 ## What This Is

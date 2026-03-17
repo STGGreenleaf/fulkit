@@ -49,6 +49,7 @@ export const REFERRALS = {
   freeAtStandard: 9,          // 9 refs × $1 = $9 → Standard covered
   freeAtPro: 15,              // 15 refs × $1 = $15 → Pro covered
   payoutMinTier: 4,           // Builder tier (25+ refs) unlocks cash payouts
+  payoutMinUsd: 10,           // minimum $10 to trigger payout (rolls over if under)
   tiers: [
     { id: 1, min: 1,   max: 6,          fulPerRef: 100, label: "Piece" },
     { id: 2, min: 7,   max: 14,         fulPerRef: 100, label: "Component" },

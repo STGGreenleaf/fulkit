@@ -44,6 +44,6 @@ export async function GET(request) {
     });
   } catch (err) {
     console.error("[notes/search] Error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Search failed" }, { status: 500 });
   }
 }

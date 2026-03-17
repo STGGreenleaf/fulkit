@@ -16,7 +16,7 @@ const apps = [
   { name: "Readwise Reader", cost: 8, replaces: "Read-later" },
 ];
 const appsTotal = apps.reduce((sum, a) => sum + a.cost, 0);
-const fulkitPrice = 7;
+const fulkitPrice = 9;
 const annualSavings = (appsTotal - fulkitPrice) * 12;
 
 const features = [

@@ -41,6 +41,6 @@ export async function GET(request) {
       preferences: prefsResult.data || [],
     });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Export failed" }, { status: 500 });
   }
 }

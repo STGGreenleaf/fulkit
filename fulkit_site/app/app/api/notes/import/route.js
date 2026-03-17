@@ -43,11 +43,11 @@ export async function POST(request) {
 
     const { data, error } = await admin.from("notes").insert(rows).select("id, title");
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
+      return Response.json({ error: "Import failed" }, { status: 500 });
     }
 
     return Response.json({ imported: data.length, notes: data });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

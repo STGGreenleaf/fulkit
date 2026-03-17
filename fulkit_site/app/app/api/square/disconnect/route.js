@@ -32,7 +32,7 @@ export async function DELETE(request) {
     .eq("provider", "square");
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: "Failed to disconnect" }, { status: 500 });
   }
 
   return Response.json({ ok: true });

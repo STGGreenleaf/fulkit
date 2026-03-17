@@ -32,7 +32,7 @@ export async function POST(request) {
   if (!owner) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { title, content, channel, subtype, tag } = await request.json();
-  if (!title || !content || !["context", "announcement", "owner-context"].includes(channel)) {
+  if (!title || !content || !["context", "announcement", "owner-context", "fabric-context"].includes(channel)) {
     return Response.json({ error: "Missing title, content, or valid channel" }, { status: 400 });
   }
 

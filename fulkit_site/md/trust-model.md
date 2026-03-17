@@ -775,25 +775,35 @@ notes (
 -- RLS: users can only read/write their own notes
 -- For Model A (local vault): this table is empty — vault is on device
 
--- Conversation summaries (OPT-IN)
-conversation_sessions (
+-- Conversations (active, used by chat route for context injection)
+conversations (
   id uuid PRIMARY KEY,
   user_id uuid REFERENCES users,
-  summary text,            -- AI-generated summary, NOT raw transcript
-  key_decisions text[],    -- Array of key decisions made
-  action_items text[],     -- Extracted action items
+  title text,
+  topics text[],           -- AI-extracted conversation topics
   created_at timestamp,
   updated_at timestamp
 )
 
--- Full transcripts (OPT-IN, explicit)
-conversation_transcripts (
-  id uuid PRIMARY KEY,
-  session_id uuid REFERENCES conversation_sessions,
-  user_id uuid REFERENCES users,
-  messages jsonb,          -- Full message array
-  created_at timestamp
-)
+-- Conversation summaries (PLANNED — schema not yet created)
+-- conversation_sessions (
+--   id uuid PRIMARY KEY,
+--   user_id uuid REFERENCES users,
+--   summary text,            -- AI-generated summary, NOT raw transcript
+--   key_decisions text[],    -- Array of key decisions made
+--   action_items text[],     -- Extracted action items
+--   created_at timestamp,
+--   updated_at timestamp
+-- )
+
+-- Full transcripts (PLANNED — schema not yet created)
+-- conversation_transcripts (
+--   id uuid PRIMARY KEY,
+--   session_id uuid REFERENCES conversation_sessions,
+--   user_id uuid REFERENCES users,
+--   messages jsonb,          -- Full message array
+--   created_at timestamp
+-- )
 
 -- User file storage (Model C users)
 -- Uses Supabase Storage buckets, not a table

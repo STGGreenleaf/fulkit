@@ -85,11 +85,11 @@ export async function POST(request) {
     const session = await stripePost("/checkout/sessions", params);
 
     if (session.error) {
-      return Response.json({ error: session.error.message }, { status: 500 });
+      return Response.json({ error: "Checkout failed. Try again." }, { status: 500 });
     }
 
     return Response.json({ url: session.url });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

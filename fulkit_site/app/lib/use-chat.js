@@ -191,7 +191,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
   // ─── Send message ─────────────────────────────────────────
 
-  const sendMessage = useCallback(async (assembleContext, retryText) => {
+  const sendMessage = useCallback(async (assembleContext, retryText, greetingText) => {
     const isRetry = typeof retryText === "string";
     const text = isRetry ? retryText.trim() : input.trim();
     console.log("[sendMessage] entry", { text: text?.slice(0, 30), isRetry, streamingRef: streamingRef.current, hasAuthFetch: !!authFetch });
@@ -223,6 +223,10 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     const userMsg = isRetry ? null : { role: "user", content: text, _ts: msgTimestamp };
     // For retry, reuse existing messages (user msg is already there); for new, append user msg
     let apiMessages = isRetry ? [...messages.filter((m) => !m._failed)] : [...messages, userMsg];
+    // Prepend greeting as prior assistant message for continuity
+    if (greetingText && !isRetry) {
+      apiMessages = [{ role: "assistant", content: greetingText }, ...apiMessages];
+    }
     // In sandbox mode, only send current chapter messages (bounded window)
     const sandboxMode = sandbox?.sandboxActive && sandbox?.currentChapter;
     if (sandboxMode) {
@@ -236,7 +240,11 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         : [...chapterMsgs, userMsg];
     }
     if (!isRetry) {
-      setMessages((prev) => [...prev, userMsg]);
+      setMessages((prev) =>
+        greetingText
+          ? [{ role: "assistant", content: greetingText, _greeting: true }, ...prev, userMsg]
+          : [...prev, userMsg]
+      );
       setInput("");
     }
     setStreaming(true);
@@ -271,6 +279,12 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
             }
           })
           .catch((err) => { signal("message_save_failed", "error", { role: "user", conversationId: convId, error: err?.message }); });
+      }
+
+      // Save greeting as first assistant message if provided (fire-and-forget)
+      if (greetingText && convId && !isRetry) {
+        saveMessage(convId, "assistant", greetingText)
+          .then(() => {}).catch(() => {});
       }
 
       // Add empty assistant placeholder with timestamp for safe ID assignment

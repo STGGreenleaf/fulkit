@@ -65,6 +65,11 @@ export async function POST(request) {
       continue;
     }
 
+    if (cashPayout < REFERRALS.payoutMinUsd) {
+      results.push({ userId: u.id, name: u.name, status: "skipped", reason: `Under $${REFERRALS.payoutMinUsd} minimum ($${cashPayout.toFixed(2)})` });
+      continue;
+    }
+
     const payoutCents = Math.round(cashPayout * 100);
 
     // Create Stripe Transfer

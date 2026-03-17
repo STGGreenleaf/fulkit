@@ -200,10 +200,10 @@ Fülkit isn't another chat app. It's a dashboard backed by everything you've eve
 
 | What you pay with Fülkit | Monthly cost |
 |:---|:---:|
-| Fülkit Standard | $7 |
-| **Total** | **$7/mo** |
+| Fülkit Standard | $9 |
+| **Total** | **$9/mo** |
 
-**You save ~$81/month. $972/year.** And you get a better experience because everything is connected.
+**You save ~$79/month. $948/year.** And you get a better experience because everything is connected.
 
 *(Fine print: Fülkit doesn't replace every feature of every app. It replaces the 80% you actually use. The 20% you don't miss.)*
 
@@ -526,13 +526,13 @@ Behind the hamburger / settings, a full control panel exists:
 
 ### 9. "Get Fülkit" — Earn Your Way to Free
 
-**What it is:** Refer friends, earn credits. Credits offset your subscription. Refer 7 friends = free forever.
+**What it is:** Refer friends, earn credits. Credits offset your subscription. Refer 9 friends = free forever.
 
 **How it works:**
 - Share your referral link
-- Friend signs up, pays $7-12/mo
+- Friend signs up, pays $9-15/mo
 - You earn $1/mo credit for each active referral
-- Credits stack. 7 referrals = your $7 Standard sub is fully offset.
+- Credits stack. 9 referrals = your $9 Standard sub is fully offset.
 - If a referral cancels, that credit drops. Quality matters.
 
 **Where it lives:**
@@ -550,7 +550,7 @@ Behind the hamburger / settings, a full control panel exists:
 
 | Tier | Price | Messages/month | ~Messages/day |
 |:---|:---:|:---:|:---:|
-| Standard | $7/mo | 450 | ~15 |
+| Standard | $9/mo | 450 | ~15 |
 | Pro | $15/mo | 800 | ~26 |
 | Buy credits | $2/100 | On demand | — |
 
@@ -619,7 +619,7 @@ Fülkit sits in the top-right quadrant: smart AND conversational. Nobody else li
 | Referral rewards | ❌ | ❌ | ❌ | ❌ | ✅ |
 | No vendor lock-in | ✅ | ❌ | ❌ | ❌ | ✅ |
 | Offline support | ✅ | ⚠️ | ❌ | ❌ | 🟡 |
-| Price | $8/mo sync | $10/mo | $20/mo | $20/mo | $7/mo |
+| Price | $8/mo sync | $10/mo | $20/mo | $20/mo | $9/mo |
 
 ---
 
@@ -641,8 +641,8 @@ Fülkit sits in the top-right quadrant: smart AND conversational. Nobody else li
 
 ### Cost savings
 - Average subscription stack for a power user: **~$88/month**
-- Fülkit Standard: **$7/month**
-- Annual savings: **$972**
+- Fülkit Standard: **$9/month**
+- Annual savings: **$948**
 - ROI: **"Fülkit pays for itself 12x over"**
 
 ---
@@ -814,7 +814,7 @@ Rules enforced by the system, not by discipline:
 - Goal: same experience for everyone regardless of where they're coming from
 
 ### Layer 3: AI
-- Claude-powered (claude-sonnet-4-5-20250514)
+- Claude-powered (claude-sonnet-4-6)
 - System prompt shaped by user's stored content
 - Smart retrieval via pgvector — relevant notes pulled per conversation
 - Document processing for inbox triage
@@ -831,7 +831,7 @@ Rules enforced by the system, not by discipline:
 |:---|:---|
 | Web | React (Next.js App Router) |
 | Mobile | PWA first → React Native (Expo) later |
-| AI | Claude API (claude-sonnet-4-5-20250514) |
+| AI | Claude API (claude-sonnet-4-6) |
 | Backend/DB | Supabase (Postgres + Auth + Storage) |
 | Vector search (RAG) | pgvector on Supabase |
 | Auth | Supabase Auth |
@@ -876,7 +876,7 @@ Every user must cover their own cost and then some. Fülkit never loses money af
 ### Real Claude API costs (baked in)
 A typical Fülkit exchange (question + RAG context from notes + AI response) ≈ 2,000 input tokens + 500 output tokens.
 
-- Claude Sonnet: $3/million input, $15/million output
+- Claude Sonnet 4.6: $3/million input, $15/million output
 - Input cost: $0.006/msg
 - Output cost: $0.0075/msg
 - **Total: ~$0.014 per message (1.5 cents)**
@@ -891,7 +891,7 @@ A typical Fülkit exchange (question + RAG context from notes + AI response) ≈
 ### Pricing structure
 - **Founder = free.** Your usage is the cost of building the product.
 - **5 hot seats = free.** Your inner circle. You float ~$22/mo max. The only cost center.
-- **Standard = $7/mo.** Light-to-moderate users. Get a set amount of messages, refill when empty.
+- **Standard = $9/mo.** Light-to-moderate users. Get a set amount of messages, refill when empty.
 - **Pro = $15/mo.** Medium-to-heavy users. Bigger Fül tank. Still protected — house always wins.
 
 No confusing matrix. You're in for free, your people are in for free, everyone else picks a tier.
@@ -901,7 +901,7 @@ Users get a SET amount of messages per billing cycle. When the tank is empty, th
 
 | Tier | Price | Monthly messages | Cost per msg | Max API cost | Margin |
 |:---|:---:|:---:|:---:|:---:|:---:|
-| Standard | $7/mo | ~450 msgs (~15/day) | 1.5¢ | ~$6.75 | **+$0.25 min** |
+| Standard | $9/mo | ~450 msgs (~15/day) | 1.5¢ | ~$6.75 | **+$2.25 min** |
 | Pro | $15/mo | ~800 msgs (~26/day) | 1.5¢ | ~$12.00 | **+$3.00 min** |
 | Buy credits | $2 per 100 msgs | On demand | 1.5¢ | $1.50 | **+$0.50 per pack** |
 
@@ -932,7 +932,7 @@ Your 5 founder seats are a **loan, not a gift.**
 - You assign a seat to someone → they use Fülkit free
 - Activity threshold: **1 message per week or 4 per month**
 - If they go inactive (miss the threshold for 30 days) → seat auto-revokes
-- They get a message: "Hey, your Fülkit seat went inactive. Want to keep going? $7/mo."
+- They get a message: "Hey, your Fülkit seat went inactive. Want to keep going? $9/mo."
 - They can re-engage as a paying user at any time
 - Your seat opens back up for someone who'll actually use it
 
@@ -947,7 +947,7 @@ Your 5 founder seats are a **loan, not a gift.**
 - User table tracks: last_message_date, messages_this_month, seat_type (founder/paid)
 - Cron job checks monthly: any founder seat user with <4 messages → flag for revocation
 - Grace period notification: "You have 7 days to stay active or your seat converts to paid"
-- Revoked users auto-convert to paid ($7/mo) or churn — their choice
+- Revoked users auto-convert to paid ($9/mo) or churn — their choice
 
 ---
 
@@ -958,7 +958,7 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 "Refer a friend, get a buck." But the buck is platform credit, not money. (Fine print: commission toward subscription, not a payout.)
 
 **How it works:**
-- User refers a friend → friend signs up and pays $7+/mo
+- User refers a friend → friend signs up and pays $9+/mo
 - Referrer earns **$1/mo credit** for as long as that referral stays active and paying
 - Credits offset the referrer's subscription
 - **Unlimited invites.** No cap. Every referral makes Fülkit money.
@@ -969,20 +969,20 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 - **In the heartbeat (whispers):** If a user has never sent an invite, Fülkit whispers: "You know you could get a free account, right? Every friend who joins earns you $1/mo off your subscription." Permission-based, earns its way in, fades if ignored.
 
 **The math per referral:**
-- Referred user pays: $7/mo (Standard) or $15/mo (Pro)
+- Referred user pays: $9/mo (Standard) or $15/mo (Pro)
 - API cost for that user: ~$4.50/mo (capped by Fül)
 - **Fülkit nets: +$2.50/mo minimum** from the referred user
 - Referral credit paid: -$1/mo (foregone revenue, not cash out of pocket)
 - **Fülkit still nets: +$1.50/mo per referral.** Always positive.
 
 **The referrer's path to free:**
-- Refer 1 friend → pay $6/mo instead of $7
-- Refer 3 friends → pay $4/mo
-- Refer 7 friends → **$7 in credits = Standard subscription fully offset. Free.**
+- Refer 1 friend → pay $8/mo instead of $9
+- Refer 3 friends → pay $6/mo
+- Refer 9 friends → **$9 in credits = Standard subscription fully offset. Free.**
 - Refer 15 friends → **Pro subscription fully offset. Free.**
 - Refer 16+ friends → excess credits banked for buy-credit packs or premium perks
 
-**Key: credits are tied to ACTIVE referred users.** If 2 of your 7 referrals cancel, your credits drop to $5/mo. You pay the $2 difference. Keeps referrers invested in quality users, not just bodies.
+**Key: credits are tied to ACTIVE referred users.** If 2 of your 9 referrals cancel, your credits drop to $5/mo. You pay the $2 difference. Keeps referrers invested in quality users, not just bodies.
 
 **Why unlimited invites:**
 - Every referral is net positive for Fülkit (+$1.50/mo minimum)
@@ -991,13 +991,13 @@ Not "Share Fülkit." **"Get Fülkit."** The language matters. You're not asking 
 - The more they share, the more they save. The more they save, the more Fülkit earns.
 
 **The flywheel:**
-Good product → users love it → they "Get Fülkit" for friends → friends pay $7-15 → referrer earns credits → referrer refers more → Fülkit grows AND profits on every step
+Good product → users love it → they "Get Fülkit" for friends → friends pay $9-15 → referrer earns credits → referrer refers more → Fülkit grows AND profits on every step
 
 ---
 
 ## The Math at Scale
 
-**Assumes 70% Standard ($7), 30% Pro ($15). Fül caps prevent losses.**
+**Assumes 70% Standard ($9), 30% Pro ($15). Fül caps prevent losses.**
 
 | Total Users | Free | Standard | Pro | Revenue | API Cost (capped) | Credits Out | Hosting | Net Profit |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -1321,7 +1321,7 @@ A single, scrolling page. Dense. Visual. Typographic. Feels like a German indust
 - Visual: a wall of dimmed note titles, one highlighted with Fülkit's sparkle
 
 **3. The App Stack**
-- Side-by-side: your current stack ($88/mo) vs Fülkit ($7/mo)
+- Side-by-side: your current stack ($88/mo) vs Fülkit ($9/mo)
 - Each replaced app shown with a simple icon + label → arrow → Fülkit equivalent
 - Total savings counter: $972/year
 
@@ -1343,8 +1343,8 @@ Each feature gets a tile. Minimal text, strong visual.
 - Format: "quote" — name, role
 
 **7. Pricing**
-- Standard ($7) / Pro ($12) / Buy credits ($2/100)
-- "Get Fülkit" referral pitch: "Refer 7 friends, never pay again"
+- Standard ($9) / Pro ($15) / Buy credits ($2/100)
+- "Get Fülkit" referral pitch: "Refer 9 friends, never pay again"
 
 **8. CTA**
 - "Get Fülkit"
@@ -1370,7 +1370,7 @@ Each feature gets a tile. Minimal text, strong visual.
 - "ChatGPT forgets you. Fülkit never does."
 - "Stop catching AI up to speed."
 - "The app that thinks with you."
-- "10 apps. $88/month. Or Fülkit. $7."
+- "10 apps. $88/month. Or Fülkit. $9."
 - "Capture everything. Retrieve anything. Forget nothing."
 - "Your second brain, fully loaded."
 - "I'll be your bestie."
@@ -1407,7 +1407,7 @@ Each feature gets a tile. Minimal text, strong visual.
 
 **Feature page:**
 - "No more app switching. Just Fülkit."
-- "10 apps. $88/month. Or just Fülkit."
+- "10 apps. $88/month. Or Fülkit. $9."
 
 **Error pages & empty states (easter eggs):**
 - "Well, Fülkit." — error page
@@ -1420,7 +1420,7 @@ Each feature gets a tile. Minimal text, strong visual.
 - "My AI remembers everything I've ever saved. Yours starts from zero every time."
 - "I talked to an orb for 5 minutes. It organized my entire week."
 - "Fülkit just reminded me about something I forgot I saved 3 weeks ago. How."
-- "Refer 7 friends → use Fülkit free forever. The math works."
+- "Refer 9 friends → use Fülkit free forever. The math works."
 
 ---
 
@@ -1457,14 +1457,22 @@ fulkit/                   # Monorepo root (git root)
 | Product spec | ✅ Complete (buildnotes.md) |
 | Design system | ✅ Complete (design.md) |
 | Task tracking | ✅ Complete (TODO.md) |
-| App prototype | 🟡 Working prototype |
-| The Hum prototype | 🟡 Working prototype |
-| Auth (Google OAuth) | ✅ Working |
-| Spotify integration | ✅ Wired up |
-| Vault / trust model | ✅ Built |
-| Supabase setup | ✅ Connected |
-| RAG pipeline | ⬜ Not started |
-| Landing page | ⬜ Not started |
+| App prototype | ✅ Production-ready |
+| The Hum | ✅ Feature-complete (4 animation states, voice input, chat integration) |
+| Auth (Google OAuth) | ✅ Working (PKCE flow) |
+| Spotify / Fabric | ✅ Full integration (OAuth, playback, playlists, search, crates) |
+| Vault / trust model | ✅ Built (3 storage models, write-back, relevance scoring) |
+| Supabase setup | ✅ Connected (Postgres + Auth + RLS) |
+| RAG pipeline | ✅ Built (pgvector + Voyage embeddings + keyword fallback) |
+| Landing page | ✅ Complete (competitive grid, features, pricing) |
+| Integrations | ✅ 9 active: Square, Shopify, Stripe, Toast, Trello, GitHub, Numbrly, TrueGauge, Spotify |
+| Sandbox (planning) | ✅ Built (chapter-based, 20-turn auto-close) |
+| Threads (kanban) | ✅ Built (board, calendar, table views) |
+| Signal system | ✅ Built (error capture, cold diagnosis, owner portal) |
+| Proactive greeting | ✅ Built (AI texts first when user opens chat) |
+| Compact mode | ✅ Built (icon-only sidebar, tooltip hover) |
+| Owner portal | ✅ 12 tabs (dashboard, design, users, pitches, KB, radio, etc.) |
+| Onboarding | ✅ 5-tier progressive questionnaire with feature assignments |
 | First 5 hot seats | ⬜ Not started |
 
 ---
@@ -1472,7 +1480,7 @@ fulkit/                   # Monorepo root (git root)
 ## Open Questions
 - ~~Storage backend~~ → Supabase ✅
 - ~~RAG implementation~~ → pgvector on Supabase ✅
-- ~~Pricing model~~ → Standard $7/mo, Pro $15/mo, Fül caps, buy credits $2/100 ✅
+- ~~Pricing model~~ → Standard $9/mo, Pro $15/mo, Fül caps, buy credits $2/100 ✅
 - ~~Heavy user protection~~ → Fül system, BYOK nudge for power burners ✅
 - ~~Referral model~~ → "Get Fülkit" — $1 credit per active referral, unlimited, credits not cash ✅
 - ~~Referral visibility~~ → Account settings + dashboard pull-tab + whisper nudge ✅

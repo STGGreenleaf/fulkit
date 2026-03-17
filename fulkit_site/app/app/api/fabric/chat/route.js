@@ -1,12 +1,13 @@
 import { authenticateUser } from "../../../../lib/fabric-server";
 import { runPipeline } from "../../../../lib/btc/pipeline";
+import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
 export async function POST(request) {
   try {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary } = await request.json();
+    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary, spotifyConnected } = await request.json();
     if (!messages?.length) {
       return Response.json({ error: "messages required" }, { status: 400 });
     }
@@ -18,8 +19,29 @@ export async function POST(request) {
     }
     const conversationHistory = messages.slice(0, -1);
 
+    // Fetch Fabric Knowledge Base (B-Side's own island — music only)
+    let fabricKB = "";
+    try {
+      const { data: fabricDocs } = await getSupabaseAdmin()
+        .from("vault_broadcasts")
+        .select("title, content")
+        .eq("channel", "fabric-context")
+        .eq("active", true)
+        .abortSignal(AbortSignal.timeout(5000));
+      if (fabricDocs?.length) {
+        fabricKB = `\n\nFABRIC KNOWLEDGE BASE (your reference docs — use when relevant):\n${fabricDocs.map(d => `### ${d.title}\n${d.content}`).join("\n\n")}`;
+      }
+    } catch (e) {
+      console.error("[BTC] Fabric KB fetch failed:", e.message);
+    }
+
     // Build dynamic context block (same shape as before)
     const contextParts = [];
+    if (!spotifyConnected) {
+      contextParts.push("MUSIC SOURCE: No music service connected. The speakers are off. You're stressed — can't concentrate without something playing. Nudge them to hook up Spotify so the store can open.");
+    } else {
+      contextParts.push("MUSIC SOURCE: Spotify connected.");
+    }
     if (currentTrack) {
       contextParts.push(`Now playing: "${currentTrack.title}" by ${currentTrack.artist} (${currentTrack.album || "unknown album"}) — the user is already listening to this. NEVER include the currently playing track in your suggestions.`);
     }
@@ -66,9 +88,10 @@ export async function POST(request) {
       if (tp.length) contextParts.push(`TASTE PROFILE:\n${tp.join("\n")}`);
     }
 
-    const dynamicContext = contextParts.length
-      ? `\nCURRENT CONTEXT (use this to inform your responses):\n${contextParts.join("\n")}`
-      : "";
+    const dynamicContext = [
+      contextParts.length ? `\nCURRENT CONTEXT (use this to inform your responses):\n${contextParts.join("\n")}` : "",
+      fabricKB,
+    ].filter(Boolean).join("");
 
     // Run the 3-pass pipeline (classify → take → counter)
     // Returns a stream from either Pass 1 (fast path) or Pass 2 (full path)

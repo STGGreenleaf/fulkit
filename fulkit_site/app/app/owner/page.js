@@ -1312,6 +1312,7 @@ function DeveloperTab() {
   const quickFacts = broadcasts.filter(b => b.channel === "context" && b.subtype !== "doc");
   const userDocs = broadcasts.filter(b => b.channel === "context" && b.subtype === "doc");
   const fulkitDocs = broadcasts.filter(b => b.channel === "owner-context" && b.subtype === "doc");
+  const fabricDocs = broadcasts.filter(b => b.channel === "fabric-context" && b.subtype === "doc");
   const announcementBroadcasts = broadcasts.filter(b => b.channel === "announcement");
 
   const refreshBroadcasts = useCallback(async () => {
@@ -2343,6 +2344,24 @@ function DeveloperTab() {
           ]}
           storageKey="fulkit-kb-tags-fulkit"
           docs={fulkitDocs}
+          defaultOpen={false}
+        />
+      </div>
+
+      {/* ── FABRIC KNOWLEDGE BASE (B-Side's island) ── */}
+      <div style={{ gridColumn: "1 / -1", marginTop: "var(--space-2)" }}>
+        <KnowledgeBaseCard
+          title="Fabric Knowledge Base"
+          description="B-Side's world. Music specs, audio analysis, crate system. Only /fabric chat sees these."
+          icon={Music}
+          channel="fabric-context"
+          seedTags={[
+            { key: "persona", label: "Persona" },
+            { key: "audio", label: "Audio" },
+            { key: "crate", label: "Crate" },
+          ]}
+          storageKey="fulkit-kb-tags-fabric"
+          docs={fabricDocs}
           defaultOpen={false}
         />
       </div>
@@ -3647,11 +3666,13 @@ const PITCHES = [
   { cat: "Comparisons", text: "Workers spend 3.6 hours a day searching for information. F\u00FClkit finds it in seconds." },
   { cat: "Comparisons", text: "Only 15% of saved knowledge is ever found again. F\u00FClkit retrieves it \u2014 proactively." },
   { cat: "Comparisons", text: "Context switching costs 23 minutes to return to focus. With F\u00FClkit, everything\u2019s in one place." },
+  { cat: "Comparisons", text: "ChatGPT, Claude, Gemini, Copilot \u2014 they all sit there with a cursor blinking until you type. F\u00FClkit texts first." },
   { cat: "Features", text: "The Hum: talk to an orb, not a transcript. It silently files your thoughts." },
   { cat: "Features", text: "Whispers: proactive suggestions that drift in and fade out. Like a text from a friend." },
   { cat: "Features", text: "Your notes talk back. Ask a question, get an answer from your own knowledge." },
   { cat: "Features", text: "Three vault modes: local-first, encrypted sync, or F\u00FClkit-managed. Your data, your rules." },
   { cat: "Features", text: "Voice mode that auto-files: ramble for 5 minutes, open your notes, everything\u2019s organized." },
+  { cat: "Features", text: "Proactive chat: F\u00FClkit opens the conversation based on what it knows about you. No other AI does this." },
   { cat: "One-Liners", text: "I\u2019ll be your bestie." },
   { cat: "One-Liners", text: "One app. One bestie. Everything else is noise." },
   { cat: "One-Liners", text: "A friend with benefits \u2014 and the benefits are real." },
@@ -3661,6 +3682,7 @@ const PITCHES = [
   { cat: "One-Liners", text: "Let\u2019s chat and get shit done." },
   { cat: "One-Liners", text: "Your second brain, fully loaded." },
   { cat: "One-Liners", text: "Capture everything. Retrieve anything. Forget nothing." },
+  { cat: "One-Liners", text: "Every AI chat waits for you. F\u00FClkit texts first." },
   { cat: "Brand", text: "F\u00FClkit \u2014 from German \u2018f\u00FChlen\u2019 (to feel) + kit. A toolkit that feels right." },
   { cat: "Brand", text: "The two dots aren\u2019t decoration. They\u2019re German. F\u00FCl = to feel." },
   { cat: "Brand", text: "Get your F\u00FClkit together." },

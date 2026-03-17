@@ -1086,6 +1086,7 @@ export function FabricProvider({ children }) {
           setTracks: flagged,
           bsidesTracks: guyCrate?.tracks || [],
           tasteSummary: buildTasteSummary(),
+          spotifyConnected: connected,
         }),
       });
 

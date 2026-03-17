@@ -117,10 +117,13 @@ export default function ChatContent({ isPopout = false }) {
   const [showPins, setShowPins] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
+  const [greeting, setGreeting] = useState(null);
+  const [greetingLoading, setGreetingLoading] = useState(false);
 
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
   const draggingRef = useRef(false);
+  const greetingFetchedRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
@@ -131,6 +134,20 @@ export default function ChatContent({ isPopout = false }) {
     if (!user) return;
     loadPinnedMessages();
   }, [user]);
+
+  // ─── Proactive greeting ─────────────────────────────────
+
+  useEffect(() => {
+    if (!user || !accessToken || chat.messages.length > 0 || chat.conversationId || greetingFetchedRef.current) return;
+    greetingFetchedRef.current = true;
+    setGreetingLoading(true);
+
+    authFetch("/api/chat/greeting")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.greeting) setGreeting(data.greeting); })
+      .catch(() => {})
+      .finally(() => setGreetingLoading(false));
+  }, [user, accessToken, chat.messages.length, chat.conversationId]);
 
   async function loadPinnedMessages() {
     try {
@@ -245,8 +262,12 @@ export default function ChatContent({ isPopout = false }) {
       return;
     }
 
-    await chat.sendMessage(ctx.assembleContext);
-  }, [chat.input, chat.streaming, chat.sendMessage, ctx.assembleContext, ctx.handleRecall]);
+    // Pass greeting to sendMessage if this is the first message
+    const greetingToInject = (greeting && chat.messages.length === 0) ? greeting : undefined;
+    if (greetingToInject) setGreeting(null);
+
+    await chat.sendMessage(ctx.assembleContext, undefined, greetingToInject);
+  }, [chat.input, chat.streaming, chat.sendMessage, ctx.assembleContext, ctx.handleRecall, greeting, chat.messages.length]);
 
   const handleRetry = useCallback((userText) => {
     chat.sendMessage(ctx.assembleContext, userText);
@@ -266,6 +287,8 @@ export default function ChatContent({ isPopout = false }) {
   const handleStartNewChat = () => {
     chat.startNewChat();
     ctx.resetContext();
+    setGreeting(null);
+    greetingFetchedRef.current = false;
   };
 
   // ─── Drag-to-resize history panel ─────────────────────────
@@ -607,25 +630,70 @@ export default function ChatContent({ isPopout = false }) {
                   >
                     <VaultGate />
 
-                    <MessageCircle
-                      size={28}
-                      strokeWidth={1.5}
-                      style={{ color: "var(--color-text-dim)" }}
-                    />
-                    <p
-                      style={{
-                        fontSize: "var(--font-size-sm)",
-                        color: "var(--color-text-muted)",
-                        textAlign: "center",
-                        lineHeight: "var(--line-height-relaxed)",
-                      }}
-                    >
-                      Add anything. Think out loud. Get stuff done.
-                      <br />
-                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                        Drop files, paste code, or just start typing.
-                      </span>
-                    </p>
+                    {/* Proactive greeting or static fallback */}
+                    {greetingLoading ? (
+                      <div style={{
+                        maxWidth: 640,
+                        width: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                      }}>
+                        <div style={{
+                          padding: "var(--space-2-5) var(--space-3-5)",
+                          background: "var(--color-bg-alt)",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
+                        }}>
+                          <ThinkingIndicator phase="connecting" startedAt={Date.now()} />
+                        </div>
+                      </div>
+                    ) : greeting ? (
+                      <div style={{
+                        maxWidth: 640,
+                        width: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                      }}>
+                        <div style={{
+                          maxWidth: "100%",
+                          padding: "var(--space-2-5) var(--space-3-5)",
+                          fontSize: "var(--font-size-base)",
+                          lineHeight: "var(--line-height-relaxed)",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          background: "var(--color-bg-alt)",
+                          color: "var(--color-text)",
+                          border: "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
+                        }}>
+                          <MessageRenderer content={greeting} />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <MessageCircle
+                          size={28}
+                          strokeWidth={1.5}
+                          style={{ color: "var(--color-text-dim)" }}
+                        />
+                        <p
+                          style={{
+                            fontSize: "var(--font-size-sm)",
+                            color: "var(--color-text-muted)",
+                            textAlign: "center",
+                            lineHeight: "var(--line-height-relaxed)",
+                          }}
+                        >
+                          Add anything. Think out loud. Get stuff done.
+                          <br />
+                          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
+                            Drop files, paste code, or just start typing.
+                          </span>
+                        </p>
+                      </>
+                    )}
 
                     {/* Context nudge */}
                     {!hasContext && (

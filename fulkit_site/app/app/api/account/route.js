@@ -22,11 +22,11 @@ export async function PATCH(request) {
     }
 
     const { error } = await admin.from("profiles").update(updates).eq("id", user.id);
-    if (error) return Response.json({ error: error.message }, { status: 500 });
+    if (error) return Response.json({ error: "Failed to update profile" }, { status: 500 });
 
     return Response.json({ updated: true, ...updates });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
 
@@ -61,6 +61,6 @@ export async function DELETE(request) {
     return Response.json({ deleted: true });
   } catch (err) {
     console.error("[account] Delete error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
