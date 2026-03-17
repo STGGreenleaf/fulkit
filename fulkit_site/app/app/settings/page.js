@@ -3731,16 +3731,16 @@ function BillingTab() {
             {/* ── Payout history ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
               <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Stripe payouts</div>
-              <div style={{ display: "flex", gap: "var(--space-6)", marginBottom: "var(--space-3)" }}>
-                <div>
+              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
+                <div style={{ flex: 1 }}>
                   <div style={bigNum}>${adminStats.totalPaidOut}</div>
                   <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Paid out</div>
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={bigNum}>${adminStats.pendingPayouts}</div>
                   <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={bigNum}>${adminStats.totalMonthlyDollars}</div>
                   <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Monthly obligation</div>
                 </div>
