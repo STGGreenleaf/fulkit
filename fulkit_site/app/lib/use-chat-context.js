@@ -22,6 +22,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
   const [recalledNotes, setRecalledNotes] = useState([]);
   const [recallResults, setRecallResults] = useState(null);
   const [contextMeta, setContextMeta] = useState(null);
+  const [contextDropped, setContextDropped] = useState(false);
 
   // Alerts
   const [alerts, setAlerts] = useState([]);
@@ -186,6 +187,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
 
   const assembleContext = useCallback(async (text, apiMessages) => {
     let context = [];
+    setContextDropped(false);
 
     // Vault context
     if (isReady && getContextWithMeta) {
@@ -197,6 +199,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
         }
       } catch (err) {
         console.error("[assembleContext] vault context failed:", err.message);
+        setContextDropped(true);
       }
     }
 
@@ -319,6 +322,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
 
   const resetContext = useCallback(() => {
     setContextMeta(null);
+    setContextDropped(false);
     setRecalledNotes([]);
     setRecallResults(null);
     attachedFilesRef.current = [];
@@ -333,6 +337,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     tgContext,
     tgError,
     contextMeta,
+    contextDropped,
     // Files
     attachedFiles,
     setAttachedFiles,

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-writeback";
+import { useSignal } from "./signal";
 
 // Lightweight topic extraction from message text — no API call
 const STOPWORDS = new Set([
@@ -66,9 +67,11 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
   const [conversationId, setConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
 
+  const signal = useSignal();
   const abortRef = useRef(null);
   const streamingRef = useRef(false);
   const mountedRef = useRef(true);
+  const lastSendTimeRef = useRef(0);
   // Chunk buffer — accumulate SSE chunks, flush to state on rAF
   const chunkBufferRef = useRef("");
   const flushRafRef = useRef(null);
@@ -194,8 +197,15 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     console.log("[sendMessage] entry", { text: text?.slice(0, 30), isRetry, streamingRef: streamingRef.current, hasAuthFetch: !!authFetch });
     if (!text || streamingRef.current) {
       console.warn("[sendMessage] blocked —", !text ? "empty text" : "already streaming");
+      if (text && streamingRef.current) signal("double_send", "info");
       return;
     }
+
+    // Rapid retry detection
+    if (isRetry && Date.now() - lastSendTimeRef.current < 5000) {
+      signal("rapid_retry", "info", { elapsed: Date.now() - lastSendTimeRef.current });
+    }
+    lastSendTimeRef.current = Date.now();
 
     // Lock immediately — prevents rapid-fire double-sends
     streamingRef.current = true;
@@ -243,6 +253,9 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     try {
       // Create conversation — timeout after 5s, don't block if it fails
       convId = await ensureConversation(text);
+      if (!convId && !isRetry) {
+        console.warn("[sendMessage] no conversation — messages will not be saved");
+      }
 
       // Save user message in background (skip on retry — already saved)
       if (!isRetry) {
@@ -279,6 +292,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         console.log("[sendMessage] context assembled in", Date.now() - ctxStart, "ms —", context.length, "items");
       } catch (err) {
         console.warn("[sendMessage] context assembly failed/timed out:", err.message);
+        signal("context_timeout", "warning", { error: err.message });
       }
       if (annotatedMessages) apiMessages = annotatedMessages;
 
@@ -326,6 +340,11 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         const err = await res.json().catch(() => ({}));
         const errMsg = err.error || "Something went wrong.";
         console.error("[sendMessage] API error:", res.status, errMsg);
+        if (res.status === 429) {
+          signal("rate_limit", "warning");
+        } else {
+          signal("chat_api_error", "error", { status: res.status, error: errMsg.slice(0, 200) });
+        }
         // Don't mark rate-limit messages as retryable
         const isRetryable = res.status !== 429 && !errMsg.includes("used all");
         const isCappedError = res.status === 429 && errMsg.includes("used all");
@@ -355,7 +374,9 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
         if (!firstChunkReceived) {
           firstChunkReceived = true;
-          console.log("[sendMessage] first chunk received —", Date.now() - fetchStart, "ms after fetch");
+          const chunkLatency = Date.now() - fetchStart;
+          console.log("[sendMessage] first chunk received —", chunkLatency, "ms after fetch");
+          if (chunkLatency > 5000) signal("slow_stream", "warning", { latency: chunkLatency });
           setStreamPhase("streaming");
         }
         resetWatchdog();
@@ -428,13 +449,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       if (err.name === "AbortError" && !firstChunkReceived) {
         fullResponse = "Took too long to respond.";
         isFailed = true;
+        signal("chat_timeout", "warning", { phase: "waiting", elapsed: Date.now() - fetchStart });
       } else if (err.name === "AbortError" && firstChunkReceived) {
         // Mid-stream inactivity timeout — show what we have + error
         fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent.)*";
         isFailed = true;
+        signal("chat_timeout", "warning", { phase: "streaming", elapsed: Date.now() - fetchStart });
       } else if (err.name !== "AbortError") {
         fullResponse = "Connection error.";
         isFailed = true;
+        signal("chat_api_error", "error", { error: err.message });
       }
 
       if (fullResponse) {
@@ -500,7 +524,8 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       // Write-back artifacts
       try {
           const artifacts = extractArtifacts(fullResponse);
-          if (artifacts.actionItems.length > 0) {
+          const hasArtifacts = artifacts.actionItems.length > 0 || artifacts.decisions.length > 0 || artifacts.plans.length > 0 || artifacts.keyFacts.length > 0;
+          if (hasArtifacts) {
             const title = text.slice(0, 60) || "Chat";
             if (storageMode === "local" && directoryHandle) {
               writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
@@ -526,13 +551,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       }
     }
   }, [input, streaming, messages, conversationId, user, accessToken, authFetch,
-    loadConversations, storageMode, directoryHandle, sandbox, onMessageSent]);
+    loadConversations, storageMode, directoryHandle, sandbox, onMessageSent, signal]);
 
   // ─── Actions ──────────────────────────────────────────────
 
   const stopStreaming = useCallback(() => {
-    if (abortRef.current) abortRef.current.abort();
-  }, []);
+    if (abortRef.current) {
+      signal("chat_abort", "info");
+      abortRef.current.abort();
+    }
+  }, [signal]);
 
   const startNewChat = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();

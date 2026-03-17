@@ -7,6 +7,7 @@ import { FabricProvider } from "../lib/fabric";
 import DevInspector from "../components/DevInspector";
 import QuickCapture from "../components/QuickCapture";
 import InstallPrompt from "../components/InstallPrompt";
+import { SignalCollector } from "../lib/signal";
 import AnnouncementBanner from "../components/AnnouncementBanner";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
@@ -86,6 +87,7 @@ export default function RootLayout({ children }) {
               <InstallPrompt />
               <AnnouncementBanner />
               <DevInspector />
+              <SignalCollector />
             </FabricProvider>
             </SandboxProvider>
           </VaultProvider>

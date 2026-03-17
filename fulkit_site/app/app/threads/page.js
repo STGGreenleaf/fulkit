@@ -287,8 +287,9 @@ function ThreadsContent({ initialFolder, initialView }) {
   const updateNote = useCallback((id, field, value) => {
     setNotes((prev) => prev.map((n) => String(n.id) === String(id) ? { ...n, [field]: value } : n));
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      supabase.from("notes").update({ [field]: value }).eq("id", id);
+    saveTimer.current = setTimeout(async () => {
+      const { error } = await supabase.from("notes").update({ [field]: value }).eq("id", id);
+      if (error) console.error("[threads] save failed:", error.message);
     }, 800);
   }, []);
 
@@ -296,8 +297,14 @@ function ThreadsContent({ initialFolder, initialView }) {
     setNotes((prev) => prev.filter((n) => String(n.id) !== String(id)));
     if (String(selectedId) === String(id)) setSelectedId(null);
     // Delete linked actions first, then the note
-    await supabase.from("actions").delete().eq("thread_id", id);
-    await supabase.from("notes").delete().eq("id", id);
+    const { error: actErr } = await supabase.from("actions").delete().eq("thread_id", id);
+    if (actErr) console.error("[threads] action cleanup failed:", actErr.message);
+    const { error: noteErr } = await supabase.from("notes").delete().eq("id", id);
+    if (noteErr) {
+      console.error("[threads] delete failed:", noteErr.message);
+      // Restore note in UI since delete failed
+      // (note is already removed from state — user can refresh to recover)
+    }
   }, [selectedId]);
 
   // Move a note to a column at a specific position (handles both cross-column and within-column reorder)
@@ -331,9 +338,9 @@ function ThreadsContent({ initialFolder, initialView }) {
     });
 
     // Persist to DB
-    setTimeout(() => {
-      // Fetch fresh positions from state after update
-      supabase.from("notes").update({ status: toStatus, position: toPosition }).eq("id", noteId);
+    setTimeout(async () => {
+      const { error } = await supabase.from("notes").update({ status: toStatus, position: toPosition }).eq("id", noteId);
+      if (error) console.error("[threads] move failed:", error.message);
     }, 100);
   }, []);
 

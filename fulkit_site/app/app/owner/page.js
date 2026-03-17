@@ -27,6 +27,7 @@ import {
   Download,
   DatabaseSearch,
   Code,
+  RadioTower,
   Smartphone,
   Monitor,
   Megaphone,
@@ -57,6 +58,7 @@ const TABS = [
   { id: "playground", label: "Playground", icon: GamepadDirectional },
   { id: "notes", label: "Notes", icon: FileText },
   { id: "developer", label: "Developer", icon: Code },
+  { id: "radio", label: "Radio", icon: RadioTower },
 ];
 
 const VALID_TAB_IDS = TABS.map((t) => t.id);
@@ -127,6 +129,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         {tab === "playground" && <PlaygroundTab />}
         {tab === "notes" && <NotesTab />}
         {tab === "developer" && <DeveloperTab />}
+        {tab === "radio" && <RadioTab />}
       </div>
     </div>
   );
@@ -586,6 +589,266 @@ function DevSwitch({ label, description, on, onToggle }) {
 }
 
 /* ─── Developer Tab ─── */
+
+/* ─── Signal Radio — listening dashboard ─── */
+
+const RADIO_PERIODS = [
+  { label: "1h", value: 1 },
+  { label: "24h", value: 24 },
+  { label: "7d", value: 168 },
+  { label: "30d", value: 720 },
+];
+
+const SEVERITY_LABELS = { error: "Mayday", warning: "Static", info: "Interference" };
+
+function RadioTab() {
+  const { accessToken } = useAuth();
+  const [signals, setSignals] = useState([]);
+  const [counts, setCounts] = useState({ error: 0, warning: 0, info: 0 });
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState(24);
+  const [filter, setFilter] = useState(null); // null = all, "error" | "warning" | "info"
+  const [hasMore, setHasMore] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const refreshRef = useRef(null);
+
+  const fetchSignals = useCallback(async (hrs, sev, cur) => {
+    if (!accessToken) return;
+    const params = new URLSearchParams({ period: String(hrs), limit: "50" });
+    if (sev) params.set("severity", sev);
+    if (cur) params.set("cursor", cur);
+    try {
+      const res = await fetch(`/api/owner/signals?${params}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (cur) {
+        setSignals((prev) => [...prev, ...(data.signals || [])]);
+      } else {
+        setSignals(data.signals || []);
+        setCounts(data.counts || { error: 0, warning: 0, info: 0 });
+      }
+      setHasMore(data.hasMore || false);
+    } catch {}
+    setLoading(false);
+  }, [accessToken]);
+
+  useEffect(() => {
+    setLoading(true);
+    setCursor(null);
+    fetchSignals(period, filter, null);
+  }, [period, filter, fetchSignals]);
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    refreshRef.current = setInterval(() => {
+      fetchSignals(period, filter, null);
+    }, 30000);
+    return () => clearInterval(refreshRef.current);
+  }, [period, filter, fetchSignals]);
+
+  const loadMore = () => {
+    if (!signals.length) return;
+    const last = signals[signals.length - 1].created_at;
+    setCursor(last);
+    fetchSignals(period, filter, last);
+  };
+
+  const total = counts.error + counts.warning + counts.info;
+
+  const severityColor = (sev) => {
+    if (sev === "error") return "var(--color-error, #e53e3e)";
+    if (sev === "warning") return "var(--color-warning, #b7791f)";
+    return "var(--color-text-muted)";
+  };
+
+  const severityBg = (sev) => {
+    if (sev === "error") return "rgba(229, 62, 62, 0.08)";
+    if (sev === "warning") return "rgba(183, 121, 31, 0.08)";
+    return "var(--color-bg-alt)";
+  };
+
+  const formatTime = (iso) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const signalLabel = (event) => event.replace("signal:", "").replace(/_/g, " ");
+
+  if (loading && signals.length === 0) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)" }}>
+        <LoadingMark size={32} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
+        <div style={DASH_LABEL}>Signal Radio</div>
+        <div style={{ display: "flex", gap: 2, background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)", padding: 2 }}>
+          {RADIO_PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              style={{
+                padding: "var(--space-1) var(--space-2-5)",
+                fontSize: "var(--font-size-2xs)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: period === p.value ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                color: period === p.value ? "var(--color-text)" : "var(--color-text-muted)",
+                background: period === p.value ? "var(--color-bg-elevated)" : "transparent",
+                border: "none",
+                borderRadius: "var(--radius-xs)",
+                cursor: "pointer",
+                transition: "all var(--duration-fast) var(--ease-default)",
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPI tiles */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+        {[
+          { key: "error", label: "Mayday", count: counts.error },
+          { key: "warning", label: "Static", count: counts.warning },
+          { key: "info", label: "Interference", count: counts.info },
+        ].map((kpi) => (
+          <button
+            key={kpi.key}
+            onClick={() => setFilter(filter === kpi.key ? null : kpi.key)}
+            style={{
+              ...CARD,
+              cursor: "pointer",
+              textAlign: "center",
+              outline: filter === kpi.key ? `2px solid ${severityColor(kpi.key)}` : "none",
+              outlineOffset: -2,
+            }}
+          >
+            <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+              {kpi.label}
+            </div>
+            <div style={{ fontSize: "var(--font-size-xl, 20px)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-mono)", color: kpi.count > 0 ? severityColor(kpi.key) : "var(--color-text-dim)" }}>
+              {kpi.count}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Filter pills */}
+      <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+        {[
+          { key: null, label: `All (${total})` },
+          { key: "error", label: `Mayday (${counts.error})` },
+          { key: "warning", label: `Static (${counts.warning})` },
+          { key: "info", label: `Interference (${counts.info})` },
+        ].map((pill) => (
+          <button
+            key={pill.key || "all"}
+            onClick={() => setFilter(pill.key)}
+            style={{
+              padding: "var(--space-1) var(--space-2-5)",
+              fontSize: "var(--font-size-2xs)",
+              fontFamily: "var(--font-primary)",
+              fontWeight: filter === pill.key ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+              color: filter === pill.key ? "var(--color-text)" : "var(--color-text-muted)",
+              background: filter === pill.key ? "var(--color-bg-alt)" : "transparent",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-full)",
+              cursor: "pointer",
+              transition: "all var(--duration-fast) var(--ease-default)",
+            }}
+          >
+            {pill.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Signal feed */}
+      {signals.length === 0 ? (
+        <div style={{ ...CARD, textAlign: "center", padding: "var(--space-8)" }}>
+          <RadioTower size={24} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: "var(--space-3)" }} />
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+            {filter ? `No ${SEVERITY_LABELS[filter] || filter} signals in this period` : "All quiet. No signals detected."}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {signals.map((s, i) => {
+            const sev = s.meta?.severity || "info";
+            return (
+              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)" }}>
+                {/* Top row: time + signal name + severity badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                    {formatTime(s.created_at)}
+                  </span>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {signalLabel(s.event)}
+                  </span>
+                  <span style={{
+                    fontSize: 9,
+                    fontWeight: "var(--font-weight-semibold)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-wider)",
+                    padding: "2px 6px",
+                    borderRadius: "var(--radius-sm)",
+                    color: severityColor(sev),
+                    background: severityBg(sev),
+                    flexShrink: 0,
+                  }}>
+                    {SEVERITY_LABELS[sev] || sev}
+                  </span>
+                </div>
+                {/* Bottom row: user + page + detail */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                  <span>{s.user_label}</span>
+                  {s.page && <span>&middot; {s.page}</span>}
+                </div>
+                {/* Detail from meta */}
+                {(s.meta?.error || s.meta?.message || s.meta?.elapsed) && (
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {s.meta.error || s.meta.message || `${s.meta.elapsed}ms`}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Load more */}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              style={{
+                padding: "var(--space-2-5)",
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-muted)",
+                background: "var(--color-bg-alt)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+                textAlign: "center",
+              }}
+            >
+              Load more
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function DeveloperTab() {
   const { accessToken, compactMode, setCompactMode } = useAuth();

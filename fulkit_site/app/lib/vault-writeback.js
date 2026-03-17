@@ -111,7 +111,7 @@ export async function writeBackSupabase(userId, artifacts, conversationTitle, en
   if (!userId) return [];
   const written = [];
 
-  // Write action items to the actions table (already exists in the app)
+  // Write action items to the actions table
   if (artifacts.actionItems.length > 0) {
     for (const item of artifacts.actionItems) {
       try {
@@ -127,6 +127,35 @@ export async function writeBackSupabase(userId, artifacts, conversationTitle, en
       } catch {
         // Skip if insert fails
       }
+    }
+  }
+
+  // Write decisions, plans, and key facts as notes (vault knowledge)
+  const knowledgeItems = [
+    ...artifacts.decisions.map((d) => ({ type: "decision", content: d })),
+    ...artifacts.plans.map((p) => ({ type: "plan", content: p })),
+    ...artifacts.keyFacts.map((f) => ({ type: "fact", content: f })),
+  ];
+
+  if (knowledgeItems.length > 0) {
+    const date = new Date().toISOString().slice(0, 10);
+    const title = `${conversationTitle || "Chat"} — ${date}`;
+    const body = knowledgeItems
+      .map((k) => `**${k.type}:** ${k.content}`)
+      .join("\n\n");
+
+    try {
+      await supabase.from("notes").insert({
+        user_id: userId,
+        title,
+        content: body,
+        source: "chat",
+        folder: triageFolder(body),
+        context_mode: "available",
+      });
+      written.push({ type: "knowledge", count: knowledgeItems.length });
+    } catch {
+      // Skip if insert fails
     }
   }
 

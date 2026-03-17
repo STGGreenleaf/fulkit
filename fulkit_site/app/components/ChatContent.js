@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
 import { useAuth } from "../lib/auth";
@@ -409,6 +409,21 @@ export default function ChatContent({ isPopout = false }) {
                 >
                   <FileText size={11} strokeWidth={1.8} />
                   {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
+                </span>
+              )}
+              {ctx.contextDropped && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    fontSize: "var(--font-size-2xs)",
+                    color: "var(--color-warning, #b7791f)",
+                    padding: "var(--space-1) var(--space-2)",
+                  }}
+                >
+                  <AlertTriangle size={11} strokeWidth={1.8} />
+                  Context unavailable — response may lack vault knowledge
                 </span>
               )}
               {ctx.recalledNotes.length > 0 && !compactMode && (

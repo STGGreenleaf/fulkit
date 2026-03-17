@@ -12,6 +12,7 @@ import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding } from "../embed/route";
+import { emitServerSignal } from "../../../lib/signal-server";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -2009,6 +2010,7 @@ export async function POST(request) {
       const limit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
+        emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: profile?.seat_type });
         return Response.json({
           error: `You burned through all ${limit} messages this month. Drop in your own API key to keep going — unlimited, no cap.`,
         }, { status: 429 });
@@ -2560,6 +2562,13 @@ Never skip the preview step. The user must see and approve changes before they g
               }
             }
 
+            // Signal any tool errors
+            for (const tr of toolResults) {
+              if (tr.is_error) {
+                emitServerSignal(userId, "tool_error", "error", { tool: tr.tool_use_id, error: tr.content?.slice(0, 200) });
+              }
+            }
+
             // Feed results back for next round
             loopMessages = [
               ...loopMessages,
@@ -2603,6 +2612,7 @@ Never skip the preview step. The user must see and approve changes before they g
           try { controller.close(); } catch {}
         } catch (err) {
           console.error("[chat] STREAM FATAL:", err.message, err.stack?.split("\n")[1]);
+          emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message });
           try {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong. Try again." })}\n\n`)
