@@ -3094,19 +3094,95 @@ function ReferralsTab() {
         )}
       </div>
 
-      {/* Cheatsheet CTA */}
-      <Card style={{ marginBottom: "var(--space-4)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none" }}>
-        <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", marginBottom: "var(--space-3)" }}>Get F{"\u00FC"}lkit</div>
-        <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "var(--space-1) var(--space-4)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-3)" }}>
+      {/* Hero CTA — Dieter Rams poster */}
+      <Card style={{
+        marginBottom: "var(--space-4)",
+        background: "var(--color-bg-inverse)",
+        color: "var(--color-text-inverse)",
+        border: "none",
+        padding: "var(--space-8) var(--space-6)",
+        overflow: "hidden",
+      }}>
+        {/* Eyebrow */}
+        <div style={{
+          fontSize: "var(--font-size-2xs)",
+          fontWeight: "var(--font-weight-medium)",
+          textTransform: "uppercase",
+          letterSpacing: "3px",
+          opacity: 0.4,
+          marginBottom: "var(--space-3)",
+        }}>
+          Refer {"\u00B7"} Earn {"\u00B7"} Go free
+        </div>
+
+        {/* Headline */}
+        <div style={{
+          fontSize: "var(--font-size-4xl)",
+          fontWeight: "var(--font-weight-black)",
+          letterSpacing: "var(--letter-spacing-tighter)",
+          lineHeight: "var(--line-height-none)",
+          marginBottom: "var(--space-2)",
+        }}>
+          Get F{"\u00FC"}lkit.
+        </div>
+
+        {/* Subtitle */}
+        <div style={{
+          fontSize: "var(--font-size-sm)",
+          opacity: 0.5,
+          lineHeight: "var(--line-height-normal)",
+          marginBottom: "var(--space-6)",
+          maxWidth: 280,
+        }}>
+          Share the link. They pay, you earn {"\u2014"} forever.
+        </div>
+
+        {/* Bauhaus rule */}
+        <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-5)" }} />
+
+        {/* 4-column progression */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "var(--space-2)",
+          marginBottom: "var(--space-5)",
+        }}>
           {cheatsheet.map((row, i) => (
-            <span key={i} style={{ display: "contents" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{row.refs}</span>
-              <span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{typeof row.ful === "number" ? row.ful.toLocaleString() : row.ful} F{"\u00FC"}l/mo</span>
-              <span style={{ opacity: 0.7 }}>{row.label}</span>
-            </span>
+            <div key={i}>
+              <div style={{
+                fontSize: "var(--font-size-2xl)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: "var(--font-weight-black)",
+                lineHeight: "var(--line-height-none)",
+                marginBottom: "var(--space-1)",
+              }}>
+                {row.refs}
+              </div>
+              <div style={{
+                fontSize: "var(--font-size-2xs)",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                opacity: 0.45,
+                lineHeight: "var(--line-height-tight)",
+              }}>
+                {row.label}
+              </div>
+            </div>
           ))}
         </div>
-        <div style={{ fontSize: "var(--font-size-xs)", opacity: 0.6 }}>Every friend who joins and pays earns you F{"\u00FC"}l toward your subscription {"\u2014"} or cash.</div>
+
+        {/* Bauhaus rule */}
+        <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-3)" }} />
+
+        {/* Legend */}
+        <div style={{
+          fontSize: "var(--font-size-2xs)",
+          fontFamily: "var(--font-mono)",
+          opacity: 0.35,
+          letterSpacing: "0.3px",
+        }}>
+          1 active referral = 100 F{"\u00FC"}l = $1/mo
+        </div>
       </Card>
 
       {/* KPI strip */}
