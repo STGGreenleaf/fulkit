@@ -3096,10 +3096,10 @@ function ReferralsTab() {
 
       {/* Hero CTA — Dieter Rams poster */}
       <Card style={{
-        marginBottom: "var(--space-4)",
-        background: "var(--color-bg-inverse)",
-        color: "var(--color-text-inverse)",
-        border: "none",
+        marginBottom: "var(--space-3)",
+        background: "#FFFFFF",
+        color: "var(--color-text)",
+        border: "1px solid var(--color-border-light)",
         padding: "var(--space-8) var(--space-6)",
         overflow: "hidden",
       }}>
@@ -3109,7 +3109,7 @@ function ReferralsTab() {
           fontWeight: "var(--font-weight-medium)",
           textTransform: "uppercase",
           letterSpacing: "3px",
-          opacity: 0.4,
+          color: "var(--color-text-muted)",
           marginBottom: "var(--space-3)",
         }}>
           Refer {"\u00B7"} Earn {"\u00B7"} Go free
@@ -3129,7 +3129,7 @@ function ReferralsTab() {
         {/* Subtitle */}
         <div style={{
           fontSize: "var(--font-size-sm)",
-          opacity: 0.5,
+          color: "var(--color-text-secondary)",
           lineHeight: "var(--line-height-normal)",
           marginBottom: "var(--space-6)",
           maxWidth: 280,
@@ -3138,7 +3138,7 @@ function ReferralsTab() {
         </div>
 
         {/* Bauhaus rule */}
-        <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-5)" }} />
+        <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-5)" }} />
 
         {/* 4-column progression */}
         <div style={{
@@ -3162,7 +3162,7 @@ function ReferralsTab() {
                 fontSize: "var(--font-size-2xs)",
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
-                opacity: 0.45,
+                color: "var(--color-text-muted)",
                 lineHeight: "var(--line-height-tight)",
               }}>
                 {row.label}
@@ -3172,18 +3172,57 @@ function ReferralsTab() {
         </div>
 
         {/* Bauhaus rule */}
-        <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-3)" }} />
+        <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-3)" }} />
 
         {/* Legend */}
         <div style={{
           fontSize: "var(--font-size-2xs)",
           fontFamily: "var(--font-mono)",
-          opacity: 0.35,
+          color: "var(--color-text-dim)",
           letterSpacing: "0.3px",
         }}>
           1 active referral = 100 F{"\u00FC"}l = $1/mo
         </div>
       </Card>
+
+      {/* Examples */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "var(--space-3)",
+        marginBottom: "var(--space-4)",
+      }}>
+        {[
+          { scenario: "3 friends join", result: "$3/mo off", detail: "Standard drops to $6" },
+          { scenario: "9 friends join", result: "$0/mo", detail: "Standard is free" },
+          { scenario: "15 friends join", result: "$0/mo", detail: "Pro is free" },
+          { scenario: "30 friends join", result: "+$15/mo", detail: "Free + cash in your pocket" },
+        ].map((ex, i) => (
+          <Card key={i} style={{ padding: "var(--space-3)" }}>
+            <div style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              marginBottom: "var(--space-1)",
+            }}>
+              {ex.scenario}
+            </div>
+            <div style={{
+              fontSize: "var(--font-size-lg)",
+              fontFamily: "var(--font-mono)",
+              fontWeight: "var(--font-weight-black)",
+              marginBottom: "var(--space-0.5)",
+            }}>
+              {ex.result}
+            </div>
+            <div style={{
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+            }}>
+              {ex.detail}
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* KPI strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
