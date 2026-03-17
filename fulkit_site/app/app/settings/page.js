@@ -2933,7 +2933,11 @@ function ReferralsTab() {
   const [stats, setStats] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [ownerView, setOwnerView] = useState(false);
+  const [ownerView, setOwnerViewRaw] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("fulkit-referrals-owner") === "true";
+    return false;
+  });
+  const setOwnerView = (val) => { setOwnerViewRaw(val); localStorage.setItem("fulkit-referrals-owner", String(val)); };
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -3555,7 +3559,11 @@ function ReferralsTab() {
 function BillingTab() {
   const { user, profile, isOwner, accessToken } = useAuth();
   const [loading, setLoading] = useState(null);
-  const [ownerView, setOwnerView] = useState(false);
+  const [ownerView, setOwnerViewRaw] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("fulkit-billing-owner") === "true";
+    return false;
+  });
+  const setOwnerView = (val) => { setOwnerViewRaw(val); localStorage.setItem("fulkit-billing-owner", String(val)); };
   const [adminStats, setAdminStats] = useState(null);
   const [refStats, setRefStats] = useState(null);
 
