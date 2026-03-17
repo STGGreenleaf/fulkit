@@ -1902,8 +1902,12 @@ async function executeNoteCreate(input, userId, conversationId) {
   if (process.env.OPENAI_API_KEY) {
     const embText = `${title}\n\n${content}`.trim();
     getEmbedding(embText).then(emb => {
-      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch(() => {});
-    }).catch(() => {});
+      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch((err) => {
+        emitServerSignal(userId, "note_embed_failed", "warning", { phase: "update", noteId: data.id, error: err?.message });
+      });
+    }).catch((err) => {
+      emitServerSignal(userId, "note_embed_failed", "warning", { phase: "embedding", noteId: data.id, error: err?.message });
+    });
   }
 
   return { saved: true, id: data.id, title: data.title, folder: data.folder };
@@ -1930,8 +1934,12 @@ async function executeNoteUpdate(input, userId) {
   if (process.env.OPENAI_API_KEY) {
     const embText = `${data.title || ""}\n\n${content}`.trim();
     getEmbedding(embText).then(emb => {
-      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch(() => {});
-    }).catch(() => {});
+      admin.from("notes").update({ embedding: JSON.stringify(emb) }).eq("id", data.id).then(() => {}).catch((err) => {
+        emitServerSignal(userId, "note_embed_failed", "warning", { phase: "update", noteId: data.id, error: err?.message });
+      });
+    }).catch((err) => {
+      emitServerSignal(userId, "note_embed_failed", "warning", { phase: "embedding", noteId: data.id, error: err?.message });
+    });
   }
 
   return { updated: true, id: data.id, title: data.title, folder: data.folder };
@@ -2010,7 +2018,7 @@ export async function POST(request) {
       const limit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
-        emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: profile?.seat_type });
+        emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: profile?.seat_type, model: config.model, hasByok: config.isByok });
         return Response.json({
           error: `You burned through all ${limit} messages this month. Drop in your own API key to keep going — unlimited, no cap.`,
         }, { status: 429 });
@@ -2158,15 +2166,15 @@ export async function POST(request) {
     let toastToken = null;
     let trelloToken = null;
     if (userId) {
-      const safeGet = (fn) => fn(userId).catch(() => null);
+      const safeGet = (fn, provider) => fn(userId).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; });
       [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken] = await Promise.all([
-        safeGet(getNumbrlyToken),
-        safeGet(getTrueGaugeToken),
-        safeGet(getSquareToken),
-        safeGet(getShopifyToken),
-        safeGet(getStripeToken),
-        safeGet(getToastToken),
-        safeGet(getTrelloToken),
+        safeGet(getNumbrlyToken, "numbrly"),
+        safeGet(getTrueGaugeToken, "truegauge"),
+        safeGet(getSquareToken, "square"),
+        safeGet(getShopifyToken, "shopify"),
+        safeGet(getStripeToken, "stripe"),
+        safeGet(getToastToken, "toast"),
+        safeGet(getTrelloToken, "trello"),
       ]);
     }
 
@@ -2283,7 +2291,7 @@ Never skip the preview step. The user must see and approve changes before they g
     if (userId && !config.isByok) {
       getSupabaseAdmin()
         .rpc("increment_message_count", { user_id_arg: userId })
-        .then(() => {}).catch(() => {});
+        .then(() => {}).catch((err) => { emitServerSignal(userId, "message_count_failed", "error", { error: err?.message, seat: profile?.seat_type, used: profile?.messages_this_month }); });
     }
 
     // Track chat_sent event (fire-and-forget)
@@ -2565,7 +2573,7 @@ Never skip the preview step. The user must see and approve changes before they g
             // Signal any tool errors
             for (const tr of toolResults) {
               if (tr.is_error) {
-                emitServerSignal(userId, "tool_error", "error", { tool: tr.tool_use_id, error: tr.content?.slice(0, 200) });
+                emitServerSignal(userId, "tool_error", "error", { tool: tr.tool_use_id, error: tr.content?.slice(0, 200), toolRound: round, model: config.model, conversationId: rawConvId });
               }
             }
 
@@ -2612,7 +2620,7 @@ Never skip the preview step. The user must see and approve changes before they g
           try { controller.close(); } catch {}
         } catch (err) {
           console.error("[chat] STREAM FATAL:", err.message, err.stack?.split("\n")[1]);
-          emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message });
+          emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message, stack: err.stack?.split("\n").slice(0, 3).join(" | "), model: config.model, messageCount: messages.length, contextLength: context?.length, hasByok: config.isByok, seatType: profile?.seat_type, conversationId: rawConvId });
           try {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong. Try again." })}\n\n`)

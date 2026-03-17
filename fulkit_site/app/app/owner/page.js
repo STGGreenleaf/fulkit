@@ -14,6 +14,7 @@ import {
   Trash2,
   GripVertical,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Copy,
   Check as CheckIcon,
@@ -65,12 +66,40 @@ const VALID_TAB_IDS = TABS.map((t) => t.id);
 
 /* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
 export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
-  const { compactMode } = useAuth();
+  const { compactMode, accessToken } = useAuth();
   const [tab, setTab] = useState(initialTab && VALID_TAB_IDS.includes(initialTab) ? initialTab : "dashboard");
+  const [maydayAlert, setMaydayAlert] = useState(false);
 
   useEffect(() => {
     if (initialTab && VALID_TAB_IDS.includes(initialTab)) setTab(initialTab);
   }, [initialTab]);
+
+  // MAYDAY alert — lightweight check for unseen error signals
+  useEffect(() => {
+    if (!accessToken) return;
+    const checkMayday = async () => {
+      const lastSeen = localStorage.getItem("fulkit-radio-last-seen") || "1970-01-01T00:00:00Z";
+      try {
+        const res = await fetch("/api/owner/signals?period=24&severity=error&limit=1", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setMaydayAlert(data.signals?.length > 0 && data.signals[0].created_at > lastSeen);
+      } catch {}
+    };
+    checkMayday();
+    const interval = setInterval(checkMayday, 60000);
+    return () => clearInterval(interval);
+  }, [accessToken]);
+
+  // Clear alert when visiting Radio
+  useEffect(() => {
+    if (tab === "radio") {
+      localStorage.setItem("fulkit-radio-last-seen", new Date().toISOString());
+      setMaydayAlert(false);
+    }
+  }, [tab]);
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
@@ -110,6 +139,15 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
                 }}
               >
                 <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                {t.id === "radio" && maydayAlert && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: "var(--color-error, #e53e3e)",
+                    flexShrink: 0,
+                    marginLeft: -4,
+                    alignSelf: "flex-start",
+                  }} />
+                )}
                 {!compactMode && t.label}
               </button>
             </Tooltip>
@@ -601,6 +639,23 @@ const RADIO_PERIODS = [
 
 const SEVERITY_LABELS = { error: "Mayday", warning: "Static", info: "Interference" };
 
+function groupSignals(signals) {
+  const map = new Map();
+  for (const s of signals) {
+    const key = s.event;
+    if (!map.has(key)) {
+      map.set(key, { event: key, latest: s, all: [s] });
+    } else {
+      const g = map.get(key);
+      g.all.push(s);
+      if (s.created_at > g.latest.created_at) g.latest = s;
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    b.latest.created_at.localeCompare(a.latest.created_at)
+  );
+}
+
 function RadioTab() {
   const { accessToken } = useAuth();
   const [signals, setSignals] = useState([]);
@@ -611,6 +666,8 @@ function RadioTab() {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [exported, setExported] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const refreshRef = useRef(null);
 
   const fetchSignals = useCallback(async (hrs, sev, cur) => {
@@ -713,6 +770,65 @@ function RadioTab() {
     }).catch(() => {});
   };
 
+  const exportSignals = () => {
+    if (!signals.length) return;
+    const payload = {
+      exported: new Date().toISOString(),
+      period: `${period}h`,
+      filter: filter || "all",
+      count: signals.length,
+      signals: signals.map((s) => ({
+        event: s.event,
+        severity: s.meta?.severity || "info",
+        time: s.created_at,
+        user: `${s.user_label} (${s.user_id})`,
+        page: s.page || null,
+        meta: Object.fromEntries(
+          Object.entries(s.meta || {}).filter(([k]) => k !== "severity")
+        ),
+      })),
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fulkit-signals-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    navigator.clipboard.writeText(json).then(() => {
+      setExported(true);
+      setTimeout(() => setExported(false), 1500);
+    }).catch(() => {});
+  };
+
+  const copyGroup = (group) => {
+    const sev = group.latest.meta?.severity || "info";
+    const label = SEVERITY_LABELS[sev]?.toUpperCase() || sev.toUpperCase();
+    const name = signalLabel(group.event);
+    const uniqueUsers = new Set(group.all.map((s) => s.user_id)).size;
+    const header = [
+      `[${label}] ${name} (×${group.all.length})`,
+      `Period: ${period}h | Users affected: ${uniqueUsers}`,
+      "---",
+    ].join("\n");
+    const instances = group.all.map((s, i) => {
+      const time = new Date(s.created_at).toLocaleString();
+      const metaLines = Object.entries(s.meta || {})
+        .filter(([k]) => k !== "severity")
+        .map(([k, v]) => `    ${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+        .join("\n");
+      return [`Instance ${i + 1}:`, `  Time: ${time}`, `  User: ${s.user_label} (${s.user_id})`, `  Page: ${s.page || "unknown"}`, metaLines ? `  Meta:\n${metaLines}` : null].filter(Boolean).join("\n");
+    }).join("\n---\n");
+    const text = `${header}\n${instances}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(`group-${group.event}`);
+      setTimeout(() => setCopiedId(null), 1500);
+    }).catch(() => {});
+  };
+
+  const grouped = groupSignals(signals);
+
   if (loading && signals.length === 0) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)" }}>
@@ -726,6 +842,29 @@ function RadioTab() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
         <div style={DASH_LABEL}>Signal Radio</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          {signals.length > 0 && (
+            <button
+              onClick={exportSignals}
+              title="Export filtered signals as JSON (also copies to clipboard)"
+              style={{
+                display: "flex", alignItems: "center", gap: "var(--space-1)",
+                padding: "var(--space-1) var(--space-2-5)",
+                fontSize: "var(--font-size-2xs)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: "var(--font-weight-normal)",
+                color: exported ? "var(--color-text)" : "var(--color-text-muted)",
+                background: "var(--color-bg-alt)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                transition: "all var(--duration-fast) var(--ease-default)",
+              }}
+            >
+              {exported ? <CheckIcon size={13} strokeWidth={2} /> : <Download size={13} strokeWidth={1.5} />}
+              {exported ? "Copied" : "Export"}
+            </button>
+          )}
         <div style={{ display: "flex", gap: 2, background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)", padding: 2 }}>
           {RADIO_PERIODS.map((p) => (
             <button
@@ -747,6 +886,7 @@ function RadioTab() {
               {p.label}
             </button>
           ))}
+        </div>
         </div>
       </div>
 
@@ -807,7 +947,7 @@ function RadioTab() {
         ))}
       </div>
 
-      {/* Signal feed */}
+      {/* Signal feed — grouped by event */}
       {signals.length === 0 ? (
         <div style={{ ...CARD, textAlign: "center", padding: "var(--space-8)" }}>
           <RadioTower size={24} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: "var(--space-3)" }} />
@@ -817,57 +957,145 @@ function RadioTab() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {signals.map((s, i) => {
+          {grouped.map((group) => {
+            const s = group.latest;
             const sev = s.meta?.severity || "info";
+            const isGroup = group.all.length > 1;
+            const isExpanded = expandedGroups[group.event];
+            const uniqueUsers = isGroup ? new Set(group.all.map((x) => x.user_id)).size : 0;
+            const oldest = isGroup ? group.all[group.all.length - 1] : null;
             return (
-              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)" }}>
-                {/* Title row: copy + signal name + severity badge */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
-                  <button
-                    onClick={() => copySignal(s)}
-                    title="Copy signal"
-                    style={{
-                      background: "none", border: "none", cursor: "pointer", padding: 0,
-                      display: "flex", alignItems: "center", flexShrink: 0,
-                      color: copiedId === `${s.created_at}-${s.user_id}` ? "var(--color-text-muted)" : "var(--color-text-dim)",
-                      transition: "color var(--duration-fast) var(--ease-default)",
-                    }}
-                  >
-                    {copiedId === `${s.created_at}-${s.user_id}` ? <CheckIcon size={13} strokeWidth={2} /> : <Copy size={13} strokeWidth={1.5} />}
-                  </button>
-                  <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {signalLabel(s.event)}
-                  </span>
-                  <span style={{
-                    fontSize: 9,
-                    fontWeight: "var(--font-weight-semibold)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                    padding: "2px 6px",
-                    borderRadius: "var(--radius-sm)",
-                    color: severityColor(sev),
-                    background: severityBg(sev),
-                    flexShrink: 0,
-                  }}>
-                    {SEVERITY_LABELS[sev] || sev}
-                  </span>
+              <div key={group.event}>
+                <div style={{ ...CARD, padding: "var(--space-3)" }}>
+                  {/* Title row: copy + signal name + count badge + severity badge */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                    <button
+                      onClick={() => isGroup ? copyGroup(group) : copySignal(s)}
+                      title={isGroup ? `Copy all ${group.all.length} signals` : "Copy signal"}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        display: "flex", alignItems: "center", flexShrink: 0,
+                        color: copiedId === (isGroup ? `group-${group.event}` : `${s.created_at}-${s.user_id}`) ? "var(--color-text-muted)" : "var(--color-text-dim)",
+                        transition: "color var(--duration-fast) var(--ease-default)",
+                      }}
+                    >
+                      {copiedId === (isGroup ? `group-${group.event}` : `${s.created_at}-${s.user_id}`) ? <CheckIcon size={13} strokeWidth={2} /> : <Copy size={13} strokeWidth={1.5} />}
+                    </button>
+                    <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {signalLabel(s.event)}
+                    </span>
+                    {isGroup && (
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-mono)",
+                        padding: "2px 5px",
+                        borderRadius: "var(--radius-sm)",
+                        color: "var(--color-text-muted)",
+                        background: "var(--color-bg-alt)",
+                        flexShrink: 0,
+                      }}>
+                        &times;{group.all.length}
+                      </span>
+                    )}
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: "var(--font-weight-semibold)",
+                      textTransform: "uppercase",
+                      letterSpacing: "var(--letter-spacing-wider)",
+                      padding: "2px 6px",
+                      borderRadius: "var(--radius-sm)",
+                      color: severityColor(sev),
+                      background: severityBg(sev),
+                      flexShrink: 0,
+                    }}>
+                      {SEVERITY_LABELS[sev] || sev}
+                    </span>
+                  </div>
+                  {/* Info row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                    {isGroup ? (
+                      <>
+                        <span style={{ fontFamily: "var(--font-mono)" }}>{formatTime(oldest.created_at)} – {formatTime(s.created_at)}</span>
+                        <span>&middot;</span>
+                        <span>{uniqueUsers} {uniqueUsers === 1 ? "user" : "users"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontFamily: "var(--font-mono)" }}>{formatTime(s.created_at)}</span>
+                        <span>&middot;</span>
+                        <span>{s.user_label}</span>
+                        {s.page && <><span>&middot;</span><span>{s.page}</span></>}
+                      </>
+                    )}
+                  </div>
+                  {/* Meta — show latest signal's meta */}
+                  {s.meta && Object.keys(s.meta).filter((k) => k !== "severity").length > 0 && (
+                    <div style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginTop: "var(--space-1)", display: "flex", flexDirection: "column", gap: 1 }}>
+                      {Object.entries(s.meta).filter(([k]) => k !== "severity").map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", gap: "var(--space-2)" }}>
+                          <span style={{ color: "var(--color-text-dim)", flexShrink: 0 }}>{k}:</span>
+                          <span style={{ wordBreak: "break-all" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Expand/collapse toggle for groups */}
+                  {isGroup && (
+                    <button
+                      onClick={() => setExpandedGroups((prev) => ({ ...prev, [group.event]: !prev[group.event] }))}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-1)",
+                        marginTop: "var(--space-2)", padding: 0,
+                        background: "none", border: "none", cursor: "pointer",
+                        fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {isExpanded ? <ChevronUp size={12} strokeWidth={1.5} /> : <ChevronDown size={12} strokeWidth={1.5} />}
+                      {isExpanded ? "Collapse" : `Show all ${group.all.length} signals`}
+                    </button>
+                  )}
                 </div>
-                {/* Info row: time + user + page */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
-                  <span style={{ fontFamily: "var(--font-mono)" }}>{formatTime(s.created_at)}</span>
-                  <span>&middot;</span>
-                  <span>{s.user_label}</span>
-                  {s.page && <><span>&middot;</span><span>{s.page}</span></>}
-                </div>
-                {/* Full meta dump — every key visible */}
-                {s.meta && Object.keys(s.meta).filter((k) => k !== "severity").length > 0 && (
-                  <div style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginTop: "var(--space-1)", display: "flex", flexDirection: "column", gap: 1 }}>
-                    {Object.entries(s.meta).filter(([k]) => k !== "severity").map(([k, v]) => (
-                      <div key={k} style={{ display: "flex", gap: "var(--space-2)" }}>
-                        <span style={{ color: "var(--color-text-dim)", flexShrink: 0 }}>{k}:</span>
-                        <span style={{ wordBreak: "break-all" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
-                      </div>
-                    ))}
+                {/* Expanded sub-cards */}
+                {isGroup && isExpanded && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 1, marginLeft: "var(--space-4)", marginTop: 2, borderLeft: `2px solid ${severityColor(sev)}20`, paddingLeft: "var(--space-3)" }}>
+                    {group.all.map((sub, j) => {
+                      const subSev = sub.meta?.severity || "info";
+                      return (
+                        <div key={`${sub.created_at}-${j}`} style={{ padding: "var(--space-2)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: 2 }}>
+                            <button
+                              onClick={() => copySignal(sub)}
+                              title="Copy signal"
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 0,
+                                display: "flex", alignItems: "center", flexShrink: 0,
+                                color: copiedId === `${sub.created_at}-${sub.user_id}` ? "var(--color-text-muted)" : "var(--color-text-dim)",
+                              }}
+                            >
+                              {copiedId === `${sub.created_at}-${sub.user_id}` ? <CheckIcon size={11} strokeWidth={2} /> : <Copy size={11} strokeWidth={1.5} />}
+                            </button>
+                            <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                              {formatTime(sub.created_at)}
+                            </span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>&middot;</span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{sub.user_label}</span>
+                            {sub.page && <><span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>&middot;</span><span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>{sub.page}</span></>}
+                          </div>
+                          {sub.meta && Object.keys(sub.meta).filter((k) => k !== "severity").length > 0 && (
+                            <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", display: "flex", flexDirection: "column", gap: 1 }}>
+                              {Object.entries(sub.meta).filter(([k]) => k !== "severity").map(([k, v]) => (
+                                <div key={k} style={{ display: "flex", gap: "var(--space-2)" }}>
+                                  <span style={{ flexShrink: 0 }}>{k}:</span>
+                                  <span style={{ wordBreak: "break-all" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

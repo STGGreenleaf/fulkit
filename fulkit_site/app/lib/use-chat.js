@@ -197,13 +197,13 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     console.log("[sendMessage] entry", { text: text?.slice(0, 30), isRetry, streamingRef: streamingRef.current, hasAuthFetch: !!authFetch });
     if (!text || streamingRef.current) {
       console.warn("[sendMessage] blocked —", !text ? "empty text" : "already streaming");
-      if (text && streamingRef.current) signal("double_send", "info");
+      if (text && streamingRef.current) signal("double_send", "info", { textLength: text.length });
       return;
     }
 
     // Rapid retry detection
     if (isRetry && Date.now() - lastSendTimeRef.current < 5000) {
-      signal("rapid_retry", "info", { elapsed: Date.now() - lastSendTimeRef.current });
+      signal("rapid_retry", "info", { elapsed: Date.now() - lastSendTimeRef.current, conversationId, messageCount: messages.length });
     }
     lastSendTimeRef.current = Date.now();
 
@@ -269,7 +269,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
               );
             }
           })
-          .catch(() => {});
+          .catch((err) => { signal("message_save_failed", "error", { role: "user", conversationId: convId, error: err?.message }); });
       }
 
       // Add empty assistant placeholder with timestamp for safe ID assignment
@@ -292,7 +292,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         console.log("[sendMessage] context assembled in", Date.now() - ctxStart, "ms —", context.length, "items");
       } catch (err) {
         console.warn("[sendMessage] context assembly failed/timed out:", err.message);
-        signal("context_timeout", "warning", { error: err.message });
+        signal("context_timeout", "warning", { error: err.message, conversationId, messageCount: apiMessages.length });
       }
       if (annotatedMessages) apiMessages = annotatedMessages;
 
@@ -341,9 +341,9 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         const errMsg = err.error || "Something went wrong.";
         console.error("[sendMessage] API error:", res.status, errMsg);
         if (res.status === 429) {
-          signal("rate_limit", "warning");
+          signal("rate_limit", "warning", { conversationId });
         } else {
-          signal("chat_api_error", "error", { status: res.status, error: errMsg.slice(0, 200) });
+          signal("chat_api_error", "error", { status: res.status, error: errMsg.slice(0, 200), conversationId, messageCount: msgCount, hasContext: context.length > 0, contextItems: context.length, isRetry });
         }
         // Don't mark rate-limit messages as retryable
         const isRetryable = res.status !== 429 && !errMsg.includes("used all");
@@ -376,7 +376,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
           firstChunkReceived = true;
           const chunkLatency = Date.now() - fetchStart;
           console.log("[sendMessage] first chunk received —", chunkLatency, "ms after fetch");
-          if (chunkLatency > 5000) signal("slow_stream", "warning", { latency: chunkLatency });
+          if (chunkLatency > 5000) signal("slow_stream", "warning", { latency: chunkLatency, conversationId, messageCount: msgCount, contextItems: context.length });
           setStreamPhase("streaming");
         }
         resetWatchdog();
@@ -449,16 +449,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       if (err.name === "AbortError" && !firstChunkReceived) {
         fullResponse = "Took too long to respond.";
         isFailed = true;
-        signal("chat_timeout", "warning", { phase: "waiting", elapsed: Date.now() - fetchStart });
+        signal("chat_timeout", "warning", { phase: "waiting", elapsed: Date.now() - fetchStart, conversationId, messageCount: msgCount, firstChunkReceived: false });
       } else if (err.name === "AbortError" && firstChunkReceived) {
         // Mid-stream inactivity timeout — show what we have + error
         fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent.)*";
         isFailed = true;
-        signal("chat_timeout", "warning", { phase: "streaming", elapsed: Date.now() - fetchStart });
+        signal("chat_timeout", "warning", { phase: "streaming", elapsed: Date.now() - fetchStart, conversationId, messageCount: msgCount, firstChunkReceived: true, responseLength: fullResponse?.length });
       } else if (err.name !== "AbortError") {
         fullResponse = "Connection error.";
         isFailed = true;
-        signal("chat_api_error", "error", { error: err.message });
+        signal("chat_api_error", "error", { error: err.message, errorType: err.name, conversationId, messageCount: msgCount });
       }
 
       if (fullResponse) {
@@ -505,7 +505,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
           }
           if (mountedRef.current) loadConversations();
         })
-        .catch(() => {});
+        .catch((err) => { signal("message_save_failed", "error", { role: "assistant", conversationId: convId, responseLength: fullResponse?.length, error: err?.message }); });
 
       // Extract topics and save to conversation (fire-and-forget)
       try {
@@ -517,7 +517,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
             .update({ topics })
             .eq("id", convId)
             .then(() => {})
-            .catch(() => {});
+            .catch((err) => { signal("topic_extract_failed", "info", { conversationId: convId, error: err?.message }); });
         }
       } catch {}
 
@@ -528,9 +528,9 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
           if (hasArtifacts) {
             const title = text.slice(0, 60) || "Chat";
             if (storageMode === "local" && directoryHandle) {
-              writeBackLocal(directoryHandle, artifacts, title).catch(() => {});
+              writeBackLocal(directoryHandle, artifacts, title).catch((err) => { signal("writeback_failed", "warning", { storageMode: "local", error: err?.message, conversationId: convId }); });
             } else if (user) {
-              writeBackSupabase(user.id, artifacts, title, null, convId).catch(() => {});
+              writeBackSupabase(user.id, artifacts, title, null, convId).catch((err) => { signal("writeback_failed", "warning", { storageMode: "supabase", error: err?.message, conversationId: convId }); });
             }
           }
         } catch {}
@@ -547,7 +547,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
       // Refresh profile so client-side Fül count stays current
       if (onMessageSent) {
-        try { onMessageSent(); } catch {}
+        try { onMessageSent(); } catch (err) { signal("profile_refresh_failed", "info", { error: err?.message }); }
       }
     }
   }, [input, streaming, messages, conversationId, user, accessToken, authFetch,
@@ -557,10 +557,10 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
   const stopStreaming = useCallback(() => {
     if (abortRef.current) {
-      signal("chat_abort", "info");
+      signal("chat_abort", "info", { conversationId, streamPhase });
       abortRef.current.abort();
     }
-  }, [signal]);
+  }, [signal, conversationId, streamPhase]);
 
   const startNewChat = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();

@@ -7,9 +7,24 @@ import { supabase } from "./supabase";
 // Module-level ref so emitSignal() works outside React
 let _userId = null;
 
+// Browser fingerprint — auto-appended to every client-side signal
+function getClientContext() {
+  if (typeof window === "undefined") return {};
+  return {
+    url: window.location.pathname + window.location.search,
+    userAgent: navigator.userAgent,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    connection: navigator.connection?.effectiveType || null,
+    downlink: navigator.connection?.downlink || null,
+    visibility: document.visibilityState,
+    memory: performance.memory?.usedJSHeapSize ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+  };
+}
+
 /**
  * useSignal() — fire-and-forget signal emission for error/frustration tracking.
  * Inserts into `user_events` with `signal:` prefix. Never blocks UI.
+ * Auto-appends browser context to every signal.
  */
 export function useSignal() {
   const { user } = useAuth();
@@ -29,7 +44,7 @@ export function useSignal() {
           user_id: uid,
           event: `signal:${signal}`,
           page: typeof window !== "undefined" ? window.location.pathname : null,
-          meta: { severity, ...detail },
+          meta: { severity, ...detail, _client: getClientContext() },
         })
         .then(() => {})
         .catch(() => {});
@@ -55,7 +70,7 @@ export function emitSignal(signal, severity = "info", detail = {}) {
       user_id: _userId,
       event: `signal:${signal}`,
       page: typeof window !== "undefined" ? window.location.pathname : null,
-      meta: { severity, ...detail },
+      meta: { severity, ...detail, _client: getClientContext() },
     })
     .then(() => {})
     .catch(() => {});
@@ -87,7 +102,8 @@ export function SignalCollector() {
     const onError = (event) => {
       emitSignal("js_error", "error", {
         message: event.message || "Unknown error",
-        source: event.filename ? `${event.filename}:${event.lineno}` : undefined,
+        source: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : undefined,
+        stack: event.error?.stack?.split("\n").slice(0, 3).join(" | ") || null,
       });
     };
 
@@ -96,6 +112,7 @@ export function SignalCollector() {
       const reason = event.reason;
       emitSignal("promise_rejection", "error", {
         message: reason?.message || String(reason || "Unknown rejection"),
+        stack: reason?.stack?.split("\n").slice(0, 3).join(" | ") || null,
       });
     };
 
