@@ -39,7 +39,7 @@ import { OwnerPanel } from "../owner/page";
 const TAB_ICON_SIZE = 14;
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
-import { SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
+import { TIERS, SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
