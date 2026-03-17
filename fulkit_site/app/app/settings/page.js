@@ -3646,6 +3646,45 @@ function BillingTab() {
   const refCredit = refStats?.monthlyDollars || 0;
   const refActiveCount = refStats?.activeReferrals || 0;
   const refFul = refStats?.monthlyFul || 0;
+  const refTier = refStats?.tier;
+  const lifetimeFul = refStats?.lifetimeFulEarned || 0;
+
+  // Payout history for user view
+  const [payoutStats, setPayoutStats] = useState(null);
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/referrals/payout/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.json()).then(setPayoutStats).catch(() => {});
+  }, [accessToken]);
+
+  // User billing CSV export
+  function exportBillingCSV() {
+    const rows = [["Category", "Detail", "Value"]];
+    rows.push(["Plan", "Type", isOwner ? "Owner (BYOK)" : (PLAN_LABELS[seatType] || "Free")]);
+    rows.push(["Plan", "Price", isOwner ? "Unlimited" : (PLAN_PRICES[seatType] || "$0")]);
+    rows.push(["Plan", "Messages/mo", isOwner ? "Unlimited" : String(seatLimit)]);
+    rows.push(["Usage", "Messages used", String(messagesUsed)]);
+    rows.push(["Usage", "Messages remaining", isOwner ? "Unlimited" : String(remaining)]);
+    rows.push(["Referrals", "Active", String(refActiveCount)]);
+    rows.push(["Referrals", "Monthly F\u00FCl", String(refFul)]);
+    rows.push(["Referrals", "Monthly credit", `$${refCredit}`]);
+    rows.push(["Referrals", "Tier", refTier ? refTier.label : "None"]);
+    rows.push(["Referrals", "Lifetime F\u00FCl earned", String(lifetimeFul)]);
+    if (payoutStats?.totalPaid) rows.push(["Payouts", "Total paid", `$${payoutStats.totalPaid}`]);
+    if (payoutStats?.payouts?.length) {
+      payoutStats.payouts.forEach(p => {
+        rows.push(["Payout", new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), `$${p.amount_usd} (${p.status})`]);
+      });
+    }
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fulkit-billing-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ── Owner financials ──
   if (isOwner && ownerView) {
@@ -3795,48 +3834,146 @@ function BillingTab() {
     );
   }
 
-  // ── Owner user view ──
+  // ── Shared styles for user views ──
+  const kpiLabelUser = { fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" };
+  const bigNumUser = { fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" };
+  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
+
+  // ── Owner "Mine" view ──
   if (isOwner) {
     return (
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
           <SectionTitle style={{ marginBottom: 0 }}>Billing</SectionTitle>
-          <button onClick={() => setOwnerView(true)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
-            All
-          </button>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <button onClick={exportBillingCSV} title="Export billing data" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-2)", cursor: "pointer", fontFamily: "var(--font-primary)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <Download size={10} /> CSV
+            </button>
+            <button onClick={() => setOwnerView(true)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
+              All
+            </button>
+          </div>
         </div>
-        <Card style={{ marginBottom: "var(--space-4)" }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>Owner</div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Unlimited {"\u2014"} using your own API key</div>
+
+        {/* ── Plan hero (white-white) ── */}
+        <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-5)" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)" }}>Owner</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>
+              BYOK{memberSince ? ` \u00B7 Member since ${memberSince}` : ""}
+            </div>
+          </div>
+          <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-3)" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-2)", textAlign: "center" }}>
+            {[
+              { label: "Messages", value: "Unlimited" },
+              { label: "Model", value: "Claude Opus" },
+              { label: "Max tokens", value: "128K" },
+              { label: "API key", value: "Your own" },
+            ].map((b, i) => (
+              <div key={i}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)" }}>{b.value}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>{b.label}</div>
+              </div>
+            ))}
           </div>
         </Card>
-        {refActiveCount > 0 && (
-          <>
-            <SectionTitle>Referral credits</SectionTitle>
-            <Card>
-              <div style={{ fontSize: "var(--font-size-sm)" }}>
-                {refActiveCount} active referral{refActiveCount !== 1 ? "s" : ""} {"\u2192"} {refFul.toLocaleString()} F{"\u00FC"}l/mo (${refCredit})
+
+        {/* ── Referral earnings ── */}
+        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Referral earnings</div>
+          {refActiveCount > 0 ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>{refActiveCount}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Active referrals</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>{refFul.toLocaleString()}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l/mo</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>${refCredit}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Credit/mo</div>
+                </div>
               </div>
-            </Card>
-          </>
-        )}
+              <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
+                <span style={{ color: "var(--color-text-muted)" }}>Tier</span>
+                <span style={{ fontWeight: "var(--font-weight-bold)" }}>{refTier ? refTier.label : "\u2014"}{refTier ? ` (${refTier.fulPerRef} F\u00FCl/ref)` : ""}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
+                <span style={{ color: "var(--color-text-muted)" }}>Lifetime F{"\u00FC"}l earned</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{lifetimeFul.toLocaleString()}</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+              No referral earnings yet.
+            </div>
+          )}
+        </Card>
+
+        {/* ── Account ── */}
+        <Card style={{ padding: "var(--space-4)" }}>
+          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Account</div>
+          {[
+            { label: "Email", value: user?.email || "\u2014" },
+            { label: "Account", value: profile?.name || user?.user_metadata?.full_name || "\u2014" },
+            { label: "Role", value: "Owner" },
+            { label: "Auth", value: "Google OAuth" },
+          ].map((row, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < 3 ? "1px solid var(--color-border-light)" : "none" }}>
+              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{row.label}</span>
+              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{row.value}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-3)", textAlign: "center" }}>
+            Using your own API key {"\u2014"} unlimited messages, no subscription required.
+          </div>
+        </Card>
       </div>
     );
   }
 
   // ── Regular user view ──
+  const planLabel = PLAN_LABELS[seatType] || "Free";
+  const planPrice = PLAN_PRICES[seatType] || "Free";
+  const planBenefits = seatType === "pro" ? [
+    { label: "Messages", value: `${seatLimit}/mo` },
+    { label: "Model", value: "Claude Sonnet" },
+    { label: "Max tokens", value: "4,096" },
+    { label: "Credits", value: "Available" },
+  ] : seatType === "standard" ? [
+    { label: "Messages", value: `${seatLimit}/mo` },
+    { label: "Model", value: "Claude Sonnet" },
+    { label: "Max tokens", value: "2,048" },
+    { label: "Credits", value: "Available" },
+  ] : [
+    { label: "Messages", value: `${seatLimit}/mo` },
+    { label: "Model", value: "Claude Sonnet" },
+    { label: "Max tokens", value: "2,048" },
+    { label: "Upgrade", value: "Available" },
+  ];
+
   return (
     <div>
-      <SectionTitle>Your plan</SectionTitle>
-      <Card style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+        <SectionTitle style={{ marginBottom: 0 }}>Billing</SectionTitle>
+        <button onClick={exportBillingCSV} title="Export billing data" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-2)", cursor: "pointer", fontFamily: "var(--font-primary)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+          <Download size={10} /> CSV
+        </button>
+      </div>
+
+      {/* ── Plan hero (white-white) ── */}
+      <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-5)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
           <div>
-            <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>
-              {PLAN_LABELS[seatType] || "Standard"}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              {PLAN_PRICES[seatType] || PLAN_PRICES.standard} {"\u2014"} {seatLimit} messages
+            <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)" }}>{planLabel}</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>
+              {planPrice}{memberSince ? ` \u00B7 Member since ${memberSince}` : ""}
             </div>
           </div>
           {seatType === "free" ? (
@@ -3854,47 +3991,136 @@ function BillingTab() {
             </button>
           ) : null}
         </div>
+        <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-3)" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-2)", textAlign: "center" }}>
+          {planBenefits.map((b, i) => (
+            <div key={i}>
+              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)" }}>{b.value}</div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>{b.label}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
-        {/* Fül gauge */}
-        <div style={{ marginBottom: "var(--space-2)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l remaining</span>
-            <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: gaugeCapped ? "var(--color-error)" : undefined }}>{remaining} / {seatLimit}</span>
-          </div>
-          <div style={{ height: 6, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${Math.max(0, (remaining / seatLimit) * 100)}%`, borderRadius: "var(--radius-full)", background: gaugeColor, transition: "width var(--duration-slow) var(--ease-default)" }} />
+      {/* ── Fül Gauge ── */}
+      <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+        <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>F{"\u00FC"}l gauge</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
+          <div style={bigNumUser}>{remaining}</div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textAlign: "right" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{messagesUsed}</span> used of <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{seatLimit}</span>
           </div>
         </div>
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{remaining} messages remaining this period.</div>
-        {seatType !== "free" && (
-          <button onClick={handlePortal} disabled={!!loading} style={{ marginTop: "var(--space-2)", padding: 0, background: "none", border: "none", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", cursor: "pointer", textDecoration: "underline" }}>
-            {loading === "portal" ? "..." : "Manage subscription"}
+        <div style={{ height: 8, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden", marginBottom: "var(--space-2)" }}>
+          <div style={{ height: "100%", width: `${Math.max(0, (remaining / seatLimit) * 100)}%`, borderRadius: "var(--radius-full)", background: gaugeColor, transition: "width var(--duration-slow) var(--ease-default)" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: gaugeCapped ? "var(--color-error)" : "var(--color-text-dim)" }}>
+            {gaugeCapped ? "Tank empty" : gaugeLow ? "Running low" : `${remaining} messages remaining`}
+          </span>
+          <button onClick={() => handleCheckout("credits")} disabled={!!loading} style={{ padding: "var(--space-1) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "credits" ? 0.6 : 1 }}>
+            {loading === "credits" ? "..." : `F\u00fcl up \u00B7 ${CREDITS.description}`}
           </button>
+        </div>
+      </Card>
+
+      {/* ── Referral earnings ── */}
+      <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+        <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Referral earnings</div>
+        {refActiveCount > 0 ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
+              <div style={{ flex: 1 }}>
+                <div style={bigNumUser}>{refActiveCount}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Active referrals</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={bigNumUser}>{refFul.toLocaleString()}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l/mo</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={bigNumUser}>${refCredit}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Credit/mo</div>
+              </div>
+            </div>
+            <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
+              <span style={{ color: "var(--color-text-muted)" }}>Tier</span>
+              <span style={{ fontWeight: "var(--font-weight-bold)" }}>{refTier ? refTier.label : "\u2014"}{refTier ? ` (${refTier.fulPerRef} F\u00FCl/ref)` : ""}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
+              <span style={{ color: "var(--color-text-muted)" }}>Lifetime F{"\u00FC"}l earned</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{lifetimeFul.toLocaleString()}</span>
+            </div>
+            {refCredit > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
+                <span style={{ color: "var(--color-text-muted)" }}>Applied to subscription</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-success)" }}>{"\u2212"}${refCredit}/mo</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ textAlign: "center", padding: "var(--space-3) 0" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>No referral earnings yet</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Refer friends from the Referrals tab to earn F{"\u00FC"}l credits toward your plan.</div>
+          </div>
         )}
       </Card>
 
-      <Card style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <Zap size={16} strokeWidth={1.8} style={{ color: "var(--color-warning)" }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>Buy credits</div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{CREDITS.description}. On demand.</div>
+      {/* ── Payouts (if tier 4+ with connect) ── */}
+      {payoutStats && payoutStats.hasConnect && (
+        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Payouts</div>
+          <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
+            <div style={{ flex: 1 }}>
+              <div style={bigNumUser}>${payoutStats.totalPaid || 0}</div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Total paid</div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={bigNumUser}>{payoutStats.payouts?.filter(p => p.status === "pending").length || 0}</div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
+            </div>
           </div>
-          <button onClick={() => handleCheckout("credits")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "credits" ? 0.6 : 1 }}>
-            {loading === "credits" ? "..." : "F\u00fcl up"}
-          </button>
-        </div>
-      </Card>
+          {payoutStats.payouts && payoutStats.payouts.length > 0 && (
+            <>
+              <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
+              <div style={{ ...kpiLabelUser, marginBottom: "var(--space-2)" }}>Transfer history</div>
+              {payoutStats.payouts.slice(0, 10).map((p, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1) 0", fontSize: "var(--font-size-xs)" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>{new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: "var(--font-weight-bold)",
+                    color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)",
+                  }}>
+                    {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : "PENDING "}${p.amount_usd}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
+        </Card>
+      )}
 
-      <SectionTitle>Referral credits</SectionTitle>
-      <Card>
-        {refActiveCount > 0 ? (
-          <div style={{ fontSize: "var(--font-size-sm)" }}>
-            {refActiveCount} active referral{refActiveCount !== 1 ? "s" : ""} {"\u2192"} {refFul.toLocaleString()} F{"\u00FC"}l/mo (${refCredit} credit)
+      {/* ── Account & subscription ── */}
+      <Card style={{ padding: "var(--space-4)" }}>
+        <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Account</div>
+        {[
+          { label: "Email", value: user?.email || "\u2014" },
+          { label: "Account", value: profile?.name || user?.user_metadata?.full_name || "\u2014" },
+          { label: "Plan", value: `${planLabel} (${planPrice})` },
+          { label: "Auth", value: "Google OAuth" },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < 3 ? "1px solid var(--color-border-light)" : "none" }}>
+            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{row.label}</span>
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{row.value}</span>
           </div>
-        ) : (
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
-            No referral credits yet. <span style={{ color: "var(--color-text-muted)" }}>Earn F{"\u00FC"}l by referring friends.</span>
+        ))}
+        {seatType !== "free" && (
+          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+            <button onClick={handlePortal} disabled={!!loading} style={{ flex: 1, padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "var(--color-text-secondary)", cursor: loading ? "wait" : "pointer", opacity: loading === "portal" ? 0.6 : 1 }}>
+              {loading === "portal" ? "..." : "Manage subscription"}
+            </button>
           </div>
         )}
       </Card>
