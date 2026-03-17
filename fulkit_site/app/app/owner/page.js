@@ -693,13 +693,18 @@ function RadioTab() {
       .map(([k, v]) => `${k}: ${v}`)
       .join(", ");
 
+    // Dump every meta key for full debug context
+    const metaLines = Object.entries(s.meta || {})
+      .map(([k, v]) => `  ${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+      .join("\n");
+
     const lines = [
       `[${label}] ${name}`,
+      `Event: ${s.event}`,
       `Time: ${time}`,
-      `User: ${s.user_label}`,
-      s.page ? `Page: ${s.page}` : null,
-      detail ? `Detail: ${detail}` : null,
-      extra ? `Context: ${extra}` : null,
+      `User: ${s.user_label} (${s.user_id})`,
+      `Page: ${s.page || "unknown"}`,
+      metaLines ? `Meta:\n${metaLines}` : null,
     ].filter(Boolean).join("\n");
 
     navigator.clipboard.writeText(lines).then(() => {
@@ -815,28 +820,22 @@ function RadioTab() {
           {signals.map((s, i) => {
             const sev = s.meta?.severity || "info";
             return (
-              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)", position: "relative" }}>
-                {/* Copy button */}
-                <button
-                  onClick={() => copySignal(s)}
-                  style={{
-                    position: "absolute", top: "var(--space-2)", right: "var(--space-2)",
-                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
-                    display: "flex", color: "var(--color-text-dim)",
-                    opacity: copiedId === `${s.created_at}-${s.user_id}` ? 1 : 0.4,
-                    transition: "opacity var(--duration-fast) var(--ease-default)",
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                  onMouseLeave={(e) => { if (copiedId !== `${s.created_at}-${s.user_id}`) e.currentTarget.style.opacity = "0.4"; }}
-                >
-                  {copiedId === `${s.created_at}-${s.user_id}` ? <CheckIcon size={12} color="var(--color-text-muted)" /> : <Copy size={12} />}
-                </button>
-                {/* Top row: time + signal name + severity badge */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)", paddingRight: "var(--space-5)" }}>
-                  <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
-                    {formatTime(s.created_at)}
-                  </span>
-                  <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)" }}>
+                {/* Title row: copy + signal name + severity badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                  <button
+                    onClick={() => copySignal(s)}
+                    title="Copy signal"
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      display: "flex", alignItems: "center", flexShrink: 0,
+                      color: copiedId === `${s.created_at}-${s.user_id}` ? "var(--color-text-muted)" : "var(--color-text-dim)",
+                      transition: "color var(--duration-fast) var(--ease-default)",
+                    }}
+                  >
+                    {copiedId === `${s.created_at}-${s.user_id}` ? <CheckIcon size={13} strokeWidth={2} /> : <Copy size={13} strokeWidth={1.5} />}
+                  </button>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {signalLabel(s.event)}
                   </span>
                   <span style={{
@@ -853,15 +852,22 @@ function RadioTab() {
                     {SEVERITY_LABELS[sev] || sev}
                   </span>
                 </div>
-                {/* Bottom row: user + page + detail */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                {/* Info row: time + user + page */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontFamily: "var(--font-mono)" }}>{formatTime(s.created_at)}</span>
+                  <span>&middot;</span>
                   <span>{s.user_label}</span>
-                  {s.page && <span>&middot; {s.page}</span>}
+                  {s.page && <><span>&middot;</span><span>{s.page}</span></>}
                 </div>
-                {/* Detail from meta */}
-                {(s.meta?.error || s.meta?.message || s.meta?.elapsed) && (
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {s.meta.error || s.meta.message || `${s.meta.elapsed}ms`}
+                {/* Full meta dump — every key visible */}
+                {s.meta && Object.keys(s.meta).filter((k) => k !== "severity").length > 0 && (
+                  <div style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)", marginTop: "var(--space-1)", display: "flex", flexDirection: "column", gap: 1 }}>
+                    {Object.entries(s.meta).filter(([k]) => k !== "severity").map(([k, v]) => (
+                      <div key={k} style={{ display: "flex", gap: "var(--space-2)" }}>
+                        <span style={{ color: "var(--color-text-dim)", flexShrink: 0 }}>{k}:</span>
+                        <span style={{ wordBreak: "break-all" }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
