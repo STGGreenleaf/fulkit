@@ -3194,44 +3194,66 @@ function ReferralsTab() {
         </div>
       </Card>
 
-      {/* Examples */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "var(--space-3)",
-        marginBottom: "var(--space-4)",
-      }}>
+      {/* Tier payout legend */}
+      <Card style={{ marginBottom: "var(--space-4)", padding: 0, overflow: "hidden" }}>
+        <div style={{
+          fontSize: "var(--font-size-2xs)",
+          fontWeight: "var(--font-weight-semibold)",
+          textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-wider)",
+          color: "var(--color-text-muted)",
+          padding: "var(--space-3) var(--space-4) var(--space-2)",
+        }}>
+          Show me the money
+        </div>
         {[
-          { scenario: "3 friends join", result: "$3/mo off", detail: "Standard drops to $6/mo" },
-          { scenario: "9 friends join", result: "$0/mo", detail: "Standard fully covered" },
-          { scenario: "25 friends join", result: "+$12.50/mo", detail: "Pro free + cash payout" },
-          { scenario: "100 friends join", result: "+$105/mo", detail: "Pro free + $1,260/yr cash" },
-        ].map((ex, i) => (
-          <Card key={i} style={{ padding: "var(--space-3)" }}>
-            <div style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              marginBottom: "var(--space-1)",
-            }}>
-              {ex.scenario}
+          { refs: "25+", tier: "Builder", monthly: "$12.50", yearly: "$150/yr", note: "Cash unlocks" },
+          { refs: "100+", tier: "Architect", monthly: "$105", yearly: "$1,260/yr", note: "120 F\u00FCl/ref" },
+          { refs: "250+", tier: "Architect", monthly: "$285", yearly: "$3,420/yr", note: null },
+          { refs: "500+", tier: "Architect", monthly: "$585", yearly: "$7,020/yr", note: null },
+        ].map((row, i) => (
+          <div key={i} style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "var(--space-3) var(--space-4)",
+            borderTop: "1px solid var(--color-border-light)",
+          }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-3)", flex: 1 }}>
+              <span style={{
+                fontSize: "var(--font-size-sm)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: "var(--font-weight-bold)",
+                minWidth: 36,
+              }}>
+                {row.refs}
+              </span>
+              <span style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-muted)",
+              }}>
+                {row.tier}{row.note ? ` \u00B7 ${row.note}` : ""}
+              </span>
             </div>
-            <div style={{
-              fontSize: "var(--font-size-lg)",
-              fontFamily: "var(--font-mono)",
-              fontWeight: "var(--font-weight-black)",
-              marginBottom: "var(--space-0.5)",
-            }}>
-              {ex.result}
+            <div style={{ textAlign: "right" }}>
+              <span style={{
+                fontSize: "var(--font-size-lg)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: "var(--font-weight-black)",
+              }}>
+                {row.monthly}
+              </span>
+              <span style={{
+                fontSize: "var(--font-size-2xs)",
+                color: "var(--color-text-dim)",
+                marginLeft: "var(--space-2)",
+              }}>
+                {row.yearly}
+              </span>
             </div>
-            <div style={{
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-            }}>
-              {ex.detail}
-            </div>
-          </Card>
+          </div>
         ))}
-      </div>
+      </Card>
 
       {/* KPI strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
