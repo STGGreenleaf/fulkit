@@ -1254,6 +1254,8 @@ function DeveloperTab() {
   const [dragOverTagKey, setDragOverTagKey] = useState(null);
   const [fileDragOver, setFileDragOver] = useState(false);
   const [fileImporting, setFileImporting] = useState(false);
+  const [dragDocId, setDragDocId] = useState(null);
+  const [dragOverDocTag, setDragOverDocTag] = useState(null);
 
   // Persistent KB tags — stored in localStorage, editable, reorderable
   const KB_STORAGE_KEY = "fulkit-kb-tags";
@@ -1333,6 +1335,22 @@ function DeveloperTab() {
     setDragOverTagKey(null);
   };
   const handleTagDragEnd = () => { setDragTagKey(null); setDragOverTagKey(null); };
+
+  // Doc-to-tag drag — drag a doc from the list onto a tag pill to reassign it
+  const handleDocDragStart = (e, docId) => {
+    setDragDocId(docId);
+    e.dataTransfer.setData("text/plain", docId); // needed for drag to work
+  };
+  const handleDocDropOnTag = async (tagKey) => {
+    if (!dragDocId) return;
+    const doc = knowledgeDocs.find(d => d.id === dragDocId);
+    if (!doc || doc.tag === tagKey) { setDragDocId(null); setDragOverDocTag(null); return; }
+    const newTag = tagKey === "all" ? null : tagKey;
+    await saveBroadcast({ id: doc.id, title: doc.title, content: doc.content, channel: "context", subtype: "doc", tag: newTag });
+    setDragDocId(null);
+    setDragOverDocTag(null);
+  };
+  const handleDocDragEnd = () => { setDragDocId(null); setDragOverDocTag(null); };
 
   // File drop — drag .md/.txt files from Finder into the doc list
   const handleFileDrop = async (e) => {
@@ -1953,13 +1971,23 @@ function DeveloperTab() {
                     );
                   }
 
+                  const isDocTarget = dragDocId && dragOverDocTag === tag.key;
+
                   return (
                     <button
                       key={tag.key}
-                      draggable={isDraggable}
-                      onDragStart={() => isDraggable && handleTagDragStart(tag.key)}
-                      onDragOver={e => isDraggable && handleTagDragOver(e, tag.key)}
-                      onDrop={() => isDraggable && handleTagDrop(tag.key)}
+                      draggable={isDraggable && !dragDocId}
+                      onDragStart={() => isDraggable && !dragDocId && handleTagDragStart(tag.key)}
+                      onDragOver={e => {
+                        e.preventDefault();
+                        if (dragDocId) { setDragOverDocTag(tag.key); }
+                        else if (isDraggable) { handleTagDragOver(e, tag.key); }
+                      }}
+                      onDragLeave={() => { if (dragDocId) setDragOverDocTag(null); }}
+                      onDrop={() => {
+                        if (dragDocId) { handleDocDropOnTag(tag.key); }
+                        else if (isDraggable) { handleTagDrop(tag.key); }
+                      }}
                       onDragEnd={handleTagDragEnd}
                       onClick={() => { setKbFilter(tag.key); setSelectedDocId(null); }}
                       onDoubleClick={() => {
@@ -1970,9 +1998,9 @@ function DeveloperTab() {
                       style={{
                         display: "flex", alignItems: "center", gap: "var(--space-1)",
                         padding: "var(--space-1) var(--space-2-5)",
-                        border: isDragOver ? "1px dashed var(--color-text-muted)" : "none",
+                        border: (isDragOver || isDocTarget) ? "1px dashed var(--color-text-muted)" : "none",
                         outline: "none",
-                        background: active ? "var(--color-bg-alt)" : "transparent",
+                        background: isDocTarget ? "var(--color-bg-alt)" : active ? "var(--color-bg-alt)" : "transparent",
                         borderRadius: "var(--radius-md)",
                         color: active ? "var(--color-text)" : "var(--color-text-muted)",
                         fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
@@ -1980,9 +2008,10 @@ function DeveloperTab() {
                         cursor: isDraggable ? "grab" : "pointer",
                         transition: "all 100ms ease",
                         opacity: dragTagKey === tag.key ? 0.4 : 1,
+                        transform: isDocTarget ? "scale(1.08)" : "none",
                       }}
                     >
-                      {isDraggable && active && <GripVertical size={10} style={{ opacity: 0.4, marginLeft: -4 }} />}
+                      {isDraggable && active && !dragDocId && <GripVertical size={10} style={{ opacity: 0.4, marginLeft: -4 }} />}
                       {tag.label}
                       {count > 0 && tag.key !== "all" && (
                         <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", opacity: 0.6 }}>{count}</span>
@@ -2068,26 +2097,33 @@ function DeveloperTab() {
                       {filteredDocs.map(d => (
                         <button
                           key={d.id}
+                          draggable
+                          onDragStart={e => handleDocDragStart(e, d.id)}
+                          onDragEnd={handleDocDragEnd}
                           onClick={() => selectDoc(d)}
                           style={{
-                            display: "block", width: "100%", textAlign: "left",
+                            display: "flex", alignItems: "center", gap: "var(--space-2)",
+                            width: "100%", textAlign: "left",
                             padding: "var(--space-2) var(--space-3)",
                             background: selectedDocId === d.id ? "var(--color-bg-alt)" : "transparent",
                             border: "none", borderBottom: "1px solid var(--color-border-light)",
-                            cursor: "pointer", opacity: d.active ? 1 : 0.5,
+                            cursor: "grab", opacity: dragDocId === d.id ? 0.4 : d.active ? 1 : 0.5,
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {d.title}
-                            </span>
-                            {!d.active && (
-                              <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
-                            {d.tag && <span style={{ marginRight: 4 }}>{d.tag}</span>}
-                            {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          <GripVertical size={10} style={{ opacity: 0.3, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {d.title}
+                              </span>
+                              {!d.active && (
+                                <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "uppercase", background: "var(--color-bg-alt)", padding: "0 4px", borderRadius: "var(--radius-sm)" }}>off</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                              {d.tag && <span style={{ marginRight: 4 }}>{d.tag}</span>}
+                              {new Date(d.updated_at || d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </div>
                           </div>
                         </button>
                       ))}
