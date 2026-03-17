@@ -133,35 +133,83 @@ export function SignalCollector() {
     }
     sessionStorage.setItem("fulkit-page-ts", String(Date.now()));
 
-    // ── Rage click detection ──
+    // ── Rage click detection (beta: any same-element rapid clicks) ──
+    let lastClickTarget = null;
     const onClick = (e) => {
       const target = e.target;
       if (!target) return;
-      // Only track clicks on disabled elements or elements with pointer-events issues
-      const isDisabled = target.disabled || target.getAttribute("aria-disabled") === "true" || target.closest("[disabled]");
-      if (!isDisabled) {
-        rageRef.current = [];
-        return;
-      }
+      const identifier = target.tagName + (target.id ? `#${target.id}` : "") + (target.className?.toString?.().slice(0, 40) || "");
       const now = Date.now();
+      if (identifier !== lastClickTarget) {
+        rageRef.current = [];
+        lastClickTarget = identifier;
+      }
       rageRef.current.push(now);
-      // Keep only clicks within last 2 seconds
       rageRef.current = rageRef.current.filter((t) => now - t < 2000);
       if (rageRef.current.length >= 3) {
+        const isDisabled = target.disabled || target.getAttribute("aria-disabled") === "true" || target.closest("[disabled]");
         emitSignal("rage_click", "info", {
           clicks: rageRef.current.length,
-          target: target.tagName?.toLowerCase(),
+          target: identifier.slice(0, 80),
+          disabled: isDisabled || false,
           page: window.location.pathname,
         });
         rageRef.current = [];
       }
     };
 
+    // ── Long tasks (UI jank > 500ms) ──
+    let longTaskObserver = null;
+    if (typeof PerformanceObserver !== "undefined") {
+      try {
+        longTaskObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.duration > 500) {
+              emitSignal("long_task", "warning", {
+                duration: Math.round(entry.duration),
+                page: window.location.pathname,
+              });
+            }
+          }
+        });
+        longTaskObserver.observe({ entryTypes: ["longtask"] });
+      } catch {}
+    }
+
+    // ── Tab bounce (left within 10s of arriving) ──
+    const arrivalTime = Date.now();
+    let bounceReported = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !bounceReported) {
+        const timeOnPage = Date.now() - arrivalTime;
+        if (timeOnPage < 10000) {
+          emitSignal("tab_bounce", "info", {
+            timeOnPage,
+            page: window.location.pathname,
+          });
+          bounceReported = true;
+        }
+      }
+    };
+
+    // ── Slow page load (> 3s to interactive) ──
+    try {
+      const navEntry = performance.getEntriesByType?.("navigation")?.[0];
+      if (navEntry?.domInteractive && navEntry.domInteractive > 3000) {
+        emitSignal("slow_page_load", "warning", {
+          domInteractive: Math.round(navEntry.domInteractive),
+          loadComplete: Math.round(navEntry.loadEventEnd || 0),
+          page: window.location.pathname,
+        });
+      }
+    } catch {}
+
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
     window.addEventListener("offline", onOffline);
     window.addEventListener("online", onOnline);
     document.addEventListener("click", onClick, true);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.removeEventListener("error", onError);
@@ -169,6 +217,8 @@ export function SignalCollector() {
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
       document.removeEventListener("click", onClick, true);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (longTaskObserver) longTaskObserver.disconnect();
     };
   }, [user?.id]);
 

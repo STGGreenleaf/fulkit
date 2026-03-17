@@ -173,6 +173,7 @@ These have caused production bugs. Always follow these patterns:
 | `md/Audio_Crate/crate-spec.md` | Crate & Mix system (DJ metaphor, drag-to-crate, sets) |
 | `md/Audio_Crate/audio-todo.md` | Audio system roadmap |
 | `TODO.md` | Master action list with checkboxes |
+| `md/signal-radio.md` | Signal Radio spec — signal inventory, knobs, tuning guide, architecture |
 
 ## Sensitive
 - Never log API keys, secrets, or credentials in any file

@@ -669,10 +669,27 @@ function AccountTab() {
     <div>
       <SectionTitle>Profile</SectionTitle>
       <Card>
-        <Row label="Name" value={profile?.name || user?.name || "—"} />
-        <Row label="Email" value={user?.email || "—"} />
-        <Row label="Role" value={isOwner ? "Owner" : (profile?.role || "Member")} />
-        <Row label="Member since" value={memberSince} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Name</div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{profile?.name || user?.name || "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Email</div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{user?.email || "—"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Role</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
+              {isOwner && <Crown size={14} strokeWidth={2} color="var(--color-text)" />}
+              {isOwner ? "Owner" : (profile?.role || "Member")}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Member since</div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{memberSince}</div>
+          </div>
+        </div>
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>
