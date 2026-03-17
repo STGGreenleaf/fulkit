@@ -54,7 +54,8 @@ export const REFERRALS = {
     { id: 2, min: 7,   max: 14,         fulPerRef: 100, label: "Component" },
     { id: 3, min: 15,  max: 24,         fulPerRef: 100, label: "Tool" },
     { id: 4, min: 25,  max: 99,         fulPerRef: 110, label: "Builder" },
-    { id: 5, min: 100, max: Infinity,   fulPerRef: 120, label: "Architect" },
+    { id: 5, min: 100, max: 249,         fulPerRef: 120, label: "Architect" },
+    { id: 6, min: 250, max: Infinity,   fulPerRef: 130, label: "Ambassador" },
   ],
 };
 

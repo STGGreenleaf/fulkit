@@ -3209,8 +3209,8 @@ function ReferralsTab() {
         {[
           { refs: "25+", tier: "Builder", monthly: "$12.50", yearly: "$150/yr", note: "Cash unlocks" },
           { refs: "100+", tier: "Architect", monthly: "$105", yearly: "$1,260/yr", note: "120 F\u00FCl/ref" },
-          { refs: "250+", tier: "Architect", monthly: "$285", yearly: "$3,420/yr", note: null },
-          { refs: "500+", tier: "Architect", monthly: "$585", yearly: "$7,020/yr", note: null },
+          { refs: "250+", tier: "Ambassador", monthly: "$310", yearly: "$3,720/yr", note: "130 F\u00FCl/ref" },
+          { refs: "2,000+", tier: "Ambassador", monthly: "$2,585", yearly: "$31,020/yr", note: null },
         ].map((row, i) => (
           <div key={i} style={{
             display: "flex",
