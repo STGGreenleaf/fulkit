@@ -2939,6 +2939,7 @@ function ReferralsTab() {
   });
   const setOwnerView = (val) => { setOwnerViewRaw(val); localStorage.setItem("fulkit-referrals-owner", String(val)); };
   const [loading, setLoading] = useState(true);
+  const [trendRange, setTrendRange] = useState(6);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -2955,11 +2956,11 @@ function ReferralsTab() {
 
   useEffect(() => {
     if (!isOwner || !ownerView || !accessToken) return;
-    fetch("/api/referrals/admin", { headers: { Authorization: `Bearer ${accessToken}` } })
+    fetch(`/api/referrals/admin?months=${trendRange}`, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.json())
       .then(setAdminStats)
       .catch(() => {});
-  }, [isOwner, ownerView, accessToken]);
+  }, [isOwner, ownerView, accessToken, trendRange]);
 
   const refLink = refCode ? `fulkit.app/ref/${refCode}` : "generating...";
   const activeRefs = stats?.activeReferrals || 0;
@@ -3153,7 +3154,46 @@ function ReferralsTab() {
             {/* ── Monthly Trend ── */}
             {adminStats.monthlySignups && adminStats.monthlySignups.length > 0 && (
               <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-                <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Monthly trend</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-3)" }}>
+                  <div style={kpiStyle}>Monthly trend</div>
+                  <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
+                    {[
+                      { label: "6mo", value: 6 },
+                      { label: "12mo", value: 12 },
+                      { label: "All", value: 0 },
+                    ].map((r) => (
+                      <button key={r.value} onClick={() => setTrendRange(r.value)} style={{
+                        fontSize: "var(--font-size-2xs)",
+                        fontFamily: "var(--font-mono)",
+                        padding: "2px var(--space-2)",
+                        borderRadius: "var(--radius-xs)",
+                        border: "1px solid var(--color-border-light)",
+                        background: trendRange === r.value ? "var(--color-text)" : "var(--color-bg-elevated)",
+                        color: trendRange === r.value ? "var(--color-bg)" : "var(--color-text-muted)",
+                        cursor: "pointer",
+                        fontWeight: "var(--font-weight-medium)",
+                      }}>{r.label}</button>
+                    ))}
+                    <button onClick={() => {
+                      const rows = [["Month", "Signups", "Activated", "Churned", "Net"]];
+                      for (const m of adminStats.monthlySignups) rows.push([m.month, m.signups, m.activated, m.churned, m.net]);
+                      const csv = rows.map(r => r.join(",")).join("\n");
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const u = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = u; a.download = `fulkit-trend-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(u);
+                    }} style={{
+                      fontSize: "var(--font-size-2xs)",
+                      fontFamily: "var(--font-mono)",
+                      padding: "2px var(--space-2)",
+                      borderRadius: "var(--radius-xs)",
+                      border: "1px solid var(--color-border-light)",
+                      background: "var(--color-bg-elevated)",
+                      color: "var(--color-text-muted)",
+                      cursor: "pointer",
+                      marginLeft: "var(--space-1)",
+                    }}>CSV</button>
+                  </div>
+                </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-xs)" }}>
                     <thead>

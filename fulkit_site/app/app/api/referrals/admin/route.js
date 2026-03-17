@@ -94,10 +94,18 @@ export async function GET(request) {
   const totalPaidOut = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount_usd || 0), 0);
   const pendingPayouts = payouts.filter(p => p.status === "pending").reduce((s, p) => s + (p.amount_usd || 0), 0);
 
-  // ── Monthly signups (last 6 months) ──
+  // ── Monthly signups (dynamic range) ──
+  const url = new URL(request.url);
+  const monthsParam = parseInt(url.searchParams.get("months") || "6", 10);
   const now = new Date();
+
+  // Start from April 2026 (launch month)
+  const earliest = new Date(2026, 3, 1); // April 2026
+  const maxMonths = Math.max(1, (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1);
+  const monthCount = monthsParam === 0 ? maxMonths : Math.min(monthsParam, maxMonths);
+
   const monthlySignups = [];
-  for (let i = 5; i >= 0; i--) {
+  for (let i = monthCount - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthStart = d.toISOString().slice(0, 7); // "YYYY-MM"
     const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().slice(0, 7);
