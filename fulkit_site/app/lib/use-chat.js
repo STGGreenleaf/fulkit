@@ -220,7 +220,10 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         role: m.role,
         content: m.content,
       }));
-      apiMessages = isRetry ? [...chapterMsgs] : [...chapterMsgs, userMsg];
+      // On retry, include chapter messages + the retried user message (already in messages state)
+      apiMessages = isRetry
+        ? [...chapterMsgs, { role: "user", content: text }]
+        : [...chapterMsgs, userMsg];
     }
     if (!isRetry) {
       setMessages((prev) => [...prev, userMsg]);

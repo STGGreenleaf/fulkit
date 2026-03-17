@@ -67,7 +67,7 @@ export default function InstallPrompt() {
       position: "fixed",
       top: "var(--space-4)",
       right: "var(--space-4)",
-      width: 340,
+      width: "min(340px, calc(100vw - 32px))",
       background: "var(--color-bg-elevated)",
       border: "1px solid var(--color-border)",
       borderRadius: "var(--radius-lg)",

@@ -5,9 +5,16 @@ import { getSupabaseAdmin } from "../../../lib/supabase-server";
 const BYOK_PREF_KEY = "byok:anthropic_api_key";
 const ENC_KEY = process.env.BYOK_ENCRYPTION_KEY; // 32-byte hex string
 
+function getEncKey() {
+  if (!ENC_KEY) throw new Error("BYOK_ENCRYPTION_KEY not set");
+  const buf = Buffer.from(ENC_KEY, "hex");
+  if (buf.length !== 32) throw new Error("BYOK_ENCRYPTION_KEY must be 32 bytes (64 hex chars)");
+  return buf;
+}
+
 // AES-256-GCM encryption — stored as iv:tag:ciphertext (all base64)
 function encrypt(plaintext) {
-  const key = Buffer.from(ENC_KEY, "hex");
+  const key = getEncKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
@@ -23,7 +30,7 @@ export function decryptByokKey(stored) {
     return Buffer.from(stored, "base64").toString("utf-8");
   }
   const [ivB64, tagB64, ctB64] = parts;
-  const key = Buffer.from(ENC_KEY, "hex");
+  const key = getEncKey();
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
   decipher.setAuthTag(Buffer.from(tagB64, "base64"));
   return decipher.update(Buffer.from(ctB64, "base64"), null, "utf-8") + decipher.final("utf-8");

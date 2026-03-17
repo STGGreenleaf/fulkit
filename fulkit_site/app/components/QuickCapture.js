@@ -12,6 +12,7 @@ export default function QuickCapture() {
   const [value, setValue] = useState("");
   const [listening, setListening] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -20,13 +21,21 @@ export default function QuickCapture() {
     if (!text || !user?.id) return;
 
     stopListening();
-    supabase.from("notes").insert({
+    setSaveError(false);
+    const { error } = await supabase.from("notes").insert({
       user_id: user.id,
       title: text,
       content: "",
       status: "inbox",
       folder: "all",
-    }).then(() => {}).catch(() => {});
+    });
+
+    if (error) {
+      console.error("[quickcapture] save failed:", error.message);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 3000);
+      return;
+    }
 
     setValue("");
     setSubmitted(true);
@@ -121,7 +130,7 @@ export default function QuickCapture() {
         position: "fixed",
         bottom: "var(--space-6)",
         right: "var(--space-6)",
-        width: 320,
+        width: "min(320px, calc(100vw - 48px))",
         background: "var(--color-bg-elevated)",
         border: "1px solid var(--color-border)",
         borderRadius: "var(--radius-lg, var(--radius-md))",
@@ -139,7 +148,7 @@ export default function QuickCapture() {
         borderBottom: "1px solid var(--color-border-light)",
       }}>
         <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>
-          {submitted ? "Saved" : "Quick Capture"}
+          {saveError ? "Failed" : submitted ? "Saved" : "Quick Capture"}
         </span>
         <button
           onClick={toggleOpen}
