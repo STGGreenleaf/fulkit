@@ -3668,23 +3668,23 @@ function BillingTab() {
         {adminStats ? (
           <>
             {/* ── P&L ── */}
-            <Card style={{ marginBottom: "var(--space-3)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none", padding: "var(--space-5)" }}>
+            <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-5)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
                 <div>
-                  <div style={{ ...kpiLabel, color: "var(--color-text-dim)" }}>MRR</div>
+                  <div style={kpiLabel}>MRR</div>
                   <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
                 </div>
                 <div>
-                  <div style={{ ...kpiLabel, color: "var(--color-text-dim)" }}>Net</div>
-                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text-inverse)" : "#C43B2E" }}>
+                  <div style={kpiLabel}>Net</div>
+                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>
                     {adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}
                   </div>
                 </div>
               </div>
-              <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-3)" }} />
+              <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-3)" }} />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
-                <span style={{ opacity: 0.5 }}>ARR <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${adminStats.mrr * 12}</span></span>
-                <span style={{ opacity: 0.5 }}>Margin <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{adminStats.margin}%</span></span>
+                <span style={{ color: "var(--color-text-muted)" }}>ARR <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>${adminStats.mrr * 12}</span></span>
+                <span style={{ color: "var(--color-text-muted)" }}>Margin <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text)" }}>{adminStats.margin}%</span></span>
               </div>
             </Card>
 
