@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
+import { TIERS, SEAT_LIMITS, CREDITS } from "../../lib/ful-config";
 
 const GATEWAY_STEPS = [
   { id: "plans", label: "Choose Plan" },
@@ -21,8 +22,8 @@ const GATEWAY_STEPS = [
 ];
 
 const MOCK_PLANS = [
-  { id: "standard", name: "Standard", price: "$7", period: "/mo", msgs: 450, features: ["450 messages/mo", "Sonnet 2K context", "All integrations", "Priority support"] },
-  { id: "pro", name: "Pro", price: "$15", period: "/mo", msgs: 800, features: ["800 messages/mo", "Sonnet 4K context", "All integrations", "Priority support", "Early features"] },
+  { id: "standard", name: TIERS.standard.label, price: `$${TIERS.standard.price}`, period: "/mo", msgs: TIERS.standard.messages, features: [`${TIERS.standard.messages} messages/mo`, "Sonnet 2K context", "All integrations", "Priority support"] },
+  { id: "pro", name: TIERS.pro.label, price: `$${TIERS.pro.price}`, period: "/mo", msgs: TIERS.pro.messages, features: [`${TIERS.pro.messages} messages/mo`, "Sonnet 4K context", "All integrations", "Priority support", "Early features"] },
 ];
 
 export default function PaymentPreview() {
@@ -141,8 +142,7 @@ export default function PaymentPreview() {
     cursor: "pointer",
   });
 
-  const seatLimit =
-    { free: 100, standard: 450, pro: 800 }[mockProfile.seat_type] || 100;
+  const seatLimit = SEAT_LIMITS[mockProfile.seat_type] || SEAT_LIMITS.free;
   const remaining = seatLimit - mockProfile.messages_this_month;
 
   return (
@@ -376,7 +376,7 @@ export default function PaymentPreview() {
                           color: "var(--color-text-muted)",
                         }}
                       >
-                        100 messages on demand
+                        {CREDITS.amount} messages on demand
                       </div>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function PaymentPreview() {
                         color: "var(--color-text)",
                       }}
                     >
-                      $2
+                      {CREDITS.priceLabel}
                     </span>
                     <span
                       style={{
@@ -453,9 +453,7 @@ export default function PaymentPreview() {
                   {"F\u00fclkit "}
                   {selectedPlan === "credits"
                     ? "Credits"
-                    : selectedPlan === "pro"
-                    ? "Pro"
-                    : "Standard"}
+                    : TIERS[selectedPlan]?.label || TIERS.standard.label}
                 </div>
                 <div
                   style={{
@@ -465,10 +463,8 @@ export default function PaymentPreview() {
                   }}
                 >
                   {selectedPlan === "credits"
-                    ? "$2.00 one-time"
-                    : selectedPlan === "pro"
-                    ? "$15.00/month"
-                    : "$7.00/month"}
+                    ? `$${CREDITS.price}.00 one-time`
+                    : `$${(TIERS[selectedPlan]?.price || TIERS.standard.price)}.00/month`}
                 </div>
                 <div
                   style={{
@@ -759,7 +755,7 @@ export default function PaymentPreview() {
                   }}
                 >
                   {mockProfile.stripe_customer_id}{" \u00b7 F\u00fclkit "}
-                  {selectedPlan === "pro" ? "Pro" : "Standard"}
+                  {TIERS[selectedPlan]?.label || TIERS.standard.label}
                 </div>
                 <div
                   style={{
@@ -788,7 +784,7 @@ export default function PaymentPreview() {
                   >
                     {"• Update payment method"}
                     <br />
-                    {"• Change plan (Standard \u2194 Pro)"}
+                    {`• Change plan (${TIERS.standard.label} \u2194 ${TIERS.pro.label})`}
                     <br />
                     {"• View billing history"}
                     <br />

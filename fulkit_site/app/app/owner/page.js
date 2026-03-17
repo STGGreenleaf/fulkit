@@ -45,6 +45,7 @@ import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 import LoadingMark from "../../components/LoadingMark";
 import LogoMark from "../../components/LogoMark";
+import { TIERS, CREDITS, COST_BASIS } from "../../lib/ful-config";
 
 const TAB_ICON_SIZE = 14;
 
@@ -1247,18 +1248,121 @@ function DeveloperTab() {
   const [kbFilter, setKbFilter] = useState("all");
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
+  const [editingTagKey, setEditingTagKey] = useState(null);
+  const [editingTagLabel, setEditingTagLabel] = useState("");
+  const [dragTagKey, setDragTagKey] = useState(null);
+  const [dragOverTagKey, setDragOverTagKey] = useState(null);
+  const [fileDragOver, setFileDragOver] = useState(false);
+  const [fileImporting, setFileImporting] = useState(false);
 
-  const DEFAULT_KB_TAGS = [
-    { key: "all", label: "All" },
+  // Persistent KB tags — stored in localStorage, editable, reorderable
+  const KB_STORAGE_KEY = "fulkit-kb-tags";
+  const SEED_TAGS = [
     { key: "brand", label: "Brand" },
     { key: "product", label: "Product" },
     { key: "support", label: "Support" },
     { key: "policy", label: "Policy" },
+    { key: "ful_system", label: "Ful_System" },
   ];
 
-  // Derive custom tags from existing docs
-  const customTags = [...new Set(knowledgeDocs.map(d => d.tag).filter(t => t && !DEFAULT_KB_TAGS.some(dt => dt.key === t)))];
-  const allTags = [...DEFAULT_KB_TAGS, ...customTags.map(t => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))];
+  const [kbTags, setKbTags] = useState(() => {
+    if (typeof window === "undefined") return SEED_TAGS;
+    try {
+      const stored = localStorage.getItem(KB_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return SEED_TAGS;
+  });
+
+  // Persist tags to localStorage on change
+  useEffect(() => {
+    try { localStorage.setItem(KB_STORAGE_KEY, JSON.stringify(kbTags)); } catch {}
+  }, [kbTags]);
+
+  // Merge in any tags from existing docs that aren't in the list
+  const docOnlyTags = [...new Set(knowledgeDocs.map(d => d.tag).filter(t => t && !kbTags.some(kt => kt.key === t)))];
+  const allTags = [{ key: "all", label: "All" }, ...kbTags, ...docOnlyTags.map(t => ({ key: t, label: t }))];
+
+  const addCustomTag = () => {
+    const raw = newTagName.trim();
+    if (!raw) return;
+    const key = raw.toLowerCase().replace(/\s+/g, "_");
+    if (kbTags.some(t => t.key === key)) return;
+    setKbTags(prev => [...prev, { key, label: raw }]);
+    setKbFilter(key);
+    setNewTagName("");
+    setAddingTag(false);
+  };
+
+  const renameTag = (oldKey, newLabel) => {
+    const newKey = newLabel.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!newLabel.trim() || (newKey !== oldKey && kbTags.some(t => t.key === newKey))) return;
+    setKbTags(prev => prev.map(t => t.key === oldKey ? { key: newKey, label: newLabel.trim() } : t));
+    // Update all docs that had the old tag
+    if (newKey !== oldKey) {
+      knowledgeDocs.filter(d => d.tag === oldKey).forEach(d => {
+        saveBroadcast({ id: d.id, title: d.title, content: d.content, channel: "context", subtype: "doc", tag: newKey });
+      });
+      if (kbFilter === oldKey) setKbFilter(newKey);
+      if (docTag === oldKey) setDocTag(newKey);
+    }
+    setEditingTagKey(null);
+    setEditingTagLabel("");
+  };
+
+  const deleteTag = (key) => {
+    setKbTags(prev => prev.filter(t => t.key !== key));
+    if (kbFilter === key) setKbFilter("all");
+    // Docs with this tag keep their tag value — they'll show under "All" or can be reassigned
+  };
+
+  const handleTagDragStart = (key) => { setDragTagKey(key); };
+  const handleTagDragOver = (e, key) => { e.preventDefault(); setDragOverTagKey(key); };
+  const handleTagDrop = (targetKey) => {
+    if (!dragTagKey || dragTagKey === targetKey) { setDragTagKey(null); setDragOverTagKey(null); return; }
+    setKbTags(prev => {
+      const list = [...prev];
+      const fromIdx = list.findIndex(t => t.key === dragTagKey);
+      const toIdx = list.findIndex(t => t.key === targetKey);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return list;
+    });
+    setDragTagKey(null);
+    setDragOverTagKey(null);
+  };
+  const handleTagDragEnd = () => { setDragTagKey(null); setDragOverTagKey(null); };
+
+  // File drop — drag .md/.txt files from Finder into the doc list
+  const handleFileDrop = async (e) => {
+    e.preventDefault();
+    setFileDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
+    );
+    if (files.length === 0) return;
+
+    setFileImporting(true);
+    const tag = kbFilter !== "all" ? kbFilter : null;
+
+    for (const file of files) {
+      try {
+        const content = await file.text();
+        const title = file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        await saveBroadcast({ title, content, channel: "context", subtype: "doc", tag });
+      } catch (err) {
+        console.error("[kb] file import error:", err);
+      }
+    }
+
+    // Refresh broadcasts
+    try {
+      const res = await fetch("/api/owner/broadcasts", { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (res.ok) setBroadcasts(await res.json());
+    } catch {}
+    setFileImporting(false);
+  };
 
   const filteredDocs = kbFilter === "all" ? knowledgeDocs : knowledgeDocs.filter(d => d.tag === kbFilter);
   const selectedDoc = knowledgeDocs.find(d => d.id === selectedDocId);
@@ -1274,7 +1378,7 @@ function DeveloperTab() {
     setSelectedDocId("new");
     setDocTitle("");
     setDocContent("");
-    setDocTag(kbFilter !== "all" ? kbFilter : "brand");
+    setDocTag(kbFilter !== "all" ? kbFilter : kbTags[0]?.key || "brand");
   };
 
   const saveDoc = async () => {
@@ -1302,15 +1406,6 @@ function DeveloperTab() {
     setSelectedDocId(null);
     setDocTitle("");
     setDocContent("");
-  };
-
-  const addCustomTag = () => {
-    const key = newTagName.trim().toLowerCase().replace(/\s+/g, "-");
-    if (key && !allTags.some(t => t.key === key)) {
-      setKbFilter(key);
-      setNewTagName("");
-      setAddingTag(false);
-    }
   };
 
   // ── Doc Import ──
@@ -1814,27 +1909,80 @@ function DeveloperTab() {
                 Full documents injected into every chat. Brand voice, policies, guides. Users never see these.
               </p>
 
-              {/* Tag pills */}
-              <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+              {/* Tag pills — draggable, editable, deletable */}
+              <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", marginBottom: "var(--space-3)", alignItems: "center" }}>
                 {allTags.map(tag => {
                   const active = kbFilter === tag.key;
                   const count = tag.key === "all" ? knowledgeDocs.length : knowledgeDocs.filter(d => d.tag === tag.key).length;
+                  const isDraggable = tag.key !== "all";
+                  const isEditing = editingTagKey === tag.key;
+                  const isDragOver = dragOverTagKey === tag.key && dragTagKey !== tag.key;
+
+                  if (isEditing) {
+                    return (
+                      <div key={tag.key} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <input
+                          value={editingTagLabel}
+                          onChange={e => setEditingTagLabel(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") renameTag(tag.key, editingTagLabel);
+                            if (e.key === "Escape") { setEditingTagKey(null); setEditingTagLabel(""); }
+                          }}
+                          onBlur={() => renameTag(tag.key, editingTagLabel)}
+                          autoFocus
+                          style={{
+                            width: Math.max(60, editingTagLabel.length * 7 + 20),
+                            padding: "var(--space-1) var(--space-2)",
+                            border: "1px solid var(--color-text)", borderRadius: "var(--radius-sm)",
+                            fontSize: "var(--font-size-xs)", color: "var(--color-text)",
+                            background: "var(--color-bg)", fontFamily: "var(--font-primary)",
+                          }}
+                        />
+                        <button
+                          onClick={() => deleteTag(tag.key)}
+                          title="Delete tag"
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 18, height: 18, border: "none", background: "transparent",
+                            color: "var(--color-text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)",
+                          }}
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <button
                       key={tag.key}
+                      draggable={isDraggable}
+                      onDragStart={() => isDraggable && handleTagDragStart(tag.key)}
+                      onDragOver={e => isDraggable && handleTagDragOver(e, tag.key)}
+                      onDrop={() => isDraggable && handleTagDrop(tag.key)}
+                      onDragEnd={handleTagDragEnd}
                       onClick={() => { setKbFilter(tag.key); setSelectedDocId(null); }}
+                      onDoubleClick={() => {
+                        if (tag.key === "all") return;
+                        setEditingTagKey(tag.key);
+                        setEditingTagLabel(tag.label);
+                      }}
                       style={{
                         display: "flex", alignItems: "center", gap: "var(--space-1)",
                         padding: "var(--space-1) var(--space-2-5)",
-                        border: "none", outline: "none",
+                        border: isDragOver ? "1px dashed var(--color-text-muted)" : "none",
+                        outline: "none",
                         background: active ? "var(--color-bg-alt)" : "transparent",
                         borderRadius: "var(--radius-md)",
                         color: active ? "var(--color-text)" : "var(--color-text-muted)",
                         fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                         fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
-                        cursor: "pointer", transition: "all 100ms ease",
+                        cursor: isDraggable ? "grab" : "pointer",
+                        transition: "all 100ms ease",
+                        opacity: dragTagKey === tag.key ? 0.4 : 1,
                       }}
                     >
+                      {isDraggable && active && <GripVertical size={10} style={{ opacity: 0.4, marginLeft: -4 }} />}
                       {tag.label}
                       {count > 0 && tag.key !== "all" && (
                         <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", opacity: 0.6 }}>{count}</span>
@@ -1851,7 +1999,7 @@ function DeveloperTab() {
                       placeholder="Tag name"
                       autoFocus
                       style={{
-                        width: 80, padding: "var(--space-1) var(--space-2)",
+                        width: 100, padding: "var(--space-1) var(--space-2)",
                         border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
                         fontSize: "var(--font-size-xs)", color: "var(--color-text)",
                         background: "var(--color-bg)", fontFamily: "var(--font-primary)",
@@ -1861,6 +2009,7 @@ function DeveloperTab() {
                 ) : (
                   <button
                     onClick={() => setAddingTag(true)}
+                    title="Add tag"
                     style={{
                       display: "flex", alignItems: "center",
                       padding: "var(--space-1) var(--space-2)",
@@ -1875,8 +2024,18 @@ function DeveloperTab() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-4)", minHeight: 280 }}>
-                {/* Doc list */}
-                <div>
+                {/* Doc list — drop zone for .md files */}
+                <div
+                  onDragOver={e => { e.preventDefault(); if (e.dataTransfer.types.includes("Files")) setFileDragOver(true); }}
+                  onDragLeave={() => setFileDragOver(false)}
+                  onDrop={handleFileDrop}
+                  style={{
+                    border: fileDragOver ? "2px dashed var(--color-text-muted)" : "none",
+                    borderRadius: fileDragOver ? "var(--radius-md)" : undefined,
+                    padding: fileDragOver ? "var(--space-2)" : undefined,
+                    transition: "all 150ms ease",
+                  }}
+                >
                   <button
                     onClick={newDoc}
                     style={{
@@ -1888,13 +2047,21 @@ function DeveloperTab() {
                       cursor: "pointer", marginBottom: "var(--space-2)",
                     }}
                   >
-                    <Plus size={12} /> New document
+                    <Plus size={12} /> {fileImporting ? "Importing..." : "New document"}
                   </button>
-                  {broadcastsLoading ? (
+                  {fileDragOver ? (
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: "var(--space-6)", fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-secondary)", fontStyle: "italic",
+                    }}>
+                      Drop .md files here
+                    </div>
+                  ) : broadcastsLoading ? (
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
                   ) : filteredDocs.length === 0 ? (
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2)" }}>
-                      {knowledgeDocs.length === 0 ? "No documents yet." : "No docs in this tag."}
+                      {knowledgeDocs.length === 0 ? "No documents yet. Drag .md files here or click New." : "No docs in this tag."}
                     </div>
                   ) : (
                     <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
@@ -3030,19 +3197,19 @@ function NotesTab() {
 /* ─── Revenue Projections Data ─── */
 
 const REVENUE_GRID = [
-  { users: 20, free: 6, std: 10, pro: 4, revenue: 130, apiCost: 90, credits: 14, hosting: 25, net: 1 },
-  { users: 35, free: 6, std: 20, pro: 9, revenue: 275, apiCost: 158, credits: 29, hosting: 25, net: 63 },
-  { users: 50, free: 6, std: 31, pro: 13, revenue: 412, apiCost: 225, credits: 44, hosting: 30, net: 113 },
-  { users: 75, free: 6, std: 48, pro: 21, revenue: 651, apiCost: 338, credits: 69, hosting: 35, net: 209 },
-  { users: 100, free: 6, std: 66, pro: 28, revenue: 882, apiCost: 450, credits: 94, hosting: 40, net: 298 },
-  { users: 150, free: 6, std: 101, pro: 43, revenue: 1352, apiCost: 675, credits: 144, hosting: 50, net: 483 },
-  { users: 200, free: 6, std: 136, pro: 58, revenue: 1822, apiCost: 900, credits: 194, hosting: 50, net: 678 },
-  { users: 300, free: 6, std: 206, pro: 88, revenue: 2762, apiCost: 1350, credits: 294, hosting: 60, net: 1058 },
-  { users: 500, free: 6, std: 346, pro: 148, revenue: 4642, apiCost: 2250, credits: 494, hosting: 75, net: 1823 },
-  { users: 750, free: 6, std: 521, pro: 223, revenue: 6992, apiCost: 3375, credits: 744, hosting: 100, net: 2773 },
-  { users: 1000, free: 6, std: 696, pro: 298, revenue: 9342, apiCost: 4500, credits: 994, hosting: 200, net: 3648 },
-  { users: 1500, free: 6, std: 1046, pro: 448, revenue: 14042, apiCost: 6750, credits: 1494, hosting: 200, net: 5598 },
-  { users: 2000, free: 6, std: 1396, pro: 598, revenue: 18742, apiCost: 9000, credits: 1994, hosting: 200, net: 7548 },
+  { users: 20, free: 6, std: 10, pro: 4, revenue: 150, apiCost: 90, credits: 14, hosting: 25, net: 21 },
+  { users: 35, free: 6, std: 20, pro: 9, revenue: 315, apiCost: 158, credits: 29, hosting: 25, net: 103 },
+  { users: 50, free: 6, std: 31, pro: 13, revenue: 474, apiCost: 225, credits: 44, hosting: 30, net: 175 },
+  { users: 75, free: 6, std: 48, pro: 21, revenue: 747, apiCost: 338, credits: 69, hosting: 35, net: 305 },
+  { users: 100, free: 6, std: 66, pro: 28, revenue: 1014, apiCost: 450, credits: 94, hosting: 40, net: 430 },
+  { users: 150, free: 6, std: 101, pro: 43, revenue: 1554, apiCost: 675, credits: 144, hosting: 50, net: 685 },
+  { users: 200, free: 6, std: 136, pro: 58, revenue: 2094, apiCost: 900, credits: 194, hosting: 50, net: 950 },
+  { users: 300, free: 6, std: 206, pro: 88, revenue: 3174, apiCost: 1350, credits: 294, hosting: 60, net: 1470 },
+  { users: 500, free: 6, std: 346, pro: 148, revenue: 5334, apiCost: 2250, credits: 494, hosting: 75, net: 2515 },
+  { users: 750, free: 6, std: 521, pro: 223, revenue: 8034, apiCost: 3375, credits: 744, hosting: 100, net: 3815 },
+  { users: 1000, free: 6, std: 696, pro: 298, revenue: 10734, apiCost: 4500, credits: 994, hosting: 200, net: 5040 },
+  { users: 1500, free: 6, std: 1046, pro: 448, revenue: 16134, apiCost: 6750, credits: 1494, hosting: 200, net: 7690 },
+  { users: 2000, free: 6, std: 1396, pro: 598, revenue: 21534, apiCost: 9000, credits: 1994, hosting: 200, net: 10340 },
 ];
 
 const MILESTONES = REVENUE_GRID.map(r => r.users);
@@ -3223,8 +3390,8 @@ function UsersTab() {
           lineHeight: "var(--line-height-relaxed)",
           marginBottom: "var(--space-4)",
         }}>
-          <div>Standard $7/mo (450 msgs) &middot; Pro $15/mo (800 msgs) &middot; Credits $2/100</div>
-          <div>70/30 Standard/Pro split &middot; 6 free seats &middot; ~1.5&cent;/msg API cost &middot; ~$1/mo blended referral credit</div>
+          <div>{TIERS.standard.label} {TIERS.standard.priceLabel} ({TIERS.standard.messages} msgs) &middot; {TIERS.pro.label} {TIERS.pro.priceLabel} ({TIERS.pro.messages} msgs) &middot; Credits {CREDITS.priceLabel}/{CREDITS.amount}</div>
+          <div>70/30 {TIERS.standard.label}/{TIERS.pro.label} split &middot; 6 free seats &middot; ~{COST_BASIS.avgCostPerMsg * 100}&cent;/msg API cost &middot; ~$1/mo blended referral credit</div>
         </div>
 
         {/* Table */}
@@ -3271,7 +3438,7 @@ function UsersTab() {
           marginTop: "var(--space-4)",
           fontStyle: "italic",
         }}>
-          The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$300/mo. At 500 it's a real income.
+          The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$430/mo. At 1,000 it's $5K/mo.
         </p>
       </div>
     </div>
@@ -3327,12 +3494,12 @@ const SITE_ASSETS = [
 ];
 
 const PITCHES = [
-  { cat: "Value Props", text: "$15/mo instead of Claude or OpenAI \u2014 and it knows you." },
-  { cat: "Value Props", text: "You\u2019re paying $88/mo for 10 apps. F\u00FClkit replaces them for $7." },
-  { cat: "Value Props", text: "F\u00FClkit pays for itself 12x over. $972/year in savings." },
+  { cat: "Value Props", text: `${TIERS.pro.priceLabel} instead of Claude or OpenAI \u2014 and it knows you.` },
+  { cat: "Value Props", text: `You\u2019re paying $88/mo for 10 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
+  { cat: "Value Props", text: `F\u00FClkit pays for itself 12x over. $${(88 - TIERS.standard.price) * 12}/year in savings.` },
   { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
   { cat: "Value Props", text: "Stop catching AI up to speed. F\u00FClkit already knows what you\u2019re working on." },
-  { cat: "Comparisons", text: "10 apps. $88/month. Or F\u00FClkit. $7." },
+  { cat: "Comparisons", text: `10 apps. $88/month. Or F\u00FClkit. $${TIERS.standard.price}.` },
   { cat: "Comparisons", text: "Average knowledge worker uses 9.4 apps daily. F\u00FClkit replaces them with 1." },
   { cat: "Comparisons", text: "Workers spend 3.6 hours a day searching for information. F\u00FClkit finds it in seconds." },
   { cat: "Comparisons", text: "Only 15% of saved knowledge is ever found again. F\u00FClkit retrieves it \u2014 proactively." },

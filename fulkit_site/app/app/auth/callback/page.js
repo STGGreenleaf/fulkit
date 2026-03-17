@@ -19,6 +19,30 @@ export default function AuthCallback() {
           setStatus(`Error: ${error.message}`);
           return;
         }
+
+        // Claim referral if cookie exists
+        const refMatch = document.cookie.match(/fulkit-ref=([^;]+)/);
+        if (refMatch) {
+          const refCode = decodeURIComponent(refMatch[1]);
+          // Clear cookie immediately
+          document.cookie = "fulkit-ref=;path=/;max-age=0";
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              await fetch("/api/referrals/claim", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ code: refCode }),
+              });
+            }
+          } catch (e) {
+            console.error("[auth/callback] referral claim failed:", e);
+          }
+        }
+
         window.location.href = "/";
         return;
       }

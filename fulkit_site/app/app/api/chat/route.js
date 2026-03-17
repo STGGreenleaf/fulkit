@@ -13,6 +13,8 @@ import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
+import { SEAT_LIMITS, TIERS, OWNER, BYOK as BYOK_CONFIG, LOW_FUEL_THRESHOLD, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
+import { checkUserBudget, estimateCost, trackApiSpend } from "../../../lib/cost-guard";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -51,24 +53,20 @@ async function getStripePrices() {
 }
 
 function getModelConfig(role, seatType, hasByok) {
-  // BYOK+Owner → best tier
-  if (hasByok && role === "owner") {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: true };
-  }
-  // BYOK → great tier (Opus, same limits)
+  // BYOK (owner or not) → Opus, unlimited
   if (hasByok) {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: true };
+    return { model: BYOK_CONFIG.model, maxTokens: BYOK_CONFIG.maxTokens, compressAt: OWNER.compressAt, isByok: true };
   }
   // Owner without BYOK → still gets Opus (Fulkit pays)
   if (role === "owner") {
-    return { model: "claude-opus-4-6", maxTokens: 128000, compressAt: 180000, isByok: false };
+    return { model: OWNER.model, maxTokens: OWNER.maxTokens, compressAt: OWNER.compressAt, isByok: false };
   }
-  // Pro → good tier
+  // Pro → Sonnet 4K
   if (seatType === "pro") {
-    return { model: "claude-sonnet-4-6", maxTokens: 4096, compressAt: 80000, isByok: false };
+    return { model: TIERS.pro.model, maxTokens: TIERS.pro.maxTokens, compressAt: 80000, isByok: false };
   }
-  // Standard → decent tier
-  return { model: "claude-sonnet-4-6", maxTokens: 2048, compressAt: 80000, isByok: false };
+  // Standard/free → Sonnet 2K
+  return { model: TIERS.standard.model, maxTokens: TIERS.standard.maxTokens, compressAt: 80000, isByok: false };
 }
 
 const BASE_PROMPT = `You are Fülkit — a thinking partner, not an assistant. You're warm, direct, and useful. You have bestie energy — you care, you push back when needed, and you remember what matters.
@@ -1973,7 +1971,7 @@ export async function POST(request) {
       try {
         const { data } = await getSupabaseAdmin()
           .from("profiles")
-          .select("role, seat_type, messages_this_month, message_count_reset_at")
+          .select("role, seat_type, messages_this_month, message_count_reset_at, api_spend_this_month")
           .eq("id", userId)
           .single()
           .abortSignal(AbortSignal.timeout(5000));
@@ -1986,9 +1984,10 @@ export async function POST(request) {
       const now = new Date();
       if (resetDate.getUTCMonth() !== now.getUTCMonth() || resetDate.getUTCFullYear() !== now.getUTCFullYear()) {
         profile.messages_this_month = 0;
+        profile.api_spend_this_month = 0;
         getSupabaseAdmin()
           .from("profiles")
-          .update({ messages_this_month: 0, message_count_reset_at: now.toISOString() })
+          .update({ messages_this_month: 0, api_spend_this_month: 0, message_count_reset_at: now.toISOString() })
           .eq("id", userId)
           .then(() => {}).catch(() => {});
       }
@@ -2014,14 +2013,22 @@ export async function POST(request) {
 
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
-      const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
-      const limit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
+      const limit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
         emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: profile?.seat_type, model: config.model, hasByok: config.isByok });
         return Response.json({
           error: `You burned through all ${limit} messages this month. Drop in your own API key to keep going — unlimited, no cap.`,
         }, { status: 429 });
+      }
+    }
+
+    // Cost ceiling — secondary safeguard against API overspend (BYOK and owners exempt)
+    if (userId && !config.isByok && profile?.role !== "owner") {
+      const budgetCheck = checkUserBudget(profile?.seat_type || "free", parseFloat(profile?.api_spend_this_month || 0));
+      if (!budgetCheck.allowed) {
+        emitServerSignal(userId, "cost_ceiling", "warning", { seat: profile?.seat_type, spend: profile?.api_spend_this_month });
+        return Response.json({ error: budgetCheck.reason }, { status: 429 });
       }
     }
 
@@ -2186,11 +2193,10 @@ export async function POST(request) {
 
     // BYOK nudge — if non-BYOK user is burning through Fül, mention it naturally (once per session)
     if (userId && !config.isByok && profile?.role !== "owner") {
-      const SEAT_LIMITS_SYS = { standard: 450, pro: 800, free: 100 };
-      const fuelLimit = SEAT_LIMITS_SYS[profile?.seat_type || "free"] || 100;
+      const fuelLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
       const fuelUsed = profile?.messages_this_month || 0;
       const fuelPct = fuelLimit > 0 ? fuelUsed / fuelLimit : 0;
-      if (fuelPct >= 0.8) {
+      if (fuelPct >= LOW_FUEL_THRESHOLD) {
         system += `\n\n## Low Fuel Notice\nThe user has used ${fuelUsed} of ${fuelLimit} messages this month (${Math.round(fuelPct * 100)}%). If it comes up naturally — not forced — mention that they can drop in their own Anthropic API key in Settings to get unlimited messages with no monthly cap. Don't lead with this, don't repeat it, and don't make it the focus. Just a gentle mention if the moment is right.`;
       }
     }
@@ -2257,15 +2263,14 @@ export async function POST(request) {
           .join("\n\n");
         // Dynamic pricing injection — replace {{placeholder}} tokens with live Stripe prices
         if (broadcastBlock.includes("{{")) {
-          const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
           const prices = await getStripePrices();
           const replacements = {
             "{{free_limit}}": String(SEAT_LIMITS.free),
             "{{standard_limit}}": String(SEAT_LIMITS.standard),
             "{{pro_limit}}": String(SEAT_LIMITS.pro),
-            "{{standard_price}}": prices?.standard || "$7",
-            "{{pro_price}}": prices?.pro || "$15",
-            "{{credits_price}}": prices?.credits || "$2",
+            "{{standard_price}}": prices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
+            "{{pro_price}}": prices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
+            "{{credits_price}}": prices?.credits || CREDITS.priceLabel,
           };
           for (const [token, value] of Object.entries(replacements)) {
             broadcastBlock = broadcastBlock.replaceAll(token, value);
@@ -2274,6 +2279,64 @@ export async function POST(request) {
         system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
       }
     } catch { /* proceed without broadcasts */ }
+
+    // Referral whisper context — inject stats so AI can surface referral CTAs naturally
+    if (userId && !config.isByok && profile?.role !== "owner") {
+      try {
+        const { data: refProfile } = await getSupabaseAdmin()
+          .from("profiles")
+          .select("referral_code, total_active_referrals, referral_tier, seat_type")
+          .eq("id", userId)
+          .single()
+          .abortSignal(AbortSignal.timeout(3000));
+
+        if (refProfile) {
+          const refs = refProfile.total_active_referrals || 0;
+          const tier = refProfile.referral_tier || 0;
+          const seatType = refProfile.seat_type || "free";
+          const hasCode = !!refProfile.referral_code;
+
+          // Calculate proximity to milestones
+          const toFreeStandard = Math.max(0, 9 - refs);
+          const toFreePro = Math.max(0, 15 - refs);
+          const toBuilder = Math.max(0, 25 - refs);
+
+          // Only inject if there's a relevant milestone approaching or a trigger condition
+          const daysActive = profile?.message_count_reset_at
+            ? Math.floor((Date.now() - new Date(profile.message_count_reset_at).getTime()) / 86400000)
+            : 0;
+          const msgCount = profile?.messages_this_month || 0;
+
+          const shouldWhisper = (
+            (!hasCode && msgCount >= 5) ||                    // First touch: 5+ messages, no referral code yet
+            (refs > 0 && toFreeStandard <= 3 && toFreeStandard > 0) || // Close to Standard-free
+            (refs > 0 && toFreePro <= 3 && toFreePro > 0) ||          // Close to Pro-free
+            (refs > 0 && toBuilder <= 5 && toBuilder > 0) ||          // Close to Builder
+            (msgCount === 100 || msgCount === 500)                     // Usage milestones
+          );
+
+          if (shouldWhisper) {
+            let whisperHint = `\n\n## Referral Context (internal — use naturally, never announce)\n`;
+            whisperHint += `The user has ${refs} active referrals. `;
+
+            if (!hasCode) {
+              whisperHint += `They haven't generated a referral code yet. If the moment is right, mention that they can share Fülkit with friends and earn credit toward their subscription. Their referral link is in Settings > Referrals.`;
+            } else if (seatType !== "free" && toFreeStandard > 0 && toFreeStandard <= 3) {
+              whisperHint += `They're ${toFreeStandard} referral${toFreeStandard === 1 ? "" : "s"} away from making their Standard plan free. A gentle mention could be motivating.`;
+            } else if (toFreePro > 0 && toFreePro <= 3) {
+              whisperHint += `They're ${toFreePro} referral${toFreePro === 1 ? "" : "s"} away from making their Pro plan free.`;
+            } else if (toBuilder > 0 && toBuilder <= 5) {
+              whisperHint += `They're ${toBuilder} referral${toBuilder === 1 ? "" : "s"} away from Builder tier, which unlocks cash payouts.`;
+            } else {
+              whisperHint += `If the conversation naturally touches on sharing or recommendations, a brief mention of the referral program is appropriate.`;
+            }
+
+            whisperHint += `\nDo NOT force this. Only mention if the moment feels natural. Never more than once per conversation.`;
+            system += whisperHint;
+          }
+        }
+      } catch { /* proceed without referral context */ }
+    }
 
     // Square inventory instructions
     if (sqToken) {
@@ -2362,6 +2425,7 @@ Never skip the preview step. The user must see and approve changes before they g
           }));
 
           let needsFinalResponse = false;
+          let totalApiCost = 0; // accumulate cost across tool rounds
           const loopStart = Date.now();
           const MAX_LOOP_MS = 50000; // 50s total — stay under Vercel's 60s limit
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -2401,6 +2465,11 @@ Never skip the preview step. The user must see and approve changes before they g
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               controller.close();
               return;
+            }
+
+            // Track cost from this round's token usage
+            if (finalMessage.usage) {
+              totalApiCost += estimateCost(config.model, finalMessage.usage.input_tokens || 0, finalMessage.usage.output_tokens || 0);
             }
 
             // If Claude didn't request tools, we're done
@@ -2614,6 +2683,11 @@ Never skip the preview step. The user must see and approve changes before they g
                 encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)
               );
             }
+          }
+
+          // Track API spend (fire-and-forget) — BYOK and owners exempt
+          if (userId && totalApiCost > 0 && !config.isByok && profile?.role !== "owner") {
+            trackApiSpend(getSupabaseAdmin(), userId, totalApiCost).catch(() => {});
           }
 
           try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}

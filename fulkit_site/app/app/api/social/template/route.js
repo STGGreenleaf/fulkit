@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { TIERS } from "../../../../lib/ful-config";
 
 const SIZES = {
   og:          { w: 1200, h: 630 },
@@ -59,7 +60,7 @@ function ogHero() {
 function ogPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 140, fontWeight: 700, color: TEXT, letterSpacing: -5, lineHeight: 1 }}>{"$15/mo"}</div>
+      <div style={{ fontSize: 140, fontWeight: 700, color: TEXT, letterSpacing: -5, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
       <div style={{ fontSize: 28, fontWeight: 400, color: SEC, marginTop: 24 }}>{"Your AI bestie."}</div>
     </div>
   );
@@ -78,7 +79,7 @@ function ogStack() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
       <div style={{ fontSize: 48, fontWeight: 400, color: MUTED, letterSpacing: -1, lineHeight: 1.2 }}>{"10 apps. $88/month."}</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 12 }}>{"Or"}</span>{brandMark(52)}<span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 4 }}>{". $7."}</span></div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 12 }}>{"Or"}</span>{brandMark(52)}<span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 4 }}>{`. $${TIERS.standard.price}.`}</span></div>
     </div>
   );
 }
@@ -129,7 +130,7 @@ function igPostPrice() {
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       {brandMark(72, true)}
       <div style={{ fontSize: 20, fontWeight: 400, color: SEC, marginTop: 14, letterSpacing: 2, marginBottom: 80 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 160, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{"$15"}</div>
+      <div style={{ fontSize: 160, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{`$${TIERS.pro.price}`}</div>
       <div style={{ fontSize: 36, fontWeight: 400, color: SEC, letterSpacing: 3, marginTop: 4, marginBottom: 80 }}>{"/month"}</div>
       <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"An AI with a memory."}</div>
       <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"Your notes. Your voice. Your bestie."}</div>
@@ -157,7 +158,7 @@ function igPostStack() {
       <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 8, marginBottom: 20 }}>{"apps. $88/month."}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT_INV, marginBottom: 20 }} />
       <div style={{ fontSize: 120, fontWeight: 700, color: TEXT_INV, letterSpacing: -3, lineHeight: 1 }}>{"1"}</div>
-      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 8 }}>{"app. $7/month."}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 8 }}>{`app. $${TIERS.standard.price}/month.`}</div>
       <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
     </div>
   );
@@ -223,7 +224,7 @@ function igStoriesHero() {
         </div>
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32 }} />
-      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{"$15/mo"}</div>
+      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
     </div>
   );
@@ -239,7 +240,7 @@ function igStoriesPrice() {
         <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"1."}</span>{"Everything you need, nothing you don\u2019t."}
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32 }} />
-      <div style={{ fontSize: 120, fontWeight: 700, color: TEXT, letterSpacing: -4, lineHeight: 1 }}>{"$15"}</div>
+      <div style={{ fontSize: 120, fontWeight: 700, color: TEXT, letterSpacing: -4, lineHeight: 1 }}>{`$${TIERS.pro.price}`}</div>
       <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 8 }}>{"/month"}</div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
     </div>
@@ -269,7 +270,7 @@ function igStoriesStack() {
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 48 }} />
       <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginBottom: 8 }}>{"You need"}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1 }}>{"1 app"}</div>
-      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 8 }}>{"$7/month"}</div>
+      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 8 }}>{`$${TIERS.standard.price}/month`}</div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
     </div>
   );
@@ -330,7 +331,7 @@ function igStoriesNotes() {
         </div>
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginTop: 48, marginBottom: 32 }} />
-      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{"$15/mo"}</div>
+      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
       <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
     </div>
   );

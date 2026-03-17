@@ -39,6 +39,7 @@ import { OwnerPanel } from "../owner/page";
 const TAB_ICON_SIZE = 14;
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
+import { SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -2927,58 +2928,243 @@ function AITab() {
 }
 
 function ReferralsTab() {
-  const { user } = useAuth();
-  const refs = [];
-  const activeRefs = refs.filter((r) => r.status === "active").length;
-  const credit = activeRefs * 1;
+  const { user, profile, isOwner, accessToken } = useAuth();
+  const [refCode, setRefCode] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [adminStats, setAdminStats] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [ownerView, setOwnerView] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (!accessToken) return;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    Promise.all([
+      fetch("/api/referrals/code", { headers }).then(r => r.json()),
+      fetch("/api/referrals/status", { headers }).then(r => r.json()),
+    ]).then(([codeRes, statusRes]) => {
+      if (codeRes.code) setRefCode(codeRes.code);
+      setStats(statusRes);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!isOwner || !ownerView || !accessToken) return;
+    fetch("/api/referrals/admin", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.json())
+      .then(setAdminStats)
+      .catch(() => {});
+  }, [isOwner, ownerView, accessToken]);
+
+  const refLink = refCode ? `fulkit.app/ref/${refCode}` : "generating...";
+  const activeRefs = stats?.activeReferrals || 0;
+  const tier = stats?.tier;
+  const monthlyFul = stats?.monthlyFul || 0;
+  const monthlyDollars = stats?.monthlyDollars || 0;
+  const seatType = profile?.seat_type || "free";
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(`https://${refLink}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Cheatsheet data from config
+  const cheatsheet = [
+    { refs: 3, ful: 300, label: "Pay less" },
+    { refs: REFERRALS.freeAtStandard, ful: REFERRALS.freeAtStandard * 100, label: "Standard = free" },
+    { refs: REFERRALS.freeAtPro, ful: REFERRALS.freeAtPro * 100, label: "Pro = free" },
+    { refs: "25+", ful: "2,750+", label: "Free + cash" },
+  ];
+
+  const tierNames = REFERRALS.tiers || [];
+  const toFree = seatType === "pro"
+    ? Math.max(0, REFERRALS.freeAtPro - activeRefs)
+    : Math.max(0, REFERRALS.freeAtStandard - activeRefs);
+
+  const statusBadge = (s) => {
+    const colors = {
+      active: { bg: "var(--color-success-soft)", fg: "var(--color-success)" },
+      trial: { bg: "var(--color-warning-soft)", fg: "var(--color-warning)" },
+      churned: { bg: "var(--color-bg)", fg: "var(--color-text-dim)" },
+    };
+    const c = colors[s] || colors.churned;
+    return { background: c.bg, color: c.fg, fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", padding: "var(--space-0-5) var(--space-2)", borderRadius: "var(--radius-xs)" };
+  };
+
+  // ── Owner toggle ──
+  if (isOwner && ownerView) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+          <SectionTitle style={{ marginBottom: 0 }}>Sales Center</SectionTitle>
+          <button onClick={() => setOwnerView(false)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
+            Mine
+          </button>
+        </div>
+
+        {adminStats ? (
+          <>
+            {/* Network KPIs */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+              {[
+                { label: "Active refs", value: adminStats.activeReferrals },
+                { label: "Trial", value: adminStats.trialReferrals },
+                { label: "F\u00FCl/mo out", value: adminStats.totalMonthlyFul.toLocaleString() },
+                { label: "Payout $", value: `$${adminStats.totalMonthlyDollars}` },
+              ].map((kpi, i) => (
+                <Card key={i} style={{ textAlign: "center", padding: "var(--space-3)" }}>
+                  <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>{kpi.label}</div>
+                  <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{kpi.value}</div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Revenue summary */}
+            <Card style={{ marginBottom: "var(--space-4)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-4)" }}>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>MRR</div>
+                  <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>API cost</div>
+                  <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.estimatedApiCost}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>Net</div>
+                  <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>{adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}</div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Subscribers */}
+            <Card style={{ marginBottom: "var(--space-4)" }}>
+              <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>Subscribers</div>
+              <div style={{ display: "flex", gap: "var(--space-6)" }}>
+                {[
+                  { label: "Free", count: adminStats.subscribers.free },
+                  { label: "Standard", count: adminStats.subscribers.standard },
+                  { label: "Pro", count: adminStats.subscribers.pro },
+                  { label: "Total", count: adminStats.totalUsers },
+                ].map((s, i) => (
+                  <div key={i}>
+                    <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{s.count}</div>
+                    <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Top referrers */}
+            {adminStats.referrers.length > 0 && (
+              <>
+                <SectionTitle>Top referrers</SectionTitle>
+                <Card>
+                  {adminStats.referrers.map((r, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-2) 0", borderBottom: i < adminStats.referrers.length - 1 ? "1px solid var(--color-border-light)" : "none" }}>
+                      <div>
+                        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{r.name}</div>
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{r.tier} &middot; {r.activeRefs} active &middot; {r.monthlyFul.toLocaleString()} F{"\u00FC"}l/mo</div>
+                      </div>
+                      <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${r.monthlyFul / 100}</div>
+                    </div>
+                  ))}
+                </Card>
+              </>
+            )}
+          </>
+        ) : (
+          <Card><div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)" }}>Loading...</div></Card>
+        )}
+      </div>
+    );
+  }
+
+  // ── User view ──
   return (
     <div>
-      <SectionTitle>Get Fülkit</SectionTitle>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+        <SectionTitle style={{ marginBottom: 0 }}>Get F{"\u00FC"}lkit</SectionTitle>
+        {isOwner && (
+          <button onClick={() => setOwnerView(true)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
+            All
+          </button>
+        )}
+      </div>
+
+      {/* Cheatsheet CTA */}
+      <Card style={{ marginBottom: "var(--space-4)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none" }}>
+        <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", marginBottom: "var(--space-3)" }}>Get F{"\u00FC"}lkit</div>
+        <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "var(--space-1) var(--space-4)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-3)" }}>
+          {cheatsheet.map((row, i) => (
+            <span key={i} style={{ display: "contents" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{row.refs}</span>
+              <span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{typeof row.ful === "number" ? row.ful.toLocaleString() : row.ful} F{"\u00FC"}l/mo</span>
+              <span style={{ opacity: 0.7 }}>{row.label}</span>
+            </span>
+          ))}
+        </div>
+        <div style={{ fontSize: "var(--font-size-xs)", opacity: 0.6 }}>Every friend who joins and pays earns you F{"\u00FC"}l toward your subscription {"\u2014"} or cash.</div>
+      </Card>
 
       {/* KPI strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-6)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
         {[
-          { label: "Active referrals", value: activeRefs, color: "var(--color-text)" },
-          { label: "Monthly credit", value: `$${credit}`, color: "var(--color-success)" },
-          { label: "To free", value: `${Math.max(0, 7 - activeRefs)} more`, color: "var(--color-text-muted)" },
+          { label: "Active referrals", value: loading ? "..." : activeRefs },
+          { label: `Monthly F\u00FCl`, value: loading ? "..." : monthlyFul.toLocaleString() },
+          { label: "Tier", value: loading ? "..." : (tier ? tier.label : "—") },
         ].map((kpi, i) => (
-          <Card key={i} style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "var(--font-size-2xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-wider)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-2)",
-              }}
-            >
-              {kpi.label}
-            </div>
-            <div
-              style={{
-                fontSize: "var(--font-size-xl)",
-                fontWeight: "var(--font-weight-black)",
-                fontFamily: "var(--font-mono)",
-                color: kpi.color,
-              }}
-            >
-              {kpi.value}
-            </div>
+          <Card key={i} style={{ textAlign: "center", padding: "var(--space-3)" }}>
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>{kpi.label}</div>
+            <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{kpi.value}</div>
           </Card>
         ))}
       </div>
 
+      {/* Tier progress */}
+      <Card style={{ marginBottom: "var(--space-4)", padding: "var(--space-3) var(--space-4)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
+          {tierNames.map((t) => {
+            const isActive = tier && t.id <= tier.id;
+            const isCurrent = tier && t.id === tier.id;
+            return (
+              <div key={t.id} style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: isCurrent ? "var(--font-weight-bold)" : "var(--font-weight-medium)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>{t.label}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-muted)" }}>{t.min}{t.max === Infinity ? "+" : `–${t.max}`}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ height: 4, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            borderRadius: "var(--radius-full)",
+            background: "var(--color-text)",
+            width: `${Math.min(100, (activeRefs / 100) * 100)}%`,
+            transition: "width var(--duration-slow) var(--ease-default)",
+          }} />
+        </div>
+        {toFree > 0 && (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-2)" }}>
+            {toFree} more active referral{toFree !== 1 ? "s" : ""} to cover your {seatType === "pro" ? "Pro" : "Standard"} subscription.
+          </div>
+        )}
+        {toFree === 0 && activeRefs > 0 && (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-success)", marginTop: "var(--space-2)" }}>
+            Your subscription is covered by referrals.
+          </div>
+        )}
+      </Card>
+
       {/* Referral link */}
       <Card style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", marginBottom: "var(--space-2)" }}>
-          Your referral link
-        </div>
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", marginBottom: "var(--space-2)" }}>Your referral link</div>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <input
             readOnly
-            value="fulkit.app/ref/you"
+            value={refLink}
             style={{
               flex: 1,
               padding: "var(--space-2) var(--space-3)",
@@ -2992,83 +3178,62 @@ function ReferralsTab() {
             }}
           />
           <button
+            onClick={copyLink}
             style={{
               padding: "var(--space-2) var(--space-4)",
-              background: "var(--color-accent)",
-              color: "var(--color-text-inverse)",
+              background: copied ? "var(--color-bg-inverse)" : "var(--color-text)",
+              color: "var(--color-bg)",
               border: "none",
               borderRadius: "var(--radius-sm)",
               fontSize: "var(--font-size-xs)",
               fontWeight: "var(--font-weight-semibold)",
               fontFamily: "var(--font-primary)",
               cursor: "pointer",
+              transition: "background var(--duration-normal) var(--ease-default)",
             }}
           >
-            Copy
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
         <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-2)" }}>
-          Every friend who joins earns you $1/mo off your subscription.
+          Every friend who joins earns you {REFERRALS.fulPerRef} F{"\u00FC"}l/mo (${REFERRALS.creditPerRef}) off your subscription.
         </div>
       </Card>
 
       {/* Referral list */}
       <SectionTitle>Your referrals</SectionTitle>
-      {refs.length > 0 ? (
+      {stats?.referrals?.length > 0 ? (
         <Card>
-          {refs.map((ref, i) => (
+          {stats.referrals.map((ref, i) => (
             <div
-              key={i}
+              key={ref.id}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "var(--space-2) 0",
-                borderBottom: i < refs.length - 1 ? "1px solid var(--color-border-light)" : "none",
+                borderBottom: i < stats.referrals.length - 1 ? "1px solid var(--color-border-light)" : "none",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "var(--radius-full)",
-                    background: ref.status === "active" ? "var(--color-accent-soft)" : "var(--color-bg)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <div style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: ref.status === "active" ? "var(--color-success-soft)" : "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Users size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-                    {ref.name}
-                  </div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{ref.name}</div>
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                    Since {ref.since}
+                    Since {new Date(ref.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                   </div>
                 </div>
               </div>
-              <span
-                style={{
-                  fontSize: "var(--font-size-2xs)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  padding: "var(--space-0-5) var(--space-2)",
-                  borderRadius: "var(--radius-xs)",
-                  background: ref.status === "active" ? "var(--color-success-soft)" : "var(--color-warning-soft)",
-                  color: ref.status === "active" ? "var(--color-success)" : "var(--color-warning)",
-                }}
-              >
-                {ref.status}
-              </span>
+              <span style={statusBadge(ref.status)}>{ref.status}</span>
             </div>
           ))}
         </Card>
       ) : (
         <Card>
           <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
-            No referrals yet. Share your link to earn credits.
+            {loading ? "Loading..." : "No referrals yet. Share your link to earn credits."}
           </div>
         </Card>
       )}
@@ -3078,18 +3243,30 @@ function ReferralsTab() {
 
 function BillingTab() {
   const { user, profile, isOwner, accessToken } = useAuth();
-  const [loading, setLoading] = useState(null); // "pro" | "standard" | "credits" | "portal"
+  const [loading, setLoading] = useState(null);
+  const [ownerView, setOwnerView] = useState(false);
+  const [adminStats, setAdminStats] = useState(null);
+  const [refStats, setRefStats] = useState(null);
 
-  const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
   const seatType = profile?.seat_type || "free";
-  const seatLimit = SEAT_LIMITS[seatType] || 450;
+  const seatLimit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = seatLimit - messagesUsed;
   const gaugeLow = remaining <= Math.ceil(seatLimit * 0.1);
   const gaugeCapped = remaining <= 0;
   const gaugeColor = gaugeCapped ? "var(--color-error)" : gaugeLow ? "var(--color-warning)" : "var(--color-accent)";
-  const PLAN_LABELS = { standard: "Standard", pro: "Pro", free: "Free" };
-  const PLAN_PRICES = { standard: "$7/mo", pro: "$15/mo", free: "Free" };
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/referrals/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.json()).then(setRefStats).catch(() => {});
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!isOwner || !ownerView || !accessToken) return;
+    fetch("/api/referrals/admin", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.json()).then(setAdminStats).catch(() => {});
+  }, [isOwner, ownerView, accessToken]);
 
   async function handleCheckout(plan) {
     if (!accessToken) return;
@@ -3118,32 +3295,98 @@ function BillingTab() {
     } catch {} finally { setLoading(null); }
   }
 
-  // Owner with own API key = unlimited
-  if (isOwner) {
+  const refCredit = refStats?.monthlyDollars || 0;
+  const refActiveCount = refStats?.activeReferrals || 0;
+  const refFul = refStats?.monthlyFul || 0;
+
+  // ── Owner sales center ──
+  if (isOwner && ownerView) {
     return (
       <div>
-        <SectionTitle>Your plan</SectionTitle>
-        <Card style={{ marginBottom: "var(--space-4)" }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>
-              Owner
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              Unlimited — using your own API key
-            </div>
-          </div>
-        </Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+          <SectionTitle style={{ marginBottom: 0 }}>Sales Center</SectionTitle>
+          <button onClick={() => setOwnerView(false)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
+            Mine
+          </button>
+        </div>
 
-        <SectionTitle>Referral credits</SectionTitle>
-        <Card>
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
-            No referral credits yet.
-          </div>
-        </Card>
+        {adminStats ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>MRR</div>
+                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
+              </Card>
+              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>Costs</div>
+                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.estimatedApiCost + adminStats.totalMonthlyDollars}</div>
+              </Card>
+              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
+                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>Net</div>
+                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>{adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}</div>
+              </Card>
+            </div>
+
+            <Card style={{ marginBottom: "var(--space-4)" }}>
+              <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>Breakdown</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-3)" }}>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Subscribers</div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>{adminStats.subscribers.standard} Std + {adminStats.subscribers.pro} Pro + {adminStats.subscribers.free} Free</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Paying</div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>{adminStats.totalPaying} / {adminStats.totalUsers}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>API cost (est.)</div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>${adminStats.estimatedApiCost}/mo</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Referral payouts</div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>${adminStats.totalMonthlyDollars}/mo ({adminStats.totalMonthlyFul.toLocaleString()} F{"\u00FC"}l)</div>
+                </div>
+              </div>
+            </Card>
+          </>
+        ) : (
+          <Card><div style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)" }}>Loading...</div></Card>
+        )}
       </div>
     );
   }
 
+  // ── Owner user view ──
+  if (isOwner) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
+          <SectionTitle style={{ marginBottom: 0 }}>Billing</SectionTitle>
+          <button onClick={() => setOwnerView(true)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
+            All
+          </button>
+        </div>
+        <Card style={{ marginBottom: "var(--space-4)" }}>
+          <div>
+            <div style={{ fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-bold)" }}>Owner</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Unlimited {"\u2014"} using your own API key</div>
+          </div>
+        </Card>
+        {refActiveCount > 0 && (
+          <>
+            <SectionTitle>Referral credits</SectionTitle>
+            <Card>
+              <div style={{ fontSize: "var(--font-size-sm)" }}>
+                {refActiveCount} active referral{refActiveCount !== 1 ? "s" : ""} {"\u2192"} {refFul.toLocaleString()} F{"\u00FC"}l/mo (${refCredit})
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Regular user view ──
   return (
     <div>
       <SectionTitle>Your plan</SectionTitle>
@@ -3154,65 +3397,20 @@ function BillingTab() {
               {PLAN_LABELS[seatType] || "Standard"}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              {PLAN_PRICES[seatType] || "$7/mo"} — {seatLimit} messages
+              {PLAN_PRICES[seatType] || PLAN_PRICES.standard} {"\u2014"} {seatLimit} messages
             </div>
           </div>
           {seatType === "free" ? (
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <button
-                onClick={() => handleCheckout("standard")}
-                disabled={!!loading}
-                style={{
-                  padding: "var(--space-1-5) var(--space-3)",
-                  background: "transparent",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-sm)",
-                  color: "var(--color-text-secondary)",
-                  fontSize: "var(--font-size-xs)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  fontFamily: "var(--font-primary)",
-                  cursor: loading ? "wait" : "pointer",
-                  opacity: loading ? 0.6 : 1,
-                }}
-              >
-                {loading === "standard" ? "..." : "Standard $7/mo"}
+              <button onClick={() => handleCheckout("standard")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>
+                {loading === "standard" ? "..." : `Standard ${PLAN_PRICES.standard}`}
               </button>
-              <button
-                onClick={() => handleCheckout("pro")}
-                disabled={!!loading}
-                style={{
-                  padding: "var(--space-1-5) var(--space-3)",
-                  background: "var(--color-accent)",
-                  color: "var(--color-text-inverse)",
-                  border: "none",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "var(--font-size-xs)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  fontFamily: "var(--font-primary)",
-                  cursor: loading ? "wait" : "pointer",
-                  opacity: loading ? 0.6 : 1,
-                }}
-              >
-                {loading === "pro" ? "..." : "Pro $15/mo"}
+              <button onClick={() => handleCheckout("pro")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>
+                {loading === "pro" ? "..." : `Pro ${PLAN_PRICES.pro}`}
               </button>
             </div>
           ) : seatType === "standard" ? (
-            <button
-              onClick={() => handleCheckout("pro")}
-              disabled={!!loading}
-              style={{
-                padding: "var(--space-1-5) var(--space-3)",
-                background: "transparent",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--color-text-secondary)",
-                fontSize: "var(--font-size-xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)",
-                cursor: loading ? "wait" : "pointer",
-                opacity: loading ? 0.6 : 1,
-              }}
-            >
+            <button onClick={() => handleCheckout("pro")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>
               {loading === "pro" ? "..." : "Upgrade to Pro"}
             </button>
           ) : null}
@@ -3221,51 +3419,16 @@ function BillingTab() {
         {/* Fül gauge */}
         <div style={{ marginBottom: "var(--space-2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              Fül remaining
-            </span>
-            <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: gaugeCapped ? "var(--color-error)" : undefined }}>
-              {remaining} / {seatLimit}
-            </span>
+            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l remaining</span>
+            <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: gaugeCapped ? "var(--color-error)" : undefined }}>{remaining} / {seatLimit}</span>
           </div>
-          <div
-            style={{
-              height: 6,
-              borderRadius: "var(--radius-full)",
-              background: "var(--color-border-light)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${Math.max(0, (remaining / seatLimit) * 100)}%`,
-                borderRadius: "var(--radius-full)",
-                background: gaugeColor,
-                transition: `width var(--duration-slow) var(--ease-default)`,
-              }}
-            />
+          <div style={{ height: 6, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.max(0, (remaining / seatLimit) * 100)}%`, borderRadius: "var(--radius-full)", background: gaugeColor, transition: "width var(--duration-slow) var(--ease-default)" }} />
           </div>
         </div>
-        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-          {`${remaining} messages remaining this period.`}
-        </div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{remaining} messages remaining this period.</div>
         {seatType !== "free" && (
-          <button
-            onClick={handlePortal}
-            disabled={!!loading}
-            style={{
-              marginTop: "var(--space-2)",
-              padding: 0,
-              background: "none",
-              border: "none",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              fontFamily: "var(--font-primary)",
-              cursor: "pointer",
-              textDecoration: "underline",
-            }}
-          >
+          <button onClick={handlePortal} disabled={!!loading} style={{ marginTop: "var(--space-2)", padding: 0, background: "none", border: "none", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", cursor: "pointer", textDecoration: "underline" }}>
             {loading === "portal" ? "..." : "Manage subscription"}
           </button>
         )}
@@ -3275,29 +3438,10 @@ function BillingTab() {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <Zap size={16} strokeWidth={1.8} style={{ color: "var(--color-warning)" }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-              Buy credits
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              $2 per 100 messages. On demand.
-            </div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>Buy credits</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{CREDITS.description}. On demand.</div>
           </div>
-          <button
-            onClick={() => handleCheckout("credits")}
-            disabled={!!loading}
-            style={{
-              padding: "var(--space-1-5) var(--space-3)",
-              background: "var(--color-accent)",
-              color: "var(--color-text-inverse)",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-semibold)",
-              fontFamily: "var(--font-primary)",
-              cursor: loading ? "wait" : "pointer",
-              opacity: loading === "credits" ? 0.6 : 1,
-            }}
-          >
+          <button onClick={() => handleCheckout("credits")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "credits" ? 0.6 : 1 }}>
             {loading === "credits" ? "..." : "F\u00fcl up"}
           </button>
         </div>
@@ -3305,9 +3449,15 @@ function BillingTab() {
 
       <SectionTitle>Referral credits</SectionTitle>
       <Card>
-        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
-          No referral credits yet.
-        </div>
+        {refActiveCount > 0 ? (
+          <div style={{ fontSize: "var(--font-size-sm)" }}>
+            {refActiveCount} active referral{refActiveCount !== 1 ? "s" : ""} {"\u2192"} {refFul.toLocaleString()} F{"\u00FC"}l/mo (${refCredit} credit)
+          </div>
+        ) : (
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-3) 0" }}>
+            No referral credits yet. <span style={{ color: "var(--color-text-muted)" }}>Earn F{"\u00FC"}l by referring friends.</span>
+          </div>
+        )}
       </Card>
     </div>
   );
