@@ -11,6 +11,7 @@ import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
+import { SEAT_LIMITS } from "../../lib/ful-config";
 
 
 function getGreeting() {
@@ -29,8 +30,6 @@ function timeAgo(dateStr) {
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
 }
-
-const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
 
 export default function Dashboard() {
   const { user, profile, hasContext, accessToken, compactMode } = useAuth();

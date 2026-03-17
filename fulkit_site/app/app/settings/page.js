@@ -665,6 +665,22 @@ function AccountTab() {
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "—";
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(profile?.name || user?.user_metadata?.full_name || "");
+  const [nameSaving, setNameSaving] = useState(false);
+
+  async function saveName() {
+    if (!accessToken || !nameValue.trim()) return;
+    setNameSaving(true);
+    try {
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ name: nameValue.trim() }),
+      });
+      if (res.ok) setEditingName(false);
+    } catch {} finally { setNameSaving(false); }
+  }
 
   return (
     <div>
@@ -673,7 +689,24 @@ function AccountTab() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
           <div>
             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Name</div>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{profile?.name || user?.name || "—"}</div>
+            {editingName ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                <input
+                  value={nameValue}
+                  onChange={e => setNameValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+                  autoFocus
+                  style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", padding: "var(--space-0.5) var(--space-1)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", background: "var(--color-bg)", color: "var(--color-text-primary)", outline: "none", width: "100%" }}
+                />
+                <button onClick={saveName} disabled={nameSaving} style={{ padding: "var(--space-0.5)", background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", lineHeight: 0 }}><Check size={14} /></button>
+                <button onClick={() => { setEditingName(false); setNameValue(profile?.name || user?.user_metadata?.full_name || ""); }} style={{ padding: "var(--space-0.5)", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", lineHeight: 0 }}><X size={14} /></button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{profile?.name || user?.user_metadata?.full_name || "—"}</span>
+                <button onClick={() => setEditingName(true)} style={{ padding: "var(--space-0.5)", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", lineHeight: 0, fontSize: "var(--font-size-2xs)" }}>edit</button>
+              </div>
+            )}
           </div>
           <div>
             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Email</div>
@@ -3601,6 +3634,8 @@ function BillingTab() {
   const [adminStats, setAdminStats] = useState(null);
   const [refStats, setRefStats] = useState(null);
   const [billingInfo, setBillingInfo] = useState(null);
+  const [sampleKey, setSampleKey] = useState("standard");
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const seatType = profile?.seat_type || "free";
   const seatLimit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
@@ -3881,53 +3916,140 @@ function BillingTab() {
     color: ownerView === value ? "var(--color-text-inverse)" : "var(--color-text-muted)",
   });
 
-  // ── Owner "Sample" view (what a paying user sees) ──
+  // ── Owner "Sample" view (preview what users see) ──
   if (isOwner && ownerView === "sample") {
-    const sampleData = {
-      name: "Sarah Chen", email: "sarah@example.com", seat: "standard", joined: "April 2026",
-      limit: SEAT_LIMITS.standard, used: 138, refs: 3, ful: 300, credit: 3, tier: "Piece", lifetimeFul: 1200,
-      card: { brand: "Visa", last4: "4242", exp: "12/28" },
-      sub: { status: "active", renews: "Jul 17, 2026", amount: TIERS.standard.price, autoRenew: true },
-      invoices: [
-        { date: "Jun 17, 2026", amount: 9, status: "paid" },
-        { date: "May 17, 2026", amount: 9, status: "paid" },
-        { date: "Apr 17, 2026", amount: 9, status: "paid" },
-      ],
+    const SAMPLE_PROFILES = {
+      standard: {
+        label: "Standard", name: "Sarah Chen", email: "sarah@example.com", seat: "standard", joined: "April 2026",
+        limit: SEAT_LIMITS.standard, used: 138, refs: 3, ful: 300, credit: 3, tier: "Piece", fulPerRef: 100, lifetimeFul: 1200,
+        card: { brand: "Visa", last4: "4242", exp: "12/28" },
+        sub: { status: "active", renews: "Jul 17, 2026", amount: TIERS.standard.price, autoRenew: true, cancelAtPeriodEnd: false },
+        invoices: [
+          { date: "Jun 17, 2026", amount: 9, status: "paid" },
+          { date: "May 17, 2026", amount: 9, status: "paid" },
+          { date: "Apr 17, 2026", amount: 9, status: "paid" },
+        ],
+        payout: null, upgradeLabel: "Upgrade to Pro", downgradeLabel: null,
+      },
+      free: {
+        label: "Free", name: "Jamie Rivera", email: "jamie@gmail.com", seat: "free", joined: "June 2026",
+        limit: SEAT_LIMITS.free, used: 72, refs: 0, ful: 0, credit: 0, tier: null, fulPerRef: 0, lifetimeFul: 0,
+        card: null, sub: null,
+        invoices: [],
+        payout: null, upgradeLabel: null, downgradeLabel: null,
+      },
+      pro: {
+        label: "Pro", name: "Marcus Bell", email: "marcus@company.co", seat: "pro", joined: "April 2026",
+        limit: SEAT_LIMITS.pro, used: 410, refs: 12, ful: 1200, credit: 12, tier: "Component", fulPerRef: 100, lifetimeFul: 4800,
+        card: { brand: "Mastercard", last4: "8819", exp: "03/29" },
+        sub: { status: "active", renews: "Jul 17, 2026", amount: TIERS.pro.price, autoRenew: true, cancelAtPeriodEnd: false },
+        invoices: [
+          { date: "Jun 17, 2026", amount: 3, status: "paid" },
+          { date: "May 17, 2026", amount: 3, status: "paid" },
+          { date: "Apr 17, 2026", amount: 15, status: "paid" },
+        ],
+        payout: null, upgradeLabel: null, downgradeLabel: "Downgrade to Standard",
+      },
+      builder: {
+        label: "Builder", name: "Alex Kim", email: "alex@startup.io", seat: "pro", joined: "April 2026",
+        limit: SEAT_LIMITS.pro, used: 220, refs: 32, ful: 3520, credit: 15, tier: "Builder", fulPerRef: 110, lifetimeFul: 14080,
+        card: { brand: "Amex", last4: "1001", exp: "09/27" },
+        sub: { status: "active", renews: "Jul 17, 2026", amount: 0, autoRenew: true, cancelAtPeriodEnd: false },
+        invoices: [
+          { date: "Jun 17, 2026", amount: 0, status: "paid" },
+          { date: "May 17, 2026", amount: 0, status: "paid" },
+          { date: "Apr 17, 2026", amount: 0, status: "paid" },
+        ],
+        payout: { totalPaid: 52.50, pending: 1 }, upgradeLabel: null, downgradeLabel: null,
+      },
+      canceling: {
+        label: "Canceling", name: "Nina Park", email: "nina@web.dev", seat: "standard", joined: "May 2026",
+        limit: SEAT_LIMITS.standard, used: 31, refs: 1, ful: 100, credit: 1, tier: "Piece", fulPerRef: 100, lifetimeFul: 300,
+        card: { brand: "Visa", last4: "5567", exp: "01/27" },
+        sub: { status: "active", renews: null, amount: TIERS.standard.price, autoRenew: false, cancelAtPeriodEnd: true, endsAt: "Jul 17, 2026" },
+        invoices: [
+          { date: "Jun 17, 2026", amount: 8, status: "paid" },
+          { date: "May 17, 2026", amount: 9, status: "paid" },
+        ],
+        payout: null, upgradeLabel: null, downgradeLabel: null,
+      },
+      pastdue: {
+        label: "Past Due", name: "Devon Okafor", email: "devon@mail.com", seat: "pro", joined: "April 2026",
+        limit: SEAT_LIMITS.pro, used: 0, refs: 5, ful: 500, credit: 5, tier: "Piece", fulPerRef: 100, lifetimeFul: 2000,
+        card: { brand: "Visa", last4: "9203", exp: "11/25" },
+        sub: { status: "past_due", renews: null, amount: TIERS.pro.price, autoRenew: true, cancelAtPeriodEnd: false },
+        invoices: [
+          { date: "Jun 17, 2026", amount: 10, status: "open" },
+          { date: "May 17, 2026", amount: 15, status: "paid" },
+          { date: "Apr 17, 2026", amount: 15, status: "paid" },
+        ],
+        payout: null, upgradeLabel: null, downgradeLabel: null,
+      },
     };
-    const sRemaining = sampleData.limit - sampleData.used;
-    const sGaugeColor = "var(--color-accent)";
+
+    const s = SAMPLE_PROFILES[sampleKey];
+    const sRemaining = s.limit - s.used;
+    const sGaugeLow = sRemaining <= Math.ceil(s.limit * 0.1);
+    const sGaugeCapped = sRemaining <= 0;
+    const sGaugeColor = sGaugeCapped ? "var(--color-error)" : sGaugeLow ? "var(--color-warning)" : "var(--color-accent)";
+    const sPlanLabel = PLAN_LABELS[s.seat] || "Free";
+    const sPlanPrice = PLAN_PRICES[s.seat] || "Free";
+    const sMaxTokens = s.seat === "pro" ? "4,096" : "2,048";
+    const statusBg = s.sub?.status === "active" ? "var(--color-success-soft)" : s.sub?.status === "past_due" ? "var(--color-error-soft)" : "var(--color-bg)";
+    const statusColor = s.sub?.status === "active" ? "var(--color-success)" : s.sub?.status === "past_due" ? "var(--color-error)" : "var(--color-text-dim)";
+    const statusLabel = s.sub?.cancelAtPeriodEnd ? "Canceling" : (s.sub?.status || "\u2014");
+    const samplePill = (key) => ({
+      fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+      padding: "var(--space-0.5) var(--space-2)", cursor: "pointer", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+      background: sampleKey === key ? "var(--color-accent)" : "transparent",
+      color: sampleKey === key ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+    });
 
     return (
       <div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
-          <SectionTitle style={{ marginBottom: 0 }}>Billing <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-normal)" }}>(sample user)</span></SectionTitle>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+          <SectionTitle style={{ marginBottom: 0 }}>Billing <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-normal)" }}>({s.name})</span></SectionTitle>
           <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
             <button onClick={() => setOwnerView("mine")} style={ownerPill("mine")}>Mine</button>
             <button style={{ ...ownerPill("sample"), cursor: "default" }}>Sample</button>
             <button onClick={() => setOwnerView("all")} style={ownerPill("all")}>All</button>
           </div>
         </div>
+        {/* Profile pills */}
+        <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
+          {Object.keys(SAMPLE_PROFILES).map(key => (
+            <button key={key} onClick={() => setSampleKey(key)} style={samplePill(key)}>{SAMPLE_PROFILES[key].label}</button>
+          ))}
+        </div>
 
         {/* Plan hero */}
         <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-5)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
             <div>
-              <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)" }}>Standard</div>
+              <div style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-black)" }}>{sPlanLabel}</div>
               <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>
-                $9/mo {"\u00B7"} Member since {sampleData.joined}
+                {sPlanPrice} {"\u00B7"} Member since {s.joined}
               </div>
             </div>
-            <div style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)" }}>
-              Upgrade to Pro
-            </div>
+            {s.seat === "free" ? (
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>Standard {PLAN_PRICES.standard}</span>
+                <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>Pro {PLAN_PRICES.pro}</span>
+              </div>
+            ) : s.upgradeLabel ? (
+              <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>{s.upgradeLabel}</span>
+            ) : s.downgradeLabel ? (
+              <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{s.downgradeLabel}</span>
+            ) : null}
           </div>
           <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-3)" }} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-2)", textAlign: "center" }}>
             {[
-              { label: "Messages", value: `${sampleData.limit}/mo` },
+              { label: "Messages", value: `${s.limit}/mo` },
               { label: "Model", value: "Claude Sonnet" },
-              { label: "Max tokens", value: "2,048" },
-              { label: "Credits", value: "Available" },
+              { label: "Max tokens", value: sMaxTokens },
+              { label: s.seat === "free" ? "Upgrade" : "Credits", value: "Available" },
             ].map((b, i) => (
               <div key={i}>
                 <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)" }}>{b.value}</div>
@@ -3935,18 +4057,22 @@ function BillingTab() {
               </div>
             ))}
           </div>
-          <div style={{ height: 1, background: "var(--color-border-light)", margin: "var(--space-3) 0" }} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Status</span>
-              <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "var(--space-0.5) var(--space-2)", borderRadius: "var(--radius-sm)", background: "var(--color-success-soft)", color: "var(--color-success)" }}>
-                Active
-              </span>
-            </div>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              Renews {sampleData.sub.renews} {"\u00B7"} ${sampleData.sub.amount}
-            </span>
-          </div>
+          {s.sub && (
+            <>
+              <div style={{ height: 1, background: "var(--color-border-light)", margin: "var(--space-3) 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Status</span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "var(--space-0.5) var(--space-2)", borderRadius: "var(--radius-sm)", background: statusBg, color: statusColor }}>
+                    {statusLabel}
+                  </span>
+                </div>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                  {s.sub.cancelAtPeriodEnd ? `Ends ${s.sub.endsAt}` : s.sub.renews ? `Renews ${s.sub.renews} \u00B7 $${s.sub.amount}` : s.sub.status === "past_due" ? "Payment failed" : ""}
+                </span>
+              </div>
+            </>
+          )}
         </Card>
 
         {/* Fül Gauge */}
@@ -3955,14 +4081,16 @@ function BillingTab() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
             <div style={bigNumUser}>{sRemaining}</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{sampleData.used}</span> used of <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{sampleData.limit}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{s.used}</span> used of <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{s.limit}</span>
             </div>
           </div>
           <div style={{ height: 8, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden", marginBottom: "var(--space-2)" }}>
-            <div style={{ height: "100%", width: `${(sRemaining / sampleData.limit) * 100}%`, borderRadius: "var(--radius-full)", background: sGaugeColor }} />
+            <div style={{ height: "100%", width: `${Math.max(0, (sRemaining / s.limit) * 100)}%`, borderRadius: "var(--radius-full)", background: sGaugeColor }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{sRemaining} messages remaining</span>
+            <span style={{ fontSize: "var(--font-size-xs)", color: sGaugeCapped ? "var(--color-error)" : "var(--color-text-dim)" }}>
+              {sGaugeCapped ? "Tank empty" : sGaugeLow ? "Running low" : `${sRemaining} messages remaining`}
+            </span>
             <span style={{ padding: "var(--space-1) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)" }}>
               F{"\u00FC"}l up {"\u00B7"} {CREDITS.description}
             </span>
@@ -3970,93 +4098,135 @@ function BillingTab() {
         </Card>
 
         {/* Payment method */}
-        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Payment method</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <CreditCard size={16} strokeWidth={1.5} style={{ color: "var(--color-text-muted)" }} />
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-                {sampleData.card.brand} {"\u00B7\u00B7\u00B7\u00B7"}{sampleData.card.last4}
+        {s.card && (
+          <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+            <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Payment method</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <CreditCard size={16} strokeWidth={1.5} style={{ color: s.sub?.status === "past_due" ? "var(--color-error)" : "var(--color-text-muted)" }} />
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", textTransform: "capitalize" }}>
+                  {s.card.brand} {"\u00B7\u00B7\u00B7\u00B7"}{s.card.last4}
+                </span>
+              </div>
+              <span style={{ fontSize: "var(--font-size-xs)", color: s.sub?.status === "past_due" ? "var(--color-error)" : "var(--color-text-muted)" }}>
+                {s.sub?.status === "past_due" ? "Expired " : "Expires "}{s.card.exp}
               </span>
             </div>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Expires {sampleData.card.exp}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "var(--font-size-xs)" }}>
-            <span style={{ color: "var(--color-text-muted)" }}>Receipts {"\u2192"} {sampleData.email}</span>
-            <span style={{ color: "var(--color-text-muted)", textDecoration: "underline" }}>Update</span>
-          </div>
-        </Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "var(--font-size-xs)" }}>
+              <span style={{ color: "var(--color-text-muted)" }}>Receipts {"\u2192"} {s.email}</span>
+              <span style={{ color: s.sub?.status === "past_due" ? "var(--color-error)" : "var(--color-text-muted)", textDecoration: "underline", fontWeight: s.sub?.status === "past_due" ? "var(--font-weight-bold)" : undefined }}>
+                {s.sub?.status === "past_due" ? "Update now" : "Update"}
+              </span>
+            </div>
+          </Card>
+        )}
 
         {/* Referral earnings */}
         <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
           <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Referral earnings</div>
-          <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
-            <div style={{ flex: 1 }}>
-              <div style={bigNumUser}>{sampleData.refs}</div>
-              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Active referrals</div>
+          {s.refs > 0 ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-3)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>{s.refs}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Active referrals</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>{s.ful.toLocaleString()}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l/mo</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={bigNumUser}>${s.credit}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Credit/mo</div>
+                </div>
+              </div>
+              <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
+                <span style={{ color: "var(--color-text-muted)" }}>Tier</span>
+                <span style={{ fontWeight: "var(--font-weight-bold)" }}>{s.tier} ({s.fulPerRef} F{"\u00FC"}l/ref)</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
+                <span style={{ color: "var(--color-text-muted)" }}>Lifetime F{"\u00FC"}l earned</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{s.lifetimeFul.toLocaleString()}</span>
+              </div>
+              {s.credit > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>Applied to subscription</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-success)" }}>{"\u2212"}${s.credit}/mo</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ textAlign: "center", padding: "var(--space-3) 0" }}>
+              <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>No referral earnings yet</div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Refer friends from the Referrals tab to earn F{"\u00FC"}l credits toward your plan.</div>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={bigNumUser}>{sampleData.ful}</div>
-              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>F{"\u00FC"}l/mo</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={bigNumUser}>${sampleData.credit}</div>
-              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Credit/mo</div>
-            </div>
-          </div>
-          <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
-            <span style={{ color: "var(--color-text-muted)" }}>Tier</span>
-            <span style={{ fontWeight: "var(--font-weight-bold)" }}>{sampleData.tier} (100 F{"\u00FC"}l/ref)</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", marginBottom: "var(--space-1)" }}>
-            <span style={{ color: "var(--color-text-muted)" }}>Lifetime F{"\u00FC"}l earned</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{sampleData.lifetimeFul.toLocaleString()}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
-            <span style={{ color: "var(--color-text-muted)" }}>Applied to subscription</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: "var(--color-success)" }}>{"\u2212"}${sampleData.credit}/mo</span>
-          </div>
+          )}
         </Card>
 
-        {/* Invoices */}
-        <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-          <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Invoices</div>
-          {sampleData.invoices.map((inv, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < sampleData.invoices.length - 1 ? "1px solid var(--color-border-light)" : "none" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{inv.date}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${inv.amount}.00</span>
-                <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", color: "var(--color-success)" }}>paid</span>
-                <Download size={12} style={{ color: "var(--color-text-muted)" }} />
+        {/* Payouts (Builder+) */}
+        {s.payout && (
+          <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+            <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Payouts</div>
+            <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
+              <div style={{ flex: 1 }}>
+                <div style={bigNumUser}>${s.payout.totalPaid}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Total paid</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={bigNumUser}>{s.payout.pending}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
               </div>
             </div>
-          ))}
-        </Card>
+          </Card>
+        )}
+
+        {/* Invoices */}
+        {s.invoices.length > 0 && (
+          <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+            <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Invoices</div>
+            {s.invoices.map((inv, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < s.invoices.length - 1 ? "1px solid var(--color-border-light)" : "none" }}>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{inv.date}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${inv.amount}.00</span>
+                  <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", color: inv.status === "paid" ? "var(--color-success)" : inv.status === "open" ? "var(--color-warning)" : "var(--color-text-dim)" }}>{inv.status}</span>
+                  <Download size={12} style={{ color: "var(--color-text-muted)" }} />
+                </div>
+              </div>
+            ))}
+          </Card>
+        )}
 
         {/* Account */}
         <Card style={{ padding: "var(--space-4)" }}>
           <div style={{ ...kpiLabelUser, marginBottom: "var(--space-3)" }}>Account</div>
           {[
-            { label: "Email", value: sampleData.email },
-            { label: "Account", value: sampleData.name },
-            { label: "Plan", value: `Standard ($${TIERS.standard.price}/mo)` },
-            { label: "Auto-renew", value: "On" },
+            { label: "Email", value: s.email },
+            { label: "Account", value: s.name },
+            { label: "Plan", value: `${sPlanLabel} (${sPlanPrice})` },
+            ...(s.sub ? [{ label: "Auto-renew", value: s.sub.cancelAtPeriodEnd ? "Off" : "On" }] : []),
             { label: "Auth", value: "Google OAuth" },
-          ].map((row, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < 4 ? "1px solid var(--color-border-light)" : "none" }}>
+          ].map((row, i, arr) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1-5) 0", borderBottom: i < arr.length - 1 ? "1px solid var(--color-border-light)" : "none" }}>
               <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>{row.label}</span>
               <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{row.value}</span>
             </div>
           ))}
-          <div style={{ marginTop: "var(--space-3)" }}>
-            <div style={{ padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)", textAlign: "center" }}>
-              Manage subscription
-            </div>
-          </div>
-          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textAlign: "center", marginTop: "var(--space-2)" }}>
-            Cancel subscription
-          </div>
+          {s.seat !== "free" && (
+            <>
+              <div style={{ marginTop: "var(--space-3)" }}>
+                <div style={{ padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)", textAlign: "center" }}>
+                  Manage subscription
+                </div>
+              </div>
+              {!s.sub?.cancelAtPeriodEnd && (
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textAlign: "center", marginTop: "var(--space-2)" }}>
+                  Cancel subscription
+                </div>
+              )}
+            </>
+          )}
         </Card>
       </div>
     );
@@ -4208,6 +4378,10 @@ function BillingTab() {
           ) : seatType === "standard" ? (
             <button onClick={() => handleCheckout("pro")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>
               {loading === "pro" ? "..." : "Upgrade to Pro"}
+            </button>
+          ) : seatType === "pro" ? (
+            <button onClick={handlePortal} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading === "portal" ? 0.6 : 1 }}>
+              {loading === "portal" ? "..." : "Downgrade to Standard"}
             </button>
           ) : null}
         </div>
@@ -4435,12 +4609,41 @@ function BillingTab() {
             </button>
           </div>
         )}
-        {seatType !== "free" && (
-          <button onClick={handlePortal} disabled={!!loading} style={{ display: "block", width: "100%", marginTop: "var(--space-2)", padding: 0, background: "none", border: "none", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", cursor: "pointer", textAlign: "center" }}>
-            {loading === "portal" ? "..." : "Cancel subscription"}
+        {seatType !== "free" && !billingInfo?.subscription?.cancelAtPeriodEnd && (
+          <button onClick={() => setShowCancelModal(true)} disabled={!!loading} style={{ display: "block", width: "100%", marginTop: "var(--space-2)", padding: 0, background: "none", border: "none", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", cursor: "pointer", textAlign: "center" }}>
+            Cancel subscription
           </button>
         )}
       </Card>
+
+      {/* Cancel confirmation modal */}
+      {showCancelModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={() => setShowCancelModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
+          <div style={{ position: "relative", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-md)", padding: "var(--space-6)", maxWidth: 420, width: "90%", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-3)" }}>Cancel subscription?</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: 1.6, marginBottom: "var(--space-4)" }}>
+              {billingInfo?.subscription?.currentPeriodEnd ? (
+                <>You{"\u2019"}ll keep full access until <strong style={{ color: "var(--color-text-primary)" }}>{new Date(billingInfo.subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>.</>
+              ) : (
+                <>You{"\u2019"}ll keep access until the end of your current billing period.</>
+              )}
+              {refCredit > 0 && (
+                <> Your <strong style={{ color: "var(--color-text-primary)" }}>${refCredit}/mo</strong> referral credit will pause.</>
+              )}
+              {" "}You can resubscribe anytime.
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <button onClick={() => setShowCancelModal(false)} style={{ flex: 1, padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "var(--color-text-secondary)", cursor: "pointer" }}>
+                Keep my plan
+              </button>
+              <button onClick={() => { setShowCancelModal(false); handlePortal(); }} disabled={!!loading} style={{ flex: 1, padding: "var(--space-2)", background: "var(--color-error)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "#fff", cursor: loading ? "wait" : "pointer" }}>
+                {loading === "portal" ? "..." : "Cancel subscription"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

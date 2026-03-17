@@ -249,6 +249,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     let firstChunkReceived = false;
     let safetyTimeout = null;
     const assistantTs = Date.now();
+    let fetchStart = Date.now();
 
     try {
       // Create conversation — timeout after 5s, don't block if it fails
@@ -316,7 +317,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
       const msgCount = apiMessages.length;
       console.log("[sendMessage] firing authFetch → /api/chat", { msgCount, hasContext: context.length > 0, convId });
-      const fetchStart = Date.now();
+      fetchStart = Date.now();
       const res = await authFetch("/api/chat", {
         method: "POST",
         headers: {

@@ -84,3 +84,42 @@ export async function GET(request) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE /api/owner/signals — purge signals (owner only)
+// Query params: period (hours), severity (optional filter)
+export async function DELETE(request) {
+  try {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    const token = authHeader.replace("Bearer ", "");
+    const admin = getSupabaseAdmin();
+    const { data: { user }, error: authError } = await admin.auth.getUser(token);
+    if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).single();
+    if (profile?.role !== "owner") return Response.json({ error: "Owner only" }, { status: 403 });
+
+    const url = new URL(request.url);
+    const hours = Math.min(parseInt(url.searchParams.get("period") || "24", 10), 720);
+    const severity = url.searchParams.get("severity") || null;
+    const since = new Date(Date.now() - hours * 3600000).toISOString();
+
+    let query = admin
+      .from("user_events")
+      .delete()
+      .like("event", "signal:%")
+      .gte("created_at", since);
+
+    if (severity && ["error", "warning", "info"].includes(severity)) {
+      query = query.filter("meta->>severity", "eq", severity);
+    }
+
+    const { error, count } = await query;
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    return Response.json({ deleted: count || 0 });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}

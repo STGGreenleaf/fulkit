@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
+import { TIERS, CREDITS } from "../../lib/ful-config";
 
 const apps = [
   { name: "Obsidian Sync", cost: 8, replaces: "Notes" },
@@ -812,23 +813,23 @@ export default function Landing() {
         >
           {[
             {
-              tier: "Standard",
-              price: "$7",
+              tier: TIERS.standard.label,
+              price: `$${TIERS.standard.price}`,
               period: "/mo",
-              msgs: "~450 messages",
-              detail: "~15/day. Plenty for most people.",
+              msgs: `~${TIERS.standard.messages} messages`,
+              detail: `~${Math.round(TIERS.standard.messages / 30)}/day. Plenty for most people.`,
             },
             {
-              tier: "Pro",
-              price: "$12",
+              tier: TIERS.pro.label,
+              price: `$${TIERS.pro.price}`,
               period: "/mo",
-              msgs: "~800 messages",
-              detail: "~26/day. For power thinkers.",
+              msgs: `~${TIERS.pro.messages} messages`,
+              detail: `~${Math.round(TIERS.pro.messages / 30)}/day. For power thinkers.`,
             },
             {
               tier: "Credits",
-              price: "$2",
-              period: "/100",
+              price: CREDITS.priceLabel,
+              period: `/${CREDITS.amount}`,
               msgs: "On demand",
               detail: "Top up when you need more.",
             },

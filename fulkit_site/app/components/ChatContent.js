@@ -11,6 +11,7 @@ import MessageRenderer from "./MessageRenderer";
 import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
 import { useSandbox } from "../lib/sandbox";
+import { SEAT_LIMITS } from "../lib/ful-config";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -84,8 +85,7 @@ export default function ChatContent({ isPopout = false }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state ──────────────────────────────────────
-  const SEAT_LIMITS = { standard: 450, pro: 800, free: 100 };
-  const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
+  const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = Math.max(0, seatLimit - messagesUsed);
   const isLow = !isOwner && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);

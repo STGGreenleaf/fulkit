@@ -669,6 +669,8 @@ function RadioTab() {
   const [copiedId, setCopiedId] = useState(null);
   const [exported, setExported] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [confirmPurge, setConfirmPurge] = useState(false);
+  const [purging, setPurging] = useState(false);
   const refreshRef = useRef(null);
 
   const fetchSignals = useCallback(async (hrs, sev, cur) => {
@@ -803,6 +805,22 @@ function RadioTab() {
     }).catch(() => {});
   };
 
+  const purgeSignals = async () => {
+    if (!accessToken) return;
+    setPurging(true);
+    try {
+      const params = new URLSearchParams({ period: String(period) });
+      if (filter) params.set("severity", filter);
+      await fetch(`/api/owner/signals?${params}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setSignals([]);
+      setCounts({ error: 0, warning: 0, info: 0 });
+      setConfirmPurge(false);
+    } catch {} finally { setPurging(false); }
+  };
+
   const copyGroup = (group) => {
     const sev = group.latest.meta?.severity || "info";
     const label = SEVERITY_LABELS[sev]?.toUpperCase() || sev.toUpperCase();
@@ -845,26 +863,81 @@ function RadioTab() {
         <div style={DASH_LABEL}>Signal Radio</div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           {signals.length > 0 && (
-            <button
-              onClick={exportSignals}
-              title="Export filtered signals as JSON (also copies to clipboard)"
-              style={{
-                display: "flex", alignItems: "center", gap: "var(--space-1)",
-                padding: "var(--space-1) var(--space-2-5)",
-                fontSize: "var(--font-size-2xs)",
-                fontFamily: "var(--font-mono)",
-                fontWeight: "var(--font-weight-normal)",
-                color: exported ? "var(--color-text)" : "var(--color-text-muted)",
-                background: "var(--color-bg-alt)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-sm)",
-                cursor: "pointer",
-                transition: "all var(--duration-fast) var(--ease-default)",
-              }}
-            >
-              {exported ? <CheckIcon size={13} strokeWidth={2} /> : <Download size={13} strokeWidth={1.5} />}
-              {exported ? "Copied" : "Export"}
-            </button>
+            <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
+              <button
+                onClick={exportSignals}
+                title="Export filtered signals as JSON (also copies to clipboard)"
+                style={{
+                  display: "flex", alignItems: "center", gap: "var(--space-1)",
+                  padding: "var(--space-1) var(--space-2-5)",
+                  fontSize: "var(--font-size-2xs)",
+                  fontFamily: "var(--font-mono)",
+                  fontWeight: "var(--font-weight-normal)",
+                  color: exported ? "var(--color-text)" : "var(--color-text-muted)",
+                  background: "var(--color-bg-alt)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                  transition: "all var(--duration-fast) var(--ease-default)",
+                }}
+              >
+                {exported ? <CheckIcon size={13} strokeWidth={2} /> : <Download size={13} strokeWidth={1.5} />}
+                {exported ? "Copied" : "Export"}
+              </button>
+              {confirmPurge ? (
+                <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+                  <button
+                    onClick={purgeSignals}
+                    disabled={purging}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-1)",
+                      padding: "var(--space-1) var(--space-2-5)",
+                      fontSize: "var(--font-size-2xs)",
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: "var(--font-weight-semibold)",
+                      color: "#fff",
+                      background: "var(--color-error, #e53e3e)",
+                      border: "none",
+                      borderRadius: "var(--radius-sm)",
+                      cursor: purging ? "wait" : "pointer",
+                    }}
+                  >
+                    {purging ? "..." : "Purge"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmPurge(false)}
+                    style={{
+                      padding: "var(--space-1)",
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "var(--color-text-dim)", lineHeight: 0,
+                    }}
+                  >
+                    <X size={13} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmPurge(true)}
+                  title={`Delete ${filter ? SEVERITY_LABELS[filter] : "all"} signals in this period`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1) var(--space-2-5)",
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: "var(--font-weight-normal)",
+                    color: "var(--color-text-dim)",
+                    background: "var(--color-bg-alt)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                    transition: "all var(--duration-fast) var(--ease-default)",
+                  }}
+                >
+                  <Trash2 size={13} strokeWidth={1.5} />
+                  Delete
+                </button>
+              )}
+            </div>
           )}
         <div style={{ display: "flex", gap: 2, background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)", padding: 2 }}>
           {RADIO_PERIODS.map((p) => (
