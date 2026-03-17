@@ -2975,8 +2975,7 @@ function ReferralsTab() {
     { refs: 3, ful: 300, label: "Pay less" },
     { refs: REFERRALS.freeAtStandard, ful: REFERRALS.freeAtStandard * 100, label: "Standard = free" },
     { refs: REFERRALS.freeAtPro, ful: REFERRALS.freeAtPro * 100, label: "Pro = free" },
-    { refs: "25+", ful: "2,750+", label: "Free + $12/mo" },
-    { refs: "100+", ful: "12,000+", label: "Free + $105/mo" },
+    { refs: "25+", ful: "2,750+", label: "Free + cash" },
   ];
 
   const tierNames = REFERRALS.tiers || [];
@@ -3095,135 +3094,20 @@ function ReferralsTab() {
         )}
       </div>
 
-      {/* Hero CTA — Dieter Rams poster */}
-      <Card style={{
-        marginBottom: "var(--space-3)",
-        background: "#FFFFFF",
-        color: "var(--color-text)",
-        border: "1px solid var(--color-border-light)",
-        padding: "var(--space-8) var(--space-6)",
-        overflow: "hidden",
-      }}>
-        {/* Eyebrow */}
-        <div style={{
-          fontSize: "var(--font-size-2xs)",
-          fontWeight: "var(--font-weight-medium)",
-          textTransform: "uppercase",
-          letterSpacing: "3px",
-          color: "var(--color-text-muted)",
-          marginBottom: "var(--space-3)",
-        }}>
-          Refer {"\u00B7"} Earn {"\u00B7"} Go free
-        </div>
-
-        {/* Headline */}
-        <div style={{
-          fontSize: "var(--font-size-4xl)",
-          fontWeight: "var(--font-weight-black)",
-          letterSpacing: "var(--letter-spacing-tighter)",
-          lineHeight: "var(--line-height-none)",
-          marginBottom: "var(--space-2)",
-        }}>
-          Get F{"\u00FC"}lkit.
-        </div>
-
-        {/* Subtitle */}
-        <div style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-          lineHeight: "var(--line-height-normal)",
-          marginBottom: "var(--space-6)",
-          maxWidth: 280,
-        }}>
-          Share the link. They pay, you earn {"\u2014"} forever.
-        </div>
-
-        {/* Bauhaus rule */}
-        <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-5)" }} />
-
-        {/* 4-column progression */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: "var(--space-2)",
-          marginBottom: "var(--space-5)",
-        }}>
+      {/* Cheatsheet CTA */}
+      <Card style={{ marginBottom: "var(--space-4)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none" }}>
+        <div style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-black)", marginBottom: "var(--space-3)" }}>Get F{"\u00FC"}lkit</div>
+        <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "var(--space-1) var(--space-4)", fontSize: "var(--font-size-sm)", marginBottom: "var(--space-3)" }}>
           {cheatsheet.map((row, i) => (
-            <div key={i}>
-              <div style={{
-                fontSize: "var(--font-size-2xl)",
-                fontFamily: "var(--font-mono)",
-                fontWeight: "var(--font-weight-black)",
-                lineHeight: "var(--line-height-none)",
-                marginBottom: "var(--space-1)",
-              }}>
-                {row.refs}
-              </div>
-              <div style={{
-                fontSize: "var(--font-size-2xs)",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                color: "var(--color-text-muted)",
-                lineHeight: "var(--line-height-tight)",
-              }}>
-                {row.label}
-              </div>
-            </div>
+            <span key={i} style={{ display: "contents" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{row.refs}</span>
+              <span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>{typeof row.ful === "number" ? row.ful.toLocaleString() : row.ful} F{"\u00FC"}l/mo</span>
+              <span style={{ opacity: 0.7 }}>{row.label}</span>
+            </span>
           ))}
         </div>
-
-        {/* Bauhaus rule */}
-        <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-3)" }} />
-
-        {/* Legend */}
-        <div style={{
-          fontSize: "var(--font-size-2xs)",
-          fontFamily: "var(--font-mono)",
-          color: "var(--color-text-dim)",
-          letterSpacing: "0.3px",
-        }}>
-          1 active referral = 100 F{"\u00FC"}l = $1/mo
-        </div>
+        <div style={{ fontSize: "var(--font-size-xs)", opacity: 0.6 }}>Every friend who joins and pays earns you F{"\u00FC"}l toward your subscription {"\u2014"} or cash.</div>
       </Card>
-
-      {/* Examples */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "var(--space-3)",
-        marginBottom: "var(--space-4)",
-      }}>
-        {[
-          { scenario: "3 friends join", result: "$3/mo off", detail: "Standard drops to $6/mo" },
-          { scenario: "9 friends join", result: "$0/mo", detail: "Standard fully covered" },
-          { scenario: "25 friends join", result: "+$12.50/mo", detail: "Pro free + cash payout" },
-          { scenario: "100 friends join", result: "+$105/mo", detail: "Pro free + $1,260/yr cash" },
-        ].map((ex, i) => (
-          <Card key={i} style={{ padding: "var(--space-3)" }}>
-            <div style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              marginBottom: "var(--space-1)",
-            }}>
-              {ex.scenario}
-            </div>
-            <div style={{
-              fontSize: "var(--font-size-lg)",
-              fontFamily: "var(--font-mono)",
-              fontWeight: "var(--font-weight-black)",
-              marginBottom: "var(--space-0.5)",
-            }}>
-              {ex.result}
-            </div>
-            <div style={{
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-            }}>
-              {ex.detail}
-            </div>
-          </Card>
-        ))}
-      </div>
 
       {/* KPI strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
