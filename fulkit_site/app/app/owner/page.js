@@ -610,6 +610,7 @@ function RadioTab() {
   const [filter, setFilter] = useState(null); // null = all, "error" | "warning" | "info"
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
   const refreshRef = useRef(null);
 
   const fetchSignals = useCallback(async (hrs, sev, cur) => {
@@ -680,6 +681,32 @@ function RadioTab() {
   };
 
   const signalLabel = (event) => event.replace("signal:", "").replace(/_/g, " ");
+
+  const copySignal = (s) => {
+    const sev = s.meta?.severity || "info";
+    const label = SEVERITY_LABELS[sev]?.toUpperCase() || sev.toUpperCase();
+    const name = signalLabel(s.event);
+    const time = new Date(s.created_at).toLocaleString();
+    const detail = s.meta?.error || s.meta?.message || (s.meta?.elapsed ? `${s.meta.elapsed}ms` : "");
+    const extra = Object.entries(s.meta || {})
+      .filter(([k]) => !["severity", "error", "message", "elapsed"].includes(k))
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+
+    const lines = [
+      `[${label}] ${name}`,
+      `Time: ${time}`,
+      `User: ${s.user_label}`,
+      s.page ? `Page: ${s.page}` : null,
+      detail ? `Detail: ${detail}` : null,
+      extra ? `Context: ${extra}` : null,
+    ].filter(Boolean).join("\n");
+
+    navigator.clipboard.writeText(lines).then(() => {
+      setCopiedId(`${s.created_at}-${s.user_id}`);
+      setTimeout(() => setCopiedId(null), 1500);
+    }).catch(() => {});
+  };
 
   if (loading && signals.length === 0) {
     return (
@@ -788,9 +815,24 @@ function RadioTab() {
           {signals.map((s, i) => {
             const sev = s.meta?.severity || "info";
             return (
-              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)" }}>
+              <div key={`${s.created_at}-${i}`} style={{ ...CARD, padding: "var(--space-3)", position: "relative" }}>
+                {/* Copy button */}
+                <button
+                  onClick={() => copySignal(s)}
+                  style={{
+                    position: "absolute", top: "var(--space-2)", right: "var(--space-2)",
+                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
+                    display: "flex", color: "var(--color-text-dim)",
+                    opacity: copiedId === `${s.created_at}-${s.user_id}` ? 1 : 0.4,
+                    transition: "opacity var(--duration-fast) var(--ease-default)",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                  onMouseLeave={(e) => { if (copiedId !== `${s.created_at}-${s.user_id}`) e.currentTarget.style.opacity = "0.4"; }}
+                >
+                  {copiedId === `${s.created_at}-${s.user_id}` ? <CheckIcon size={12} color="var(--color-text-muted)" /> : <Copy size={12} />}
+                </button>
                 {/* Top row: time + signal name + severity badge */}
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)", paddingRight: "var(--space-5)" }}>
                   <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
                     {formatTime(s.created_at)}
                   </span>
