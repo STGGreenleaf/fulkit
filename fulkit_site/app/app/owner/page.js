@@ -2169,7 +2169,22 @@ function DeveloperTab() {
                       <textarea
                         value={docContent}
                         onChange={e => setDocContent(e.target.value)}
-                        placeholder="Write your document in markdown..."
+                        placeholder="Write your document in markdown — or drag a .md file here..."
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--color-text-muted)"; }}
+                        onDragLeave={e => { e.currentTarget.style.borderColor = "var(--color-border-light)"; }}
+                        onDrop={async e => {
+                          e.preventDefault();
+                          e.currentTarget.style.borderColor = "var(--color-border-light)";
+                          const file = Array.from(e.dataTransfer.files).find(f =>
+                            f.name.endsWith(".md") || f.name.endsWith(".txt") || f.type === "text/plain" || f.type === "text/markdown"
+                          );
+                          if (!file) return;
+                          const content = await file.text();
+                          setDocContent(content);
+                          if (!docTitle.trim()) {
+                            setDocTitle(file.name.replace(/\.(md|txt)$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
+                          }
+                        }}
                         style={{
                           width: "100%", flex: 1, minHeight: 200, padding: "var(--space-3)",
                           background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
@@ -2177,6 +2192,7 @@ function DeveloperTab() {
                           color: "var(--color-text)", fontFamily: "var(--font-mono)",
                           resize: "vertical", lineHeight: "var(--line-height-relaxed)",
                           marginBottom: "var(--space-2)",
+                          transition: "border-color 150ms ease",
                         }}
                       />
                       <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
