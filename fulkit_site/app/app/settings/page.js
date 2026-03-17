@@ -3050,21 +3050,17 @@ function ReferralsTab() {
           <>
             {/* ── P&L Hero ── */}
             <Card style={{ marginBottom: "var(--space-3)", background: "#FFFFFF", border: "1px solid var(--color-border-light)", padding: "var(--space-6)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-                <div>
-                  <div style={kpiStyle}>MRR</div>
-                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
-                </div>
-                <div>
-                  <div style={kpiStyle}>Net</div>
-                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>
-                    {adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}
+              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center", marginBottom: "var(--space-4)" }}>
+                {[
+                  { label: "MRR", value: `$${adminStats.mrr}`, color: undefined },
+                  { label: "Net", value: `${adminStats.netIncome >= 0 ? "+" : ""}$${adminStats.netIncome}`, color: adminStats.netIncome >= 0 ? undefined : "var(--color-error)" },
+                  { label: "Margin", value: `${adminStats.margin}%`, color: undefined },
+                ].map((k, i) => (
+                  <div key={i} style={{ flex: 1 }}>
+                    <div style={kpiStyle}>{k.label}</div>
+                    <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: k.color }}>{k.value}</div>
                   </div>
-                </div>
-                <div>
-                  <div style={kpiStyle}>Margin</div>
-                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>{adminStats.margin}%</div>
-                </div>
+                ))}
               </div>
               <div style={{ height: 1, background: "var(--color-border)", marginBottom: "var(--space-3)" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
