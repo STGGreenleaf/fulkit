@@ -3102,30 +3102,39 @@ function ReferralsTab() {
               </div>
             </Card>
 
-            {/* ── Subscribers breakdown ── */}
-            <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-              <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Subscribers</div>
-              <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
-                {[
-                  { label: "Free", count: adminStats.subscribers.free },
-                  { label: "Standard", count: adminStats.subscribers.standard },
-                  { label: "Pro", count: adminStats.subscribers.pro },
-                  { label: "Total", count: adminStats.totalUsers },
-                ].map((s, i) => (
-                  <div key={i} style={{ flex: 1 }}>
-                    <div style={smallNumStyle}>{s.count}</div>
-                    <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              {/* Visual bar */}
-              {adminStats.totalUsers > 0 && (
-                <div style={{ display: "flex", height: 6, borderRadius: "var(--radius-full)", overflow: "hidden", marginTop: "var(--space-3)", background: "var(--color-border-light)" }}>
-                  {adminStats.subscribers.pro > 0 && <div style={{ width: `${(adminStats.subscribers.pro / adminStats.totalUsers) * 100}%`, background: "var(--color-text)" }} />}
-                  {adminStats.subscribers.standard > 0 && <div style={{ width: `${(adminStats.subscribers.standard / adminStats.totalUsers) * 100}%`, background: "var(--color-text-muted)" }} />}
+            {/* ── Subscribers + Payouts side by side ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+              <Card style={{ padding: "var(--space-4)" }}>
+                <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Subscribers</div>
+                <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
+                  {[
+                    { label: "Free", count: adminStats.subscribers.free },
+                    { label: "Std", count: adminStats.subscribers.standard },
+                    { label: "Pro", count: adminStats.subscribers.pro },
+                  ].map((s, i) => (
+                    <div key={i} style={{ flex: 1 }}>
+                      <div style={smallNumStyle}>{s.count}</div>
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{s.label}</div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </Card>
+              </Card>
+              <Card style={{ padding: "var(--space-4)" }}>
+                <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Payouts</div>
+                <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
+                  {[
+                    { label: "Paid", value: `$${adminStats.totalPaidOut}` },
+                    { label: "Pending", value: `$${adminStats.pendingPayouts}` },
+                    { label: "/mo", value: `$${adminStats.totalMonthlyDollars}` },
+                  ].map((p, i) => (
+                    <div key={i} style={{ flex: 1 }}>
+                      <div style={smallNumStyle}>{p.value}</div>
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>{p.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
 
             {/* ── Referral Network ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
@@ -3174,35 +3183,18 @@ function ReferralsTab() {
               </Card>
             )}
 
-            {/* ── Payouts ── */}
-            <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
-              <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Payouts</div>
-              <div style={{ display: "flex", gap: "var(--space-6)", marginBottom: "var(--space-3)" }}>
-                <div>
-                  <div style={smallNumStyle}>${adminStats.totalPaidOut}</div>
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Total paid</div>
-                </div>
-                <div>
-                  <div style={smallNumStyle}>${adminStats.pendingPayouts}</div>
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
-                </div>
-                <div>
-                  <div style={smallNumStyle}>${adminStats.totalMonthlyDollars}</div>
-                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Obligation/mo</div>
-                </div>
-              </div>
-              {adminStats.recentPayouts && adminStats.recentPayouts.length > 0 && (
-                <>
-                  <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
-                  {adminStats.recentPayouts.map((p, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "var(--space-1) 0", fontSize: "var(--font-size-xs)" }}>
-                      <span style={{ color: "var(--color-text-muted)" }}>{new Date(p.created_at).toLocaleDateString()}</span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: p.status === "paid" ? "var(--color-text)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)" }}>${p.amount_usd}</span>
-                    </div>
-                  ))}
-                </>
-              )}
-            </Card>
+            {/* ── Recent payout history ── */}
+            {adminStats.recentPayouts && adminStats.recentPayouts.length > 0 && (
+              <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+                <div style={{ ...kpiStyle, marginBottom: "var(--space-2)" }}>Recent transfers</div>
+                {adminStats.recentPayouts.map((p, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "var(--space-1) 0", fontSize: "var(--font-size-xs)" }}>
+                    <span style={{ color: "var(--color-text-muted)" }}>{new Date(p.created_at).toLocaleDateString()}</span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", color: p.status === "paid" ? "var(--color-text)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)" }}>${p.amount_usd}</span>
+                  </div>
+                ))}
+              </Card>
+            )}
 
             {/* ── User table ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
