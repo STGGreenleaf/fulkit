@@ -3142,9 +3142,18 @@ function ReferralsTab() {
 
         {/* 4-column progression */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "var(--space-2)",
+          fontSize: "var(--font-size-2xs)",
+          textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-wider)",
+          color: "var(--color-text-muted)",
+          marginBottom: "var(--space-3)",
+        }}>
+          Friends joined
+        </div>
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          textAlign: "center",
           marginBottom: "var(--space-5)",
         }}>
           {cheatsheet.map((row, i) => (
