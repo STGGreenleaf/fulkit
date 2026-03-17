@@ -3618,12 +3618,19 @@ function BillingTab() {
   const refActiveCount = refStats?.activeReferrals || 0;
   const refFul = refStats?.monthlyFul || 0;
 
-  // ── Owner sales center ──
+  // ── Owner financials ──
   if (isOwner && ownerView) {
+    const kpiLabel = { fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" };
+    const bigNum = { fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" };
+
+    // Revenue by plan
+    const stdRevenue = adminStats ? adminStats.subscribers.standard * TIERS.standard.price : 0;
+    const proRevenue = adminStats ? adminStats.subscribers.pro * TIERS.pro.price : 0;
+
     return (
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-4)" }}>
-          <SectionTitle style={{ marginBottom: 0 }}>Sales Center</SectionTitle>
+          <SectionTitle style={{ marginBottom: 0 }}>Financials</SectionTitle>
           <button onClick={() => setOwnerView(false)} style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-3)", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)" }}>
             Mine
           </button>
@@ -3631,40 +3638,124 @@ function BillingTab() {
 
         {adminStats ? (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>MRR</div>
-                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
-              </Card>
-              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>Costs</div>
-                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.estimatedApiCost + adminStats.totalMonthlyDollars}</div>
-              </Card>
-              <Card style={{ textAlign: "center", padding: "var(--space-3)" }}>
-                <div style={{ fontSize: "var(--font-size-2xs)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>Net</div>
-                <div style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text)" : "var(--color-error)" }}>{adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}</div>
-              </Card>
-            </div>
+            {/* ── P&L ── */}
+            <Card style={{ marginBottom: "var(--space-3)", background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)", border: "none", padding: "var(--space-5)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+                <div>
+                  <div style={{ ...kpiLabel, color: "var(--color-text-dim)" }}>MRR</div>
+                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)" }}>${adminStats.mrr}</div>
+                </div>
+                <div>
+                  <div style={{ ...kpiLabel, color: "var(--color-text-dim)" }}>Net</div>
+                  <div style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", color: adminStats.netIncome >= 0 ? "var(--color-text-inverse)" : "#C43B2E" }}>
+                    {adminStats.netIncome >= 0 ? "+" : ""}${adminStats.netIncome}
+                  </div>
+                </div>
+              </div>
+              <div style={{ height: 1, background: "currentColor", opacity: 0.12, marginBottom: "var(--space-3)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)" }}>
+                <span style={{ opacity: 0.5 }}>ARR <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${adminStats.mrr * 12}</span></span>
+                <span style={{ opacity: 0.5 }}>Margin <span style={{ fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{adminStats.margin}%</span></span>
+              </div>
+            </Card>
 
-            <Card style={{ marginBottom: "var(--space-4)" }}>
-              <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>Breakdown</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-3)" }}>
+            {/* ── Revenue by plan ── */}
+            <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+              <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Revenue by plan</div>
+              {[
+                { label: `Standard ($${TIERS.standard.price}/mo)`, count: adminStats.subscribers.standard, revenue: stdRevenue },
+                { label: `Pro ($${TIERS.pro.price}/mo)`, count: adminStats.subscribers.pro, revenue: proRevenue },
+                { label: "Free", count: adminStats.subscribers.free, revenue: 0 },
+              ].map((plan, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) 0", borderBottom: i < 2 ? "1px solid var(--color-border-light)" : "none" }}>
+                  <div>
+                    <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{plan.label}</span>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginLeft: "var(--space-2)" }}>{plan.count} users</span>
+                  </div>
+                  <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>${plan.revenue}/mo</span>
+                </div>
+              ))}
+            </Card>
+
+            {/* ── Cost breakdown ── */}
+            <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+              <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Costs</div>
+              {[
+                { label: "API spend (actual)", value: `$${adminStats.actualApiCost}`, note: `$${adminStats.totalPaying > 0 ? (adminStats.actualApiCost / adminStats.totalPaying).toFixed(2) : "0"}/user` },
+                { label: "Referral credits", value: `$${adminStats.totalMonthlyDollars}`, note: `${adminStats.totalMonthlyFul.toLocaleString()} F\u00FCl` },
+                { label: "Payout obligations", value: `$${adminStats.totalPaidOut}`, note: "Total paid to date" },
+              ].map((cost, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) 0", borderBottom: i < 2 ? "1px solid var(--color-border-light)" : "none" }}>
+                  <div>
+                    <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{cost.label}</span>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginLeft: "var(--space-2)" }}>{cost.note}</span>
+                  </div>
+                  <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)" }}>{cost.value}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--space-2)", marginTop: "var(--space-2)", borderTop: "2px solid var(--color-border)" }}>
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)" }}>Total costs/mo</span>
+                <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-black)" }}>${adminStats.actualApiCost + adminStats.totalMonthlyDollars}</span>
+              </div>
+            </Card>
+
+            {/* ── Payout history ── */}
+            <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
+              <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Stripe payouts</div>
+              <div style={{ display: "flex", gap: "var(--space-6)", marginBottom: "var(--space-3)" }}>
                 <div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Subscribers</div>
-                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>{adminStats.subscribers.standard} Std + {adminStats.subscribers.pro} Pro + {adminStats.subscribers.free} Free</div>
+                  <div style={bigNum}>${adminStats.totalPaidOut}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Paid out</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Paying</div>
-                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>{adminStats.totalPaying} / {adminStats.totalUsers}</div>
+                  <div style={bigNum}>${adminStats.pendingPayouts}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Pending</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>API cost (est.)</div>
-                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>${adminStats.estimatedApiCost}/mo</div>
+                  <div style={bigNum}>${adminStats.totalMonthlyDollars}</div>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Monthly obligation</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Referral payouts</div>
-                  <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>${adminStats.totalMonthlyDollars}/mo ({adminStats.totalMonthlyFul.toLocaleString()} F{"\u00FC"}l)</div>
-                </div>
+              </div>
+              {adminStats.recentPayouts && adminStats.recentPayouts.length > 0 && (
+                <>
+                  <div style={{ height: 1, background: "var(--color-border-light)", marginBottom: "var(--space-2)" }} />
+                  <div style={{ ...kpiLabel, marginBottom: "var(--space-2)" }}>Recent transfers</div>
+                  {adminStats.recentPayouts.map((p, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-1) 0", fontSize: "var(--font-size-xs)" }}>
+                      <span style={{ color: "var(--color-text-muted)" }}>{new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span style={{
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: "var(--font-weight-bold)",
+                        color: p.status === "paid" ? "var(--color-success)" : p.status === "failed" ? "var(--color-error)" : "var(--color-text-muted)",
+                      }}>
+                        {p.status === "paid" ? "" : p.status === "failed" ? "FAILED " : "PENDING "}${p.amount_usd}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {(!adminStats.recentPayouts || adminStats.recentPayouts.length === 0) && (
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", textAlign: "center", padding: "var(--space-2) 0" }}>No payouts yet</div>
+              )}
+            </Card>
+
+            {/* ── Unit economics ── */}
+            <Card style={{ padding: "var(--space-4)" }}>
+              <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Unit economics</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", textAlign: "center" }}>
+                {[
+                  { label: "ARPU", value: `$${adminStats.arpu}` },
+                  { label: "LTV (12mo)", value: `$${adminStats.ltv}` },
+                  { label: "CAC", value: "$0" },
+                ].map((m, i) => (
+                  <div key={i}>
+                    <div style={bigNum}>{m.value}</div>
+                    <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-0.5)" }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: "var(--space-3)", textAlign: "center" }}>
+                CAC is $0 — referral-only growth, no paid acquisition
               </div>
             </Card>
           </>
