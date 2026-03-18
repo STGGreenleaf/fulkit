@@ -146,6 +146,7 @@ export async function PUT(request) {
 
     let embedded = 0;
     let failed = 0;
+    let lastError = null;
     const BATCH_SIZE = 20; // Voyage supports 128, but keep payload reasonable
 
     for (let i = 0; i < notes.length; i += BATCH_SIZE) {
@@ -167,6 +168,8 @@ export async function PUT(request) {
         });
 
         if (!res.ok) {
+          const errBody = await res.text().catch(() => "");
+          lastError = `Voyage ${res.status}: ${errBody.slice(0, 200)}`;
           failed += batch.length;
           continue;
         }
@@ -180,15 +183,16 @@ export async function PUT(request) {
             .update({ embedding: JSON.stringify(embeddings[j].embedding), embedded: true })
             .eq("id", note.id)
             .then(() => { embedded++; })
-            .catch(() => { failed++; })
+            .catch((e) => { lastError = `DB save: ${e.message}`; failed++; })
         );
         await Promise.all(saves);
-      } catch {
+      } catch (e) {
+        lastError = `Batch error: ${e.message}`;
         failed += batch.length;
       }
     }
 
-    return Response.json({ embedded, failed, total: notes.length });
+    return Response.json({ embedded, failed, total: notes.length, ...(lastError ? { lastError } : {}) });
   } catch (err) {
     console.error("[embed] Batch error:", err.message);
     return Response.json({ error: "Batch embedding failed" }, { status: 500 });
