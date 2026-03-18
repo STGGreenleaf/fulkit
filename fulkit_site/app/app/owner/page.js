@@ -278,6 +278,7 @@ function AreaChart({ data, metricKey, label, height = 120, color = "#8A8784" }) 
 /* ─── Card wrapper ─── */
 const CARD = { padding: "var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)" };
 const DASH_LABEL = { fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" };
+const TAB_TITLE = { fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-3)" };
 
 /* ─── Bar list ─── */
 function BarList({ items, labelKey, valueKey, maxItems = 10, suffix = "", labelStyle = {} }) {
@@ -876,7 +877,7 @@ function RadioTab() {
     <div>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
-        <div style={DASH_LABEL}>Signal Radio</div>
+        <div style={TAB_TITLE}>Signal Radio</div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           {signals.length > 0 && (
             <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
@@ -2052,6 +2053,7 @@ function DeveloperTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <div style={TAB_TITLE}>Developer</div>
       {/* ── Tickets (priority — always on top) ── */}
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
@@ -3235,9 +3237,7 @@ const OWNER_NOTES = [
 function NotesTab() {
   return (
     <div>
-      <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-2)" }}>
-        Owner Notes
-      </h2>
+      <div style={TAB_TITLE}>Owner Notes</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
         {OWNER_NOTES.map((cat) => (
           <div key={cat.category}>
@@ -3381,6 +3381,7 @@ function UsersTab() {
 
   return (
     <div>
+      <div style={TAB_TITLE}>Users</div>
       {/* ── PROGRESS METER ── */}
       <div style={{ marginBottom: "var(--space-3)" }}>
         <div style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)", color: "var(--color-text)" }}>
@@ -3937,21 +3938,7 @@ function SocialsTab() {
 
   return (
     <div>
-      {/* Masthead */}
-      <div style={{ marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)" }}>
-        <h2 style={{
-          fontSize: isMobile ? "var(--font-size-xl)" : "var(--font-size-3xl)",
-          fontWeight: "var(--font-weight-black)",
-          letterSpacing: "var(--letter-spacing-tighter)",
-          lineHeight: "var(--line-height-tight)",
-          marginBottom: "var(--space-1)",
-        }}>
-          Socials & Identity
-        </h2>
-        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
-          Edit how {"F\u00FCl"}kit appears everywhere. Changes update your real site metadata.
-        </p>
-      </div>
+      <div style={TAB_TITLE}>Socials & Identity</div>
 
       {/* ── METADATA + PREVIEWS + IDENTITY ── */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 2fr 1fr", gap: isMobile ? "var(--space-3)" : "var(--space-6)", marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)" }}>
@@ -4594,20 +4581,7 @@ function PitchesTab() {
   const isMobile = useIsMobile();
   return (
     <div>
-      <div style={{ marginBottom: isMobile ? "var(--space-3)" : "var(--space-8)" }}>
-        <h2 style={{
-          fontSize: isMobile ? "var(--font-size-xl)" : "var(--font-size-3xl)",
-          fontWeight: "var(--font-weight-black)",
-          letterSpacing: "var(--letter-spacing-tighter)",
-          lineHeight: "var(--line-height-tight)",
-          marginBottom: "var(--space-1)",
-        }}>
-          Pitches
-        </h2>
-        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
-          Sales facts, one-liners, and CTAs. Copy and paste anywhere.
-        </p>
-      </div>
+      <div style={TAB_TITLE}>Pitches</div>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "var(--space-2)" : "var(--space-4)" }}>
         {PITCH_CATEGORIES.map((cat) => {
           const items = PITCHES.filter(p => p.cat === cat);
@@ -4755,9 +4729,7 @@ function PlaygroundTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
       <div>
-        <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-1)" }}>
-          Onboarding Preview
-        </h2>
+        <div style={TAB_TITLE}>Onboarding Preview</div>
         <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
           Live preview of the onboarding flow. No data is saved.
         </p>
@@ -5042,8 +5014,8 @@ function FabricTab() {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
-        <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)" }}>Fabric</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+        <div style={TAB_TITLE}>Fabric</div>
         <button
           onClick={fetchData}
           style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "var(--space-1)" }}
@@ -5440,9 +5412,7 @@ function QuestionsTab() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
         <div>
-          <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-1)" }}>
-            Onboarding Questions
-          </h2>
+          <div style={TAB_TITLE}>Onboarding Questions</div>
           <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
             {tiers.length} tiers, {questions.length} questions
           </p>
