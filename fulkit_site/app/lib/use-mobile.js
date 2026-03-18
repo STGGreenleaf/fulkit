@@ -2,18 +2,16 @@
 
 import { useState, useEffect } from "react";
 
-const MOBILE_BREAKPOINT = 768;
-
 /**
- * useIsMobile() — true when viewport is below mobile breakpoint.
- * Uses matchMedia for performance (no resize listener spam).
- * SSR-safe: defaults to false (desktop).
+ * useIsMobile() — true on touch devices (phones/tablets) under 768px.
+ * Uses pointer:coarse (touch input) + max-width so desktop stays desktop
+ * at any window size. SSR-safe: defaults to false.
  */
 export function useIsMobile() {
   const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const mq = window.matchMedia("(pointer: coarse) and (max-width: 768px)");
     setMobile(mq.matches);
     const handler = (e) => setMobile(e.matches);
     mq.addEventListener("change", handler);
