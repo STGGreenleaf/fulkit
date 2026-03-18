@@ -9,9 +9,6 @@ import { useIsMobile } from "../lib/use-mobile";
 export default function QuickCapture() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-
-  // Hide on mobile — tab bar handles navigation, pencil conflicts with bottom bar
-  if (isMobile) return null;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState("text"); // "text" | "voice"
   const [value, setValue] = useState("");
@@ -20,6 +17,9 @@ export default function QuickCapture() {
   const [saveError, setSaveError] = useState(false);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // Hide on mobile — tab bar handles navigation, pencil conflicts with bottom bar
+  if (isMobile) return null;
 
   const submit = async () => {
     const text = value.trim();
