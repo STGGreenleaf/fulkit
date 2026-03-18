@@ -5,6 +5,10 @@ import { supabase } from "./supabase";
 
 const AuthContext = createContext(null);
 
+// Module-level flag: true once auth has resolved at least once this session.
+// AuthGuard uses this to skip the splash on warm navigations.
+let _authResolved = false;
+export function hasAuthResolved() { return _authResolved; }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -131,6 +135,7 @@ export function AuthProvider({ children }) {
         });
         setAccessToken(session.access_token);
         await fetchProfile(u.id);
+        _authResolved = true;
         // Seed profiles.name from Google if not already set
         const googleName = u.user_metadata?.full_name;
         if (googleName) {
