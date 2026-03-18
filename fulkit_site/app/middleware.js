@@ -73,7 +73,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https://*.scdn.co https://*.googleusercontent.com https://*.supabase.co data:",
   "font-src 'self'",
-  "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
