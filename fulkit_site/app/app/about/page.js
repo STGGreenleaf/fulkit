@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import LogoMark from "../../components/LogoMark";
+import { useIsMobile } from "../../lib/use-mobile";
 
 export default function About() {
+  const isMobile = useIsMobile();
   return (
     <div
       style={{
@@ -25,7 +27,7 @@ export default function About() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "var(--space-4) var(--space-8)",
+          padding: isMobile ? "var(--space-4) var(--space-4)" : "var(--space-4) var(--space-8)",
           background: "rgba(239, 237, 232, 0.3)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
@@ -47,14 +49,15 @@ export default function About() {
           <LogoMark size={24} />
           Fülkit
         </Link>
-        <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: isMobile ? "var(--space-5)" : "var(--space-6)", alignItems: "center" }}>
           <Link
             href="/about"
             style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-black)",
               color: "var(--color-text)",
               textDecoration: "none",
+              padding: isMobile ? "var(--space-2)" : 0,
             }}
           >
             WTF
@@ -62,10 +65,11 @@ export default function About() {
           <Link
             href="/login"
             style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-medium)",
               color: "var(--color-text-secondary)",
               textDecoration: "none",
+              padding: isMobile ? "var(--space-2)" : 0,
             }}
           >
             Sign in
@@ -76,12 +80,12 @@ export default function About() {
       {/* ─── HERO ─── */}
       <section
         style={{
-          minHeight: "100vh",
+          minHeight: isMobile ? "auto" : "100vh",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          justifyContent: isMobile ? "flex-start" : "center",
+          padding: isMobile ? "var(--space-16) var(--space-4) var(--space-8)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
         }}
       >
         <h1
@@ -261,7 +265,7 @@ export default function About() {
             display: "flex",
             flexDirection: "column",
             gap: "var(--space-3)",
-            padding: "var(--space-8) 0",
+            padding: isMobile ? "var(--space-4) 0" : "var(--space-8) 0",
             maxWidth: 600,
           }}
         >
@@ -309,8 +313,8 @@ export default function About() {
       {/* ─── CLOSING ─── */}
       <section
         style={{
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
           borderTop: "2px solid var(--color-text)",
         }}
       >
@@ -349,12 +353,14 @@ export default function About() {
       {/* ─── FOOTER ─── */}
       <footer
         style={{
-          padding: "var(--space-12) var(--space-8)",
+          padding: isMobile ? "var(--space-8) var(--space-4)" : "var(--space-12) var(--space-8)",
           borderTop: "1px solid var(--color-border-light)",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           alignItems: "center",
           justifyContent: "space-between",
-          maxWidth: 900,
+          gap: isMobile ? "var(--space-4)" : 0,
+          maxWidth: isMobile ? "none" : 900,
         }}
       >
         <div
