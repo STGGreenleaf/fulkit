@@ -1204,6 +1204,33 @@ function RadioTab() {
 function DeveloperTab() {
   const { accessToken, compactMode, setCompactMode } = useAuth();
 
+  // ── Batch embed ──
+  const [embedStatus, setEmbedStatus] = useState(null);
+  const [embedding, setEmbedding] = useState(false);
+  const runBatchEmbed = async () => {
+    if (embedding) return;
+    setEmbedding(true);
+    setEmbedStatus("Starting...");
+    let totalEmbedded = 0;
+    for (let round = 0; round < 10; round++) {
+      try {
+        const res = await fetch("/api/embed", {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) { setEmbedStatus(`Error: ${res.status}`); break; }
+        const data = await res.json();
+        totalEmbedded += data.embedded || 0;
+        setEmbedStatus(`${totalEmbedded} embedded${data.embedded === 0 ? " — done" : "..."}`);
+        if (data.embedded === 0) break;
+      } catch (err) {
+        setEmbedStatus(`Error: ${err.message}`);
+        break;
+      }
+    }
+    setEmbedding(false);
+  };
+
   // ── Inspector switch ──
   const [inspector, setInspectorState] = useState(false);
   useEffect(() => {
@@ -2032,6 +2059,32 @@ function DeveloperTab() {
           <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
           <div style={{ height: "var(--space-2)" }} />
           <DevSwitch label="Inspector" description="CSS selector overlay + Ctrl+Shift+I" on={inspector} onToggle={() => setInspector(!inspector)} />
+          <div style={{ height: "var(--space-3)" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <button
+              onClick={runBatchEmbed}
+              disabled={embedding}
+              style={{
+                flex: 1,
+                padding: "var(--space-2) var(--space-3)",
+                background: embedding ? "var(--color-bg-alt)" : "var(--color-accent)",
+                color: embedding ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                fontFamily: "var(--font-primary)",
+                cursor: embedding ? "default" : "pointer",
+              }}
+            >
+              {embedding ? "Embedding..." : "Embed Notes"}
+            </button>
+            {embedStatus && (
+              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                {embedStatus}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Quick Facts */}
