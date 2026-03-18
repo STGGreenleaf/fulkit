@@ -111,7 +111,7 @@
 - [x] Smart memory behavior — Claude auto-saves facts, uses memories naturally
 - [x] File/note uploads with embedding (vector search via pgvector) — embed route, auto-embed on create/update, batch embed endpoint
 - [x] RAG pipeline — semantic similarity search (match_notes RPC, notes_search uses vector first with keyword fallback)
-- [ ] Codebase ingestion — feed repo files so Claude knows the project (infrastructure ready — import + embed)
+- [x] Codebase ingestion — 214 files (193 code + 21 specs) imported via scripts/import-codebase.js. Batch embed pending (VOYAGE_API_KEY on Vercel only)
 - [x] Run pgvector-setup.sql in Supabase + add OPENAI_API_KEY to Vercel
 
 ## Phase 5.5: Pricing & Payments -- DONE
