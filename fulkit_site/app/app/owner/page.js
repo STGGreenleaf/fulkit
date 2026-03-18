@@ -69,6 +69,7 @@ const VALID_TAB_IDS = TABS.map((t) => t.id);
 /* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
 export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
   const { compactMode, accessToken } = useAuth();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState(initialTab && VALID_TAB_IDS.includes(initialTab) ? initialTab : "dashboard");
   const [maydayAlert, setMaydayAlert] = useState(false);
 
@@ -107,14 +108,16 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
   }, [tab, onMayday]);
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" }}>
+    <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
       {/* Sub-tab bar */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-1)",
-          padding: "var(--space-3) var(--space-6)",
+          gap: isMobile ? 0 : "var(--space-1)",
+          padding: isMobile ? "var(--space-2) var(--space-1)" : "var(--space-3) var(--space-6)",
+          overflowX: isMobile ? "auto" : "visible",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {TABS.map((t) => {
@@ -130,7 +133,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                   display: "flex",
                   alignItems: "center",
                   gap: "var(--space-1-5)",
-                  padding: "var(--space-2-5) var(--space-3)",
+                  padding: isMobile ? "var(--space-2-5) var(--space-2-5)" : "var(--space-2-5) var(--space-3)",
                   border: "none",
                   outline: "none",
                   background: active ? "var(--color-bg-alt)" : "transparent",
@@ -143,7 +146,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                   transition: `all var(--duration-fast) var(--ease-default)`,
                 }}
               >
-                <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                <t.icon size={isMobile ? 18 : TAB_ICON_SIZE} strokeWidth={1.8} />
                 {t.id === "radio" && maydayAlert && (
                   <span style={{
                     width: 6, height: 6, borderRadius: "50%",
@@ -153,7 +156,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                     alignSelf: "flex-start",
                   }} />
                 )}
-                {!compactMode && t.label}
+                {!compactMode && !isMobile && t.label}
               </button>
             </Tooltip>
           );
@@ -161,7 +164,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
       </div>
 
       {/* Sub-tab content — full width */}
-      <div style={{ padding: "0 var(--space-6) var(--space-6)" }}>
+      <div style={{ padding: isMobile ? "0 var(--space-2) var(--space-4)" : "0 var(--space-6) var(--space-6)" }}>
         {tab === "dashboard" && <DashboardTab />}
         {tab === "questions" && <QuestionsTab />}
         {tab === "design" && <DesignTab />}
@@ -327,6 +330,7 @@ function PeriodToggle({ period, onChange }) {
 
 function DashboardTab() {
   const { accessToken } = useAuth();
+  const isMobile = useIsMobile();
   const [siteMetrics, setSiteMetrics] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [events, setEvents] = useState(null);
@@ -412,7 +416,7 @@ function DashboardTab() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(5, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
         {kpis.map((k, i) => (
           <div key={i} style={{ ...CARD, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 90 }}>
             <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
@@ -440,7 +444,7 @@ function DashboardTab() {
       )}
 
       {/* Main grid: Feature Usage + Funnel */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
         {/* Feature Usage */}
         <div style={CARD}>
           <div style={DASH_LABEL}>Feature Usage ({period}d)</div>
@@ -496,7 +500,7 @@ function DashboardTab() {
 
       {/* Second grid: Pages + Geo + Referrers + Chat Depth */}
       {analytics?.configured && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
           {/* Top Pages */}
           <div style={CARD}>
             <div style={DASH_LABEL}>Top Pages</div>
