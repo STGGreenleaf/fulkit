@@ -109,6 +109,9 @@ export async function POST(request) {
 }
 
 // PUT /api/embed — batch embed all un-embedded notes for the user
+// Uses Voyage batch API (up to 128 inputs per call) instead of one-at-a-time
+export const maxDuration = 60; // Vercel function timeout (seconds)
+
 export async function PUT(request) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -119,33 +122,62 @@ export async function PUT(request) {
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
     if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Fetch notes without embeddings
+    const apiKey = process.env.VOYAGE_API_KEY;
+    if (!apiKey) return Response.json({ error: "VOYAGE_API_KEY not set" }, { status: 500 });
+
+    // Fetch notes without embeddings (up to 100 per call)
     const { data: notes, error: fetchErr } = await admin
       .from("notes")
       .select("id, title, content")
       .eq("user_id", user.id)
       .is("embedding", null)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (fetchErr) throw new Error(fetchErr.message);
     if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
 
     let embedded = 0;
     let failed = 0;
-    for (const note of notes) {
-      try {
-        const text = `${note.title || ""}\n\n${note.content || ""}`.trim();
-        if (!text) continue;
+    const BATCH_SIZE = 20; // Voyage supports 128, but keep payload reasonable
 
-        const embedding = await getEmbedding(text);
-        await admin
-          .from("notes")
-          .update({ embedding: JSON.stringify(embedding) })
-          .eq("id", note.id);
-        embedded++;
+    for (let i = 0; i < notes.length; i += BATCH_SIZE) {
+      const batch = notes.slice(i, i + BATCH_SIZE);
+      const texts = batch.map(n => `${n.title || ""}\n\n${n.content || ""}`.trim().slice(0, 32000));
+
+      try {
+        const res = await fetch(VOYAGE_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: EMBEDDING_MODEL,
+            input: texts,
+            input_type: "document",
+          }),
+        });
+
+        if (!res.ok) {
+          failed += batch.length;
+          continue;
+        }
+
+        const { data: embeddings } = await res.json();
+
+        // Save all embeddings in parallel
+        const saves = batch.map((note, j) =>
+          admin
+            .from("notes")
+            .update({ embedding: JSON.stringify(embeddings[j].embedding) })
+            .eq("id", note.id)
+            .then(() => { embedded++; })
+            .catch(() => { failed++; })
+        );
+        await Promise.all(saves);
       } catch {
-        failed++;
+        failed += batch.length;
       }
     }
 

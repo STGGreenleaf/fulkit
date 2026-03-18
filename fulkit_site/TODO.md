@@ -22,7 +22,7 @@
 - [x] Google OAuth confirmed working (sign in → dashboard → sign out loop)
 - [x] Collin's account created, role=owner, onboarded=true
 - [x] Magic link sign-in (code + UI complete — signInWithOtp + login page email flow)
-- [ ] Test magic link delivery (send a real one, confirm it arrives)
+- [x] Test magic link delivery (confirmed — Supabase email received at collin@fulkit.app)
 
 ## Phase 2.1: Core Features -- DONE
 
