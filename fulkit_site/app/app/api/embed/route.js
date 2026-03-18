@@ -125,36 +125,22 @@ export async function PUT(request) {
     const apiKey = process.env.VOYAGE_API_KEY;
     if (!apiKey) return Response.json({ error: "VOYAGE_API_KEY not set" }, { status: 500 });
 
-    // Fetch notes needing embeddings — use RPC to handle pgvector null check reliably
-    const { data: noteIds, error: idErr } = await admin
-      .rpc("get_unembedded_note_ids", { uid: user.id, lim: 100 })
-      .catch(() => ({ data: null, error: { message: "RPC not available" } }));
+    // Fetch notes needing embeddings via RPC (pgvector null check doesn't work through PostgREST)
+    const { data: noteIds, error: rpcErr } = await admin
+      .rpc("get_unembedded_note_ids", { uid: user.id, lim: 100 });
 
-    let notes;
-    if (noteIds?.length > 0) {
-      // RPC worked — fetch full content for matched IDs
-      const { data, error: fetchErr } = await admin
-        .from("notes")
-        .select("id, title, content")
-        .in("id", noteIds.map(r => r.id));
-      if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
-      notes = data || [];
-    } else if (idErr || !noteIds) {
-      // RPC doesn't exist — fall back to direct query
-      const { data, error: fetchErr } = await admin
-        .from("notes")
-        .select("id, title, content")
-        .eq("user_id", user.id)
-        .is("embedding", null)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
-      notes = data || [];
-    } else {
-      notes = [];
+    if (rpcErr || !noteIds?.length) {
+      return Response.json({ embedded: 0, rpcError: rpcErr?.message || null, message: noteIds?.length === 0 ? "All notes already embedded" : "RPC failed" });
     }
 
-    if (!notes.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
+    const { data: notes, error: fetchErr } = await admin
+      .from("notes")
+      .select("id, title, content")
+      .in("id", noteIds.map(r => r.id));
+
+    if (fetchErr || !notes?.length) {
+      return Response.json({ embedded: 0, error: fetchErr?.message || "No notes found" });
+    }
 
     let embedded = 0;
     let failed = 0;
