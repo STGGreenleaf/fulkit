@@ -1084,6 +1084,7 @@ export default function Landing() {
           flexDirection: isMobile ? "column" : "row",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: isMobile ? "var(--space-4)" : 0,
           maxWidth: 900,
           margin: "0 auto",
         }}
