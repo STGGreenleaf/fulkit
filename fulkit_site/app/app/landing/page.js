@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, X } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import { TIERS, CREDITS } from "../../lib/ful-config";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const apps = [
   { name: "Obsidian Sync", cost: 8, replaces: "Notes" },
@@ -71,6 +72,8 @@ function GridCell({ value }) {
 }
 
 export default function Landing() {
+  const isMobile = useIsMobile();
+  const px = isMobile ? "var(--space-4)" : "var(--space-8)";
   return (
     <div
       style={{
@@ -92,7 +95,7 @@ export default function Landing() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "var(--space-4) var(--space-8)",
+          padding: `var(--space-4) ${px}`,
           background: "rgba(239, 237, 232, 0.3)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
@@ -114,7 +117,7 @@ export default function Landing() {
           <LogoMark size={24} />
           Fülkit
         </Link>
-        <div style={{ display: "flex", gap: "var(--space-6)", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: isMobile ? "var(--space-3)" : "var(--space-6)", alignItems: "center" }}>
           <Link
             href="/about"
             style={{
@@ -147,8 +150,8 @@ export default function Landing() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
         }}
       >
         <h1
@@ -259,8 +262,8 @@ export default function Landing() {
       <div style={{ background: "var(--color-bg-alt)" }}>
         <section
           style={{
-            padding: "var(--space-24) var(--space-8)",
-            maxWidth: 900,
+            padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+            maxWidth: isMobile ? "none" : 900,
             margin: "0 auto",
           }}
         >
@@ -339,8 +342,8 @@ export default function Landing() {
       {/* ─── THE MATH ─── */}
       <section
         style={{
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
           margin: "0 auto",
         }}
       >
@@ -376,7 +379,7 @@ export default function Landing() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: "var(--space-12)",
             alignItems: "start",
             maxWidth: 700,
@@ -563,8 +566,8 @@ export default function Landing() {
       <div style={{ background: "var(--color-bg-alt)" }}>
       <section
         style={{
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
           margin: "0 auto",
         }}
       >
@@ -597,7 +600,7 @@ export default function Landing() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: "0",
           }}
         >
@@ -651,8 +654,8 @@ export default function Landing() {
       {/* ─── COMPETITIVE GRID ─── */}
         <section
           style={{
-            padding: "var(--space-24) var(--space-8)",
-            maxWidth: 900,
+            padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+            maxWidth: isMobile ? "none" : 900,
             margin: "0 auto",
           }}
         >
@@ -773,8 +776,8 @@ export default function Landing() {
       <div style={{ background: "var(--color-bg-alt)" }}>
       <section
         style={{
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
           margin: "0 auto",
         }}
       >
@@ -807,7 +810,7 @@ export default function Landing() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
             gap: "0",
             borderTop: "2px solid var(--color-text)",
           }}
@@ -918,8 +921,8 @@ export default function Landing() {
       {/* ─── TRUST ─── */}
       <section
         style={{
-          padding: "var(--space-24) var(--space-8)",
-          maxWidth: 900,
+          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          maxWidth: isMobile ? "none" : 900,
           margin: "0 auto",
         }}
       >
@@ -964,7 +967,7 @@ export default function Landing() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: "0",
           }}
         >
@@ -1034,8 +1037,8 @@ export default function Landing() {
       {/* ─── FINAL CTA ─── */}
         <section
           style={{
-            padding: "var(--space-24) var(--space-8)",
-            maxWidth: 900,
+            padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+            maxWidth: isMobile ? "none" : 900,
           }}
         >
           <h2
@@ -1071,9 +1074,10 @@ export default function Landing() {
       {/* ─── FOOTER ─── */}
       <footer
         style={{
-          padding: "var(--space-12) var(--space-8)",
+          padding: isMobile ? "var(--space-8) var(--space-4)" : "var(--space-12) var(--space-8)",
           borderTop: "1px solid var(--color-border-light)",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           alignItems: "center",
           justifyContent: "space-between",
           maxWidth: 900,

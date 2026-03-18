@@ -30,9 +30,10 @@ export default function MobileTabBar() {
 
   const active = getActiveTab(pathname);
 
-  // Don't show on public pages
+  // Don't show on public pages or unauthenticated root
   const publicPaths = ["/landing", "/login", "/about", "/privacy", "/terms", "/security", "/wtf", "/onboarding"];
   if (publicPaths.some(p => pathname.startsWith(p))) return null;
+  if (pathname === "/" && !active) return null;
 
   return (
     <nav
