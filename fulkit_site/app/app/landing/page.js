@@ -197,7 +197,7 @@ export default function Landing() {
           {[
             "A full kit \u2014 everything you need, nothing you\u00A0don\u2019t.",
             "A feeling \u2014 a tool designed to feel right.",
-            "Your bestie \u2014 the last app you\u2019ll ever need.",
+            "Your new bestie \u2014 the last app you\u2019ll ever\u00A0need.",
           ].map((def, i) => (
             <div
               key={i}
