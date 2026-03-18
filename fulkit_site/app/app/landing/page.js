@@ -79,9 +79,11 @@ export default function Landing() {
       style={{
         width: "100%",
         overflowX: "hidden",
+        overflowY: "auto",
         background: "var(--color-bg)",
         color: "var(--color-text)",
         fontFamily: "var(--font-primary)",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       {/* ─── NAV ─── */}
