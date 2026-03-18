@@ -1221,7 +1221,8 @@ function DeveloperTab() {
         if (!res.ok) { setEmbedStatus(`Error: ${res.status}`); break; }
         const data = await res.json();
         totalEmbedded += data.embedded || 0;
-        setEmbedStatus(`${totalEmbedded} embedded${data.embedded === 0 ? " — done" : "..."}`);
+        const detail = data.uid ? ` (uid: ${data.uid.slice(0, 8)})` : "";
+        setEmbedStatus(`${totalEmbedded} embedded${data.embedded === 0 ? " — done" + detail : "..."}`);
         if (data.embedded === 0) break;
       } catch (err) {
         setEmbedStatus(`Error: ${err.message}`);

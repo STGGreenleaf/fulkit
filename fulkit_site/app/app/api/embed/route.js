@@ -134,8 +134,8 @@ export async function PUT(request) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
-    if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
+    if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0, uid: user.id }, { status: 500 });
+    if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded", uid: user.id, queried: "embedded=false" });
 
     let embedded = 0;
     let failed = 0;
