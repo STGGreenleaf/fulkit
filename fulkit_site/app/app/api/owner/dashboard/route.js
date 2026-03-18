@@ -19,7 +19,7 @@ export async function GET(request) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
 
     // ── All data fetched in parallel (each query fault-tolerant) ──
-    const safe = (promise, fallback) => promise.catch(() => fallback);
+    const safe = (promise, fallback) => promise.then(res => res.error ? fallback : res).catch(() => fallback);
     const [
       profilesRes,
       pageViewsRes,
@@ -96,7 +96,8 @@ export async function GET(request) {
 
     return Response.json({ metrics, analytics: analyticsResult, events });
   } catch (err) {
-    return Response.json({ error: "Failed to load dashboard" }, { status: 500 });
+    console.error("[owner/dashboard] Error:", err.message, err.stack?.split("\n").slice(0, 3).join(" | "));
+    return Response.json({ error: "Failed to load dashboard", detail: err.message }, { status: 500 });
   }
 }
 
