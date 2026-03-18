@@ -256,7 +256,6 @@ export default function Landing() {
           A friend with benefits — and the benefits are&nbsp;real.
         </p>
         <CTAButton />
-        {isMobile && <div style={{ height: "var(--space-6)" }} />}
       </section>
 
       {/* ─── THE PROBLEM ─── */}
