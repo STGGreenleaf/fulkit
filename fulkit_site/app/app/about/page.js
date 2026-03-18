@@ -84,7 +84,7 @@ export default function About() {
           display: "flex",
           flexDirection: "column",
           justifyContent: isMobile ? "flex-start" : "center",
-          padding: isMobile ? "calc(var(--space-24) + var(--space-12)) var(--space-4) calc(var(--space-24) + var(--space-12))" : "var(--space-24) var(--space-8)",
+          padding: isMobile ? "var(--space-24) var(--space-4) calc(var(--space-24) + var(--space-12))" : "var(--space-24) var(--space-8)",
           maxWidth: isMobile ? "none" : 900,
         }}
       >
