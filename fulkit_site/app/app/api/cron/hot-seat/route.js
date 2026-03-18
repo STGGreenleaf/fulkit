@@ -44,42 +44,40 @@ export async function GET(request) {
     const active = [];
 
     for (const user of founders) {
-      const msgs = user.messages_this_month || 0;
       const lastMsg = user.last_message_date ? new Date(user.last_message_date).getTime() : 0;
       const daysSinceLastMsg = lastMsg > 0 ? Math.floor((now - lastMsg) / 86400000) : Infinity;
 
-      if (msgs >= HOT_SEATS.minMonthly) {
-        // Active — meets threshold
-        active.push({ id: user.id, name: user.name, msgs });
+      // Active = messaged within the last 30 days (uses last_message_date, not
+      // messages_this_month which resets to 0 on the 1st before this cron runs)
+      if (daysSinceLastMsg <= HOT_SEATS.graceDays) {
+        active.push({ id: user.id, name: user.name, daysSince: daysSinceLastMsg });
         continue;
       }
 
-      // Under threshold — check grace period
-      if (daysSinceLastMsg > HOT_SEATS.graceDays) {
+      // Inactive beyond grace period — revoke
+      if (daysSinceLastMsg > HOT_SEATS.graceDays * 2) {
         // Grace period expired — revoke to free
         await admin
           .from("profiles")
           .update({ seat_type: "free" })
           .eq("id", user.id);
 
-        revoked.push({ id: user.id, name: user.name, email: user.email, msgs, daysSince: daysSinceLastMsg });
+        revoked.push({ id: user.id, name: user.name, email: user.email, daysSince: daysSinceLastMsg });
 
         emitServerSignal(user.id, "hot_seat_revoked", "warning", {
           name: user.name,
-          msgs,
           daysSinceLastMsg,
-          reason: `Under ${HOT_SEATS.minMonthly} msgs/month, inactive ${daysSinceLastMsg} days (grace: ${HOT_SEATS.graceDays})`,
+          reason: `No activity in ${daysSinceLastMsg} days (grace: ${HOT_SEATS.graceDays})`,
         });
       } else {
-        // Within grace — warn
-        warned.push({ id: user.id, name: user.name, msgs, daysSince: daysSinceLastMsg });
+        // Between grace and 2x grace — warn before revocation
+        warned.push({ id: user.id, name: user.name, daysSince: daysSinceLastMsg });
 
         emitServerSignal(user.id, "hot_seat_warning", "info", {
           name: user.name,
-          msgs,
           daysSinceLastMsg,
-          graceDaysRemaining: HOT_SEATS.graceDays - daysSinceLastMsg,
-          message: `Low activity — ${msgs} msgs this month (need ${HOT_SEATS.minMonthly}). ${HOT_SEATS.graceDays - daysSinceLastMsg} grace days remaining.`,
+          revokeIn: (HOT_SEATS.graceDays * 2) - daysSinceLastMsg,
+          message: `Inactive ${daysSinceLastMsg} days. Seat revokes after ${HOT_SEATS.graceDays * 2} days of inactivity.`,
         });
       }
     }
@@ -101,8 +99,8 @@ export async function GET(request) {
           warned: warned.length,
           revoked: revoked.length,
           details: {
-            active: active.map(u => `${u.name} (${u.msgs} msgs)`),
-            warned: warned.map(u => `${u.name} (${u.msgs} msgs, ${u.daysSince}d inactive)`),
+            active: active.map(u => `${u.name} (${u.daysSince}d ago)`),
+            warned: warned.map(u => `${u.name} (${u.daysSince}d inactive)`),
             revoked: revoked.map(u => `${u.name} (${u.email}, ${u.daysSince}d inactive)`),
           },
         });

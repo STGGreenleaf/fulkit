@@ -18,7 +18,8 @@ export async function GET(request) {
     const days = Math.min(parseInt(url.searchParams.get("period") || "30", 10), 90);
     const since = new Date(Date.now() - days * 86400000).toISOString();
 
-    // ── All data fetched in parallel ──
+    // ── All data fetched in parallel (each query fault-tolerant) ──
+    const safe = (promise, fallback) => promise.catch(() => fallback);
     const [
       profilesRes,
       pageViewsRes,
@@ -29,21 +30,13 @@ export async function GET(request) {
       paidRes,
       analyticsResult,
     ] = await Promise.all([
-      // Metrics: all profiles
-      admin.from("profiles").select("seat_type, onboarded, messages_this_month"),
-      // Events: page views
-      admin.from("user_events").select("user_id, meta").eq("event", "page_view").gte("created_at", since),
-      // Events: chat
-      admin.from("user_events").select("user_id, meta").eq("event", "chat_sent").gte("created_at", since),
-      // Events: integrations
-      admin.from("user_events").select("meta").eq("event", "integration_connected").gte("created_at", since),
-      // Funnel: onboarded
-      admin.from("profiles").select("id", { count: "exact", head: true }).eq("onboarded", true),
-      // Funnel: active
-      admin.from("profiles").select("id", { count: "exact", head: true }).gt("messages_this_month", 0),
-      // Funnel: paid
-      admin.from("profiles").select("id", { count: "exact", head: true }).in("seat_type", ["standard", "pro"]),
-      // Analytics: GA4 (may not be configured)
+      safe(admin.from("profiles").select("seat_type, onboarded, messages_this_month"), { data: [] }),
+      safe(admin.from("user_events").select("user_id, meta").eq("event", "page_view").gte("created_at", since), { data: [] }),
+      safe(admin.from("user_events").select("user_id, meta").eq("event", "chat_sent").gte("created_at", since), { data: [] }),
+      safe(admin.from("user_events").select("meta").eq("event", "integration_connected").gte("created_at", since), { data: [] }),
+      safe(admin.from("profiles").select("id", { count: "exact", head: true }).eq("onboarded", true), { count: 0 }),
+      safe(admin.from("profiles").select("id", { count: "exact", head: true }).gt("messages_this_month", 0), { count: 0 }),
+      safe(admin.from("profiles").select("id", { count: "exact", head: true }).in("seat_type", ["standard", "pro"]), { count: 0 }),
       fetchGA4(days).catch(() => ({ configured: false })),
     ]);
 

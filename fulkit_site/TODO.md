@@ -191,7 +191,7 @@
 - [x] "Fül up" inline prompt — capped state now shows upgrade CTA (plan or credits) + BYOK fallback instead of just BYOK link
 - [x] Trial end UX — dashboard banner when trial ends or has ≤5 days remaining, links to billing, dismissible
 - [ ] Spotify Extended Quota Mode — request from Spotify developer dashboard (currently only Collin's account works)
-- [ ] Seamless page transitions — verify cold start splash + warm nav fade-in working correctly in production (check after next deploy)
+- [x] Seamless page transitions — verified: cold start shows 3600ms splash via hasAuthResolved(), warm nav skips splash + 200ms fade-in via authFadeIn keyframe
 
 ## Prelaunch
 
