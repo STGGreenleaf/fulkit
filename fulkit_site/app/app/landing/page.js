@@ -195,7 +195,7 @@ export default function Landing() {
           }}
         >
           {[
-            "The full kit \u2014 everything you need, nothing you don\u2019t.",
+            "A full kit \u2014 everything you need, nothing you\u00A0don\u2019t.",
             "A feeling \u2014 a tool designed to feel right.",
             "Your bestie \u2014 the last app you\u2019ll ever need.",
           ].map((def, i) => (
@@ -220,7 +220,7 @@ export default function Landing() {
             color: "var(--color-text-dim)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 600,
-            marginBottom: "var(--space-10)",
+            marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
           <div>
@@ -238,7 +238,7 @@ export default function Landing() {
             color: "var(--color-text-secondary)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 720,
-            marginBottom: "var(--space-3)",
+            marginBottom: isMobile ? "var(--space-1)" : "var(--space-3)",
           }}
         >
           One app. One bestie. Everything else is noise.
@@ -250,12 +250,13 @@ export default function Landing() {
             color: "var(--color-text-secondary)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 480,
-            marginBottom: "var(--space-10)",
+            marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
-          A friend with benefits — and the benefits are real.
+          A friend with benefits — and the benefits are&nbsp;real.
         </p>
         <CTAButton />
+        {isMobile && <div style={{ height: "var(--space-6)" }} />}
       </section>
 
       {/* ─── THE PROBLEM ─── */}
