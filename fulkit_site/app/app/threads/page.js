@@ -474,14 +474,14 @@ function ThreadsContent({ initialFolder, initialView }) {
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div style={{
-            padding: "var(--space-2-5) var(--space-6)",
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
           }}>
             <span style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
@@ -503,7 +503,7 @@ function ThreadsContent({ initialFolder, initialView }) {
             display: "flex",
             alignItems: "center",
             gap: "var(--space-1)",
-            padding: "0 var(--space-6)",
+            padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
             position: "relative",
             zIndex: 10,
@@ -921,7 +921,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                 flex: 1,
                 display: "flex",
                 overflow: "hidden",
-                margin: "var(--space-4) var(--space-6)",
+                margin: isMobile ? "var(--space-4) var(--space-3)" : "var(--space-4) var(--space-6)",
                 background: "var(--color-bg-elevated)",
                 border: "1px solid var(--color-border-light)",
                 borderRadius: "var(--radius-lg)",

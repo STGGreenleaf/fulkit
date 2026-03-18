@@ -12,6 +12,7 @@ import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
 import { useSandbox } from "../lib/sandbox";
 import { SEAT_LIMITS, TIERS, CREDITS } from "../lib/ful-config";
+import { useIsMobile } from "../lib/use-mobile";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -91,6 +92,7 @@ export default function ChatContent({ isPopout = false }) {
   const isLow = !isOwner && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);
   const isCapped = !isOwner && remaining <= 0;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
+  const isMobile = useIsMobile();
 
   // ─── Sandbox hook ────────────────────────────────────────
   const sandbox = useSandbox();
@@ -332,7 +334,7 @@ export default function ChatContent({ isPopout = false }) {
     document.addEventListener("mouseup", onMouseUp);
   }, [historyWidth]);
 
-  const effectiveCompact = isPopout || compactMode;
+  const effectiveCompact = isPopout || compactMode || isMobile;
   const maxHistoryWidth = isPopout ? 200 : 400;
 
   // ─── Render ───────────────────────────────────────────────
@@ -343,7 +345,7 @@ export default function ChatContent({ isPopout = false }) {
           {/* Header */}
           <div
             style={{
-              padding: "var(--space-2-5) var(--space-6)",
+              padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
               borderBottom: "1px solid var(--color-border-light)",
               display: "flex",
               alignItems: "center",
@@ -351,7 +353,7 @@ export default function ChatContent({ isPopout = false }) {
             }}
           >
             <span style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
@@ -1172,8 +1174,8 @@ export default function ChatContent({ isPopout = false }) {
               ) : (
               <div
                 style={{
-                  padding: "var(--space-3) var(--space-6) var(--space-5)",
-                  maxWidth: 640,
+                  padding: isMobile ? "var(--space-2) var(--space-2)" : "var(--space-3) var(--space-6) var(--space-5)",
+                  maxWidth: isMobile ? "none" : 640,
                   width: "100%",
                   margin: "0 auto",
                 }}
@@ -1182,17 +1184,17 @@ export default function ChatContent({ isPopout = false }) {
                   style={{
                     display: "flex",
                     alignItems: "flex-end",
-                    gap: "var(--space-1-5)",
+                    gap: isMobile ? "var(--space-2)" : "var(--space-1-5)",
                     border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: "var(--space-1) var(--space-1) var(--space-1) var(--space-1)",
+                    borderRadius: isMobile ? "var(--radius-full)" : "var(--radius-lg)",
+                    padding: isMobile ? "var(--space-1-5) var(--space-2)" : "var(--space-1)",
                   }}
                 >
                   <button
                     onClick={() => chatFileRef.current?.click()}
                     style={{
-                      width: 32,
-                      height: 32,
+                      width: isMobile ? 36 : 32,
+                      height: isMobile ? 36 : 32,
                       flexShrink: 0,
                       display: "flex",
                       alignItems: "center",
@@ -1205,8 +1207,9 @@ export default function ChatContent({ isPopout = false }) {
                     }}
                     title="Attach files"
                   >
-                    <Paperclip size={15} strokeWidth={2} />
+                    <Paperclip size={isMobile ? 18 : 15} strokeWidth={2} />
                   </button>
+                  {!isMobile && (
                   <Link
                     href="/hum"
                     style={{
@@ -1224,6 +1227,7 @@ export default function ChatContent({ isPopout = false }) {
                   >
                     <Mic size={15} strokeWidth={2} />
                   </Link>
+                  )}
                   <input
                     ref={chatFileRef}
                     type="file"
@@ -1258,9 +1262,9 @@ export default function ChatContent({ isPopout = false }) {
                     onClick={handleSend}
                     disabled={!chat.input.trim() || chat.streaming}
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "var(--radius-md)",
+                      width: isMobile ? 36 : 32,
+                      height: isMobile ? 36 : 32,
+                      borderRadius: isMobile ? "var(--radius-full)" : "var(--radius-md)",
                       flexShrink: 0,
                       background: chat.input.trim()
                         ? "var(--color-accent)"
@@ -1275,9 +1279,9 @@ export default function ChatContent({ isPopout = false }) {
                       transition: "background var(--duration-fast) var(--ease-default)",
                     }}
                   >
-                    <ArrowRight size={14} strokeWidth={2.5} color={chat.input.trim() ? "var(--color-text-inverse)" : "var(--color-text-secondary)"} />
+                    <ArrowRight size={isMobile ? 16 : 14} strokeWidth={2.5} color={chat.input.trim() ? "var(--color-text-inverse)" : "var(--color-text-secondary)"} />
                   </button>
-                  {!isPopout && (
+                  {!isPopout && !isMobile && (
                     <button
                       onClick={() => {
                         const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;

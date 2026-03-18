@@ -237,7 +237,7 @@ export default function Actions() {
           {/* Header */}
           <div
             style={{
-              padding: "var(--space-2-5) var(--space-6)",
+              padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
               borderBottom: "1px solid var(--color-border-light)",
               display: "flex",
               alignItems: "center",
@@ -245,7 +245,7 @@ export default function Actions() {
             }}
           >
             <span style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
@@ -290,7 +290,7 @@ export default function Actions() {
             style={{
               display: "flex",
               gap: "var(--space-1)",
-              padding: "0 var(--space-6)",
+              padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
               borderBottom: "1px solid var(--color-border-light)",
             }}
           >
@@ -333,7 +333,7 @@ export default function Actions() {
                 display: "flex",
                 alignItems: "center",
                 gap: "var(--space-1)",
-                padding: "var(--space-3) var(--space-6)",
+                padding: isMobile ? "var(--space-3) var(--space-3)" : "var(--space-3) var(--space-6)",
               }}
             >
               {FILTERS.map(({ key, Icon }) => {
@@ -381,8 +381,8 @@ export default function Actions() {
             </div>
 
             {/* Action list */}
-            <div style={{ padding: "0 var(--space-6) var(--space-6)" }}>
-            <div style={{ maxWidth: 640 }}>
+            <div style={{ padding: isMobile ? "0 var(--space-3) var(--space-6)" : "0 var(--space-6) var(--space-6)" }}>
+            <div style={{ maxWidth: isMobile ? "none" : 640 }}>
               {/* Add action inline */}
               {adding && (
                 <div

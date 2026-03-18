@@ -292,7 +292,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         {/* Header */}
         <div
           style={{
-            padding: "var(--space-2-5) var(--space-6)",
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
             display: "flex",
             alignItems: "center",
@@ -300,7 +300,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
           }}
         >
           <span style={{
-            fontSize: "var(--font-size-sm)",
+            fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
             fontWeight: "var(--font-weight-black)",
             letterSpacing: "var(--letter-spacing-tight)",
             color: "var(--color-text)",
@@ -322,7 +322,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
           style={{
             display: "flex",
             gap: "var(--space-1)",
-            padding: "0 var(--space-6)",
+            padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
           }}
         >
@@ -368,7 +368,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         </div>
 
         {/* Tab content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: tab === "owner" ? 0 : "var(--space-4) var(--space-6) var(--space-6)" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: tab === "owner" ? 0 : isMobile ? "var(--space-4) var(--space-3) var(--space-6)" : "var(--space-4) var(--space-6) var(--space-6)" }}>
             {tab === "account" && <AccountTab />}
             {tab === "sources" && <SourcesTab />}
             {tab === "manual" && <ManualTab />}
