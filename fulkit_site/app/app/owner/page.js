@@ -394,6 +394,12 @@ function DashboardTab() {
       sub: paying > 0 ? `${paying} paying` : "Pre-launch",
       spark: null,
     },
+    {
+      label: "Avg Duration",
+      value: analytics?.overview?.avgDuration || "\u2014",
+      sub: "\u00A0",
+      spark: null,
+    },
   ], [analytics, siteMetrics, daily, mrr, paying]);
 
   if (loading && !analytics && !siteMetrics) {
@@ -415,7 +421,7 @@ function DashboardTab() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(5, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(6, 1fr)", gap: isMobile ? "var(--space-2)" : "var(--space-3)", marginBottom: "var(--space-4)" }}>
         {kpis.map((k, i) => (
           <div key={i} style={{ ...CARD, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 90 }}>
             <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
@@ -3789,6 +3795,7 @@ function DownloadAppCard() {
 
 function SocialsTab() {
   const { accessToken } = useAuth();
+  const isMobile = useIsMobile();
   const [meta, setMeta] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -3973,7 +3980,7 @@ function SocialsTab() {
       </div>
 
       {/* ── METADATA + PREVIEWS + IDENTITY ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 2fr 1fr", gap: isMobile ? "var(--space-3)" : "var(--space-6)", marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)" }}>
 
         {/* LEFT: Editor */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
@@ -4610,6 +4617,7 @@ function SocialsTab() {
 /* ─── Pitches Tab ─── */
 
 function PitchesTab() {
+  const isMobile = useIsMobile();
   return (
     <div>
       <div style={{ marginBottom: "var(--space-8)" }}>
@@ -4626,7 +4634,7 @@ function PitchesTab() {
           Sales facts, one-liners, and CTAs. Copy and paste anywhere.
         </p>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "var(--space-2)" : "var(--space-4)" }}>
         {PITCH_CATEGORIES.map((cat) => {
           const items = PITCHES.filter(p => p.cat === cat);
           return (

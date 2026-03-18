@@ -323,17 +323,17 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 36,
-                height: 36,
+                width: 28,
+                height: 28,
                 background: tab === "owner" ? "var(--color-bg-alt)" : "none",
                 border: "none",
-                borderRadius: "var(--radius-md)",
+                borderRadius: "var(--radius-sm)",
                 cursor: "pointer",
                 color: tab === "owner" ? "var(--color-text)" : "var(--color-text-muted)",
                 position: "relative",
               }}
             >
-              <Crown size={18} strokeWidth={1.8} />
+              <Crown size={14} strokeWidth={1.8} />
               {ownerMayday && (
                 <span style={{
                   position: "absolute", top: 6, right: 6,
