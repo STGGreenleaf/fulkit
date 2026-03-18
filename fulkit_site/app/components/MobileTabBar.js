@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, MessageCircle, CheckSquare, LineSquiggle, Settings } from "lucide-react";
 import { useIsMobile } from "../lib/use-mobile";
+import { useAuth } from "../lib/auth";
 
 const TABS = [
   { id: "home", icon: Home, href: "/home", label: "Home" },
@@ -25,15 +26,18 @@ function getActiveTab(pathname) {
 export default function MobileTabBar() {
   const isMobile = useIsMobile();
   const pathname = usePathname();
+  const { user } = useAuth();
 
   if (!isMobile) return null;
 
+  // Only show for authenticated users on app pages
+  if (!user) return null;
+
   const active = getActiveTab(pathname);
 
-  // Don't show on public pages or unauthenticated root
+  // Don't show on public pages
   const publicPaths = ["/landing", "/login", "/about", "/privacy", "/terms", "/security", "/wtf", "/onboarding"];
   if (publicPaths.some(p => pathname.startsWith(p))) return null;
-  if (pathname === "/" && !active) return null;
 
   return (
     <nav
