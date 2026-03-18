@@ -349,9 +349,10 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         <div
           style={{
             display: "flex",
-            gap: "var(--space-1)",
-            padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
+            gap: isMobile ? 0 : "var(--space-1)",
+            padding: isMobile ? 0 : "0 var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
+            justifyContent: isMobile ? "space-around" : "flex-start",
           }}
         >
           {tabs.map((t) => {
@@ -368,7 +369,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                     display: hiddenOnMobile ? "none" : "flex",
                     alignItems: "center",
                     gap: "var(--space-1-5)",
-                    padding: "var(--space-2-5) var(--space-3)",
+                    padding: isMobile ? "var(--space-3) var(--space-3)" : "var(--space-2-5) var(--space-3)",
                     border: "none",
                     outline: "none",
                     background: active ? "var(--color-bg-alt)" : "transparent",
@@ -381,8 +382,8 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                     transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                   }}
                 >
-                  <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
-                  {!compactMode && t.label}
+                  <t.icon size={isMobile ? 20 : TAB_ICON_SIZE} strokeWidth={1.8} />
+                  {!compactMode && !isMobile && t.label}
                   {t.id === "owner" && ownerMayday && (
                     <span style={{
                       width: 6, height: 6, borderRadius: "50%",
