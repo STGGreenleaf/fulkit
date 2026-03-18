@@ -9,7 +9,7 @@
 
 > The 10 things to build, ordered by impact. Top 3 are non-negotiable before inviting users.
 
-- [ ] **Error monitoring (Sentry)** — Add `@sentry/nextjs`. Wrap chat route + React error boundaries. Free tier. Without this, production bugs are invisible. Non-negotiable.
+- [x] **Error monitoring (Signal Radio enhanced)** — React ErrorBoundary (SignalBoundary), fetch interceptor (all 5xx), Core Web Vitals (LCP, CLS), conversation_save_failed, withSignal() API wrapper, Radio health summary strip. No external service — all in Radio.
 - [ ] **CI/CD pipeline** — GitHub Actions: `npm run build && npm test` on every push to main. Prevent broken deploys. One YAML file.
 - [ ] **Database indexes** — Composite indexes on `(user_id, created_at)` for notes, conversations, messages, actions. One SQL migration. Prevents query slowdown at 10K+ users.
 - [ ] **Mobile responsive layout** — Sidebar → hamburger on mobile. Landing page responsive. Chat input usable on phone. 0 @media queries exist today — 50%+ of traffic will be mobile.

@@ -993,6 +993,47 @@ function RadioTab() {
         ))}
       </div>
 
+      {/* Health summary strip */}
+      {(() => {
+        const lastError = signals.find(s => s.meta?.severity === "error");
+        const lastErrorAgo = lastError ? Math.floor((Date.now() - new Date(lastError.created_at).getTime()) / 3600000) : null;
+        const errorRate = period > 0 && counts.error > 0 ? (counts.error / period).toFixed(1) : "0";
+        const healthy = counts.error === 0;
+        return (
+          <div style={{
+            display: "flex", alignItems: "center", gap: "var(--space-3)",
+            padding: "var(--space-2) var(--space-3)",
+            background: healthy ? "var(--color-bg)" : "var(--color-bg-alt)",
+            border: `1px solid ${healthy ? "var(--color-border-light)" : "var(--color-border)"}`,
+            borderRadius: "var(--radius-sm)",
+            marginBottom: "var(--space-4)",
+            fontSize: "var(--font-size-2xs)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-text-dim)",
+          }}>
+            <span style={{ color: healthy ? "var(--color-success, #48bb78)" : "var(--color-error, #e53e3e)" }}>
+              {healthy ? "All clear" : `${counts.error} error${counts.error !== 1 ? "s" : ""}`}
+            </span>
+            <span style={{ color: "var(--color-border)" }}>|</span>
+            <span>{counts.warning} warning{counts.warning !== 1 ? "s" : ""}</span>
+            <span style={{ color: "var(--color-border)" }}>|</span>
+            <span>{total} total</span>
+            {lastErrorAgo !== null && (
+              <>
+                <span style={{ color: "var(--color-border)" }}>|</span>
+                <span>Last error: {lastErrorAgo === 0 ? "<1h ago" : `${lastErrorAgo}h ago`}</span>
+              </>
+            )}
+            {counts.error > 0 && (
+              <>
+                <span style={{ color: "var(--color-border)" }}>|</span>
+                <span>Rate: {errorRate}/hr</span>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Filter pills */}
       <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
         {[

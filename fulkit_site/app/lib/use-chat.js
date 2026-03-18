@@ -142,6 +142,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       }
     } catch (err) {
       console.error("[ensureConversation] failed:", err.message);
+      signal("conversation_save_failed", "error", { error: err?.message });
     }
     return null;
   }

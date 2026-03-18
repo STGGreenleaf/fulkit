@@ -204,6 +204,68 @@ export function SignalCollector() {
       }
     } catch {}
 
+    // ── Fetch interceptor (catch all 5xx responses) ──
+    const origFetch = window.fetch;
+    window.fetch = async (...args) => {
+      try {
+        const res = await origFetch(...args);
+        if (res.status >= 500) {
+          const url = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
+          emitSignal("fetch_error", "error", {
+            url: url.split("?")[0], // strip query params
+            status: res.status,
+            page: window.location.pathname,
+          });
+        }
+        return res;
+      } catch (err) {
+        const url = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
+        emitSignal("fetch_error", "error", {
+          url: url.split("?")[0],
+          message: err.message,
+          page: window.location.pathname,
+        });
+        throw err;
+      }
+    };
+
+    // ── Core Web Vitals (emit only when bad) ──
+    let lcpObserver = null;
+    let clsObserver = null;
+    if (typeof PerformanceObserver !== "undefined") {
+      // LCP > 4s = slow
+      try {
+        lcpObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          const lcp = entries[entries.length - 1];
+          if (lcp && lcp.startTime > 4000) {
+            emitSignal("slow_lcp", "warning", {
+              lcp: Math.round(lcp.startTime),
+              page: window.location.pathname,
+            });
+          }
+        });
+        lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
+      } catch {}
+
+      // CLS > 0.25 = layout shift problem
+      try {
+        let clsValue = 0;
+        clsObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (!entry.hadRecentInput) clsValue += entry.value;
+          }
+          if (clsValue > 0.25) {
+            emitSignal("high_cls", "warning", {
+              cls: clsValue.toFixed(3),
+              page: window.location.pathname,
+            });
+          }
+        });
+        clsObserver.observe({ type: "layout-shift", buffered: true });
+      } catch {}
+    }
+
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
     window.addEventListener("offline", onOffline);
@@ -219,6 +281,9 @@ export function SignalCollector() {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (longTaskObserver) longTaskObserver.disconnect();
+      if (lcpObserver) lcpObserver.disconnect();
+      if (clsObserver) clsObserver.disconnect();
+      window.fetch = origFetch;
     };
   }, [user?.id]);
 
