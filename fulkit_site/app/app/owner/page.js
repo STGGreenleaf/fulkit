@@ -1320,115 +1320,6 @@ function DeveloperTab() {
     if (res.ok) setBroadcasts(await res.json());
   }, [accessToken]);
 
-  // ── Doc Import ──
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState(null);
-  const [mdFiles, setMdFiles] = useState([]);
-  const [selectedFiles, setSelectedFiles] = useState(new Set());
-  const [loadingFiles, setLoadingFiles] = useState(false);
-  const [discovered, setDiscovered] = useState(false);
-
-  const getFolder = (path) => {
-    if (path.includes("Audio_Crate")) return "02-AUDIO";
-    if (path.includes("numbrly") || path.includes("truegauge")) return "03-INTEGRATIONS";
-    return "01-PROJECT";
-  };
-
-  const getTitle = (name) => name.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-
-  const discoverDocs = useCallback(async () => {
-    setLoadingFiles(true);
-    setImportResult(null);
-    try {
-      const allFiles = [];
-      const fetchDir = async (dirPath) => {
-        const res = await fetch(`/api/github/tree?repo=STGGreenleaf/fulkit&path=${dirPath}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!res.ok) return [];
-        return await res.json();
-      };
-
-      const mdItems = await fetchDir("fulkit_site/md");
-      for (const item of mdItems) {
-        if (item.type === "dir") {
-          if (item.name === "archive") continue;
-          const subItems = await fetchDir(item.path);
-          for (const sub of subItems) {
-            if (sub.name.endsWith(".md")) allFiles.push(sub);
-          }
-        } else if (item.name.endsWith(".md")) {
-          allFiles.push(item);
-        }
-      }
-
-      const rootItems = await fetchDir("fulkit_site");
-      for (const item of rootItems) {
-        if (["CLAUDE.md", "TODO.md"].includes(item.name)) {
-          allFiles.push(item);
-        }
-      }
-
-      setMdFiles(allFiles);
-      setSelectedFiles(new Set(allFiles.map(f => f.path)));
-      setDiscovered(true);
-    } catch (err) {
-      setImportResult({ error: "Failed to discover docs: " + err.message });
-    } finally {
-      setLoadingFiles(false);
-    }
-  }, [accessToken]);
-
-  const toggleFile = (path) => {
-    setSelectedFiles(prev => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  };
-
-  const importDocs = async () => {
-    if (selectedFiles.size === 0) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const notes = [];
-      for (const filePath of selectedFiles) {
-        try {
-          const res = await fetch(`/api/github/file?repo=STGGreenleaf/fulkit&path=${filePath}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          if (!res.ok) continue;
-          const { content } = await res.json();
-          const name = filePath.split("/").pop();
-          if (content) notes.push({ title: getTitle(name), content, source: "import", folder: getFolder(filePath) });
-        } catch { /* skip failed files */ }
-      }
-
-      if (notes.length === 0) {
-        setImportResult({ error: "No files fetched. Is GitHub connected?" });
-        return;
-      }
-
-      const res = await fetch("/api/notes/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ notes }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setImportResult({ success: `${data.imported} docs imported as notes` });
-      } else {
-        setImportResult({ error: data.error });
-      }
-    } catch (err) {
-      setImportResult({ error: err.message });
-    } finally {
-      setImporting(false);
-    }
-  };
-
   // ── Broadcast editor inline ──
   const BroadcastEditor = ({ item, onSave, onCancel }) => {
     const [title, setTitle] = useState(item.title || "");
@@ -2218,114 +2109,6 @@ function DeveloperTab() {
           )}
         </div>
 
-        {/* Doc Import */}
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <FileText size={12} strokeWidth={2} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-              Doc Import
-            </span>
-          </div>
-          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
-            Import project docs from GitHub as notes.
-          </p>
-
-          {!discovered ? (
-            <button
-              onClick={discoverDocs}
-              disabled={loadingFiles}
-              style={{
-                display: "flex", alignItems: "center", gap: "var(--space-2)",
-                padding: "var(--space-1-5) var(--space-3)",
-                background: loadingFiles ? "var(--color-bg-elevated)" : "var(--color-text)",
-                color: loadingFiles ? "var(--color-text-muted)" : "var(--color-bg)",
-                border: "none", borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                cursor: loadingFiles ? "wait" : "pointer",
-              }}
-            >
-              <RefreshCw size={11} strokeWidth={2} style={loadingFiles ? { animation: "spin 1s linear infinite" } : {}} />
-              {loadingFiles ? "Discovering..." : "Discover from GitHub"}
-            </button>
-          ) : (
-            <>
-              <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)", flexWrap: "wrap" }}>
-                <button
-                  onClick={() => setSelectedFiles(new Set(mdFiles.map(f => f.path)))}
-                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer" }}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setSelectedFiles(new Set())}
-                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer" }}
-                >
-                  None
-                </button>
-                <button
-                  onClick={discoverDocs}
-                  disabled={loadingFiles}
-                  style={{ padding: "2px var(--space-2)", background: "transparent", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", fontSize: 9, color: "var(--color-text-secondary)", cursor: "pointer", marginLeft: "auto" }}
-                >
-                  <RefreshCw size={9} strokeWidth={2} style={{ marginRight: 2, verticalAlign: "middle", ...(loadingFiles ? { animation: "spin 1s linear infinite" } : {}) }} />
-                  Refresh
-                </button>
-              </div>
-
-              <div style={{ maxHeight: 160, overflowY: "auto", marginBottom: "var(--space-2)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)" }}>
-                {mdFiles.map((file) => {
-                  const name = file.path.split("/").pop();
-                  return (
-                    <label
-                      key={file.path}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-1-5)",
-                        padding: "3px var(--space-2)",
-                        borderBottom: "1px solid var(--color-border-light)",
-                        cursor: "pointer", fontSize: "var(--font-size-xs)",
-                        background: selectedFiles.has(file.path) ? "var(--color-bg-elevated)" : "transparent",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.path)}
-                        onChange={() => toggleFile(file.path)}
-                        style={{ accentColor: "var(--color-text-primary)" }}
-                      />
-                      <span style={{ color: "var(--color-text-primary)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {name}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={importDocs}
-                disabled={importing || selectedFiles.size === 0}
-                style={{
-                  display: "flex", alignItems: "center", gap: "var(--space-2)",
-                  padding: "var(--space-1-5) var(--space-3)",
-                  background: importing || selectedFiles.size === 0 ? "var(--color-bg-elevated)" : "var(--color-text)",
-                  color: importing || selectedFiles.size === 0 ? "var(--color-text-muted)" : "var(--color-bg)",
-                  border: "none", borderRadius: "var(--radius-sm)",
-                  fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                  cursor: importing || selectedFiles.size === 0 ? "default" : "pointer",
-                }}
-              >
-                <Upload size={11} strokeWidth={2} />
-                {importing ? "Importing..." : `Import ${selectedFiles.size}`}
-              </button>
-            </>
-          )}
-
-          {importResult?.success && (
-            <div style={{ marginTop: "var(--space-2)", fontSize: 9, color: "var(--color-success)" }}>{importResult.success}</div>
-          )}
-          {importResult?.error && (
-            <div style={{ marginTop: "var(--space-2)", fontSize: 9, color: "var(--color-error)" }}>{importResult.error}</div>
-          )}
-        </div>
       </div>
 
       {/* ── USER KNOWLEDGE BASE ── */}
@@ -3318,6 +3101,7 @@ const OWNER_NOTES = [
     category: "Database & Auth",
     items: [
       { name: "Supabase", url: "https://supabase.com/dashboard", note: "Postgres + Auth + RLS. Project: zwezmthocrbavowrprzl." },
+      { name: "Upstash Redis", url: "https://console.upstash.com/redis/34b124cd-3c2c-49f2-a023-f12222ee4ea7?teamid=0", note: "Distributed rate limiting — sliding window per API route. Shared across all serverless instances. Free tier (10K cmds/day)." },
     ],
   },
   {
@@ -3340,6 +3124,28 @@ const OWNER_NOTES = [
     category: "Domain",
     items: [
       { name: "GoDaddy", url: "https://www.godaddy.com", note: "Domain registrar for fulkit.app + fullkit.app. Nameservers pointed to Vercel." },
+    ],
+  },
+  {
+    category: "Internal Pages",
+    items: [
+      { name: "/landing", url: "https://fulkit.app/landing", note: "Public landing page — hero, problem, math, features, grid, pricing, trust, CTA" },
+      { name: "/about", url: "https://fulkit.app/about", note: "Public — brand philosophy, design language, Dieter Rams principles" },
+      { name: "/login", url: "https://fulkit.app/login", note: "Public — Google OAuth + email sign-in" },
+      { name: "/security", url: "https://fulkit.app/security", note: "Public — full security architecture (encryption, RLS, CSP, rate limiting)" },
+      { name: "/privacy", url: "https://fulkit.app/privacy", note: "Public — privacy policy, data handling, third parties, deletion rights" },
+      { name: "/terms", url: "https://fulkit.app/terms", note: "Public — terms of service, acceptable use, AI limitations" },
+      { name: "/wtf", url: "https://fulkit.app/wtf", note: "Public — about/FAQ page" },
+      { name: "/home", url: "https://fulkit.app/home", note: "App — dashboard, whispers, recent threads, action items" },
+      { name: "/chat", url: "https://fulkit.app/chat", note: "App — main AI chat with streaming, tools, context injection" },
+      { name: "/threads", url: "https://fulkit.app/threads", note: "App — kanban board (5 columns), drag-and-drop, due dates, labels" },
+      { name: "/actions", url: "https://fulkit.app/actions", note: "App — task list with status tabs (active, done, deferred, dismissed)" },
+      { name: "/fabric", url: "https://fulkit.app/fabric", note: "App — Signal Terrain audio viz, B-Side chat, crates, search" },
+      { name: "/hum", url: "https://fulkit.app/hum", note: "App — voice capture mode" },
+      { name: "/settings", url: "https://fulkit.app/settings", note: "App — profile, vault, integrations, AI, appearance, about tabs" },
+      { name: "/owner", url: "https://fulkit.app/owner", note: "Owner — dashboard, design, users, notes, developer, fabric tabs" },
+      { name: "/onboarding", url: "https://fulkit.app/onboarding", note: "App — new user questionnaire flow" },
+      { name: "/ref/[code]", url: "https://fulkit.app/ref/code", note: "Public — referral landing page (dynamic per referral code)" },
     ],
   },
 ];
@@ -3708,9 +3514,21 @@ const PITCHES = [
   { cat: "Social Posts", text: "My AI remembers everything I\u2019ve ever saved. Yours starts from zero every time." },
   { cat: "Social Posts", text: "I talked to an orb for 5 minutes. It organized my entire week." },
   { cat: "Social Posts", text: "Refer 7 friends, use F\u00FClkit free forever. The math works." },
+  { cat: "Security", text: "Your data is encrypted before it touches the database. AES-256-GCM \u2014 the same standard banks use." },
+  { cat: "Security", text: "Read our security architecture. All of it. fulkit.app/security" },
+  { cat: "Security", text: "Delete everything. Right now. For real. Not \u201Cwithin 30 days.\u201D Atomic cascade, immediate, verifiable." },
+  { cat: "Security", text: "Your API key, your encryption, your control. BYOK with AES-256-GCM. No other AI app does this." },
+  { cat: "Security", text: "Row-level security on every table. Even a bug in our code can\u2019t leak your data to another user." },
+  { cat: "Security", text: "We don\u2019t trust your data as instructions. Prompt injection defense with XML isolation boundaries." },
+  { cat: "Security", text: "Zero plaintext secrets in our database. Every token, every key, every refresh token \u2014 encrypted at rest." },
+  { cat: "Security", text: "Strict Content Security Policy. No inline scripts, no eval(), no third-party injection. Enforced, not optional." },
+  { cat: "Security", text: "Distributed rate limiting across all instances. Not per-server counters that reset on deploy \u2014 real limits." },
+  { cat: "Security", text: "ChatGPT says \u201Cwe may retain your data for 30 days.\u201D F\u00FClkit says \u201Cdelete now\u201D and means it." },
+  { cat: "Security", text: "We publish our security architecture because we built it to be read. Most AI apps don\u2019t \u2014 because they can\u2019t." },
+  { cat: "Security", text: "Security is not a feature we added. It\u2019s the way we built everything else." },
 ];
 
-const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "One-Liners", "Brand", "Social Posts"];
+const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts"];
 
 /* ─── Socials Tab ─── */
 

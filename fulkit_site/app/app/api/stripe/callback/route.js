@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { encryptToken, encryptMeta } from "../../../../lib/token-crypt";
 import crypto from "crypto";
 
 export async function GET(request) {
@@ -53,13 +54,13 @@ export async function GET(request) {
         {
           user_id: userId,
           provider: "stripe",
-          access_token: tokenData.access_token,
+          access_token: encryptToken(tokenData.access_token),
           scope: tokenData.scope || "read_only",
-          metadata: {
+          metadata: encryptMeta({
             stripe_user_id: tokenData.stripe_user_id,
             refresh_token: tokenData.refresh_token,
             livemode: tokenData.livemode,
-          },
+          }),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,provider" }

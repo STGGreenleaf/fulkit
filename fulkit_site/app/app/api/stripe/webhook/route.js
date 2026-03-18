@@ -310,7 +310,7 @@ export async function POST(request) {
 
     return Response.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err);
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error("[stripe/webhook] Error:", err.message);
+    return Response.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

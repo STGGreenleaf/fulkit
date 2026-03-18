@@ -13,6 +13,8 @@
     "@google-analytics/data": "^5.2.1",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "dotenv": "^17.3.1",
     "fft.js": "^4.0.4",
     "lucide-react": "^0.577.0",

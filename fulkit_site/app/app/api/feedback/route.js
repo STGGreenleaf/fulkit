@@ -35,10 +35,10 @@ export async function POST(request) {
       status: "open",
     }).select().single();
 
-    if (error) return Response.json({ error: error.message }, { status: 500 });
+    if (error) return Response.json({ error: "Failed to submit feedback" }, { status: 500 });
     return Response.json(data);
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+  } catch {
+    return Response.json({ error: "Failed to submit feedback" }, { status: 500 });
   }
 }
 
@@ -55,10 +55,10 @@ export async function GET(request) {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) return Response.json({ error: error.message }, { status: 500 });
+    if (error) return Response.json({ error: "Failed to fetch tickets" }, { status: 500 });
     return Response.json(data);
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+  } catch {
+    return Response.json({ error: "Failed to fetch tickets" }, { status: 500 });
   }
 }
 
@@ -83,9 +83,9 @@ export async function PATCH(request) {
       .select()
       .single();
 
-    if (error) return Response.json({ error: error.message }, { status: 500 });
+    if (error) return Response.json({ error: "Failed to update ticket" }, { status: 500 });
     return Response.json(data);
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+  } catch {
+    return Response.json({ error: "Failed to update ticket" }, { status: 500 });
   }
 }

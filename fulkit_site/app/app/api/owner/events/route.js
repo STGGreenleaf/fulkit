@@ -115,6 +115,7 @@ export async function GET(request) {
       chatDepth,
     });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error("[owner/events] Error:", err.message);
+    return Response.json({ error: "Failed to load analytics" }, { status: 500 });
   }
 }

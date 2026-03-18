@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { encryptToken } from "../../../../lib/token-crypt";
 import crypto from "crypto";
 
 export async function GET(request) {
@@ -53,7 +54,7 @@ export async function GET(request) {
         {
           user_id: userId,
           provider: "github",
-          access_token: tokenData.access_token,
+          access_token: encryptToken(tokenData.access_token),
           scope: tokenData.scope || "",
           metadata: {},
           updated_at: new Date().toISOString(),

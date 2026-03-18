@@ -5,6 +5,64 @@
 
 ---
 
+## Session 17 — 2026-03-17: Operation Vault Door — Bank-Vault Security Hardening
+
+### What was built
+- **Token encryption at rest** — All 9 OAuth providers now encrypt tokens with AES-256-GCM before database storage. New shared utility `lib/token-crypt.js` (extracted from BYOK route). Format: `iv:tag:ciphertext`. Migration-safe: detects plaintext legacy tokens, returns as-is, encrypts on next write cycle.
+- **Metadata encryption** — Refresh tokens in the `metadata` JSON column (Square, Toast, Spotify, Shopify, Trello) encrypted as complete blobs via `encryptMeta()`/`decryptMeta()`.
+- **Content Security Policy** — Strict CSP enforced in middleware. Blocks XSS, clickjacking, third-party script injection. Tested in Report-Only first, then flipped to enforcing.
+- **Distributed rate limiting** — Installed `@upstash/ratelimit` + `@upstash/redis`. Middleware rewritten to use Redis sliding window. Same limits (chat 15/min, checkout 5/min, etc.) now shared across all serverless instances. Graceful fallback to in-memory if Redis unavailable. Upstash Redis deployed (AWS, no eviction, free tier).
+- **Error leakage sweep** — Sealed `err.message` returns in 6 routes (embed, feedback, owner/events, rsg, numbrly/context, stripe/webhook). All now return generic messages. No internal details exposed to clients.
+- **Security page** — New public page at `/security` — renders the full security architecture for anyone to read.
+- **Landing page trust section** — 6-item grid (AES-256-GCM, SOC 2 controls, RLS, zero plaintext, CSP, full deletion) between Pricing and Final CTA. Link to /security. "Bank-vault encryption at rest" row added to competitive grid. Security link in footer.
+- **Security documentation** — `md/security.md` — comprehensive brag-worthy security architecture doc. Covers encryption, auth, RLS, rate limiting, CSP, prompt injection defense, webhook integrity, BYOK, data deletion, infrastructure.
+- **Final audit** — Two-agent sweep verified every claim on landing page and /security page is backed by real code. Zero aspirational statements. Removed "audit logging" from SOC 2 claim (not implemented). All facts.
+- **Owner notes** — Added Upstash Redis console link to owner portal Notes tab.
+- **Phase 1 security audit** (done prior) — JWT bypass fix, security headers, input validation, RLS hardening, error leakage fixes.
+
+### Files created
+- `lib/token-crypt.js` — shared AES-256-GCM encrypt/decrypt for tokens + metadata
+- `md/security.md` — security architecture documentation
+- `app/security/page.js` — public security page
+
+### Files changed
+- `middleware.js` — CSP enforcing, Upstash Redis rate limiting with in-memory fallback
+- `api/byok/route.js` — imports from shared token-crypt instead of inline
+- 9 callback/connect routes — encrypt tokens before storage
+- 9 server lib files — decrypt tokens after fetch
+- 6 API routes — error leakage sealed (embed, feedback, owner/events, rsg, numbrly/context, stripe/webhook)
+- `app/landing/page.js` — trust section, competitive grid row, security footer link
+- `app/owner/page.js` — Upstash Redis in owner notes
+- `TODO.md` — security items marked complete
+
+### Env vars added
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (Upstash console → Vercel + .env.local)
+
+### What's next
+- Upload security.md to Fulkit KB (vault_broadcasts)
+- Test CSP in production (check browser console for blocked resources after deploy)
+
+---
+
+## Session 16 — 2026-03-17: Operation Pancakes finale + KB audit + Doc Import removal
+
+### What was built
+- **Final KB audit** — Verified all 28 docs across 3 knowledge bases (4 DB channels). Confirmed complete isolation: main chat reads `context` + `owner-context`, fabric chat reads `fabric-context` only, greeting reads `owner-context` voice doc only. Zero bleed.
+- **Removed Doc Import** — Stripped GitHub-sourced markdown discovery/import tool from owner portal Developer tab (state, logic, UI). The KB card system built during Pancakes replaced this workflow entirely. Build passes clean.
+- **Content strategy confirmed** — Three buckets mapped to three audiences:
+  - User KB (`context`) = "The Menu" — product education, user-facing
+  - Fulkit KB (`owner-context`) = "The Kitchen" — dev specs, business ops, sensitive info
+  - Fabric KB (`fabric-context`) = "The Record Store" — B-Side's music island
+
+### Files changed
+- `app/app/owner/page.js` — Removed Doc Import section (~210 lines: state, functions, UI)
+
+### What's next
+- Dogfooding — all KBs loaded, isolation verified, ready to test in production
+- Future: Context engine (pgvector embeddings, RAG)
+
+---
+
 ## Session 15 — 2026-03-14: Fabric search enrichment + Dig column scroll + Crate polish
 
 ### What was built

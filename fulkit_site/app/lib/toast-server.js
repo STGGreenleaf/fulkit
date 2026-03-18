@@ -3,6 +3,7 @@
 // Note: Toast API requires partner approval. This is built for when access is granted.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken, decryptMeta, encryptToken, encryptMeta } from "./token-crypt";
 
 const TOAST_API = "https://ws-api.toasttab.com";
 const TOKEN_URL = "https://ws-api.toasttab.com/authentication/v1/authentication/login";
@@ -18,7 +19,8 @@ export async function getToastToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "toast")
     .single();
-  return data || null;
+  if (!data) return null;
+  return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
 }
 
 // Refresh Toast token (they use client credentials + restaurant GUID)
@@ -42,8 +44,8 @@ async function refreshToken(userId, metadata) {
   await getSupabaseAdmin()
     .from("integrations")
     .update({
-      access_token: data.token.accessToken,
-      metadata: { ...metadata, expires_at: Date.now() + 3600000 },
+      access_token: encryptToken(data.token.accessToken),
+      metadata: encryptMeta({ ...metadata, expires_at: Date.now() + 3600000 }),
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", userId)

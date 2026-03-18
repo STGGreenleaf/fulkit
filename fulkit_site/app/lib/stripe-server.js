@@ -2,6 +2,7 @@
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken, decryptMeta } from "./token-crypt";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
@@ -16,7 +17,7 @@ export async function getStripeToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "stripe")
     .single();
-  if (data) return data;
+  if (data) return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
   // Fall back to env var (owner's own Stripe account)
   if (process.env.STRIPE_CLIENT_SECRET) {
     return { access_token: process.env.STRIPE_CLIENT_SECRET, metadata: {} };

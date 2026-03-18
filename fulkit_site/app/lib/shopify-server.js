@@ -2,6 +2,7 @@
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken, decryptMeta } from "./token-crypt";
 
 // Reuse authenticateUser from numbrly (same pattern)
 export { authenticateUser } from "./numbrly";
@@ -14,7 +15,8 @@ export async function getShopifyToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "shopify")
     .single();
-  return data || null;
+  if (!data) return null;
+  return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
 }
 
 // Shopify access tokens don't expire (no refresh needed), but we check for validity

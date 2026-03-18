@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { encryptToken, encryptMeta } from "../../../../lib/token-crypt";
 import crypto from "crypto";
 
 export async function POST(request) {
@@ -37,13 +38,13 @@ export async function POST(request) {
         {
           user_id: userId,
           provider: "trello",
-          access_token: token,
+          access_token: encryptToken(token),
           scope: "read,write",
-          metadata: {
+          metadata: encryptMeta({
             trello_member_id: member.id,
             trello_username: member.username,
             trello_fullname: member.fullName,
-          },
+          }),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,provider" }

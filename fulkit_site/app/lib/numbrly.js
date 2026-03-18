@@ -1,5 +1,6 @@
 // Server-side Numbrly helpers — only import from API routes
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken } from "./token-crypt";
 
 const NUMBRLY_BASE = "https://oajhduknuwxfakttpdum.supabase.co/functions/v1/numbrly-api";
 
@@ -10,7 +11,7 @@ export async function getNumbrlyToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "numbrly")
     .single();
-  return data?.access_token || null;
+  return data?.access_token ? decryptToken(data.access_token) : null;
 }
 
 export async function numbrlyFetch(apiKey, action, params = {}) {

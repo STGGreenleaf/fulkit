@@ -1,40 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import crypto from "crypto";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
+import { encryptToken, decryptToken } from "../../../lib/token-crypt";
 
 const BYOK_PREF_KEY = "byok:anthropic_api_key";
-const ENC_KEY = process.env.BYOK_ENCRYPTION_KEY; // 32-byte hex string
 
-function getEncKey() {
-  if (!ENC_KEY) throw new Error("BYOK_ENCRYPTION_KEY not set");
-  const buf = Buffer.from(ENC_KEY, "hex");
-  if (buf.length !== 32) throw new Error("BYOK_ENCRYPTION_KEY must be 32 bytes (64 hex chars)");
-  return buf;
-}
-
-// AES-256-GCM encryption — stored as iv:tag:ciphertext (all base64)
-function encrypt(plaintext) {
-  const key = getEncKey();
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
-}
-
-// Decrypt — falls back to legacy base64 for migration
-export function decryptByokKey(stored) {
-  const parts = stored.split(":");
-  if (parts.length !== 3) {
-    // Legacy base64 format — decode directly
-    return Buffer.from(stored, "base64").toString("utf-8");
-  }
-  const [ivB64, tagB64, ctB64] = parts;
-  const key = getEncKey();
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
-  decipher.setAuthTag(Buffer.from(tagB64, "base64"));
-  return decipher.update(Buffer.from(ctB64, "base64"), null, "utf-8") + decipher.final("utf-8");
-}
+// Re-export for chat route compatibility
+export const decryptByokKey = decryptToken;
 
 async function getUser(request) {
   const authHeader = request.headers.get("authorization");
@@ -80,7 +51,7 @@ export async function POST(request) {
       {
         user_id: user.id,
         key: BYOK_PREF_KEY,
-        value: encrypt(key),
+        value: encryptToken(key),
       },
       { onConflict: "user_id,key" }
     );

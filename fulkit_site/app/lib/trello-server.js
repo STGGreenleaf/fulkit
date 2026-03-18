@@ -2,6 +2,7 @@
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken, decryptMeta } from "./token-crypt";
 
 const TRELLO_API = "https://api.trello.com/1";
 
@@ -16,7 +17,8 @@ export async function getTrelloToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "trello")
     .single();
-  return data || null;
+  if (!data) return null;
+  return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
 }
 
 // Trello API Key + Token auth: ?key={API_KEY}&token={USER_TOKEN} on every request

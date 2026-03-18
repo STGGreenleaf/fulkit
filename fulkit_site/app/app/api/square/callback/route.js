@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { encryptToken, encryptMeta } from "../../../../lib/token-crypt";
 import crypto from "crypto";
 
 export async function GET(request) {
@@ -59,13 +60,13 @@ export async function GET(request) {
         {
           user_id: userId,
           provider: "square",
-          access_token: tokenData.access_token,
+          access_token: encryptToken(tokenData.access_token),
           scope: tokenData.scope || "",
-          metadata: {
+          metadata: encryptMeta({
             refresh_token: tokenData.refresh_token,
             expires_at: new Date(tokenData.expires_at).getTime(),
             merchant_id: tokenData.merchant_id,
-          },
+          }),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,provider" }

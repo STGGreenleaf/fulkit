@@ -54,7 +54,7 @@ export async function DELETE(request) {
     return Response.json({ deleted: true });
   } catch (err) {
     console.error("[account/data] Delete error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Delete failed" }, { status: 500 });
   }
 }
 

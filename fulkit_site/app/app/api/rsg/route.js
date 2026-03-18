@@ -82,9 +82,9 @@ export async function POST(request) {
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
-        } catch (err) {
+        } catch {
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: err.message })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`)
           );
           controller.close();
         }
@@ -98,7 +98,7 @@ export async function POST(request) {
         Connection: "keep-alive",
       },
     });
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+  } catch {
+    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

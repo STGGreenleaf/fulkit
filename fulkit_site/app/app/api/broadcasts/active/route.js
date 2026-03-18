@@ -1,5 +1,7 @@
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
+// Public endpoint — intentionally no auth. Only returns announcement channel.
+// Never expose context, owner-context, or fabric-context here.
 export async function GET() {
   const { data, error } = await getSupabaseAdmin()
     .from("vault_broadcasts")

@@ -11,6 +11,7 @@ export async function GET(request) {
     const data = await numbrlyFetch(apiKey, "fulkit_context");
     return Response.json(data);
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 502 });
+    console.error("[numbrly/context] Error:", err.message);
+    return Response.json({ error: "Failed to fetch context" }, { status: 502 });
   }
 }

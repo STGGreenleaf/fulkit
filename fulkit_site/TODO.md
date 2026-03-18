@@ -90,8 +90,8 @@
 ## Phase 4: Dogfood
 
 - [x] Bulk import API (POST /api/notes/import) — owner-only
-- [x] Import project docs — owner portal button fetches from GitHub + imports as notes
-- [ ] Flood personal todos into Actions (use chat → actions_create)
+- [x] Import project docs — KB card system (replaced GitHub doc import, removed Session 16)
+- [x] Flood personal todos into Actions (use chat → actions_create)
 - [x] Use Fulkit daily for 1 week (active — CSV reconciliation, file uploads, integrations)
 - [x] Build Fulkit features by chatting with Fulkit (active — using chat to drive dev)
 - [x] Iterate based on friction (ongoing — file attach fix, blank data fix, message rendering)
@@ -114,16 +114,20 @@
 - [ ] Codebase ingestion — feed repo files so Claude knows the project (infrastructure ready — import + embed)
 - [x] Run pgvector-setup.sql in Supabase + add OPENAI_API_KEY to Vercel
 
-## Phase 5.5: Pricing & Payments
+## Phase 5.5: Pricing & Payments -- DONE
 
-- [ ] Set up Stripe integration (subscriptions + one-time purchases)
+- [x] Stripe integration — checkout, portal, billing, webhook (HMAC verified, 4 event types)
+- [x] Subscriptions (Standard $9/mo, Pro $15/mo) + one-time credits ($2/100 msgs)
 - [x] Fül counting — message tracking + dashboard gauge (Standard 450/mo, Pro 800/mo)
 - [x] Fül cap enforcement — monthly reset, client gate, low-fuel warning, gauge colors, Bestie voice
-- [ ] "Fül up" prompt when empty — buy credits ($2/100 messages)
-- [ ] Hot seat mechanic — 4 msgs/month threshold, 30-day auto-revoke
-- [ ] Referral credit system — $1/mo per active referral (credits not cash)
-- [ ] Referral page in settings — link, active referrals, credit balance
+- [x] Referral system — 6 tiers, code generation, claim flow, invoice offsets, cash payouts (Builder+)
+- [x] Billing UI — plans, invoices, payment method, referral stats, owner P&L dashboard
+- [x] Free trial tracking (30 days)
 - [x] BYOK nudge whisper for heavy burners (system prompt injection at 80%+ usage)
+- [ ] Polish: "Fül up" inline prompt when empty (chat hard-stops but doesn't offer purchase inline)
+- [ ] Polish: Hot seat enforcement (config in ful-config.js, no activity check logic yet)
+- [ ] Polish: Trial end UX (silent downgrade — no "subscribe now" prompt)
+- [ ] Polish: Cost ceiling check in chat route (COST_CEILINGS defined but not enforced)
 
 ## Phase 6: MCP Integrations (plug in everything)
 
@@ -156,11 +160,31 @@
 
 ---
 
+## Security Audit -- DONE
+
+- [x] JWT signature bypass — removed unsigned JWT fallback in fabric/connect + stripe/connect
+- [x] Rate limiting — middleware.js with sliding window (chat 15/min, checkout 5/min, referral 3/min, default 60/min)
+- [x] Security headers — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+- [x] Chat input limits — max 100 messages, max 200KB payload
+- [x] Error info leakage — generic messages in numbrly/connect, truegauge/connect, account/data, og-upload
+- [x] RLS hardening — vault_broadcasts policy scoped (was permissive `true`), core tables verified
+- [x] OG upload hardening — 5MB file size limit, extension whitelist (png, jpg, gif, webp)
+- [x] Broadcasts/active documented as intentionally public (announcement channel only)
+- [x] Fabric/token documented (Spotify SDK requires client-side token, auth-gated)
+- [x] OAuth token encryption at rest — AES-256-GCM for all 9 providers (lib/token-crypt.js shared utility)
+- [x] Content Security Policy — strict CSP enforced in middleware (tested Report-Only, flipped to enforcing)
+- [x] Upstash Redis rate limiting — distributed sliding window, survives deploys + scaling (AWS, free tier)
+- [x] Error leakage sweep — sealed err.message in 6 remaining routes (embed, feedback, events, rsg, numbrly, webhook)
+- [x] Security documentation — md/security.md (Goldman Sachs brag doc)
+- [x] Security page — /security public page with full architecture
+- [x] Landing page trust section — 6-item security grid + competitive grid row + footer link
+- [x] Final two-agent audit — every claim verified against code, zero aspirational statements
+
 ## Prelaunch
 
 - [x] Fül cap enforcement — monthly reset, client gate, gauge colors, Bestie voice copy
-- [ ] Stripe integration — subscriptions (Standard $7/mo, Pro $15/mo), webhook → flip seat_type, checkout/portal flow
-- [ ] Free trial flow — 30 days free (100 msgs/mo, all features), auto-prompt to subscribe at expiry
+- [x] Stripe integration — subscriptions (Standard $9/mo, Pro $15/mo), webhook → flip seat_type, checkout/portal flow
+- [x] Free trial flow — 30 days free (100 msgs/mo, all features)
 - [x] handle_new_user trigger — set seat_type='free' explicitly on signup (scripts/handle-new-user-trigger.sql)
 - [x] Fabric auto-analyze (dev) — launchd plist every 5 min, runs batch-analyze.mjs --limit 10
 - [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg, daemon watches for pending tracks. Shared DB = analyze once, serve all users.
@@ -170,4 +194,4 @@
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → ~~Actions~~ → **Dogfood** → Context engine → **Pricing** → MCP integrations → Self-building.
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core features~~ → ~~Onboarding~~ → ~~Owner role~~ → ~~Context gate~~ → ~~Actions~~ → ~~Dogfood~~ → ~~Context engine~~ → ~~Pricing~~ → ~~Security audit~~ → **Prelaunch** → MCP integrations → Self-building.

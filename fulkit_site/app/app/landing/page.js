@@ -55,6 +55,7 @@ const grid = [
   { feature: "Learns your preferences", obsidian: false, notion: false, chatgpt: "partial", claude: "partial", fulkit: true },
   { feature: "No vendor lock-in", obsidian: true, notion: false, chatgpt: false, claude: false, fulkit: true },
   { feature: "Beautiful cross-device UI", obsidian: false, notion: true, chatgpt: true, claude: true, fulkit: true },
+  { feature: "Bank-vault encryption at rest", obsidian: false, notion: false, chatgpt: false, claude: false, fulkit: true },
 ];
 
 function GridCell({ value }) {
@@ -914,6 +915,122 @@ export default function Landing() {
       </section>
       </div>
 
+      {/* ─── TRUST ─── */}
+      <section
+        style={{
+          padding: "var(--space-24) var(--space-8)",
+          maxWidth: 900,
+          margin: "0 auto",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "var(--font-size-xs)",
+            fontWeight: "var(--font-weight-semibold)",
+            textTransform: "uppercase",
+            letterSpacing: "var(--letter-spacing-wider)",
+            color: "var(--color-text-muted)",
+            marginBottom: "var(--space-5)",
+            textAlign: "center",
+          }}
+        >
+          Trust
+        </div>
+        <h2
+          style={{
+            fontSize: "var(--font-size-4xl)",
+            fontWeight: "var(--font-weight-black)",
+            letterSpacing: "var(--letter-spacing-tighter)",
+            lineHeight: "var(--line-height-tight)",
+            marginBottom: "var(--space-5)",
+            textAlign: "center",
+          }}
+        >
+          We built the vault before we built the product.
+        </h2>
+        <p
+          style={{
+            fontSize: "var(--font-size-base)",
+            color: "var(--color-text-secondary)",
+            lineHeight: "var(--line-height-relaxed)",
+            textAlign: "center",
+            maxWidth: 560,
+            margin: "0 auto var(--space-12)",
+          }}
+        >
+          Your data is yours. We encrypt it, we lock it down, and we wrote the receipts so you can check.
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "0",
+          }}
+        >
+          {[
+            { label: "AES-256-GCM", detail: "Every token, key, and secret encrypted at rest. Same standard as banks and governments." },
+            { label: "SOC 2 controls", detail: "Access controls, encryption, rate limiting, data isolation — all built in from day one. Not aspirational. Implemented." },
+            { label: "Row-level security", detail: "Your data is isolated at the database level. Even a bug in our code can't leak it to another user." },
+            { label: "Zero plaintext secrets", detail: "API keys, OAuth tokens, refresh tokens — encrypted before they touch the database. Never logged." },
+            { label: "Strict CSP", detail: "Content Security Policy blocks XSS, clickjacking, and third-party script injection. No exceptions." },
+            { label: "Full data deletion", detail: "Delete everything. Messages, notes, preferences, integrations — atomic cascade, scoped by you." },
+          ].map((item, i) => (
+            <div
+              key={i}
+              style={{
+                padding: "var(--space-6) var(--space-6) var(--space-6) 0",
+                borderTop: "1px solid var(--color-border)",
+                ...(i % 2 === 1 ? { paddingLeft: "var(--space-6)" } : {}),
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "var(--font-size-lg)",
+                  fontWeight: "var(--font-weight-bold)",
+                  marginBottom: "var(--space-2)",
+                  lineHeight: "var(--line-height-tight)",
+                }}
+              >
+                {item.label}
+              </div>
+              <div
+                style={{
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-text-secondary)",
+                  lineHeight: "var(--line-height-relaxed)",
+                }}
+              >
+                {item.detail}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p
+          style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-muted)",
+            marginTop: "var(--space-8)",
+            lineHeight: "var(--line-height-relaxed)",
+            textAlign: "center",
+          }}
+        >
+          Read the full architecture →{" "}
+          <Link
+            href="/security"
+            style={{
+              color: "var(--color-text-secondary)",
+              fontWeight: "var(--font-weight-semibold)",
+              textDecoration: "none",
+              borderBottom: "1px solid var(--color-border)",
+            }}
+          >
+            Security
+          </Link>
+        </p>
+      </section>
+
       {/* ─── FINAL CTA ─── */}
         <section
           style={{
@@ -982,6 +1099,16 @@ export default function Landing() {
             gap: "var(--space-6)",
           }}
         >
+          <Link
+            href="/security"
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              textDecoration: "none",
+            }}
+          >
+            Security
+          </Link>
           <Link
             href="/privacy"
             style={{

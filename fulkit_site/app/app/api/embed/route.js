@@ -104,7 +104,7 @@ export async function POST(request) {
     return Response.json({ embedded: true, noteId, dimensions: embedding.length });
   } catch (err) {
     console.error("[embed] Error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Embedding failed" }, { status: 500 });
   }
 }
 
@@ -152,7 +152,7 @@ export async function PUT(request) {
     return Response.json({ embedded, failed, total: notes.length });
   } catch (err) {
     console.error("[embed] Batch error:", err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: "Batch embedding failed" }, { status: 500 });
   }
 }
 

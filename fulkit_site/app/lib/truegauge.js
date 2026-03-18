@@ -1,5 +1,6 @@
 // Server-side TrueGauge helpers — only import from API routes
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken } from "./token-crypt";
 
 const TRUEGAUGE_BASE = "https://www.truegauge.app/api/external/truegauge";
 
@@ -10,7 +11,7 @@ export async function getTrueGaugeToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "truegauge")
     .single();
-  return data?.access_token || null;
+  return data?.access_token ? decryptToken(data.access_token) : null;
 }
 
 // Supports both GET (reads) and POST (writes)

@@ -2,6 +2,7 @@
 // All Spotify API logic lives here. Routes call provider methods, never Spotify directly.
 
 import { getSupabaseAdmin } from "../supabase-server";
+import { encryptToken, decryptToken, encryptMeta, decryptMeta } from "../token-crypt";
 
 const SPOTIFY_API = "https://api.spotify.com/v1";
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -68,12 +69,12 @@ export class SpotifyProvider {
         {
           user_id: this.userId,
           provider: "spotify",
-          access_token: data.access_token,
+          access_token: encryptToken(data.access_token),
           scope: data.scope || "",
-          metadata: {
+          metadata: encryptMeta({
             refresh_token: data.refresh_token,
             expires_at: Date.now() + data.expires_in * 1000,
-          },
+          }),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,provider" }
@@ -384,7 +385,8 @@ export class SpotifyProvider {
       .eq("user_id", this.userId)
       .eq("provider", "spotify")
       .single();
-    return data || null;
+    if (!data) return null;
+    return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
   }
 
   async _refreshToken(refreshTokenStr) {
@@ -411,8 +413,8 @@ export class SpotifyProvider {
     await getSupabaseAdmin()
       .from("integrations")
       .update({
-        access_token: data.access_token,
-        metadata: { refresh_token: data.refresh_token || refreshTokenStr, expires_at: Date.now() + data.expires_in * 1000 },
+        access_token: encryptToken(data.access_token),
+        metadata: encryptMeta({ refresh_token: data.refresh_token || refreshTokenStr, expires_at: Date.now() + data.expires_in * 1000 }),
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", this.userId)

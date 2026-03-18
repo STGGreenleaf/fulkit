@@ -22,6 +22,18 @@ export async function POST(request) {
       return Response.json({ error: "file required" }, { status: 400 });
     }
 
+    // File size limit (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return Response.json({ error: "File too large (max 5MB)" }, { status: 413 });
+    }
+
+    // Validate file type by extension (owner-only, low risk)
+    const allowedExts = ["png", "jpg", "jpeg", "gif", "webp"];
+    const fileExt = (file.name.split(".").pop() || "").toLowerCase();
+    if (!allowedExts.includes(fileExt)) {
+      return Response.json({ error: "Invalid file type (png, jpg, gif, webp only)" }, { status: 400 });
+    }
+
     // Accept numeric slots 1-3 or "twitter"
     const isTwitter = slotRaw === "twitter";
     const slot = isTwitter ? "twitter" : parseInt(slotRaw, 10);
@@ -42,7 +54,8 @@ export async function POST(request) {
       });
 
     if (uploadError) {
-      return Response.json({ error: uploadError.message }, { status: 500 });
+      console.error("[og-upload] Upload failed:", uploadError.message);
+      return Response.json({ error: "Upload failed" }, { status: 500 });
     }
 
     // Get public URL
@@ -51,6 +64,7 @@ export async function POST(request) {
 
     return Response.json({ url: publicUrl, slot });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error("[og-upload] Error:", err.message);
+    return Response.json({ error: "Upload failed" }, { status: 500 });
   }
 }

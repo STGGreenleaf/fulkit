@@ -17,24 +17,12 @@ export async function GET(request) {
       return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=no_token", request.url));
     }
 
-    // Try valid token first, fall back to decoding expired JWT for user ID
-    let user;
+    // Validate token — reject expired/invalid tokens (no unsigned fallback)
     const { data, error } = await getSupabaseAdmin().auth.getUser(token);
-    if (!error && data?.user) {
-      user = data.user;
-    } else {
-      try {
-        const payloadB64 = token.split(".")[1];
-        const claims = JSON.parse(Buffer.from(payloadB64, "base64").toString());
-        const userId = claims.sub;
-        if (!userId) throw new Error("No sub in JWT");
-        const { data: adminData, error: adminError } = await getSupabaseAdmin().auth.admin.getUserById(userId);
-        if (adminError || !adminData?.user) throw new Error("User not found");
-        user = adminData.user;
-      } catch {
-        return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=bad_token", request.url));
-      }
+    if (error || !data?.user) {
+      return NextResponse.redirect(new URL("/settings/sources?sp=error&reason=bad_token", request.url));
     }
+    const user = data.user;
 
     // HMAC-signed state (includes provider name for callback to know which provider)
     const providerName = url.searchParams.get("provider") || "spotify";

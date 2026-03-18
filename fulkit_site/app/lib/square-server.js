@@ -2,6 +2,7 @@
 // Only import from API routes. Never from client.
 
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken, decryptMeta, encryptToken, encryptMeta } from "./token-crypt";
 
 const IS_SANDBOX = (process.env.SQUARE_APP_ID || "").startsWith("sandbox-");
 const SQUARE_BASE = IS_SANDBOX
@@ -21,7 +22,8 @@ export async function getSquareToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "square")
     .single();
-  return data || null;
+  if (!data) return null;
+  return { access_token: decryptToken(data.access_token), metadata: decryptMeta(data.metadata) };
 }
 
 // Refresh expired access token
@@ -47,12 +49,12 @@ async function refreshToken(userId, refreshTokenStr) {
   await getSupabaseAdmin()
     .from("integrations")
     .update({
-      access_token: data.access_token,
-      metadata: {
+      access_token: encryptToken(data.access_token),
+      metadata: encryptMeta({
         refresh_token: data.refresh_token || refreshTokenStr,
         expires_at: new Date(data.expires_at).getTime(),
         merchant_id: data.merchant_id,
-      },
+      }),
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", userId)

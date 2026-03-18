@@ -1,5 +1,6 @@
 // Server-side GitHub helpers — only import from API routes
 import { getSupabaseAdmin } from "./supabase-server";
+import { decryptToken } from "./token-crypt";
 
 export async function getGitHubToken(userId) {
   const { data } = await getSupabaseAdmin()
@@ -8,7 +9,7 @@ export async function getGitHubToken(userId) {
     .eq("user_id", userId)
     .eq("provider", "github")
     .single();
-  return data?.access_token || null;
+  return data?.access_token ? decryptToken(data.access_token) : null;
 }
 
 export async function githubFetch(token, endpoint) {

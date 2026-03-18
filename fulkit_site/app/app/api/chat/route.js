@@ -2037,7 +2037,17 @@ export async function POST(request) {
       ? new Anthropic({ apiKey: byokKey })
       : defaultAnthropic;
 
-    const { messages, context: rawContext = [], timezone: rawTz, chapterSummaries: rawChapters, conversationId: rawConvId } = await request.json();
+    const body = await request.json();
+    const { messages, context: rawContext = [], timezone: rawTz, chapterSummaries: rawChapters, conversationId: rawConvId } = body;
+
+    // Input size limits — prevent abuse
+    if (!Array.isArray(messages) || messages.length > 100) {
+      return Response.json({ error: "Too many messages" }, { status: 413 });
+    }
+    const payloadSize = JSON.stringify(body).length;
+    if (payloadSize > 200_000) {
+      return Response.json({ error: "Payload too large" }, { status: 413 });
+    }
 
     // Validate inputs from client
     const timezone = (typeof rawTz === "string" && rawTz.length < 50) ? rawTz : "UTC";
