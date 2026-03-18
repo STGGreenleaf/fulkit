@@ -269,18 +269,34 @@ export default function ChatContent({ isPopout = false }) {
     await chat.sendMessage(ctx.assembleContext, undefined, greetingToInject);
   }, [chat.input, chat.streaming, chat.sendMessage, ctx.assembleContext, ctx.handleRecall, greeting, chat.messages.length]);
 
+  // Cmd+K to focus chat input
+  useEffect(() => {
+    const onGlobalKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onGlobalKey);
+    return () => window.removeEventListener("keydown", onGlobalKey);
+  }, []);
+
   const handleRetry = useCallback((userText) => {
     chat.sendMessage(ctx.assembleContext, userText);
   }, [chat.sendMessage, ctx.assembleContext]);
 
   const handleKeyDown = (e) => {
+    // Enter or Cmd+Enter to send
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (e.repeat) {
-        console.warn("[handleKeyDown] blocked — key repeat");
-        return;
-      }
+      if (e.repeat) return;
       handleSend();
+    }
+    // Escape to clear input or close panels
+    if (e.key === "Escape") {
+      if (chat.input) {
+        chat.setInput("");
+      }
     }
   };
 

@@ -14,9 +14,9 @@
 - [x] **Database indexes** — 5 composite indexes added (notes, conversations, messages, actions, signals). scripts/scale-indexes.sql
 - [ ] **Mobile responsive layout** — Sidebar → hamburger on mobile. Landing page responsive. Chat input usable on phone. 0 @media queries exist today — 50%+ of traffic will be mobile.
 - [ ] **Shareable conversation links** — `/share/[id]` read-only public view of a conversation. Users can't share their "aha moment" today. Every competitor has this. Unlocks word-of-mouth.
-- [ ] **Feedback button in UI** — The `/api/feedback` endpoint exists, tickets table exists, owner can view/manage them. But there's no UI to reach it. Add "Send feedback" in Settings footer + on error states.
+- [x] **Feedback button in UI** — already exists in SettingsFooter (bug icon → textarea popover → /api/feedback). Visible on all non-owner settings tabs.
 - [ ] **Welcome email** — Add Resend (free tier, 100/day). Send welcome email on signup. Quick-start guide. Re-engagement hook.
-- [ ] **Keyboard shortcuts** — Cmd+Enter to send message. Escape to close modals. Cmd+K for search. Power user basics.
+- [x] **Keyboard shortcuts** — Enter to send (existing), Escape clears input, Cmd+K focuses chat input from anywhere
 - [ ] **Loading skeletons** — Dashboard, Actions, Settings show skeleton placeholders during data fetch instead of blank screen.
 - [ ] **Spotify Extended Quota** — Request from Spotify developer dashboard. Currently Development Mode (only Collin's account works).
 
