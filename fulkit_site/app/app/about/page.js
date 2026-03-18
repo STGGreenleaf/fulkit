@@ -365,56 +365,21 @@ export default function About() {
       >
         <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
             fontSize: "var(--font-size-sm)",
             fontWeight: "var(--font-weight-bold)",
             letterSpacing: "var(--letter-spacing-tight)",
           }}
         >
+          <LogoMark size={18} />
           F{"\u00FC"}lkit
         </div>
         <div style={{ display: "flex", gap: "var(--space-6)" }}>
-          <Link
-            href="/privacy"
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              textDecoration: "none",
-            }}
-          >
-            Privacy
-          </Link>
-          <Link
-            href="/terms"
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              textDecoration: "none",
-            }}
-          >
-            Terms
-          </Link>
-          <a
-            href="https://bsky.app/profile/fulkit.bsky.social"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              textDecoration: "none",
-            }}
-          >
-            Bluesky
-          </a>
-          <Link
-            href="/settings/account"
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              textDecoration: "none",
-            }}
-          >
-            Report an issue
-          </Link>
+          <Link href="/security" style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textDecoration: "none" }}>Security</Link>
+          <Link href="/privacy" style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textDecoration: "none" }}>Privacy</Link>
+          <Link href="/terms" style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textDecoration: "none" }}>Terms</Link>
         </div>
       </footer>
     </div>
