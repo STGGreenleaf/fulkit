@@ -268,7 +268,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "settings" }); }, []);
   useOnboardingTrigger("settings");
-  const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
+  const tabs = (isOwner && !isMobile) ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
   const [ownerMayday, setOwnerMayday] = useState(false);
 
@@ -307,13 +307,41 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
           }}>
             Fülkit
           </span>
-          {!compactMode && (
+          {!compactMode && !isMobile && (
             <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
           )}
-          {!compactMode && (
+          {!compactMode && !isMobile && (
             <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
               Settings
             </span>
+          )}
+          {isMobile && isOwner && (
+            <button
+              onClick={() => { setTab("owner"); window.history.replaceState({}, "", "/settings/owner"); }}
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                background: tab === "owner" ? "var(--color-bg-alt)" : "none",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+                color: tab === "owner" ? "var(--color-text)" : "var(--color-text-muted)",
+                position: "relative",
+              }}
+            >
+              <Crown size={18} strokeWidth={1.8} />
+              {ownerMayday && (
+                <span style={{
+                  position: "absolute", top: 6, right: 6,
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: "var(--color-error, #e53e3e)",
+                }} />
+              )}
+            </button>
           )}
         </div>
 
