@@ -117,14 +117,15 @@ export default function Landing() {
           <LogoMark size={24} />
           Fülkit
         </Link>
-        <div style={{ display: "flex", gap: isMobile ? "var(--space-3)" : "var(--space-6)", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: isMobile ? "var(--space-5)" : "var(--space-6)", alignItems: "center" }}>
           <Link
             href="/about"
             style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-semibold)",
               color: "var(--color-text-muted)",
               textDecoration: "none",
+              padding: isMobile ? "var(--space-2)" : 0,
             }}
           >
             WTF
@@ -132,10 +133,11 @@ export default function Landing() {
           <Link
             href="/login"
             style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-medium)",
               color: "var(--color-text-secondary)",
               textDecoration: "none",
+              padding: isMobile ? "var(--space-2)" : 0,
             }}
           >
             Sign in
