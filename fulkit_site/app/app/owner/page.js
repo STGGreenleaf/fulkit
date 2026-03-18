@@ -331,18 +331,19 @@ function DashboardTab() {
   const fetchData = useCallback((p) => {
     if (!accessToken) return;
     setLoading(true);
-    const headers = { Authorization: `Bearer ${accessToken}` };
-
-    Promise.all([
-      fetch("/api/owner/metrics", { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`/api/owner/analytics?period=${p}`, { headers }).then(r => r.ok ? r.json() : null),
-      fetch(`/api/owner/events?period=${p}`, { headers }).then(r => r.ok ? r.json() : null),
-    ]).then(([m, a, e]) => {
-      if (m) setSiteMetrics(m);
-      if (a) setAnalytics(a);
-      if (e) setEvents(e);
-      setLoading(false);
-    }).catch(() => { setLoading(false); });
+    fetch(`/api/owner/dashboard?period=${p}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setSiteMetrics(data.metrics);
+          setAnalytics(data.analytics);
+          setEvents(data.events);
+        }
+        setLoading(false);
+      })
+      .catch(() => { setLoading(false); });
   }, [accessToken]);
 
   useEffect(() => { fetchData(period); }, [period, fetchData]);

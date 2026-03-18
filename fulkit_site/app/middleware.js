@@ -22,6 +22,7 @@ const limiters = redis
       checkout: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "60 s"), prefix: "rl:checkout" }),
       referral: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(3, "60 s"), prefix: "rl:referral" }),
       byok: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "60 s"), prefix: "rl:byok" }),
+      authed: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(200, "60 s"), prefix: "rl:authed" }),
       api: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "60 s"), prefix: "rl:api" }),
     }
   : null;
@@ -97,23 +98,28 @@ export async function middleware(request) {
       || request.headers.get("x-real-ip")
       || "unknown";
 
+    // Authenticated users get a higher ceiling keyed by token hash (not IP)
+    const authHeader = request.headers.get("authorization");
+    const isAuthed = authHeader?.startsWith("Bearer ") && authHeader.length > 20;
+    const rateLimitKey = isAuthed ? `u:${authHeader.slice(-16)}` : ip;
+
     let blocked = false;
 
     // Try Redis first, fall back to in-memory
-    const limiter = getLimiter(pathname);
+    const limiter = isAuthed ? limiters?.authed : getLimiter(pathname);
     if (limiter) {
       try {
-        const { success } = await limiter.limit(ip);
+        const { success } = await limiter.limit(rateLimitKey);
         blocked = !success;
       } catch {
         // Redis failed — fall back to in-memory
-        const fallback = getFallbackLimit(pathname);
-        if (fallback) blocked = !checkFallbackLimit(`${ip}:${pathname}`, fallback);
+        const fallback = isAuthed ? { window: 60_000, max: 200 } : getFallbackLimit(pathname);
+        if (fallback) blocked = !checkFallbackLimit(`${rateLimitKey}:${pathname}`, fallback);
       }
     } else {
       // No Redis configured — use in-memory
-      const fallback = getFallbackLimit(pathname);
-      if (fallback) blocked = !checkFallbackLimit(`${ip}:${pathname}`, fallback);
+      const fallback = isAuthed ? { window: 60_000, max: 200 } : getFallbackLimit(pathname);
+      if (fallback) blocked = !checkFallbackLimit(`${rateLimitKey}:${pathname}`, fallback);
     }
 
     if (blocked) {
