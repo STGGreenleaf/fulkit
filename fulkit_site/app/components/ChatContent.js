@@ -1209,6 +1209,23 @@ export default function ChatContent({ isPopout = false }) {
                   >
                     <Paperclip size={isMobile ? 18 : 15} strokeWidth={2} />
                   </button>
+                  <Link
+                    href="/hum"
+                    style={{
+                      width: isMobile ? 36 : 32,
+                      height: isMobile ? 36 : 32,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--color-text-secondary)",
+                      borderRadius: "var(--radius-md)",
+                      textDecoration: "none",
+                    }}
+                    title="The Hum"
+                  >
+                    <Mic size={isMobile ? 18 : 15} strokeWidth={2} />
+                  </Link>
                   <input
                     ref={chatFileRef}
                     type="file"
@@ -1239,23 +1256,6 @@ export default function ChatContent({ isPopout = false }) {
                       resize: "none",
                     }}
                   />
-                  <Link
-                    href="/hum"
-                    style={{
-                      width: isMobile ? 36 : 32,
-                      height: isMobile ? 36 : 32,
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--color-text-secondary)",
-                      borderRadius: "var(--radius-md)",
-                      textDecoration: "none",
-                    }}
-                    title="The Hum"
-                  >
-                    <Mic size={isMobile ? 18 : 15} strokeWidth={2} />
-                  </Link>
                   <button
                     onClick={handleSend}
                     disabled={!chat.input.trim() || chat.streaming}
