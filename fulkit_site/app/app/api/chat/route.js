@@ -2334,6 +2334,15 @@ Never skip the preview step. The user must see and approve changes before they g
         .then(() => {}).catch((err) => { emitServerSignal(userId, "message_count_failed", "error", { error: err?.message, seat: profile?.seat_type, used: profile?.messages_this_month }); });
     }
 
+    // Track last message date (hot seat activity — all users, fire-and-forget)
+    if (userId) {
+      getSupabaseAdmin()
+        .from("profiles")
+        .update({ last_message_date: new Date().toISOString() })
+        .eq("id", userId)
+        .then(() => {}).catch(() => {});
+    }
+
     // Track chat_sent event (fire-and-forget)
     if (userId) {
       getSupabaseAdmin()

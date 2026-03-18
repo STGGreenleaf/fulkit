@@ -5,6 +5,43 @@
 
 ---
 
+## Session 18 — 2026-03-18: Next 10 — Performance & Polish Sweep
+
+### What was built
+- **Actions button feedback** — `loadingIds` Set tracks in-flight operations. All async buttons (complete, defer, dismiss, reactivate, priority, bucket, add) now disable + dim during async. Prevents rage clicks (already tracked in signals).
+- **Chat latency — vault token budget** — Reduced from 100K → 25K tokens. Added client-side context cap at 15 items (was unlimited, server was silently dropping past 20 via `.slice(0, 20)`).
+- **Chat latency — GitHub → tool** — Deleted 70-line blocking enrichment block (up to 10s). GitHub file fetch is now an on-demand `github_fetch_files` tool. Claude calls it only when code is relevant. First token streams immediately.
+- **Chat latency — query parallelization** — 7 server-side queries (prefs, conversations, broadcasts, owner docs, referral profile, integration tokens, Stripe prices) wrapped in single `Promise.all`. Deduped `getStripePrices()` (was called twice). GitHub token fetched alongside integration tokens.
+- **"Fül up" inline prompt** — Capped chat state now shows upgrade CTA (plan or credits) + BYOK fallback. Previously only linked to BYOK settings.
+- **Trial end UX** — Dashboard banner when trial ends or has ≤5 days remaining. Dismissible. Links to billing with upgrade CTA.
+- **Security KB uploaded** — `security.md` inserted into vault_broadcasts (owner-context channel, id: d258acc3).
+- **Combined dashboard endpoint** — New `/api/owner/dashboard` merges metrics + analytics + events into one request (was 3 separate calls). Single auth check, single round-trip.
+- **User-keyed rate limiting** — Authenticated users get 200/min keyed by token hash (was 60/min keyed by IP, shared with anonymous traffic). Unauthenticated stays at 60/min by IP.
+- **Missing DB column** — Added `scheduled_for` to actions table. Was referenced in 5 places but migration never ran. Fixed 400 errors on /home and /actions.
+
+### Files created
+- `api/owner/dashboard/route.js` — combined owner dashboard endpoint
+- `scripts/upload-security-kb.mjs` — one-time KB upload script
+- `scripts/add-scheduled-for.sql` — migration for missing column
+
+### Files changed
+- `app/actions/page.js` — loadingIds state, button disabled/opacity
+- `app/api/chat/route.js` — Promise.all queries, GITHUB_TOOLS + handler, deleted blocking enrichment
+- `app/home/page.js` — trial banner, onboardingState consumption
+- `components/ChatContent.js` — inline upgrade CTA in capped state
+- `lib/vault-tokens.js` — TOKEN_BUDGET 100K → 25K
+- `lib/use-chat-context.js` — CLIENT_CONTEXT_CAP = 15
+- `middleware.js` — authed rate limit tier (200/min), user-keyed limiting
+- `app/owner/page.js` — DashboardTab uses combined endpoint
+- `TODO.md` — 7 items checked off
+
+### Production issues found & fixed
+- `actions.scheduled_for` column missing → added via supabase db query
+- Owner portal 429 avalanche → combined endpoint + user-keyed rate limits
+- No CSP violations detected (clean)
+
+---
+
 ## Session 17 — 2026-03-17: Operation Vault Door — Bank-Vault Security Hardening
 
 ### What was built

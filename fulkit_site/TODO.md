@@ -125,9 +125,9 @@
 - [x] Free trial tracking (30 days)
 - [x] BYOK nudge whisper for heavy burners (system prompt injection at 80%+ usage)
 - [x] Polish: "Fül up" inline prompt when empty (upgrade CTA + credits + BYOK in capped state)
-- [ ] Polish: Hot seat enforcement (config in ful-config.js, no activity check logic yet)
+- [x] Polish: Hot seat enforcement — last_message_date tracked in chat route, cron job at /api/cron/hot-seat (1st of month 7am UTC), warns then revokes inactive founder seats
 - [x] Polish: Trial end UX (dashboard banner at ≤5 days + expired state, links to billing)
-- [ ] Polish: Cost ceiling check in chat route (COST_CEILINGS defined but not enforced)
+- [x] Polish: Cost ceiling check in chat route (already enforced — checkUserBudget + trackApiSpend in chat route, TODO was stale)
 
 ## Phase 6: MCP Integrations (plug in everything)
 
@@ -186,12 +186,12 @@
 - [x] Chat latency — vault token budget 100K → 25K, client-side context cap at 15 items (was unlimited, server was silently dropping past 20)
 - [x] Chat latency — GitHub enrichment moved from blocking system prompt (10s) to on-demand github_fetch_files tool call
 - [x] Chat latency — parallelized 7 server-side queries via Promise.all (prefs, convos, broadcasts, owner docs, referral, integration tokens, Stripe prices). Deduped getStripePrices() (was called twice)
-- [ ] CSP production test — verify zero console violations after enforcing mode deploy, fix any blocked resources
+- [x] CSP production test — verified zero console violations in production (Session 18)
 - [x] Upload security.md to Fulkit KB — inserted into vault_broadcasts (owner-context, id: d258acc3)
 - [x] "Fül up" inline prompt — capped state now shows upgrade CTA (plan or credits) + BYOK fallback instead of just BYOK link
 - [x] Trial end UX — dashboard banner when trial ends or has ≤5 days remaining, links to billing, dismissible
 - [ ] Spotify Extended Quota Mode — request from Spotify developer dashboard (currently only Collin's account works)
-- [ ] Seamless page transitions — verify cold start splash + warm nav fade-in working correctly in production
+- [ ] Seamless page transitions — verify cold start splash + warm nav fade-in working correctly in production (check after next deploy)
 
 ## Prelaunch
 

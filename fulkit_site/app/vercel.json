@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/tax-check",
       "schedule": "0 6 15 1 *"
+    },
+    {
+      "path": "/api/cron/hot-seat",
+      "schedule": "0 7 1 * *"
     }
   ]
 }
