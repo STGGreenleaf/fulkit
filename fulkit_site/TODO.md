@@ -10,8 +10,8 @@
 > The 10 things to build, ordered by impact. Top 3 are non-negotiable before inviting users.
 
 - [x] **Error monitoring (Signal Radio enhanced)** — React ErrorBoundary (SignalBoundary), fetch interceptor (all 5xx), Core Web Vitals (LCP, CLS), conversation_save_failed, withSignal() API wrapper, Radio health summary strip. No external service — all in Radio.
-- [ ] **CI/CD pipeline** — GitHub Actions: `npm run build && npm test` on every push to main. Prevent broken deploys. One YAML file.
-- [ ] **Database indexes** — Composite indexes on `(user_id, created_at)` for notes, conversations, messages, actions. One SQL migration. Prevents query slowdown at 10K+ users.
+- [x] **CI/CD pipeline** — `.github/workflows/ci.yml` runs build + test on every push/PR to main
+- [x] **Database indexes** — 5 composite indexes added (notes, conversations, messages, actions, signals). scripts/scale-indexes.sql
 - [ ] **Mobile responsive layout** — Sidebar → hamburger on mobile. Landing page responsive. Chat input usable on phone. 0 @media queries exist today — 50%+ of traffic will be mobile.
 - [ ] **Shareable conversation links** — `/share/[id]` read-only public view of a conversation. Users can't share their "aha moment" today. Every competitor has this. Unlocks word-of-mouth.
 - [ ] **Feedback button in UI** — The `/api/feedback` endpoint exists, tickets table exists, owner can view/manage them. But there's no UI to reach it. Add "Send feedback" in Settings footer + on error states.
