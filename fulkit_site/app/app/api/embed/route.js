@@ -95,7 +95,7 @@ export async function POST(request) {
     // Store embedding
     const { error: updateErr } = await admin
       .from("notes")
-      .update({ embedding: JSON.stringify(embedding) })
+      .update({ embedding: JSON.stringify(embedding), embedded: true })
       .eq("id", noteId)
       .eq("user_id", user.id);
 
@@ -125,22 +125,17 @@ export async function PUT(request) {
     const apiKey = process.env.VOYAGE_API_KEY;
     if (!apiKey) return Response.json({ error: "VOYAGE_API_KEY not set" }, { status: 500 });
 
-    // Fetch notes needing embeddings via RPC (pgvector null check doesn't work through PostgREST)
-    const { data: noteIds, error: rpcErr } = await admin
-      .rpc("get_unembedded_note_ids", { uid: user.id, lim: 100 });
-
-    if (rpcErr || !noteIds?.length) {
-      return Response.json({ embedded: 0, rpcError: rpcErr?.message || null, message: noteIds?.length === 0 ? "All notes already embedded" : "RPC failed" });
-    }
-
+    // Fetch notes needing embeddings (boolean column — reliable through PostgREST)
     const { data: notes, error: fetchErr } = await admin
       .from("notes")
       .select("id, title, content")
-      .in("id", noteIds.map(r => r.id));
+      .eq("user_id", user.id)
+      .eq("embedded", false)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-    if (fetchErr || !notes?.length) {
-      return Response.json({ embedded: 0, error: fetchErr?.message || "No notes found" });
-    }
+    if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
+    if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
 
     let embedded = 0;
     let failed = 0;
@@ -175,7 +170,7 @@ export async function PUT(request) {
         const saves = batch.map((note, j) =>
           admin
             .from("notes")
-            .update({ embedding: JSON.stringify(embeddings[j].embedding) })
+            .update({ embedding: JSON.stringify(embeddings[j].embedding), embedded: true })
             .eq("id", note.id)
             .then(() => { embedded++; })
             .catch(() => { failed++; })
