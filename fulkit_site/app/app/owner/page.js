@@ -3521,7 +3521,7 @@ const PITCHES = [
   { cat: "Security", text: "Row-level security on every table. Even a bug in our code can\u2019t leak your data to another user." },
   { cat: "Security", text: "We don\u2019t trust your data as instructions. Prompt injection defense with XML isolation boundaries." },
   { cat: "Security", text: "Zero plaintext secrets in our database. Every token, every key, every refresh token \u2014 encrypted at rest." },
-  { cat: "Security", text: "Strict Content Security Policy. No inline scripts, no eval(), no third-party injection. Enforced, not optional." },
+  { cat: "Security", text: "Strict Content Security Policy. No eval(), no third-party injection. Enforced, not optional." },
   { cat: "Security", text: "Distributed rate limiting across all instances. Not per-server counters that reset on deploy \u2014 real limits." },
   { cat: "Security", text: "ChatGPT says \u201Cwe may retain your data for 30 days.\u201D F\u00FClkit says \u201Cdelete now\u201D and means it." },
   { cat: "Security", text: "We publish our security architecture because we built it to be read. Most AI apps don\u2019t \u2014 because they can\u2019t." },

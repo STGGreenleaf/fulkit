@@ -65,7 +65,7 @@ Rate limits are enforced via **Upstash Redis** — a distributed store shared ac
 
 Fulkit enforces a strict Content Security Policy (CSP) that controls what resources the browser is allowed to load:
 
-- **Scripts**: Only from fulkit.app, Google Tag Manager, and the Spotify SDK. No inline scripts, no `eval()`, no third-party injection.
+- **Scripts**: Only from fulkit.app, Google Tag Manager, and the Spotify SDK. Inline scripts allowed for React hydration (`unsafe-inline`), but no `eval()`, no third-party injection.
 - **Styles**: Self-hosted only (with `unsafe-inline` for React's style system).
 - **Images**: Self-hosted, Spotify album art, Google profile photos. No arbitrary external images.
 - **Connections**: Only to fulkit.app's own API, Supabase, and Google Analytics. All external API calls (Stripe, GitHub, Spotify, etc.) route through our server — the browser never talks to third-party APIs directly.

@@ -69,7 +69,7 @@ function checkFallbackLimit(key, limit) {
 // ── Security Headers ──
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://www.googletagmanager.com https://sdk.scdn.co",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://sdk.scdn.co",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https://*.scdn.co https://*.googleusercontent.com https://*.supabase.co data:",
   "font-src 'self'",

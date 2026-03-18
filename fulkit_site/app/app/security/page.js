@@ -55,7 +55,7 @@ const sections = [
       "Fulkit enforces a strict CSP that controls what the browser is allowed to load.",
     ],
     items: [
-      "Scripts — only from fulkit.app and required SDKs. No inline scripts, no eval()",
+      "Scripts — only from fulkit.app and required SDKs. Inline scripts for React hydration only, no eval()",
       "Connections — only to fulkit.app's own API and authenticated services. The browser never talks to third-party APIs directly",
       "Framing — frame-ancestors 'none'. Fulkit cannot be embedded in an iframe. Prevents clickjacking",
     ],
