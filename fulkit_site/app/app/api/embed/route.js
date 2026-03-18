@@ -125,17 +125,36 @@ export async function PUT(request) {
     const apiKey = process.env.VOYAGE_API_KEY;
     if (!apiKey) return Response.json({ error: "VOYAGE_API_KEY not set" }, { status: 500 });
 
-    // Fetch notes without embeddings (up to 100 per call)
-    const { data: notes, error: fetchErr } = await admin
-      .from("notes")
-      .select("id, title, content")
-      .eq("user_id", user.id)
-      .is("embedding", null)
-      .order("created_at", { ascending: false })
-      .limit(100);
+    // Fetch notes needing embeddings — use RPC to handle pgvector null check reliably
+    const { data: noteIds, error: idErr } = await admin
+      .rpc("get_unembedded_note_ids", { uid: user.id, lim: 100 })
+      .catch(() => ({ data: null, error: { message: "RPC not available" } }));
 
-    if (fetchErr) throw new Error(fetchErr.message);
-    if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
+    let notes;
+    if (noteIds?.length > 0) {
+      // RPC worked — fetch full content for matched IDs
+      const { data, error: fetchErr } = await admin
+        .from("notes")
+        .select("id, title, content")
+        .in("id", noteIds.map(r => r.id));
+      if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
+      notes = data || [];
+    } else if (idErr || !noteIds) {
+      // RPC doesn't exist — fall back to direct query
+      const { data, error: fetchErr } = await admin
+        .from("notes")
+        .select("id, title, content")
+        .eq("user_id", user.id)
+        .is("embedding", null)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
+      notes = data || [];
+    } else {
+      notes = [];
+    }
+
+    if (!notes.length) return Response.json({ embedded: 0, message: "All notes already embedded" });
 
     let embedded = 0;
     let failed = 0;
