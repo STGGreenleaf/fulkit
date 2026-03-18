@@ -1220,9 +1220,9 @@ function DeveloperTab() {
         });
         if (!res.ok) { setEmbedStatus(`Error: ${res.status}`); break; }
         const data = await res.json();
+        console.log("[embed] round", round + 1, "status:", res.status, "response:", JSON.stringify(data));
         totalEmbedded += data.embedded || 0;
-        const detail = data.uid ? ` (uid: ${data.uid.slice(0, 8)})` : "";
-        setEmbedStatus(`${totalEmbedded} embedded${data.embedded === 0 ? " — done" + detail : "..."}`);
+        setEmbedStatus(`${totalEmbedded} embedded${data.embedded === 0 ? " — done" : "..."}`);
         if (data.embedded === 0) break;
       } catch (err) {
         setEmbedStatus(`Error: ${err.message}`);
