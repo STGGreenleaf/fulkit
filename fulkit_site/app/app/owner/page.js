@@ -2045,7 +2045,41 @@ function DeveloperTab() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: "var(--space-4)", alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 1fr", gap: isMobile ? "var(--space-3)" : "var(--space-4)", alignItems: "start" }}>
+      {/* ── On mobile: Switches first (moved from right column) ── */}
+      {isMobile && (
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+          <div style={{ fontSize: 9, fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+            Switches
+          </div>
+          <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
+          <div style={{ height: "var(--space-2)" }} />
+          <DevSwitch label="Inspector" description="CSS selector overlay" on={inspector} onToggle={() => setInspector(!inspector)} />
+          <div style={{ height: "var(--space-3)" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <button
+              onClick={runBatchEmbed}
+              disabled={embedding}
+              style={{
+                flex: 1, padding: "var(--space-2) var(--space-3)",
+                background: embedding ? "var(--color-bg-alt)" : "var(--color-accent)",
+                color: embedding ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+                border: "none", borderRadius: "var(--radius-sm)",
+                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                fontFamily: "var(--font-primary)", cursor: embedding ? "default" : "pointer",
+              }}
+            >
+              {embedding ? "Embedding..." : "Embed Notes"}
+            </button>
+            {embedStatus && (
+              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                {embedStatus}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── LEFT: Tickets ── */}
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
@@ -2104,10 +2138,10 @@ function DeveloperTab() {
       </div>
 
       {/* ── RIGHT: Outgoing ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingTop: "var(--space-6)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "var(--space-3)" : "var(--space-4)", paddingTop: isMobile ? 0 : "var(--space-6)" }}>
 
-        {/* Dev Switches */}
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
+        {/* Dev Switches (hidden on mobile — rendered above tickets) */}
+        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", display: isMobile ? "none" : "block" }}>
           <div style={{ fontSize: 9, fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
             Switches
           </div>
