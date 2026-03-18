@@ -307,6 +307,11 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
       context.push({ title: "TrueGauge (Profitability Analytics)", content: tgContext });
     }
 
+    // Client-side cap — server caps at 20, but sending 100+ items wastes bandwidth
+    if (context.length > 15) {
+      context = context.slice(0, 15);
+    }
+
     return { context, annotatedMessages };
   }, [isReady, getContextWithMeta, recalledNotes, user, ghContext, nblContext, tgContext, sandbox]);
 

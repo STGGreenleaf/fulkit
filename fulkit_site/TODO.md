@@ -124,9 +124,9 @@
 - [x] Billing UI — plans, invoices, payment method, referral stats, owner P&L dashboard
 - [x] Free trial tracking (30 days)
 - [x] BYOK nudge whisper for heavy burners (system prompt injection at 80%+ usage)
-- [ ] Polish: "Fül up" inline prompt when empty (chat hard-stops but doesn't offer purchase inline)
+- [x] Polish: "Fül up" inline prompt when empty (upgrade CTA + credits + BYOK in capped state)
 - [ ] Polish: Hot seat enforcement (config in ful-config.js, no activity check logic yet)
-- [ ] Polish: Trial end UX (silent downgrade — no "subscribe now" prompt)
+- [x] Polish: Trial end UX (dashboard banner at ≤5 days + expired state, links to billing)
 - [ ] Polish: Cost ceiling check in chat route (COST_CEILINGS defined but not enforced)
 
 ## Phase 6: MCP Integrations (plug in everything)
@@ -179,6 +179,19 @@
 - [x] Security page — /security public page with full architecture
 - [x] Landing page trust section — 6-item security grid + competitive grid row + footer link
 - [x] Final two-agent audit — every claim verified against code, zero aspirational statements
+
+## Next 10 — Performance & Polish
+
+- [x] Actions button feedback — loadingIds Set, disabled+opacity on all async buttons (checkbox, menu, priority, bucket), addingInProgress guard
+- [x] Chat latency — vault token budget 100K → 25K, client-side context cap at 15 items (was unlimited, server was silently dropping past 20)
+- [x] Chat latency — GitHub enrichment moved from blocking system prompt (10s) to on-demand github_fetch_files tool call
+- [x] Chat latency — parallelized 7 server-side queries via Promise.all (prefs, convos, broadcasts, owner docs, referral, integration tokens, Stripe prices). Deduped getStripePrices() (was called twice)
+- [ ] CSP production test — verify zero console violations after enforcing mode deploy, fix any blocked resources
+- [x] Upload security.md to Fulkit KB — inserted into vault_broadcasts (owner-context, id: d258acc3)
+- [x] "Fül up" inline prompt — capped state now shows upgrade CTA (plan or credits) + BYOK fallback instead of just BYOK link
+- [x] Trial end UX — dashboard banner when trial ends or has ≤5 days remaining, links to billing, dismissible
+- [ ] Spotify Extended Quota Mode — request from Spotify developer dashboard (currently only Collin's account works)
+- [ ] Seamless page transitions — verify cold start splash + warm nav fade-in working correctly in production
 
 ## Prelaunch
 

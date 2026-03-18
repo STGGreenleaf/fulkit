@@ -11,7 +11,7 @@ import MessageRenderer from "./MessageRenderer";
 import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
 import { useSandbox } from "../lib/sandbox";
-import { SEAT_LIMITS } from "../lib/ful-config";
+import { SEAT_LIMITS, TIERS, CREDITS } from "../lib/ful-config";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -1141,11 +1141,16 @@ export default function ChatContent({ isPopout = false }) {
                       You burned through your Fül this month.
                     </div>
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                      Drop in your own API key and keep going — unlimited, no cap. Or hang tight til your reset.
+                      Grab more messages or drop in your own API key.
                     </div>
-                    <Link href="/settings?tab=ai" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
-                      Add your key
-                    </Link>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <Link href="/settings?tab=billing" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
+                        {profile?.seat_type === "free" ? `Upgrade — from ${TIERS.standard.priceLabel}` : `Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel}`}
+                      </Link>
+                      <Link href="/settings?tab=ai" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "transparent", color: "var(--color-text-muted)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", textDecoration: "none", border: "1px solid var(--color-border-light)" }}>
+                        Or bring your own key — unlimited
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ) : (

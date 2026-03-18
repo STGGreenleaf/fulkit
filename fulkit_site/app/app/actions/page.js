@@ -103,6 +103,8 @@ export default function Actions() {
   const [newTitle, setNewTitle] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [loadingIds, setLoadingIds] = useState(new Set());
+  const [addingInProgress, setAddingInProgress] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -172,15 +174,27 @@ export default function Actions() {
   }
 
   async function updateStatus(id, status) {
+    if (loadingIds.has(id)) return;
+    setLoadingIds((prev) => new Set(prev).add(id));
     const updates = { status };
     if (status === "done") updates.completed_at = new Date().toISOString();
     setActions((prev) => prev.map((a) => a.id === id ? { ...a, ...updates } : a));
-    await supabase.from("actions").update(updates).eq("id", id);
+    try {
+      await supabase.from("actions").update(updates).eq("id", id);
+    } finally {
+      setLoadingIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    }
   }
 
   async function updateAction(id, updates) {
+    if (loadingIds.has(id)) return;
+    setLoadingIds((prev) => new Set(prev).add(id));
     setActions((prev) => prev.map((a) => a.id === id ? { ...a, ...updates } : a));
-    await supabase.from("actions").update(updates).eq("id", id);
+    try {
+      await supabase.from("actions").update(updates).eq("id", id);
+    } finally {
+      setLoadingIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    }
   }
 
   async function clearDone() {
@@ -193,18 +207,23 @@ export default function Actions() {
 
   async function addAction() {
     const title = newTitle.trim();
-    if (!title) return;
+    if (!title || addingInProgress) return;
+    setAddingInProgress(true);
     setNewTitle("");
     setAdding(false);
 
     const bucket = lens !== "all" ? lens : null;
 
-    const { data } = await supabase
-      .from("actions")
-      .insert({ user_id: user.id, title, source: "manual", status: "active", bucket })
-      .select()
-      .single();
-    if (data) setActions((prev) => [...prev, data]);
+    try {
+      const { data } = await supabase
+        .from("actions")
+        .insert({ user_id: user.id, title, source: "manual", status: "active", bucket })
+        .select()
+        .single();
+      if (data) setActions((prev) => [...prev, data]);
+    } finally {
+      setAddingInProgress(false);
+    }
   }
 
   return (
@@ -506,6 +525,7 @@ export default function Actions() {
                       onUpdateAction={updateAction}
                       expanded={expandedId === action.id}
                       onToggleExpand={() => setExpandedId(expandedId === action.id ? null : action.id)}
+                      loading={loadingIds.has(action.id)}
                     />
                   ))}
                 </div>
@@ -533,7 +553,7 @@ export default function Actions() {
   );
 }
 
-function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, onToggleExpand }) {
+function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, onToggleExpand, loading }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editTitle, setEditTitle] = useState(action.title);
@@ -583,18 +603,20 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
         {/* Quick complete checkbox (active only) */}
         {filter === "active" && (
           <div
-            onClick={(e) => { e.stopPropagation(); onUpdateStatus(action.id, "done"); }}
+            onClick={(e) => { e.stopPropagation(); if (!loading) onUpdateStatus(action.id, "done"); }}
             style={{
               width: 18,
               height: 18,
               borderRadius: "var(--radius-xs)",
               border: "1.5px solid var(--color-border)",
               flexShrink: 0,
-              cursor: "pointer",
+              cursor: loading ? "default" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               transition: "all var(--duration-fast) var(--ease-default)",
+              opacity: loading ? 0.4 : 1,
+              pointerEvents: loading ? "none" : "auto",
             }}
           />
         )}
@@ -714,6 +736,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
               {menuActions.map((a) => (
                 <button
                   key={a.status}
+                  disabled={loading}
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateStatus(action.id, a.status);
@@ -727,11 +750,12 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                     padding: "var(--space-2) var(--space-3)",
                     background: "none",
                     border: "none",
-                    cursor: "pointer",
+                    cursor: loading ? "default" : "pointer",
                     fontSize: "var(--font-size-xs)",
                     fontFamily: "var(--font-primary)",
                     color: a.color,
                     textAlign: "left",
+                    opacity: loading ? 0.4 : 1,
                   }}
                 >
                   <a.icon size={12} strokeWidth={2} />
@@ -821,6 +845,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                 return (
                   <button
                     key={value}
+                    disabled={loading}
                     onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { priority: active ? null : value }); }}
                     style={{
                       flex: 1,
@@ -836,7 +861,8 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                       fontSize: "var(--font-size-2xs)",
                       fontFamily: "var(--font-primary)",
                       fontWeight: "var(--font-weight-medium)",
-                      cursor: "pointer",
+                      cursor: loading ? "default" : "pointer",
+                      opacity: loading ? 0.4 : 1,
                     }}
                   >
                     <Icon size={10} strokeWidth={2} />
@@ -860,6 +886,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                 return (
                   <button
                     key={label}
+                    disabled={loading}
                     onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { bucket: active ? null : value }); }}
                     style={{
                       flex: 1,
@@ -875,7 +902,8 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                       fontSize: "var(--font-size-2xs)",
                       fontFamily: "var(--font-primary)",
                       fontWeight: "var(--font-weight-medium)",
-                      cursor: "pointer",
+                      cursor: loading ? "default" : "pointer",
+                      opacity: loading ? 0.4 : 1,
                     }}
                   >
                     <Icon size={10} strokeWidth={2} />

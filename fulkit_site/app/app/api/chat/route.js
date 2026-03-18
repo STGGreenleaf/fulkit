@@ -1494,6 +1494,22 @@ async function executeTrelloTool(toolName, input, userId) {
   }
 }
 
+// GitHub tools — fetch source code from connected repos on demand
+const GITHUB_TOOLS = [
+  {
+    name: "github_fetch_files",
+    description: "Fetch source code from a connected GitHub repository. Use when the user asks about code, wants to see a file, debug an issue, or discuss implementation details. Scores file paths against the query and returns the most relevant files.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What the user is asking about — used to score which files to fetch" },
+        repo: { type: "string", description: "Repository name (owner/repo format)" },
+      },
+      required: ["query", "repo"],
+    },
+  },
+];
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2078,113 +2094,60 @@ export async function POST(request) {
     // Compress conversation if it's getting long (pass chapter summaries for sandbox mode)
     const compressed = compressConversation(messages, config.compressAt, chapterSummaries);
 
-    // Load user preferences + learned memories
-    let prefs = null;
-    let memories = null;
-    let helperName = null;
-    if (userId) {
-      try {
-        const { data } = await getSupabaseAdmin()
-          .from("preferences")
-          .select("key, value")
-          .eq("user_id", userId)
-          .abortSignal(AbortSignal.timeout(5000));
-        const allPrefs = data || [];
-        prefs = allPrefs.filter(p => !p.key.startsWith("memory:") && ["tone", "frequency", "chronotype"].includes(p.key));
-        memories = allPrefs.filter(p => p.key.startsWith("memory:"));
-        const helperNamePref = allPrefs.find(p => p.key === "helper_name");
-        if (helperNamePref?.value) {
-          helperName = helperNamePref.value;
-        }
-      } catch { /* proceed without preferences */ }
-    }
+    // Parallel data fetch — all independent of each other, depend only on userId + profile
+    const safeGet = userId
+      ? (fn, provider) => fn(userId).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; })
+      : () => Promise.resolve(null);
 
-    // Enrich GitHub tree context with actual file contents (10s aggregate timeout)
-    if (userId && Array.isArray(context)) {
-      const ghToken = await getGitHubToken(userId).catch(() => null);
-      if (ghToken) try {
-        await Promise.race([
-          (async () => {
-        const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
-        const words = lastMessage.split(/\W+/).filter((w) => w.length > 2);
-
-        for (let i = 0; i < context.length; i++) {
-          if (!context[i].title?.startsWith("GitHub: ")) continue;
-          const repoName = context[i].title.replace("GitHub: ", "");
-          const filePaths = context[i].content
-            .split("\n")
-            .filter((l) => l && !l.startsWith("Full repository"));
-
-          // Score each file path against the user's message
-          const CODE_EXTS = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|css|html|json|sql|sh|yaml|yml|toml|md|txt|env|mjs|cjs)$/i;
-          const scored = filePaths
-            .filter((p) => CODE_EXTS.test(p))
-            .map((p) => {
-              const parts = p.toLowerCase().split(/[/.]/);
-              let score = 0;
-              for (const w of words) {
-                if (parts.some((part) => part.includes(w))) score += 2;
-                if (p.toLowerCase().includes(w)) score += 1;
-              }
-              const name = p.split("/").pop().toLowerCase();
-              if (name === "readme.md" || name === "package.json") score += 1;
-              return { path: p, score };
-            })
-            .filter((f) => f.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5);
-
-          // Fetch files in parallel with a timeout
-          if (scored.length > 0) {
-            const MAX_CODE_TOKENS = 30000;
-            const fetchWithTimeout = (path) =>
-              Promise.race([
-                githubFetch(ghToken, `/repos/${repoName}/contents/${path}`),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000)),
-              ]);
-
-            const results = await Promise.allSettled(scored.map((f) => fetchWithTimeout(f.path)));
-            const fetched = [];
-            let fetchedTokens = 0;
-            for (const result of results) {
-              if (result.status !== "fulfilled") continue;
-              const data = result.value;
-              if (!data.content || data.size > 100000) continue;
-              const content = Buffer.from(data.content, "base64").toString("utf-8");
-              const tokens = estimateTokens(content);
-              if (fetchedTokens + tokens > MAX_CODE_TOKENS) continue;
-              fetched.push({ path: data.path, content });
-              fetchedTokens += tokens;
-            }
-
-            if (fetched.length > 0) {
-              const codeBlock = fetched
-                .map((f) => `### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``)
-                .join("\n\n");
-              context[i] = {
-                title: context[i].title,
-                content: context[i].content + `\n\n## Relevant source files\n${codeBlock}`,
-              };
-            }
-          }
-        }
-          })(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("GitHub enrichment timed out")), 10000)),
-        ]);
-      } catch { /* GitHub enrichment timed out or failed — proceed without it */ }
-    }
-
-    // Fetch integration API keys (needed for tool execution)
-    let nblKey = null;
-    let tgKey = null;
-    let sqToken = null;
-    let shopifyToken = null;
-    let stripeToken = null;
-    let toastToken = null;
-    let trelloToken = null;
-    if (userId) {
-      const safeGet = (fn, provider) => fn(userId).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; });
-      [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken] = await Promise.all([
+    const [
+      prefsResult,
+      recentConvosResult,
+      broadcastsResult,
+      ownerDocsResult,
+      refProfileResult,
+      integrationTokens,
+      stripePrices,
+    ] = await Promise.all([
+      // Prefs + memories (combined query)
+      userId ? getSupabaseAdmin()
+        .from("preferences").select("key, value").eq("user_id", userId)
+        .abortSignal(AbortSignal.timeout(5000))
+        .then(({ data }) => data || [])
+        .catch(() => [])
+      : Promise.resolve([]),
+      // Recent conversations
+      userId ? getSupabaseAdmin()
+        .from("conversations").select("title, created_at").eq("user_id", userId)
+        .order("updated_at", { ascending: false }).limit(25)
+        .abortSignal(AbortSignal.timeout(5000))
+        .then(({ data }) => data || [])
+        .catch(() => [])
+      : Promise.resolve([]),
+      // Broadcast context
+      getSupabaseAdmin()
+        .from("vault_broadcasts").select("title, content")
+        .eq("channel", "context").eq("active", true)
+        .abortSignal(AbortSignal.timeout(5000))
+        .then(({ data }) => data || [])
+        .catch(() => []),
+      // Owner context (conditional)
+      profile?.role === "owner" ? getSupabaseAdmin()
+        .from("vault_broadcasts").select("title, content")
+        .eq("channel", "owner-context").eq("active", true)
+        .abortSignal(AbortSignal.timeout(5000))
+        .then(({ data }) => data || [])
+        .catch(() => [])
+      : Promise.resolve([]),
+      // Referral profile (conditional)
+      (userId && !config.isByok && profile?.role !== "owner") ? getSupabaseAdmin()
+        .from("profiles").select("referral_code, total_active_referrals, referral_tier, seat_type")
+        .eq("id", userId).single()
+        .abortSignal(AbortSignal.timeout(3000))
+        .then(({ data }) => data)
+        .catch(() => null)
+      : Promise.resolve(null),
+      // Integration tokens (already parallel internally)
+      userId ? Promise.all([
         safeGet(getNumbrlyToken, "numbrly"),
         safeGet(getTrueGaugeToken, "truegauge"),
         safeGet(getSquareToken, "square"),
@@ -2192,8 +2155,18 @@ export async function POST(request) {
         safeGet(getStripeToken, "stripe"),
         safeGet(getToastToken, "toast"),
         safeGet(getTrelloToken, "trello"),
-      ]);
-    }
+        safeGet(getGitHubToken, "github"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null]),
+      // Stripe prices (fetched once, used by broadcasts + owner context)
+      getStripePrices(),
+    ]);
+
+    // Destructure parallel results
+    const prefs = prefsResult.filter(p => !p.key.startsWith("memory:") && ["tone", "frequency", "chronotype"].includes(p.key));
+    const memories = prefsResult.filter(p => p.key.startsWith("memory:"));
+    const helperNamePref = prefsResult.find(p => p.key === "helper_name");
+    const helperName = helperNamePref?.value || null;
+    const [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken] = integrationTokens;
 
     // Build system prompt
     let system = helperName
@@ -2227,23 +2200,12 @@ export async function POST(request) {
       system += `\n\n## What I Know About You\nThese are things you've told me across our conversations. Use them naturally.\n<user-memories>\n${memBlock}\n</user-memories>`;
     }
 
-    // Inject recent conversation summaries (cross-session context)
-    if (userId) {
-      try {
-        const { data: recentConvos } = await getSupabaseAdmin()
-          .from("conversations")
-          .select("title, created_at")
-          .eq("user_id", userId)
-          .order("updated_at", { ascending: false })
-          .limit(25)
-          .abortSignal(AbortSignal.timeout(5000));
-        if (recentConvos && recentConvos.length > 0) {
-          const convoBlock = recentConvos
-            .map((c) => `- ${c.title} (${new Date(c.created_at).toLocaleDateString()})`)
-            .join("\n");
-          system += `\n\n## Recent Conversations\nTopics discussed recently:\n<conversation-history>\n${convoBlock}\n</conversation-history>`;
-        }
-      } catch { /* table may not exist yet */ }
+    // Inject recent conversation summaries (cross-session context — pre-fetched)
+    if (recentConvosResult.length > 0) {
+      const convoBlock = recentConvosResult
+        .map((c) => `- ${c.title} (${new Date(c.created_at).toLocaleDateString()})`)
+        .join("\n");
+      system += `\n\n## Recent Conversations\nTopics discussed recently:\n<conversation-history>\n${convoBlock}\n</conversation-history>`;
     }
 
     // Inject vault context
@@ -2259,126 +2221,88 @@ export async function POST(request) {
       system += `\n\n## User's Notes & Context\n${contextIntro}\n<user-documents>\n${contextBlock}\n</user-documents>`;
     }
 
-    // Inject owner broadcast context docs (silent — users never see these, but Fülkit knows them)
-    try {
-      const { data: broadcasts } = await getSupabaseAdmin()
-        .from("vault_broadcasts")
-        .select("title, content")
-        .eq("channel", "context")
-        .eq("active", true)
-        .abortSignal(AbortSignal.timeout(5000));
-      if (broadcasts && broadcasts.length > 0) {
-        let broadcastBlock = broadcasts
-          .map(b => `### ${b.title}\n${b.content}`)
-          .join("\n\n");
-        // Dynamic pricing injection — replace {{placeholder}} tokens with live Stripe prices
-        if (broadcastBlock.includes("{{")) {
-          const prices = await getStripePrices();
-          const replacements = {
-            "{{free_limit}}": String(SEAT_LIMITS.free),
-            "{{standard_limit}}": String(SEAT_LIMITS.standard),
-            "{{pro_limit}}": String(SEAT_LIMITS.pro),
-            "{{standard_price}}": prices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
-            "{{pro_price}}": prices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
-            "{{credits_price}}": prices?.credits || CREDITS.priceLabel,
-          };
-          for (const [token, value] of Object.entries(replacements)) {
-            broadcastBlock = broadcastBlock.replaceAll(token, value);
-          }
+    // Inject broadcast context (pre-fetched)
+    if (broadcastsResult.length > 0) {
+      let broadcastBlock = broadcastsResult
+        .map(b => `### ${b.title}\n${b.content}`)
+        .join("\n\n");
+      // Dynamic pricing injection — replace {{placeholder}} tokens with live Stripe prices
+      if (broadcastBlock.includes("{{")) {
+        const replacements = {
+          "{{free_limit}}": String(SEAT_LIMITS.free),
+          "{{standard_limit}}": String(SEAT_LIMITS.standard),
+          "{{pro_limit}}": String(SEAT_LIMITS.pro),
+          "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
+          "{{pro_price}}": stripePrices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
+          "{{credits_price}}": stripePrices?.credits || CREDITS.priceLabel,
+        };
+        for (const [token, value] of Object.entries(replacements)) {
+          broadcastBlock = broadcastBlock.replaceAll(token, value);
         }
-        system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
       }
-    } catch { /* proceed without broadcasts */ }
-
-    // Inject owner-only knowledge base docs (kitchen — never for regular users)
-    if (profile?.role === "owner") {
-      try {
-        const { data: ownerDocs } = await getSupabaseAdmin()
-          .from("vault_broadcasts")
-          .select("title, content")
-          .eq("channel", "owner-context")
-          .eq("active", true)
-          .abortSignal(AbortSignal.timeout(5000));
-        if (ownerDocs && ownerDocs.length > 0) {
-          let ownerBlock = ownerDocs
-            .map(b => `### ${b.title}\n${b.content}`)
-            .join("\n\n");
-          // Dynamic pricing injection — same as user-facing knowledge
-          if (ownerBlock.includes("{{")) {
-            const prices = await getStripePrices();
-            const replacements = {
-              "{{free_limit}}": String(SEAT_LIMITS.free),
-              "{{standard_limit}}": String(SEAT_LIMITS.standard),
-              "{{pro_limit}}": String(SEAT_LIMITS.pro),
-              "{{standard_price}}": prices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
-              "{{pro_price}}": prices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
-              "{{credits_price}}": prices?.credits || CREDITS.priceLabel,
-            };
-            for (const [token, value] of Object.entries(replacements)) {
-              ownerBlock = ownerBlock.replaceAll(token, value);
-            }
-          }
-          system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${ownerBlock}\n</owner-knowledge>`;
-        }
-      } catch { /* proceed without owner knowledge */ }
+      system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
     }
 
-    // Referral whisper context — inject stats so AI can surface referral CTAs naturally
-    if (userId && !config.isByok && profile?.role !== "owner") {
-      try {
-        const { data: refProfile } = await getSupabaseAdmin()
-          .from("profiles")
-          .select("referral_code, total_active_referrals, referral_tier, seat_type")
-          .eq("id", userId)
-          .single()
-          .abortSignal(AbortSignal.timeout(3000));
-
-        if (refProfile) {
-          const refs = refProfile.total_active_referrals || 0;
-          const tier = refProfile.referral_tier || 0;
-          const seatType = refProfile.seat_type || "free";
-          const hasCode = !!refProfile.referral_code;
-
-          // Calculate proximity to milestones
-          const toFreeStandard = Math.max(0, 9 - refs);
-          const toFreePro = Math.max(0, 15 - refs);
-          const toBuilder = Math.max(0, 25 - refs);
-
-          // Only inject if there's a relevant milestone approaching or a trigger condition
-          const daysActive = profile?.message_count_reset_at
-            ? Math.floor((Date.now() - new Date(profile.message_count_reset_at).getTime()) / 86400000)
-            : 0;
-          const msgCount = profile?.messages_this_month || 0;
-
-          const shouldWhisper = (
-            (!hasCode && msgCount >= 5) ||                    // First touch: 5+ messages, no referral code yet
-            (refs > 0 && toFreeStandard <= 3 && toFreeStandard > 0) || // Close to Standard-free
-            (refs > 0 && toFreePro <= 3 && toFreePro > 0) ||          // Close to Pro-free
-            (refs > 0 && toBuilder <= 5 && toBuilder > 0) ||          // Close to Builder
-            (msgCount === 100 || msgCount === 500)                     // Usage milestones
-          );
-
-          if (shouldWhisper) {
-            let whisperHint = `\n\n## Referral Context (internal — use naturally, never announce)\n`;
-            whisperHint += `The user has ${refs} active referrals. `;
-
-            if (!hasCode) {
-              whisperHint += `They haven't generated a referral code yet. If the moment is right, mention that they can share Fülkit with friends and earn credit toward their subscription. Their referral link is in Settings > Referrals.`;
-            } else if (seatType !== "free" && toFreeStandard > 0 && toFreeStandard <= 3) {
-              whisperHint += `They're ${toFreeStandard} referral${toFreeStandard === 1 ? "" : "s"} away from making their Standard plan free. A gentle mention could be motivating.`;
-            } else if (toFreePro > 0 && toFreePro <= 3) {
-              whisperHint += `They're ${toFreePro} referral${toFreePro === 1 ? "" : "s"} away from making their Pro plan free.`;
-            } else if (toBuilder > 0 && toBuilder <= 5) {
-              whisperHint += `They're ${toBuilder} referral${toBuilder === 1 ? "" : "s"} away from Builder tier, which unlocks cash payouts.`;
-            } else {
-              whisperHint += `If the conversation naturally touches on sharing or recommendations, a brief mention of the referral program is appropriate.`;
-            }
-
-            whisperHint += `\nDo NOT force this. Only mention if the moment feels natural. Never more than once per conversation.`;
-            system += whisperHint;
-          }
+    // Inject owner-only knowledge base docs (pre-fetched)
+    if (ownerDocsResult.length > 0) {
+      let ownerBlock = ownerDocsResult
+        .map(b => `### ${b.title}\n${b.content}`)
+        .join("\n\n");
+      if (ownerBlock.includes("{{")) {
+        const replacements = {
+          "{{free_limit}}": String(SEAT_LIMITS.free),
+          "{{standard_limit}}": String(SEAT_LIMITS.standard),
+          "{{pro_limit}}": String(SEAT_LIMITS.pro),
+          "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
+          "{{pro_price}}": stripePrices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
+          "{{credits_price}}": stripePrices?.credits || CREDITS.priceLabel,
+        };
+        for (const [token, value] of Object.entries(replacements)) {
+          ownerBlock = ownerBlock.replaceAll(token, value);
         }
-      } catch { /* proceed without referral context */ }
+      }
+      system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${ownerBlock}\n</owner-knowledge>`;
+    }
+
+    // Referral whisper context (pre-fetched)
+    if (refProfileResult) {
+      const refs = refProfileResult.total_active_referrals || 0;
+      const seatType = refProfileResult.seat_type || "free";
+      const hasCode = !!refProfileResult.referral_code;
+
+      const toFreeStandard = Math.max(0, 9 - refs);
+      const toFreePro = Math.max(0, 15 - refs);
+      const toBuilder = Math.max(0, 25 - refs);
+
+      const msgCount = profile?.messages_this_month || 0;
+
+      const shouldWhisper = (
+        (!hasCode && msgCount >= 5) ||
+        (refs > 0 && toFreeStandard <= 3 && toFreeStandard > 0) ||
+        (refs > 0 && toFreePro <= 3 && toFreePro > 0) ||
+        (refs > 0 && toBuilder <= 5 && toBuilder > 0) ||
+        (msgCount === 100 || msgCount === 500)
+      );
+
+      if (shouldWhisper) {
+        let whisperHint = `\n\n## Referral Context (internal — use naturally, never announce)\n`;
+        whisperHint += `The user has ${refs} active referrals. `;
+
+        if (!hasCode) {
+          whisperHint += `They haven't generated a referral code yet. If the moment is right, mention that they can share Fülkit with friends and earn credit toward their subscription. Their referral link is in Settings > Referrals.`;
+        } else if (seatType !== "free" && toFreeStandard > 0 && toFreeStandard <= 3) {
+          whisperHint += `They're ${toFreeStandard} referral${toFreeStandard === 1 ? "" : "s"} away from making their Standard plan free. A gentle mention could be motivating.`;
+        } else if (toFreePro > 0 && toFreePro <= 3) {
+          whisperHint += `They're ${toFreePro} referral${toFreePro === 1 ? "" : "s"} away from making their Pro plan free.`;
+        } else if (toBuilder > 0 && toBuilder <= 5) {
+          whisperHint += `They're ${toBuilder} referral${toBuilder === 1 ? "" : "s"} away from Builder tier, which unlocks cash payouts.`;
+        } else {
+          whisperHint += `If the conversation naturally touches on sharing or recommendations, a brief mention of the referral program is appropriate.`;
+        }
+
+        whisperHint += `\nDo NOT force this. Only mention if the moment feels natural. Never more than once per conversation.`;
+        system += whisperHint;
+      }
     }
 
     // Square inventory instructions
@@ -2391,6 +2315,16 @@ When the user asks to update inventory counts:
 4. Show the user a clear table of changes: item name, current count → new count, delta
 5. Wait for the user to confirm (say "go", "yes", "confirm", etc.) before calling square_confirm with the preview_id
 Never skip the preview step. The user must see and approve changes before they go live in Square.`;
+    }
+
+    // GitHub repo hint — tell Claude repos are connected and the tool is available
+    if (ghToken && Array.isArray(context)) {
+      const connectedRepos = context
+        .filter(c => c.title?.startsWith("GitHub: "))
+        .map(c => c.title.replace("GitHub: ", ""));
+      if (connectedRepos.length > 0) {
+        system += `\n\n## GitHub Repositories\nThe user has ${connectedRepos.length} connected GitHub repo${connectedRepos.length > 1 ? "s" : ""}: ${connectedRepos.join(", ")}. The repository file trees are in the context above. Use the github_fetch_files tool to read specific source files when discussing code.`;
+      }
     }
 
     // Increment message count (Fül cap) — atomic, skip for BYOK users (they pay their own tokens)
@@ -2450,6 +2384,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(stripeToken ? STRIPE_TOOLS : []),
       ...(toastToken ? TOAST_TOOLS : []),
       ...(trelloToken ? TRELLO_TOOLS : []),
+      ...(ghToken ? GITHUB_TOOLS : []),
     ];
     const baseOpts = {
       model: config.model,
@@ -2661,6 +2596,67 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // GitHub file fetch tool
+              if (block.name === "github_fetch_files" && ghToken) {
+                try {
+                  const result = await withTimeout(async () => {
+                    const { query, repo } = block.input || {};
+                    const repoCtx = context.find(c => c.title === `GitHub: ${repo}`);
+                    if (!repoCtx) return { error: `Repository ${repo} not found in connected repos` };
+
+                    const filePaths = repoCtx.content.split("\n").filter(l => l && !l.startsWith("Full repository"));
+                    const words = (query || "").toLowerCase().split(/\W+/).filter(w => w.length > 2);
+                    const CODE_EXTS = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|css|html|json|sql|sh|yaml|yml|toml|md|txt|env|mjs|cjs)$/i;
+
+                    const scored = filePaths
+                      .filter(p => CODE_EXTS.test(p))
+                      .map(p => {
+                        const parts = p.toLowerCase().split(/[/.]/);
+                        let score = 0;
+                        for (const w of words) {
+                          if (parts.some(part => part.includes(w))) score += 2;
+                          if (p.toLowerCase().includes(w)) score += 1;
+                        }
+                        const name = p.split("/").pop().toLowerCase();
+                        if (name === "readme.md" || name === "package.json") score += 1;
+                        return { path: p, score };
+                      })
+                      .filter(f => f.score > 0)
+                      .sort((a, b) => b.score - a.score)
+                      .slice(0, 5);
+
+                    if (scored.length === 0) return { message: "No files matched the query. Try a more specific query or ask for a specific file path." };
+
+                    const MAX_CODE_TOKENS = 30000;
+                    const fetchWithTimeout = (path) => Promise.race([
+                      githubFetch(ghToken, `/repos/${repo}/contents/${path}`),
+                      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000)),
+                    ]);
+
+                    const results = await Promise.allSettled(scored.map(f => fetchWithTimeout(f.path)));
+                    const fetched = [];
+                    let fetchedTokens = 0;
+                    for (const r of results) {
+                      if (r.status !== "fulfilled") continue;
+                      const data = r.value;
+                      if (!data.content || data.size > 100000) continue;
+                      const fileContent = Buffer.from(data.content, "base64").toString("utf-8");
+                      const tokens = estimateTokens(fileContent);
+                      if (fetchedTokens + tokens > MAX_CODE_TOKENS) continue;
+                      fetched.push({ path: data.path, content: fileContent });
+                      fetchedTokens += tokens;
+                    }
+
+                    if (fetched.length === 0) return { message: "Files matched but could not be fetched. They may be too large or the GitHub API timed out." };
+                    return { files: fetched.map(f => ({ path: f.path, content: f.content })) };
+                  });
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

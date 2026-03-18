@@ -11,7 +11,7 @@ import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
-import { SEAT_LIMITS } from "../../lib/ful-config";
+import { SEAT_LIMITS, TIERS } from "../../lib/ful-config";
 
 
 function getGreeting() {
@@ -32,7 +32,7 @@ function timeAgo(dateStr) {
 }
 
 export default function Dashboard() {
-  const { user, profile, hasContext, accessToken, compactMode } = useAuth();
+  const { user, profile, hasContext, accessToken, compactMode, onboardingState } = useAuth();
   const router = useRouter();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "home" }); }, []);
@@ -49,6 +49,12 @@ export default function Dashboard() {
   const [notes, setNotes] = useState([]);
   const [whispers, setWhispers] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+
+  // Trial state — only for non-owner users with onboarding state
+  const trialDaysRemaining = onboardingState?.trialDaysRemaining ?? null;
+  const trialExpired = trialDaysRemaining !== null && trialDaysRemaining <= 0 && profile?.seat_type === "free";
+  const trialEndingSoon = trialDaysRemaining !== null && trialDaysRemaining > 0 && trialDaysRemaining <= 5 && profile?.seat_type === "free";
 
   useEffect(() => {
     if (!user) return;
@@ -204,6 +210,66 @@ export default function Dashboard() {
               >
                 Here's what's on your desk.
               </p>
+
+              {/* Trial banner — show when trial expired or ending soon */}
+              {!trialBannerDismissed && (trialExpired || trialEndingSoon) && (
+                <div
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    background: "var(--color-bg-elevated)",
+                    border: `1px solid ${trialExpired ? "var(--color-warning)" : "var(--color-border)"}`,
+                    borderRadius: "var(--radius-lg)",
+                    marginBottom: "var(--space-4)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-3)",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                      {trialExpired ? "Your free trial has ended." : `Your trial ends in ${trialDaysRemaining} day${trialDaysRemaining !== 1 ? "s" : ""}.`}
+                    </div>
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                      {trialExpired
+                        ? "Subscribe to keep your Fül flowing, or bring your own API key."
+                        : "Lock in a plan to keep going after your trial — or bring your own key."}
+                    </div>
+                  </div>
+                  <Link
+                    href="/settings?tab=billing"
+                    style={{
+                      flexShrink: 0,
+                      padding: "var(--space-2) var(--space-3)",
+                      background: "var(--color-accent)",
+                      color: "var(--color-text-inverse)",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: "var(--font-weight-semibold)",
+                      fontFamily: "var(--font-primary)",
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {trialExpired ? `Upgrade — from ${TIERS.standard.priceLabel}` : "See plans"}
+                  </Link>
+                  <button
+                    onClick={() => setTrialBannerDismissed(true)}
+                    style={{
+                      position: "absolute",
+                      top: "var(--space-2)",
+                      right: "var(--space-2)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-dim)",
+                      padding: 2,
+                    }}
+                  >
+                    <X size={12} strokeWidth={2} />
+                  </button>
+                </div>
+              )}
 
               {/* Context nudge — show when user has no context and hasn't dismissed */}
               {!hasContext && !nudgeDismissed && (

@@ -1,7 +1,7 @@
 // Token budget manager — shared by all three vault models
 // Estimates token counts, scores relevance, selects notes that fit within budget
 
-const TOKEN_BUDGET = 100000; // ~100K tokens — owner tier has 200K context, use half for vault
+const TOKEN_BUDGET = 25000; // ~25K tokens — reduced from 100K, server caps at 20 items
 
 export function estimateTokens(text) {
   if (!text) return 0;
