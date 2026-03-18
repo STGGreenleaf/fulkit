@@ -18,8 +18,6 @@ export default function QuickCapture() {
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Hide on mobile — tab bar handles navigation, pencil conflicts with bottom bar
-  if (isMobile) return null;
 
   const submit = async () => {
     const text = value.trim();
@@ -93,8 +91,8 @@ export default function QuickCapture() {
     }
   }, [open, mode]);
 
-  // Don't render for unauthenticated, new, or dev users
-  if (!user || user.isNew || !user.id) return null;
+  // Don't render for unauthenticated, new, dev users, or mobile
+  if (!user || user.isNew || !user.id || isMobile) return null;
 
   const fabSize = 33;
 
