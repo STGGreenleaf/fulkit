@@ -372,7 +372,7 @@ export default function ChatContent({ isPopout = false }) {
               </span>
             )}
 
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
               {/* Sandbox toggle + chapter indicator */}
               {(
                 <>
@@ -400,7 +400,7 @@ export default function ChatContent({ isPopout = false }) {
                             padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
                           }}
                         >
-                          <ChevronDown size={12} strokeWidth={2} style={{ transform: showChapters ? "rotate(180deg)" : "none" }} />
+                          <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ transform: showChapters ? "rotate(180deg)" : "none" }} />
                           {!effectiveCompact && "Chapters"}
                         </button>
                       )}
@@ -414,7 +414,7 @@ export default function ChatContent({ isPopout = false }) {
                           padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
                         }}
                       >
-                        <X size={12} strokeWidth={2} />
+                        <X size={isMobile ? 18 : 12} strokeWidth={2} />
                         {!effectiveCompact && "End & Save"}
                       </button>
                     </>
@@ -429,7 +429,7 @@ export default function ChatContent({ isPopout = false }) {
                         padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
                       }}
                     >
-                      <Box size={12} strokeWidth={2} />
+                      <Box size={isMobile ? 18 : 12} strokeWidth={2} />
                       {!effectiveCompact && "Sandbox"}
                     </button>
                   )}
