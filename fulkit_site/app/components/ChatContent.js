@@ -503,7 +503,7 @@ export default function ChatContent({ isPopout = false }) {
                     borderRadius: "var(--radius-sm)",
                   }}
                 >
-                  <Pin size={12} strokeWidth={2} />
+                  <Pin size={isMobile ? 18 : 12} strokeWidth={2} />
                   {!effectiveCompact && "Pins"}
                 </button>
               )}
@@ -526,7 +526,7 @@ export default function ChatContent({ isPopout = false }) {
                     borderRadius: "var(--radius-sm)",
                   }}
                 >
-                  <Clock size={12} strokeWidth={2} />
+                  <Clock size={isMobile ? 18 : 12} strokeWidth={2} />
                   {!effectiveCompact && "History"}
                 </button>
               )}
