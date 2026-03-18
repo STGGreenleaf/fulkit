@@ -115,9 +115,8 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
           display: "flex",
           alignItems: "center",
           gap: isMobile ? 0 : "var(--space-1)",
-          padding: isMobile ? "var(--space-2) var(--space-1)" : "var(--space-3) var(--space-6)",
-          overflowX: isMobile ? "auto" : "visible",
-          WebkitOverflowScrolling: "touch",
+          padding: isMobile ? "var(--space-2) 0" : "var(--space-3) var(--space-6)",
+          justifyContent: isMobile ? "space-around" : "flex-start",
         }}
       >
         {TABS.map((t) => {
