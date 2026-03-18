@@ -15,6 +15,7 @@ import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const TAB_ICON_SIZE = 14;
 
@@ -62,6 +63,7 @@ export default function ThreadsPage({ initialFolder, initialView }) {
 
 function ThreadsContent({ initialFolder, initialView }) {
   const { user, compactMode } = useAuth();
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "threads" }); }, []);
@@ -466,8 +468,8 @@ function ThreadsContent({ initialFolder, initialView }) {
   // --- Render ---
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}

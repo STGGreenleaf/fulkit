@@ -12,6 +12,7 @@ import { useFabric } from "../../lib/fabric";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const TAB_ICON_SIZE = 14;
 
@@ -1539,6 +1540,7 @@ export default function FabricPage() {
     reconnectSpotify,
   } = useFabric();
 
+  const isMobile = useIsMobile();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "fabric" }); }, []);
   useOnboardingTrigger("fabric");
@@ -1993,8 +1995,8 @@ export default function FabricPage() {
           prev={prev}
         />
       )}
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
 
         <div
           style={{

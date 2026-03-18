@@ -11,6 +11,7 @@ import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const FILTERS = [
   { key: "active", Icon: Activity },
@@ -92,6 +93,7 @@ const fieldInputStyle = {
 
 export default function Actions() {
   const { user, compactMode } = useAuth();
+  const isMobile = useIsMobile();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "actions" }); }, []);
   useOnboardingTrigger("actions");
@@ -228,8 +230,8 @@ export default function Actions() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}

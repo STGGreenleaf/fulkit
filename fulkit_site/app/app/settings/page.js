@@ -40,6 +40,7 @@ const TAB_ICON_SIZE = 14;
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 import { TIERS, SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -263,6 +264,7 @@ const ALL_SOURCES = [
 
 export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const { compactMode, isOwner } = useAuth();
+  const isMobile = useIsMobile();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "settings" }); }, []);
   useOnboardingTrigger("settings");
@@ -278,11 +280,12 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         style={{
           display: "flex",
           width: "100%",
-          height: "100vh",
+          height: "100dvh",
           overflow: "hidden",
+          paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0,
         }}
       >
-        <Sidebar />
+        {!isMobile && <Sidebar />}
 
         {/* ─── Main ─── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>

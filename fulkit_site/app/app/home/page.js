@@ -12,6 +12,7 @@ import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
 import { SEAT_LIMITS, TIERS } from "../../lib/ful-config";
+import { useIsMobile } from "../../lib/use-mobile";
 
 
 function getGreeting() {
@@ -33,6 +34,7 @@ function timeAgo(dateStr) {
 
 export default function Dashboard() {
   const { user, profile, hasContext, accessToken, compactMode, onboardingState } = useAuth();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "home" }); }, []);
@@ -119,8 +121,8 @@ export default function Dashboard() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}

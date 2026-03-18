@@ -10,6 +10,7 @@ import InstallPrompt from "../components/InstallPrompt";
 import { SignalCollector } from "../lib/signal";
 import AnnouncementBanner from "../components/AnnouncementBanner";
 import SignalBoundary from "../components/SignalBoundary";
+import MobileTabBar from "../components/MobileTabBar";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
 const DEFAULTS = {
@@ -86,6 +87,7 @@ export default function RootLayout({ children }) {
               <SignalBoundary>
               {children}
               </SignalBoundary>
+              <MobileTabBar />
               <QuickCapture />
               <InstallPrompt />
               <AnnouncementBanner />

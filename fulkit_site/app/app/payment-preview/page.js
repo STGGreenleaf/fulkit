@@ -11,6 +11,7 @@ import {
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { TIERS, SEAT_LIMITS, CREDITS } from "../../lib/ful-config";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const GATEWAY_STEPS = [
   { id: "plans", label: "Choose Plan" },
@@ -27,6 +28,7 @@ const MOCK_PLANS = [
 ];
 
 export default function PaymentPreview() {
+  const isMobile = useIsMobile();
   const [gwStep, setGwStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [webhookEvents, setWebhookEvents] = useState([]);
@@ -147,8 +149,8 @@ export default function PaymentPreview() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div

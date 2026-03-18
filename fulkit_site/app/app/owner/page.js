@@ -46,6 +46,7 @@ import { supabase } from "../../lib/supabase";
 import LoadingMark from "../../components/LoadingMark";
 import LogoMark from "../../components/LogoMark";
 import { TIERS, CREDITS, COST_BASIS } from "../../lib/ful-config";
+import { useIsMobile } from "../../lib/use-mobile";
 
 const TAB_ICON_SIZE = 14;
 
@@ -180,6 +181,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
 /* ─── Standalone /owner page ─── */
 export default function Owner({ initialTab }) {
   const { isOwner, loading } = useAuth();
+  const isMobile = useIsMobile();
   const router = useRouter();
 
   useEffect(() => {
@@ -188,8 +190,8 @@ export default function Owner({ initialTab }) {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100vh", overflow: "hidden" }}>
-        <Sidebar />
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           <OwnerPanel initialTab={initialTab} urlPrefix="/owner" />
         </div>
