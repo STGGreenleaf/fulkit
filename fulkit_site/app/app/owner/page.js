@@ -164,7 +164,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
       </div>
 
       {/* Sub-tab content — full width */}
-      <div style={{ padding: isMobile ? "0 var(--space-2) var(--space-4)" : "0 var(--space-6) var(--space-6)" }}>
+      <div style={{ padding: isMobile ? "var(--space-3) var(--space-2) var(--space-4)" : "0 var(--space-6) var(--space-6)" }}>
         {tab === "dashboard" && <DashboardTab />}
         {tab === "questions" && <QuestionsTab />}
         {tab === "design" && <DesignTab />}
@@ -2323,16 +2323,17 @@ function SpacingBlock({ label, size, px }) {
 }
 
 function DesignTab() {
+  const isMobile = useIsMobile();
   return (
     <div>
 
       {/* ═══ MASTHEAD ═══ */}
-      <div style={{ marginBottom: "var(--space-12)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ marginBottom: isMobile ? "var(--space-4)" : "var(--space-12)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div style={{
-            fontSize: 64, fontWeight: "var(--font-weight-black)",
+            fontSize: isMobile ? 36 : 64, fontWeight: "var(--font-weight-black)",
             fontFamily: "var(--font-primary)", letterSpacing: "var(--letter-spacing-tighter)",
-            lineHeight: 1, color: "var(--color-text)", marginBottom: "var(--space-3)",
+            lineHeight: 1, color: "var(--color-text)", marginBottom: "var(--space-2)",
           }}>
             Fülkit
           </div>
@@ -3317,6 +3318,7 @@ function formatDollar(n) {
 
 function UsersTab() {
   const { accessToken } = useAuth();
+  const isMobile = useIsMobile();
   const [metrics, setMetrics] = useState(null);
 
   useEffect(() => {
@@ -3336,11 +3338,11 @@ function UsersTab() {
   const highlightUsers = REVENUE_GRID.find(r => r.users >= currentTotal)?.users || REVENUE_GRID[0].users;
 
   const cardStyle = {
-    padding: "var(--space-5)",
+    padding: isMobile ? "var(--space-3)" : "var(--space-5)",
     background: "var(--color-bg-elevated)",
     border: "1px solid var(--color-border-light)",
     borderRadius: "var(--radius-lg)",
-    marginBottom: "var(--space-6)",
+    marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)",
   };
 
   const sectionLabel = {
@@ -3350,7 +3352,7 @@ function UsersTab() {
     textTransform: "uppercase",
     letterSpacing: "var(--letter-spacing-widest)",
     color: "var(--color-text-dim)",
-    marginBottom: "var(--space-4)",
+    marginBottom: isMobile ? "var(--space-2)" : "var(--space-4)",
   };
 
   const thStyle = {
@@ -3936,9 +3938,9 @@ function SocialsTab() {
   return (
     <div>
       {/* Masthead */}
-      <div style={{ marginBottom: "var(--space-6)" }}>
+      <div style={{ marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)" }}>
         <h2 style={{
-          fontSize: "var(--font-size-3xl)",
+          fontSize: isMobile ? "var(--font-size-xl)" : "var(--font-size-3xl)",
           fontWeight: "var(--font-weight-black)",
           letterSpacing: "var(--letter-spacing-tighter)",
           lineHeight: "var(--line-height-tight)",
@@ -4592,9 +4594,9 @@ function PitchesTab() {
   const isMobile = useIsMobile();
   return (
     <div>
-      <div style={{ marginBottom: "var(--space-8)" }}>
+      <div style={{ marginBottom: isMobile ? "var(--space-3)" : "var(--space-8)" }}>
         <h2 style={{
-          fontSize: "var(--font-size-3xl)",
+          fontSize: isMobile ? "var(--font-size-xl)" : "var(--font-size-3xl)",
           fontWeight: "var(--font-weight-black)",
           letterSpacing: "var(--letter-spacing-tighter)",
           lineHeight: "var(--line-height-tight)",
