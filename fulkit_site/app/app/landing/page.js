@@ -146,11 +146,11 @@ export default function Landing() {
       {/* ─── HERO: DICTIONARY ENTRY ─── */}
       <section
         style={{
-          minHeight: "100vh",
+          minHeight: isMobile ? "auto" : "100vh",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+          justifyContent: isMobile ? "flex-start" : "center",
+          padding: isMobile ? "var(--space-16) var(--space-4) var(--space-8)" : "var(--space-24) var(--space-8)",
           maxWidth: isMobile ? "none" : 900,
         }}
       >
