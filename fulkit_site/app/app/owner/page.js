@@ -66,7 +66,7 @@ const TABS = [
 const VALID_TAB_IDS = TABS.map((t) => t.id);
 
 /* ─── OwnerPanel: reusable inner content (used by Settings > Owner tab) ─── */
-export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
+export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
   const { compactMode, accessToken } = useAuth();
   const [tab, setTab] = useState(initialTab && VALID_TAB_IDS.includes(initialTab) ? initialTab : "dashboard");
   const [maydayAlert, setMaydayAlert] = useState(false);
@@ -86,21 +86,24 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner" }) {
         });
         if (!res.ok) return;
         const data = await res.json();
-        setMaydayAlert(data.signals?.length > 0 && data.signals[0].created_at > lastSeen);
+        const active = data.signals?.length > 0 && data.signals[0].created_at > lastSeen;
+        setMaydayAlert(active);
+        if (onMayday) onMayday(active);
       } catch {}
     };
     checkMayday();
     const interval = setInterval(checkMayday, 60000);
     return () => clearInterval(interval);
-  }, [accessToken]);
+  }, [accessToken, onMayday]);
 
   // Clear alert when visiting Radio
   useEffect(() => {
     if (tab === "radio") {
       localStorage.setItem("fulkit-radio-last-seen", new Date().toISOString());
       setMaydayAlert(false);
+      if (onMayday) onMayday(false);
     }
-  }, [tab]);
+  }, [tab, onMayday]);
 
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>

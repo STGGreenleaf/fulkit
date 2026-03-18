@@ -268,6 +268,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
   useOnboardingTrigger("settings");
   const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
+  const [ownerMayday, setOwnerMayday] = useState(false);
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
 
@@ -350,6 +351,13 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                 >
                   <t.icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
                   {!compactMode && t.label}
+                  {t.id === "owner" && ownerMayday && (
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: "var(--color-error, #e53e3e)",
+                      flexShrink: 0, marginLeft: compactMode ? 0 : 2,
+                    }} />
+                  )}
                 </button>
               </Tooltip>
             );
@@ -366,7 +374,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
             {tab === "referrals" && <ReferralsTab />}
             {tab === "billing" && <BillingTab />}
             {tab === "privacy" && <PrivacyTab />}
-            {tab === "owner" && isOwner && <OwnerPanel initialTab={initialOwnerTab} urlPrefix="/settings/owner" />}
+            {tab === "owner" && isOwner && <OwnerPanel initialTab={initialOwnerTab} urlPrefix="/settings/owner" onMayday={setOwnerMayday} />}
           </div>
 
         {/* Footer — pinned to bottom, consistent across all tabs */}
