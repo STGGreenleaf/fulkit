@@ -125,17 +125,24 @@ export async function PUT(request) {
     const apiKey = process.env.VOYAGE_API_KEY;
     if (!apiKey) return Response.json({ error: "VOYAGE_API_KEY not set" }, { status: 500 });
 
-    // Fetch notes needing embeddings (boolean column — reliable through PostgREST)
-    const { data: notes, error: fetchErr } = await admin
+    // Fetch note IDs + embedded flag, filter in JS (avoids PostgREST issues with pgvector/boolean columns)
+    const { data: allNotes, error: fetchErr } = await admin
       .from("notes")
-      .select("id, title, content")
-      .eq("user_id", user.id)
-      .eq("embedded", false)
-      .order("created_at", { ascending: false })
-      .limit(100);
+      .select("id, embedded")
+      .eq("user_id", user.id);
 
     if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0, uid: user.id }, { status: 500 });
-    if (!notes?.length) return Response.json({ embedded: 0, message: "All notes already embedded", uid: user.id, queried: "embedded=false" });
+
+    const unembeddedIds = (allNotes || []).filter(n => !n.embedded).map(n => n.id).slice(0, 100);
+    if (!unembeddedIds.length) return Response.json({ embedded: 0, uid: user.id, total: allNotes?.length || 0, message: "All notes already embedded" });
+
+    // Fetch full content for unembedded notes
+    const { data: notes, error: contentErr } = await admin
+      .from("notes")
+      .select("id, title, content")
+      .in("id", unembeddedIds);
+
+    if (contentErr || !notes?.length) return Response.json({ error: contentErr?.message || "Content fetch failed", embedded: 0, uid: user.id });
 
     let embedded = 0;
     let failed = 0;
