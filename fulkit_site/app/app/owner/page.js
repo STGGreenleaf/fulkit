@@ -37,6 +37,7 @@ import {
   Send,
   Zap,
   BookOpen,
+  Settings2,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
@@ -1333,6 +1334,11 @@ function DeveloperTab() {
 
   const openCount = tickets.filter(t => t.status === "open").length;
 
+  // ── Drawer states ──
+  const [switchesOpen, setSwitchesOpen] = useState(false);
+  const [factsOpen, setFactsOpen] = useState(false);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
+
   // ── Broadcasts ──
   const [broadcasts, setBroadcasts] = useState([]);
   const [broadcastsLoading, setBroadcastsLoading] = useState(true);
@@ -2045,42 +2051,8 @@ function DeveloperTab() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 1fr", gap: isMobile ? "var(--space-3)" : "var(--space-4)", alignItems: "start" }}>
-      {/* ── On mobile: Switches first (moved from right column) ── */}
-      {isMobile && (
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ fontSize: 9, fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-            Switches
-          </div>
-          <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
-          <div style={{ height: "var(--space-2)" }} />
-          <DevSwitch label="Inspector" description="CSS selector overlay" on={inspector} onToggle={() => setInspector(!inspector)} />
-          <div style={{ height: "var(--space-3)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <button
-              onClick={runBatchEmbed}
-              disabled={embedding}
-              style={{
-                flex: 1, padding: "var(--space-2) var(--space-3)",
-                background: embedding ? "var(--color-bg-alt)" : "var(--color-accent)",
-                color: embedding ? "var(--color-text-muted)" : "var(--color-text-inverse)",
-                border: "none", borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)", cursor: embedding ? "default" : "pointer",
-              }}
-            >
-              {embedding ? "Embedding..." : "Embed Notes"}
-            </button>
-            {embedStatus && (
-              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
-                {embedStatus}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── LEFT: Tickets ── */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      {/* ── Tickets (priority — always on top) ── */}
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
           <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
@@ -2137,121 +2109,87 @@ function DeveloperTab() {
         )}
       </div>
 
-      {/* ── RIGHT: Outgoing ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "var(--space-3)" : "var(--space-4)", paddingTop: isMobile ? 0 : "var(--space-6)" }}>
-
-        {/* Dev Switches (hidden on mobile — rendered above tickets) */}
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", display: isMobile ? "none" : "block" }}>
-          <div style={{ fontSize: 9, fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-            Switches
+      {/* ── Switches (collapsible drawer) ── */}
+      <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <button onClick={() => setSwitchesOpen(!switchesOpen)} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" }}>
+          <Settings2 size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>Switches</span>
+          {switchesOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {switchesOpen && (
+          <div style={{ padding: "0 var(--space-3) var(--space-3)" }}>
+            <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
+            <div style={{ height: "var(--space-2)" }} />
+            <DevSwitch label="Inspector" description="CSS selector overlay" on={inspector} onToggle={() => setInspector(!inspector)} />
+            <div style={{ height: "var(--space-3)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <button onClick={runBatchEmbed} disabled={embedding} style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: embedding ? "var(--color-bg-alt)" : "var(--color-accent)", color: embedding ? "var(--color-text-muted)" : "var(--color-text-inverse)", border: "none", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: embedding ? "default" : "pointer" }}>
+                {embedding ? "Embedding..." : "Embed Notes"}
+              </button>
+              {embedStatus && <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{embedStatus}</span>}
+            </div>
           </div>
-          <DevSwitch label="Expanded View" description="Show labels in sidebar nav" on={!compactMode} onToggle={() => setCompactMode(!compactMode)} />
-          <div style={{ height: "var(--space-2)" }} />
-          <DevSwitch label="Inspector" description="CSS selector overlay + Ctrl+Shift+I" on={inspector} onToggle={() => setInspector(!inspector)} />
-          <div style={{ height: "var(--space-3)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <button
-              onClick={runBatchEmbed}
-              disabled={embedding}
-              style={{
-                flex: 1,
-                padding: "var(--space-2) var(--space-3)",
-                background: embedding ? "var(--color-bg-alt)" : "var(--color-accent)",
-                color: embedding ? "var(--color-text-muted)" : "var(--color-text-inverse)",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)",
-                cursor: embedding ? "default" : "pointer",
-              }}
-            >
-              {embedding ? "Embedding..." : "Embed Notes"}
-            </button>
-            {embedStatus && (
-              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
-                {embedStatus}
-              </span>
+        )}
+      </div>
+
+      {/* ── Quick Facts (collapsible drawer) ── */}
+      <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <button onClick={() => setFactsOpen(!factsOpen)} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" }}>
+          <Zap size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>Quick Facts</span>
+          <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", marginRight: "var(--space-2)" }}>{quickFacts.length}</span>
+          {factsOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {factsOpen && (
+          <div style={{ padding: "0 var(--space-3) var(--space-3)" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-2)" }}>
+              <button onClick={() => { setNewBroadcast({ channel: "context", subtype: "fact" }); setEditingBroadcast(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}><Plus size={14} /></button>
+            </div>
+            {quickFacts.length === 0 && !newBroadcast ? (
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No quick facts yet.</div>
+            ) : (
+              <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+                {quickFacts.map(b => (
+                  <div key={b.id}>
+                    <BroadcastItem b={b} />
+                    {editingBroadcast?.id === b.id && <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />}
+                  </div>
+                ))}
+              </div>
             )}
+            {newBroadcast?.channel === "context" && newBroadcast?.subtype !== "doc" && <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Quick Facts */}
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <Zap size={12} strokeWidth={2} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1 }}>
-              Quick Facts
-            </span>
-            <button
-              onClick={() => { setNewBroadcast({ channel: "context", subtype: "fact" }); setEditingBroadcast(null); }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
-            Short facts F{"\u00FC"}lkit knows about you and your brand.
-          </p>
-          {broadcastsLoading ? (
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-          ) : quickFacts.length === 0 && !newBroadcast ? (
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No quick facts yet.</div>
-          ) : (
-            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-              {quickFacts.map(b => (
-                <div key={b.id}>
-                  <BroadcastItem b={b} />
-                  {editingBroadcast?.id === b.id && (
-                    <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />
-                  )}
-                </div>
-              ))}
+      {/* ── Announcements (collapsible drawer) ── */}
+      <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <button onClick={() => setAnnouncementsOpen(!announcementsOpen)} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" }}>
+          <Megaphone size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>Announcements</span>
+          <span style={{ fontSize: 9, color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", marginRight: "var(--space-2)" }}>{announcementBroadcasts.length}</span>
+          {announcementsOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {announcementsOpen && (
+          <div style={{ padding: "0 var(--space-3) var(--space-3)" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-2)" }}>
+              <button onClick={() => { setNewBroadcast({ channel: "announcement" }); setEditingBroadcast(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}><Plus size={14} /></button>
             </div>
-          )}
-          {newBroadcast?.channel === "context" && newBroadcast?.subtype !== "doc" && (
-            <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />
-          )}
-        </div>
-
-        {/* Announcements */}
-        <div style={{ padding: "var(--space-3)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <Megaphone size={12} strokeWidth={2} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1 }}>
-              Announcements
-            </span>
-            <button
-              onClick={() => { setNewBroadcast({ channel: "announcement" }); setEditingBroadcast(null); }}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
-            >
-              <Plus size={14} />
-            </button>
+            {announcementBroadcasts.length === 0 && !newBroadcast ? (
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No announcements yet.</div>
+            ) : (
+              <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+                {announcementBroadcasts.map(b => (
+                  <div key={b.id}>
+                    <BroadcastItem b={b} />
+                    {editingBroadcast?.id === b.id && <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />}
+                  </div>
+                ))}
+              </div>
+            )}
+            {newBroadcast?.channel === "announcement" && <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />}
           </div>
-          <p style={{ fontSize: 9, color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-2)" }}>
-            Visible to users as a banner. Dismissible, delivered once.
-          </p>
-          {broadcastsLoading ? (
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-          ) : announcementBroadcasts.length === 0 && !newBroadcast ? (
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No announcements yet.</div>
-          ) : (
-            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-              {announcementBroadcasts.map(b => (
-                <div key={b.id}>
-                  <BroadcastItem b={b} />
-                  {editingBroadcast?.id === b.id && (
-                    <BroadcastEditor item={b} onSave={saveBroadcast} onCancel={() => setEditingBroadcast(null)} />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {newBroadcast?.channel === "announcement" && (
-            <BroadcastEditor item={newBroadcast} onSave={saveBroadcast} onCancel={() => setNewBroadcast(null)} />
-          )}
-        </div>
-
+        )}
       </div>
 
       {/* ── USER KNOWLEDGE BASE ── */}
