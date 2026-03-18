@@ -131,10 +131,10 @@ export async function PUT(request) {
       .select("id, embedded")
       .eq("user_id", user.id);
 
-    if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0, uid: user.id }, { status: 500 });
+    if (fetchErr) return Response.json({ error: fetchErr.message, embedded: 0 }, { status: 500 });
 
     const unembeddedIds = (allNotes || []).filter(n => !n.embedded).map(n => n.id).slice(0, 100);
-    if (!unembeddedIds.length) return Response.json({ embedded: 0, uid: user.id, total: allNotes?.length || 0, message: "All notes already embedded" });
+    if (!unembeddedIds.length) return Response.json({ embedded: 0, total: allNotes?.length || 0, message: "All notes already embedded" });
 
     // Fetch full content for unembedded notes
     const { data: notes, error: contentErr } = await admin
@@ -142,7 +142,7 @@ export async function PUT(request) {
       .select("id, title, content")
       .in("id", unembeddedIds);
 
-    if (contentErr || !notes?.length) return Response.json({ error: contentErr?.message || "Content fetch failed", embedded: 0, uid: user.id });
+    if (contentErr || !notes?.length) return Response.json({ error: contentErr?.message || "Content fetch failed", embedded: 0 });
 
     let embedded = 0;
     let failed = 0;
