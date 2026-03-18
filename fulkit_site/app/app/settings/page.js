@@ -268,7 +268,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "settings" }); }, []);
   useOnboardingTrigger("settings");
-  const tabs = (isOwner && !isMobile) ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
+  const tabs = isOwner ? [...TABS, { id: "owner", label: "Owner", icon: Crown }] : TABS;
   const [tab, setTab] = useState(initialTab);
   const [ownerMayday, setOwnerMayday] = useState(false);
 
@@ -356,6 +356,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
         >
           {tabs.map((t) => {
             const active = tab === t.id;
+            const hiddenOnMobile = t.id === "owner" && isMobile;
             return (
               <Tooltip key={t.id} label={compactMode ? t.label : null}>
                 <button
@@ -364,7 +365,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                     window.history.replaceState({}, "", `/settings/${t.id}`);
                   }}
                   style={{
-                    display: "flex",
+                    display: hiddenOnMobile ? "none" : "flex",
                     alignItems: "center",
                     gap: "var(--space-1-5)",
                     padding: "var(--space-2-5) var(--space-3)",
