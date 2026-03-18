@@ -124,17 +124,17 @@ export default function Dashboard() {
       <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
         {!isMobile && <Sidebar />}
 
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* Header */}
           <div style={{
-            padding: "var(--space-2-5) var(--space-6)",
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
             borderBottom: "1px solid var(--color-border-light)",
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
           }}>
             <span style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
@@ -151,7 +151,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6) var(--space-6)" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "var(--space-3) var(--space-3) var(--space-4)" : "var(--space-4) var(--space-6) var(--space-6)" }}>
             <div>
               {/* Greeting + Fül Gauge on same line */}
               <div style={{
@@ -357,21 +357,22 @@ export default function Dashboard() {
               {/* Two-column dashboard grid */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "var(--space-6)",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gap: isMobile ? "var(--space-3)" : "var(--space-6)",
                 alignItems: "start",
               }}>
                 {/* Left column — incoming signals */}
                 <div>
                   {/* Quick actions */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-8)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: isMobile ? "var(--space-4)" : "var(--space-8)" }}>
                     <Link
                       href="/chat"
                       style={{
                         display: "flex",
                         alignItems: "center",
+                        justifyContent: isMobile ? "center" : "flex-start",
                         gap: "var(--space-2)",
-                        padding: "var(--space-3) var(--space-4)",
+                        padding: isMobile ? "var(--space-3)" : "var(--space-3) var(--space-4)",
                         background: "var(--color-accent)",
                         color: "var(--color-text-inverse)",
                         borderRadius: "var(--radius-md)",
@@ -380,16 +381,17 @@ export default function Dashboard() {
                         textDecoration: "none",
                       }}
                     >
-                      <MessageCircle size={16} strokeWidth={1.8} />
-                      Start chatting
+                      <MessageCircle size={isMobile ? 20 : 16} strokeWidth={1.8} />
+                      {!isMobile && "Start chatting"}
                     </Link>
                     <Link
                       href="/hum"
                       style={{
                         display: "flex",
                         alignItems: "center",
+                        justifyContent: isMobile ? "center" : "flex-start",
                         gap: "var(--space-2)",
-                        padding: "var(--space-3) var(--space-4)",
+                        padding: isMobile ? "var(--space-3)" : "var(--space-3) var(--space-4)",
                         background: "var(--color-bg-elevated)",
                         border: "1px solid var(--color-border-light)",
                         color: "var(--color-text)",
@@ -399,8 +401,8 @@ export default function Dashboard() {
                         textDecoration: "none",
                       }}
                     >
-                      <Zap size={16} strokeWidth={1.8} />
-                      Open The Hum
+                      <Zap size={isMobile ? 20 : 16} strokeWidth={1.8} />
+                      {!isMobile && "Open The Hum"}
                     </Link>
                   </div>
 
