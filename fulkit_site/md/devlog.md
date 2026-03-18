@@ -5,7 +5,14 @@
 
 ---
 
-## Session 18 — 2026-03-18: Next 10 — Performance & Polish Sweep
+## Session 18 — 2026-03-18: Next 10 + Launch Readiness Audit
+
+### Milestone: TODO Restructured
+- Full production readiness audit: infrastructure, UX, scale risks, viral readiness
+- Archived completed phases (1–5.5, Security, Next 10) to `md/archive/todo-phases-1-5.md`
+- New TODO.md with 3-part structure: What's Next (10 items) / Watch List (10 monitors) / Manager's Choice (10 strategic bets)
+- Critical path updated: now at **Launch Hardening** phase
+- Top 3 non-negotiables before users: Sentry, CI/CD, database indexes
 
 ### What was built
 - **Actions button feedback** — `loadingIds` Set tracks in-flight operations. All async buttons (complete, defer, dismiss, reactivate, priority, bucket, add) now disable + dim during async. Prevents rage clicks (already tracked in signals).
