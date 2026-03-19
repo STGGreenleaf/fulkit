@@ -30,7 +30,7 @@ export async function GET(request) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Pull everything in parallel
+  // Pull everything in parallel (each query catches independently to prevent one failure from breaking all)
   const [
     { data: allReferrals },
     { data: allProfiles },
@@ -38,11 +38,11 @@ export async function GET(request) {
     { data: recentLedger },
     { data: byokRows },
   ] = await Promise.all([
-    admin.from("referrals").select("referrer_id, referred_id, status, credit_ful_per_month, created_at, activated_at, deactivated_at"),
-    admin.from("profiles").select("id, name, email, seat_type, total_active_referrals, referral_tier, lifetime_ful_earned, stripe_connect_account_id, api_spend_this_month, message_count, created_at"),
-    admin.from("payouts").select("id, user_id, amount_ful, amount_usd, status, created_at").order("created_at", { ascending: false }).limit(100),
-    admin.from("ful_ledger").select("id, user_id, type, amount_ful, description, created_at").order("created_at", { ascending: false }).limit(200),
-    admin.from("preferences").select("user_id").eq("key", "byok_key").not("value", "is", null),
+    admin.from("referrals").select("referrer_id, referred_id, status, credit_ful_per_month, created_at, activated_at, deactivated_at").then(r => r).catch(() => ({ data: [] })),
+    admin.from("profiles").select("id, name, email, seat_type, total_active_referrals, referral_tier, lifetime_ful_earned, stripe_connect_account_id, api_spend_this_month, messages_this_month, created_at").then(r => r).catch(() => ({ data: [] })),
+    admin.from("payouts").select("id, user_id, amount_ful, amount_usd, status, created_at").order("created_at", { ascending: false }).limit(100).then(r => r).catch(() => ({ data: [] })),
+    admin.from("ful_ledger").select("id, user_id, type, amount_ful, description, created_at").order("created_at", { ascending: false }).limit(200).then(r => r).catch(() => ({ data: [] })),
+    admin.from("preferences").select("user_id").eq("key", "byok_key").not("value", "is", null).then(r => r).catch(() => ({ data: [] })),
   ]);
 
   // ── Subscriber breakdown ──
@@ -56,7 +56,7 @@ export async function GET(request) {
     const st = p.seat_type || "free";
     if (subscribers[st] !== undefined) subscribers[st]++;
     totalApiSpend += parseFloat(p.api_spend_this_month || 0);
-    totalMessages += p.message_count || 0;
+    totalMessages += p.messages_this_month || 0;
 
     if (p.total_active_referrals > 0) {
       const tier = getTierForCount(p.total_active_referrals);
@@ -147,7 +147,7 @@ export async function GET(request) {
       tier: tier ? tier.label : "—",
       ful: calculateMonthlyFul(p.total_active_referrals || 0),
       apiSpend: Math.round(parseFloat(p.api_spend_this_month || 0) * 100) / 100,
-      messages: p.message_count || 0,
+      messages: p.messages_this_month || 0,
       joined: p.created_at,
     };
   }).sort((a, b) => b.refs - a.refs || b.messages - a.messages);
