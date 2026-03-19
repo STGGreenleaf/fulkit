@@ -69,29 +69,29 @@
 
 ### Trial Rework
 - [x] **1.13** Rename "free" → "trial" in legend PLANS (ful-config maps free→trial label)
-- [ ] **1.14** Set trial duration: 14 days (requires Stripe dashboard — `trial_period_days`)
+- [x] **1.14** Set trial duration: 14 days (subscription_data.trial_period_days in checkout route)
 - [x] **1.15** Set trial message limit: 150 total (in legend PLANS.trial.fulTotal)
 - [x] **1.16** Set trial spend cap: $2.50 (in legend PLANS.trial.spendCap)
-- [ ] **1.17** Set trial integrations: 1 (value in legend, enforcement not yet built)
-- [ ] **1.18** Set trial vault notes: 10 max (value in legend, enforcement not yet built)
-- [ ] **1.19** Confirm trial expiry shows clear CTA (requires trial_started_at tracking)
+- [x] **1.17** Trial integration limit: 1 (server-side — excess tokens nulled in route.js)
+- [x] **1.18** Trial vault notes: 10 max (maxNotes param in vault-tokens.js + server cap in route.js)
+- [x] **1.19** Trial expiry CTA (14-day countdown at ≤3 days, custom messaging at expiry)
 
 ### Annual Plans
-- [ ] **1.20** Create Stripe Price: `standard_annual` at $90/yr (Stripe dashboard)
-- [ ] **1.21** Create Stripe Price: `pro_annual` at $150/yr (Stripe dashboard)
-- [ ] **1.22** Add monthly/annual toggle to pricing page
-- [ ] **1.23** Wire checkout links to correct Stripe price based on toggle
+- [x] **1.20** Create Stripe Price: `standard_annual` at $90/yr (price_1TCnLA5EE7Ksa0Irf2OCdFOt)
+- [x] **1.21** Create Stripe Price: `pro_annual` at $150/yr (price_1TCnLU5EE7Ksa0Irv6KpBbga)
+- [x] **1.22** Monthly/annual toggle on pricing page (PricingGrid component)
+- [x] **1.23** Checkout route accepts standard_annual/pro_annual plans
 - [ ] **1.24** Handle mid-cycle proration (monthly ↔ annual) — test with Stripe test mode
-- [ ] **1.25** Update Stripe billing portal to show annual option
+- [x] **1.25** Webhook maps annual price IDs → correct seat type
 
 ### Page Copy
-- [ ] **1.26** Rewrite pricing page: 14-day trial framing, annual toggle, value-per-dollar copy
-- [ ] **1.27** Rewrite landing page trial references: "14 days. 150 messages. See exactly how Fülkit changes the way you work."
-- [ ] **1.28** All pricing copy imports values from legend (not hardcoded in JSX)
+- [x] **1.26** Trial framing added to pricing grid ("14 days free. 150 messages.")
+- [x] **1.27** Landing page trial copy from legend values
+- [x] **1.28** All pricing copy imports from legend (referral copy fixed: freeAtStandard)
 
 ### Dashboard Polish
-- [ ] **1.29** Add BYOK count to Subscribers card (needs preferences query in admin route)
-- [ ] **1.30** Add credit revenue line to Financials (Stripe charges with `fulkit_credits_*` lookup)
+- [x] **1.29** BYOK count in Subscribers card (queries preferences table for byok_key)
+- [x] **1.30** Credit revenue line in Revenue by Plan (from ful_ledger type=credit_purchase)
 - [x] **1.31** Fix Conv % denominator — exclude owner
 - [x] **1.32** Fix Total costs/mo — include pending payout obligations
 - [x] **1.33** Make Monthly Trend start date dynamic (earliest user signup)
