@@ -4724,16 +4724,16 @@ function SocialsTab() {
 /* ─── Pitches Tab ─── */
 
 function PitchesTab() {
-  const [activeCat, setActiveCat] = useState(null);
-  const items = activeCat ? PITCHES.filter(p => p.cat === activeCat) : [];
+  const [activeCat, setActiveCat] = useState("All");
+  const items = activeCat === "All" ? PITCHES : PITCHES.filter(p => p.cat === activeCat);
   return (
     <div>
       <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{PITCHES.length}</span></div>
       {/* Pill group */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-        {PITCH_CATEGORIES.map((cat) => {
+        {["All", ...PITCH_CATEGORIES].map((cat) => {
           const active = activeCat === cat;
-          const count = PITCHES.filter(p => p.cat === cat).length;
+          const count = cat === "All" ? PITCHES.length : PITCHES.filter(p => p.cat === cat).length;
           return (
             <button key={cat} onClick={() => setActiveCat(active ? null : cat)} style={{
               padding: "var(--space-2) var(--space-3)",
@@ -4751,7 +4751,7 @@ function PitchesTab() {
         })}
       </div>
       {/* List for selected category */}
-      {activeCat && (
+      {items.length > 0 && (
         <div style={{
           background: "var(--color-bg-elevated)",
           border: "1px solid var(--color-border-light)",
