@@ -3570,10 +3570,8 @@ const PITCHES = [
   // ── Value Props ──
   { cat: "Value Props", text: `$${TIERS.standard.price}/mo. No onboarding. It read your notes.`, star: true },
   { cat: "Value Props", text: `You\u2019re paying $92/mo for 8 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
-  { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
   { cat: "Value Props", text: `$${TIERS.standard.price}/mo. AI chat. Voice capture. Task manager. Note system. Decision log. One app.` },
   { cat: "Value Props", text: `ChatGPT Plus is $20. It doesn\u2019t know your name. F\u00FClkit is $${TIERS.standard.price}. It knows your week.`, star: true },
-  { cat: "Value Props", text: "You spend the first 3 messages catching AI up to speed. F\u00FClkit starts at message zero." },
   { cat: "Value Props", text: `$${TIERS.standard.price}/mo is less than one lunch. F\u00FClkit remembers every lunch meeting you\u2019ve ever had.`, star: true },
   { cat: "Value Props", text: "Cancel 3 subscriptions. Keep F\u00FClkit. You\u2019re still saving money." },
   { cat: "Value Props", text: "Every other AI starts with a blank page. F\u00FClkit starts with yours.", star: true },
@@ -3621,6 +3619,8 @@ const PITCHES = [
   { cat: "Comparisons", text: "You can talk to ChatGPT. You can talk with F\u00FClkit. There\u2019s a difference.", star: true },
   { cat: "Comparisons", text: "Every productivity app is a filing cabinet. F\u00FClkit is the person who knows where everything is." },
   { cat: "Comparisons", text: "Alexa, Siri, and Google listen to commands. F\u00FClkit listens to context." },
+  { cat: "Comparisons", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
+  { cat: "Comparisons", text: "You spend the first 3 messages catching AI up to speed. F\u00FClkit starts at message zero." },
   // ── Features ──
   { cat: "Features", text: "You talked for 5 minutes. You never looked at a screen. Everything was filed." },
   { cat: "Features", text: "No transcript. No typing. Just an orb that breathes while you think out loud.", star: true },
@@ -3773,7 +3773,6 @@ const PITCHES = [
   // ── For Cynics ──
   // ── Cynics ──
   { cat: "Cynics", text: "Another AI app. Except this one shuts up until it has something useful to say.", star: true },
-  { cat: "Cynics", text: "It\u2019s not magic. It\u2019s memory.", star: true },
   { cat: "Cynics", text: "We\u2019re not revolutionizing anything. We just made your notes useful." },
   { cat: "Cynics", text: "You don\u2019t need another app. You need fewer apps.", star: true },
   { cat: "Cynics", text: "No blockchain. No metaverse. No \u2018delightful experience.\u2019 Just a tool that works.", star: true },
@@ -3836,7 +3835,6 @@ const PITCHES = [
   { cat: "Design", text: "When in doubt, we remove something. It\u2019s always the right call." },
   { cat: "Design", text: "Pretty is easy. Quiet is hard. We built quiet.", star: true },
   { cat: "Design", text: "Form follows function. Color follows meaning. Everything else is removed." },
-  { cat: "Design", text: "One color family. Warm grey. Because your work is the color." },
   { cat: "Design", text: "We don\u2019t have a mascot. We have a typeface.", star: true },
   // ── For Creatives ──
   // ── Creatives ──
@@ -3878,9 +3876,28 @@ const PITCHES = [
   { cat: "Entrepreneurs", text: "Board meeting prep used to take a day. Now you open F\u00FClkit and ask \u201Cwhat happened this quarter?\u201D", star: true },
   { cat: "Entrepreneurs", text: `You can\u2019t hire a chief of staff. You can get F\u00FClkit for $${TIERS.standard.price}.` },
   { cat: "Entrepreneurs", text: "The difference between a founder who wings it and a founder who\u2019s prepared is what their AI remembers.", star: true },
+  // ── Switch ──
+  { cat: "Switch", text: "Cancel Notion. Cancel Otter. Cancel Todoist. Open F\u00FClkit. That\u2019s the whole migration.", star: true },
+  { cat: "Switch", text: "The hardest part of switching is deciding to. After that it takes 4 minutes.", star: true },
+  { cat: "Switch", text: "You don\u2019t need to export anything. Just start talking. F\u00FClkit builds your brain from day one." },
+  { cat: "Switch", text: "No migration wizard. No CSV import hell. Just open it and go." },
+  { cat: "Switch", text: "Your old apps had 3 years of notes you never looked at. Start fresh. F\u00FClkit will be smarter than them by Friday.", star: true },
+  { cat: "Switch", text: "You\u2019re not \u201Cinvested\u201D in your old apps. You\u2019re trapped. There\u2019s a difference.", star: true },
+  { cat: "Switch", text: "Sunk cost isn\u2019t a reason to keep paying. It\u2019s a reason to stop.", star: true },
+  { cat: "Switch", text: "That Notion setup you spent a weekend building? You haven\u2019t opened it in 3 weeks. It\u2019s okay to let go.", star: true },
+  { cat: "Switch", text: "You don\u2019t owe your productivity stack loyalty." },
+  { cat: "Switch", text: "Every app you cancel is one less password, one less tab, one less \u201Cjust checking in!\u201D email." },
+  { cat: "Switch", text: "Your old apps will send you \u201Cwe miss you\u201D emails. F\u00FClkit won\u2019t. It\u2019ll be too busy remembering your week.", star: true },
+  { cat: "Switch", text: "Day 1: skeptical. Day 3: curious. Day 7: you forgot you had other apps.", star: true },
+  { cat: "Switch", text: "The first time F\u00FClkit references something you said last week without being asked \u2014 that\u2019s the moment you know.", star: true },
+  { cat: "Switch", text: "Nobody switches back. Not because they can\u2019t. Because there\u2019s nothing to go back to.", star: true },
+  { cat: "Switch", text: "You\u2019ll spend 5 minutes setting up F\u00FClkit and wonder why you spent 5 years setting up everything else.", star: true },
+  { cat: "Switch", text: "Cancel 3 apps today. Sign up for F\u00FClkit. Net savings by tomorrow: $40+/mo." },
+  { cat: "Switch", text: "The free trial is 100 messages. That\u2019s enough to know." },
+  { cat: "Switch", text: `$${TIERS.standard.price}/mo. 30-day cancel anytime. No annual trap. No \u201Care you sure?\u201D guilt screen.`, star: true },
 ];
 
-const PITCH_CATEGORIES = ["Value Props", "Ful-Up", "Comparisons", "Features", "Fabric", "Security", "One-Liners", "Brand", "Design", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
+const PITCH_CATEGORIES = ["Value Props", "Ful-Up", "Comparisons", "Features", "Fabric", "Security", "One-Liners", "Brand", "Design", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs", "Switch"];
 
 /* ─── Socials Tab ─── */
 
