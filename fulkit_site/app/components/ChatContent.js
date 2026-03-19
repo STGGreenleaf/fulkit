@@ -121,7 +121,7 @@ export default function ChatContent({ isPopout = false }) {
   // ─── UI-only state ────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/history");
   const [historyWidth, setHistoryWidth] = useState(260);
-  const [topicFilter, setTopicFilter] = useState(null);
+  const [topicFilters, setTopicFilters] = useState(new Set());
   const [chatDragOver, setChatDragOver] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
@@ -1454,9 +1454,9 @@ export default function ChatContent({ isPopout = false }) {
                       if (sorted.length === 0) return null;
                       return (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: "var(--space-2)", paddingBottom: "var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
-                          {topicFilter && (
+                          {topicFilters.size > 0 && (
                             <button
-                              onClick={() => setTopicFilter(null)}
+                              onClick={() => setTopicFilters(new Set())}
                               style={{
                                 fontSize: "var(--font-size-xs)", padding: "4px 10px", borderRadius: "var(--radius-sm)",
                                 border: "1px solid var(--color-border)", background: "transparent",
@@ -1467,14 +1467,14 @@ export default function ChatContent({ isPopout = false }) {
                           {sorted.map(([topic]) => (
                             <button
                               key={topic}
-                              onClick={() => setTopicFilter(topicFilter === topic ? null : topic)}
+                              onClick={() => setTopicFilters(prev => { const next = new Set(prev); next.has(topic) ? next.delete(topic) : next.add(topic); return next; })}
                               style={{
                                 fontSize: "var(--font-size-xs)", padding: "4px 10px", borderRadius: "var(--radius-sm)",
-                                border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border)"}`,
-                                background: topicFilter === topic ? "var(--color-bg-alt)" : "transparent",
-                                color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-muted)",
+                                border: `1px solid ${topicFilters.has(topic) ? "var(--color-text-muted)" : "var(--color-border)"}`,
+                                background: topicFilters.has(topic) ? "var(--color-bg-alt)" : "transparent",
+                                color: topicFilters.has(topic) ? "var(--color-text)" : "var(--color-text-muted)",
                                 cursor: "pointer", fontFamily: "var(--font-primary)",
-                                fontWeight: topicFilter === topic ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                                fontWeight: topicFilters.has(topic) ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
                               }}
                             >{topic}</button>
                           ))}
@@ -1483,7 +1483,7 @@ export default function ChatContent({ isPopout = false }) {
                     })()}
                     {/* Conversation list — swipe left to reveal delete */}
                     {chat.conversations
-                      .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
+                      .filter((conv) => topicFilters.size === 0 || (conv.topics || []).some(t => topicFilters.has(t)))
                       .map((conv) => (
                         <div
                           key={conv.id}
@@ -1547,7 +1547,7 @@ export default function ChatContent({ isPopout = false }) {
                           </button>
                         </div>
                       ))}
-                    {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
+                    {topicFilters.size > 0 && chat.conversations.filter((c) => (c.topics || []).some(t => topicFilters.has(t))).length === 0 && (
                       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
                         No conversations with this topic.
                       </div>
@@ -1763,9 +1763,9 @@ export default function ChatContent({ isPopout = false }) {
                     if (sorted.length === 0) return null;
                     return (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: "var(--space-2)", paddingBottom: "var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
-                        {topicFilter && (
+                        {topicFilters.size > 0 && (
                           <button
-                            onClick={() => setTopicFilter(null)}
+                            onClick={() => setTopicFilters(new Set())}
                             style={{
                               fontSize: "var(--font-size-2xs)",
                               padding: "2px 6px",
@@ -1783,17 +1783,17 @@ export default function ChatContent({ isPopout = false }) {
                         {sorted.map(([topic, count]) => (
                           <button
                             key={topic}
-                            onClick={() => setTopicFilter(topicFilter === topic ? null : topic)}
+                            onClick={() => setTopicFilters(prev => { const next = new Set(prev); next.has(topic) ? next.delete(topic) : next.add(topic); return next; })}
                             style={{
                               fontSize: "var(--font-size-2xs)",
                               padding: "2px 6px",
                               borderRadius: "var(--radius-sm)",
-                              border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border-light)"}`,
-                              background: topicFilter === topic ? "var(--color-bg-alt)" : "transparent",
-                              color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-dim)",
+                              border: `1px solid ${topicFilters.has(topic) ? "var(--color-text-muted)" : "var(--color-border-light)"}`,
+                              background: topicFilters.has(topic) ? "var(--color-bg-alt)" : "transparent",
+                              color: topicFilters.has(topic) ? "var(--color-text)" : "var(--color-text-dim)",
                               cursor: "pointer",
                               fontFamily: "var(--font-primary)",
-                              fontWeight: topicFilter === topic ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                              fontWeight: topicFilters.has(topic) ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
                             }}
                           >
                             {topic}
@@ -1805,7 +1805,7 @@ export default function ChatContent({ isPopout = false }) {
 
                   {/* Conversation list (filtered by topic if selected) */}
                   {chat.conversations
-                    .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
+                    .filter((conv) => topicFilters.size === 0 || (conv.topics || []).some(t => topicFilters.has(t)))
                     .map((conv) => (
                     <div
                       key={conv.id}
@@ -1874,7 +1874,7 @@ export default function ChatContent({ isPopout = false }) {
                       </button>
                     </div>
                   ))}
-                  {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
+                  {topicFilters.size > 0 && chat.conversations.filter((c) => (c.topics || []).some(t => topicFilters.has(t))).length === 0 && (
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
                       No conversations with this topic.
                     </div>
