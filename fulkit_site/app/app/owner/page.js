@@ -3941,11 +3941,12 @@ function SocialsTab() {
     <div>
       <button onClick={() => setSocialsOpen(prev => !prev)} style={{
         ...TAB_TITLE,
-        background: "none", border: "none", cursor: "pointer",
-        display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", textAlign: "left",
+        background: "var(--color-bg)", border: "1px solid var(--color-border-light)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
+        padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
       }}>
-        {socialsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         Socials & Identity
+        {socialsOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
       </button>
 
       {socialsOpen && (<>
