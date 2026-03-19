@@ -430,6 +430,11 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
               console.log("[chat:debug]", JSON.stringify(parsed.debugPost, null, 2));
               continue;
             }
+            if (parsed.status === "retrying") {
+              console.log(`[chat] API busy, retrying (attempt ${parsed.attempt}/3)...`);
+              setStreamPhase("retrying");
+              continue;
+            }
             const { text: chunk, error } = parsed;
             if (error) {
               // Flush any buffered content first, then show error

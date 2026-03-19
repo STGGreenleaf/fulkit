@@ -33,7 +33,7 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
     return () => clearInterval(tick);
   }, [startedAt]);
 
-  const label = phase === "preparing" ? "Preparing" : phase === "connecting" ? "Connecting" : "Thinking";
+  const label = phase === "preparing" ? "Preparing" : phase === "connecting" ? "Connecting" : phase === "retrying" ? "AI busy, retrying" : "Thinking";
   const showTime = elapsed >= 4;
 
   return (
@@ -1201,11 +1201,24 @@ export default function ChatContent({ isPopout = false }) {
                 <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
                   <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
                     {remaining} message{remaining !== 1 ? "s" : ""} left —{" "}
-                    <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
-                      {profile?.seat_type === "free" ? "upgrade" : `grab ${CREDITS.amount} more for ${CREDITS.priceLabel}`}
-                    </Link>
-                    {profile?.seat_type === "standard" && (
-                      <>{" "}or <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>go Pro for longer responses</Link></>
+                    {profile?.seat_type === "free" ? (
+                      <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
+                        subscribe to keep everything you&apos;ve built
+                      </Link>
+                    ) : (
+                      <>
+                        <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
+                          {CREDITS.amount} more for {CREDITS.priceLabel}
+                        </Link>
+                        {profile?.seat_type === "standard" && (
+                          <>{" "}&middot; <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
+                            Pro: {TIERS.pro.messages} msgs + longer responses — {TIERS.pro.priceLabel}
+                          </Link></>
+                        )}
+                        {" "}&middot; <Link href="/settings?tab=billing" style={{ color: "var(--color-text-muted)", textDecoration: "underline" }}>
+                          annual saves ${(profile?.seat_type === "standard" ? 18 : 30)}/yr
+                        </Link>
+                      </>
                     )}
                   </div>
                 </div>

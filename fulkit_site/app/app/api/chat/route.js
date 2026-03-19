@@ -2756,10 +2756,42 @@ Never skip the preview step. The user must see and approve changes before they g
               break;
             }
             console.log("[chat] starting stream round", round, "model:", config.model, "tools:", allTools.length);
-            const stream = anthropic.messages.stream({
-              ...baseOpts,
-              messages: loopMessages,
-            });
+
+            // Retry wrapper: 3 attempts with exponential backoff on 429/529
+            let stream;
+            let streamConnected = false;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                stream = anthropic.messages.stream({
+                  ...baseOpts,
+                  messages: loopMessages,
+                });
+                streamConnected = true;
+                break;
+              } catch (retryErr) {
+                const status = retryErr?.status || retryErr?.error?.status;
+                if ((status === 429 || status === 529) && attempt < 2) {
+                  const delay = (attempt + 1) * 1500; // 1.5s, 3s
+                  console.warn(`[chat] API ${status}, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+                  try {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ status: "retrying", attempt: attempt + 1 })}\n\n`)
+                    );
+                  } catch {}
+                  await new Promise(r => setTimeout(r, delay));
+                  continue;
+                }
+                throw retryErr;
+              }
+            }
+            if (!stream) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ error: "AI service is temporarily busy. Try again in a moment." })}\n\n`)
+              );
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              return;
+            }
 
             // Stream text deltas to client
             for await (const event of stream) {
