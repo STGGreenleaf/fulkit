@@ -212,6 +212,19 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     streamingRef.current = true;
     console.log("[sendMessage] lock acquired, streamingRef → true");
 
+    let convId = null;
+    let fullResponse = "";
+    let firstChunkReceived = false;
+    let safetyTimeout = null;
+    let fetchStart = Date.now();
+    let msgCount = 0;
+    const msgTimestamp = Date.now();
+    const assistantTs = Date.now();
+
+    try {
+    // ─── Message setup (inside try so lock always releases) ──
+    console.log("[sendMessage] step:setup");
+
     // On retry, remove the failed assistant message before re-sending
     if (isRetry) {
       setMessages((prev) => {
@@ -220,7 +233,6 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       });
     }
 
-    const msgTimestamp = Date.now();
     const userMsg = isRetry ? null : { role: "user", content: text, _ts: msgTimestamp };
     // For retry, reuse existing messages (user msg is already there); for new, append user msg
     let apiMessages = isRetry ? [...messages.filter((m) => !m._failed)] : [...messages, userMsg];
@@ -253,20 +265,15 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     setStreamStartedAt(Date.now());
     streamingRef.current = true;
 
-    let convId = null;
-    let fullResponse = "";
-    let firstChunkReceived = false;
-    let safetyTimeout = null;
-    const assistantTs = Date.now();
-    let fetchStart = Date.now();
-    let msgCount = 0;
+    console.log("[sendMessage] step:setup done, messages:", apiMessages.length, "sandbox:", !!sandboxMode);
 
-    try {
       // Create conversation — timeout after 5s, don't block if it fails
+      console.log("[sendMessage] step:conversation");
       convId = await ensureConversation(text);
       if (!convId && !isRetry) {
         console.warn("[sendMessage] no conversation — messages will not be saved");
       }
+      console.log("[sendMessage] step:conversation done, convId:", convId ? "yes" : "null");
 
       // Save user message in background (skip on retry — already saved)
       if (!isRetry) {
@@ -472,6 +479,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         });
       }
     } catch (err) {
+      console.error("[sendMessage] CAUGHT:", err.name, err.message, err.stack?.split("\n")[1]);
       clearTimeout(safetyTimeout);
       let isFailed = false;
       if (err.name === "AbortError" && !firstChunkReceived) {
