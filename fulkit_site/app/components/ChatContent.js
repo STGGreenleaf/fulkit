@@ -1316,7 +1316,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       Pinned
                     </span>
-                    <button type="button" onClick={() => router.push("/chat")} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => { setShowPins(false); window.history.replaceState(null, "", "/chat"); }} style={toolbarBtn(false)}>
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
@@ -1336,7 +1336,8 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                           key={pin.id}
                           onClick={() => {
                             chat.openConversation({ id: pin.conversation_id });
-                            router.push("/chat");
+                            setShowPins(false);
+                            window.history.replaceState(null, "", "/chat");
                           }}
                           style={{
                             display: "flex",
@@ -1417,7 +1418,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       History
                     </span>
-                    <button type="button" onClick={() => router.push("/chat")} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => { setShowHistory(false); window.history.replaceState(null, "", "/chat"); }} style={toolbarBtn(false)}>
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
@@ -1465,7 +1466,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                       .map((conv) => (
                         <button
                           key={conv.id}
-                          onClick={() => { chat.openConversation(conv); router.push("/chat"); }}
+                          onClick={() => { chat.openConversation(conv); setShowHistory(false); window.history.replaceState(null, "", "/chat"); }}
                           style={{
                             display: "flex",
                             alignItems: "center",
