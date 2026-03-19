@@ -3614,9 +3614,61 @@ const PITCHES = [
   { cat: "Security", text: "ChatGPT says \u201Cwe may retain your data for 30 days.\u201D F\u00FClkit says \u201Cdelete now\u201D and means it." },
   { cat: "Security", text: "We publish our security architecture because we built it to be read. Most AI apps don\u2019t \u2014 because they can\u2019t." },
   { cat: "Security", text: "Security is not a feature we added. It\u2019s the way we built everything else." },
+  // ── For Cynics ──
+  { cat: "Cynics", text: "Another AI app. Except this one shuts up until it has something useful to say." },
+  { cat: "Cynics", text: "It\u2019s not magic. It\u2019s memory." },
+  { cat: "Cynics", text: "We\u2019re not revolutionizing anything. We just made your notes useful." },
+  { cat: "Cynics", text: "You don\u2019t need another app. You need fewer apps." },
+  { cat: "Cynics", text: "No blockchain. No metaverse. No \u2018delightful experience.\u2019 Just a tool that works." },
+  { cat: "Cynics", text: "Tired of catching AI up to speed? Same." },
+  { cat: "Cynics", text: "We won\u2019t change your life. We\u2019ll save you 40 minutes a day." },
+  { cat: "Cynics", text: "Zero push notifications. We respect your attention span." },
+  { cat: "Cynics", text: "Your data isn\u2019t the product. You are the customer. There\u2019s a difference." },
+  { cat: "Cynics", text: "We don\u2019t have a feature roadmap on a public Notion board. We just ship." },
+  { cat: "Cynics", text: "Yes, it uses AI. No, it\u2019s not a ChatGPT wrapper." },
+  { cat: "Cynics", text: "No VC money. No growth-at-all-costs. Just a tool someone actually uses." },
+  // ── For Developers ──
+  { cat: "Developers", text: "Supabase. Row-level security. AES-256-GCM. No plaintext secrets. Read the receipts." },
+  { cat: "Developers", text: "Bring your own key. Your API calls, your model, your bill." },
+  { cat: "Developers", text: "No vendor lock-in. Export everything. Delete everything. We wrote the cascade." },
+  { cat: "Developers", text: "Every query is scoped by user ID at the database level. Not the app level. The database level." },
+  { cat: "Developers", text: "Strict CSP. No eval(). No inline scripts. No exceptions." },
+  { cat: "Developers", text: "Three storage models. Local-first, encrypted sync, or managed. You pick." },
+  { cat: "Developers", text: "Tokens encrypted before they touch the database. Decrypted in memory. Never logged." },
+  { cat: "Developers", text: "One repo. One framework. No microservices pretending to be simple." },
+  { cat: "Developers", text: "Built for people who think in keyboard shortcuts." },
+  { cat: "Developers", text: "No analytics SDK. No Mixpanel. No \u2018anonymous\u2019 telemetry that isn\u2019t." },
+  { cat: "Developers", text: "The security model is documented. Not behind a sales call." },
+  { cat: "Developers", text: "REST. Bearer tokens. JSON. Not a GraphQL schema that needs a PhD." },
+  // ── For Creatives ──
+  { cat: "Creatives", text: "Your ideas deserve better than a notes app graveyard." },
+  { cat: "Creatives", text: "You had the idea Tuesday. The connection was there Thursday. F\u00FClkit saw it Wednesday." },
+  { cat: "Creatives", text: "No notification badges. No social feeds. Just you and what you\u2019re thinking." },
+  { cat: "Creatives", text: "Talk through it. F\u00FClkit listens, files, connects. You just think out loud." },
+  { cat: "Creatives", text: "It doesn\u2019t interrupt. It whispers. Like a collaborator who reads the room." },
+  { cat: "Creatives", text: "Built by a designer. For people who notice when something feels off." },
+  { cat: "Creatives", text: "The font was designed for German road signs. Legible at speed. Beautiful at rest." },
+  { cat: "Creatives", text: "Your creative process is messy. Your tools don\u2019t have to be." },
+  { cat: "Creatives", text: "No blank canvas anxiety. Open it and it already knows what you\u2019re working on." },
+  { cat: "Creatives", text: "Signal Terrain \u2014 your music, visualized. Because sound has shape." },
+  { cat: "Creatives", text: "One color family. Warm grey. Because your work is the color." },
+  { cat: "Creatives", text: "Dieter Rams said \u2018less, but better.\u2019 We listened." },
+  // ── For Entrepreneurs ──
+  { cat: "Entrepreneurs", text: "Your AI doesn\u2019t know about the investor call, the pricing pivot, or the hire you\u2019re agonizing over. F\u00FClkit does." },
+  { cat: "Entrepreneurs", text: "Every conversation starts with context. Not from scratch." },
+  { cat: "Entrepreneurs", text: `Notes app. Task manager. AI chat. Voice recorder. Decision log. $${TIERS.standard.price}/month. One app.` },
+  { cat: "Entrepreneurs", text: "Move fast. Don\u2019t explain yourself twice." },
+  { cat: "Entrepreneurs", text: "Solo founder? F\u00FClkit is the thinking partner you can\u2019t afford to hire." },
+  { cat: "Entrepreneurs", text: "Friday brain dump \u2192 Monday action list. Automatically." },
+  { cat: "Entrepreneurs", text: "Investors ask about security. You send them the architecture doc. Not a slide deck." },
+  { cat: "Entrepreneurs", text: "Every decision you\u2019ve made, searchable. Every pivot, timestamped." },
+  { cat: "Entrepreneurs", text: `$${TIERS.standard.price}/month. Less than your coffee. More than your current stack delivers.` },
+  { cat: "Entrepreneurs", text: "Stripe, Shopify, Square, GitHub \u2014 already connected. Your business data in your bestie\u2019s brain." },
+  { cat: "Entrepreneurs", text: "It\u2019s not a pitch deck tool. It\u2019s the thing that makes your pitch deck honest." },
+  { cat: "Entrepreneurs", text: "You have 14 hours a day and 40 priorities. F\u00FClkit remembers all of them." },
 ];
 
-const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts"];
+const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
 
 /* ─── Socials Tab ─── */
 
@@ -3796,8 +3848,6 @@ function SocialsTab() {
   const [metaOpen, setMetaOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-metaOpen") === "true");
   const [socialsOpen, setSocialsOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialsOpen") === "true");
   const [socialSize, setSocialSize] = useState("og");
-  const [customW, setCustomW] = useState(1080);
-  const [customH, setCustomH] = useState(1080);
   const [socialConceptIdx, setSocialConceptIdx] = useState(0);
   const [socialKitOpen, setSocialKitOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialKitOpen") === "true");
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
@@ -4397,11 +4447,11 @@ function SocialsTab() {
           { key: "og", label: "Bluesky / OG", dims: "1200 \u00D7 630", aspect: "1200/630" },
           { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350" },
           { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920" },
-          { key: "custom", label: "Custom", dims: `${customW} \u00D7 ${customH}`, aspect: `${customW}/${customH}` },
+          { key: "square", label: "1:1", dims: "1080 \u00D7 1080", aspect: "1080/1080" },
         ];
         const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
         const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
-        const sizeParam = socialSize === "custom" ? `custom&w=${customW}&h=${customH}` : socialSize;
+        const sizeParam = socialSize;
         return (
           <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
             <button onClick={() => setSocialKitOpen(prev => !prev)} style={{
@@ -4440,13 +4490,6 @@ function SocialsTab() {
                     <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{p.dims}</span>
                   </button>
                 ))}
-                {socialSize === "custom" && (
-                  <div style={{ display: "flex", gap: "var(--space-2)", padding: "var(--space-1) 0" }}>
-                    <input type="number" value={customW} onChange={e => setCustomW(Number(e.target.value) || 100)} style={{ ...inputStyle, width: 70, fontSize: "var(--font-size-2xs)", padding: "var(--space-1)" }} />
-                    <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", alignSelf: "center" }}>{"\u00D7"}</span>
-                    <input type="number" value={customH} onChange={e => setCustomH(Number(e.target.value) || 100)} style={{ ...inputStyle, width: 70, fontSize: "var(--font-size-2xs)", padding: "var(--space-1)" }} />
-                  </div>
-                )}
               </div>
 
               {/* Right: Concept carousel */}
@@ -4545,7 +4588,7 @@ function SocialsTab() {
           { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
           { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
           { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
-          { key: "custom", label: "Custom", aspect: `${customW}/${customH}` },
+          { key: "square", label: "1:1", aspect: "1080/1080" },
         ];
         const ci = concepts.indexOf(previewTemplate.concept);
         const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
