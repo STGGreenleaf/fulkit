@@ -24,6 +24,10 @@ let _priceCache = null;
 let _priceCacheTime = 0;
 const PRICE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
+// Semantic search fallback cache (per-user, 5min TTL)
+const _semanticCache = new Map();
+const SEMANTIC_CACHE_TTL = 5 * 60 * 1000;
+
 async function getStripePrices() {
   if (_priceCache && Date.now() - _priceCacheTime < PRICE_CACHE_TTL) return _priceCache;
   const secret = process.env.STRIPE_CLIENT_SECRET;
@@ -2136,6 +2140,7 @@ export async function POST(request) {
       refProfileResult,
       integrationTokens,
       stripePrices,
+      semanticNotes,
     ] = await Promise.all([
       // Prefs + memories (combined query)
       userId ? getSupabaseAdmin()
@@ -2188,6 +2193,36 @@ export async function POST(request) {
       ]) : Promise.resolve([null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
+      // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
+      (userId && messages.length > 0) ? (async () => {
+        try {
+          const lastMsg = messages.filter(m => m.role === "user").slice(-1)[0];
+          const queryText = typeof lastMsg?.content === "string" ? lastMsg.content : "";
+          if (!queryText || queryText.length < 10) return [];
+          const embedding = await getQueryEmbedding(queryText);
+          if (!embedding) {
+            // Voyage failed — try cache
+            const cached = _semanticCache.get(userId);
+            if (cached && Date.now() - cached.time < SEMANTIC_CACHE_TTL) return cached.notes;
+            return []; // Cache miss — keyword fallback handles it
+          }
+          const { data } = await admin.rpc("match_notes", {
+            query_embedding: embedding,
+            match_threshold: 0.5,
+            match_count: 8,
+            p_user_id: userId,
+          });
+          const notes = (data || []).map(n => ({ title: n.title, content: n.content }));
+          // Cache successful results
+          _semanticCache.set(userId, { notes, time: Date.now() });
+          return notes;
+        } catch {
+          // Fallback to cache on any error
+          const cached = _semanticCache.get(userId);
+          if (cached && Date.now() - cached.time < SEMANTIC_CACHE_TTL) return cached.notes;
+          return [];
+        }
+      })() : Promise.resolve([]),
     ]);
 
     // Destructure parallel results
@@ -2390,9 +2425,33 @@ export async function POST(request) {
       typeof m.content === "string" ? m.content : ""
     ).slice(-3).join(" ");
 
-    // Inject vault context (user's notes — trial: 10 max, paid: 15 client / 20 server)
+    // Merge semantic notes with client-sent context (dedupe by title)
+    if (semanticNotes && semanticNotes.length > 0 && Array.isArray(context)) {
+      const existingTitles = new Set(context.map(c => c.title));
+      for (const note of semanticNotes) {
+        if (!existingTitles.has(note.title)) {
+          context.push(note);
+          existingTitles.add(note.title);
+        }
+      }
+    }
+
+    // Cap: trial = 10, paid = reactive budget (token-based)
     if (isTrial && Array.isArray(context) && context.length > PLANS.trial.vaultNotes) {
       context = context.slice(0, PLANS.trial.vaultNotes);
+    }
+    // Reactive budget cap: 8K tokens Sonnet, 15K Opus
+    const reactiveBudget = config.model.includes("opus") ? 15000 : 8000;
+    if (Array.isArray(context) && context.length > 0) {
+      let tokenCount = 0;
+      const capped = [];
+      for (const c of context) {
+        const t = estimateTokens(c.content);
+        if (tokenCount + t > reactiveBudget) break;
+        capped.push(c);
+        tokenCount += t;
+      }
+      context = capped;
     }
     if (Array.isArray(context) && context.length > 0) {
       const contextBlock = context
