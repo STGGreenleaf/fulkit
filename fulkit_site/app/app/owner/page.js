@@ -4724,7 +4724,17 @@ function SocialsTab() {
 /* ─── Pitches Tab ─── */
 
 function PitchesTab() {
-  const [activeCat, setActiveCat] = useState("All");
+  const allCats = ["All", ...PITCH_CATEGORIES];
+  const [activeCat, setActiveCat] = useState(() => {
+    if (typeof window === "undefined") return "All";
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    return allCats.includes(hash) ? hash : "All";
+  });
+  const selectCat = (cat) => {
+    const next = cat === activeCat && cat !== "All" ? "All" : cat;
+    setActiveCat(next);
+    window.history.replaceState({}, "", next === "All" ? window.location.pathname : `${window.location.pathname}#${encodeURIComponent(next)}`);
+  };
   const items = activeCat === "All" ? PITCHES : PITCHES.filter(p => p.cat === activeCat);
   return (
     <div>
@@ -4735,7 +4745,7 @@ function PitchesTab() {
           const active = activeCat === cat;
           const count = cat === "All" ? PITCHES.length : PITCHES.filter(p => p.cat === cat).length;
           return (
-            <button key={cat} onClick={() => setActiveCat(active && cat !== "All" ? "All" : cat)} style={{
+            <button key={cat} onClick={() => selectCat(cat)} style={{
               padding: "var(--space-2) var(--space-3)",
               borderRadius: "var(--radius-md)",
               border: active ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
