@@ -4724,59 +4724,57 @@ function SocialsTab() {
 /* ─── Pitches Tab ─── */
 
 function PitchesTab() {
-  const [openCat, setOpenCat] = useState(null);
+  const [activeCat, setActiveCat] = useState(null);
+  const items = activeCat ? PITCHES.filter(p => p.cat === activeCat) : [];
   return (
     <div>
       <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{PITCHES.length}</span></div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+      {/* Pill group */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
         {PITCH_CATEGORIES.map((cat) => {
-          const active = openCat === cat;
-          const items = PITCHES.filter(p => p.cat === cat);
+          const active = activeCat === cat;
+          const count = PITCHES.filter(p => p.cat === cat).length;
           return (
-            <div key={cat} style={{ width: "100%" }}>
-              <button onClick={() => setOpenCat(active ? null : cat)} style={{
-                display: "inline-flex", alignItems: "center", gap: "var(--space-1-5)",
-                padding: "var(--space-2) var(--space-3)",
-                borderRadius: "var(--radius-md)",
-                border: active ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
-                background: active ? "var(--color-bg-alt)" : "transparent",
-                color: active ? "var(--color-text)" : "var(--color-text-muted)",
-                fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
-                cursor: "pointer",
-              }}>
-                {active ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                {cat} <span style={{ opacity: 0.5, fontSize: "var(--font-size-2xs)" }}>{items.length}</span>
-              </button>
-              {active && (
-                <div style={{
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-lg)",
-                  overflow: "hidden",
-                  marginTop: "var(--space-2)",
-                }}>
-                  {items.map((pitch, i) => (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: "var(--space-3)",
-                      padding: "var(--space-3) var(--space-4)",
-                      borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
-                    }}>
-                      <span style={{
-                        flex: 1, fontSize: "var(--font-size-sm)",
-                        color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)",
-                      }}>
-                        {pitch.text}
-                      </span>
-                      <CopyButton text={pitch.text} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button key={cat} onClick={() => setActiveCat(active ? null : cat)} style={{
+              padding: "var(--space-2) var(--space-3)",
+              borderRadius: "var(--radius-md)",
+              border: active ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
+              background: active ? "var(--color-bg-alt)" : "#FFFFFF",
+              color: active ? "var(--color-text)" : "var(--color-text-secondary)",
+              fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+              fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+              cursor: "pointer",
+            }}>
+              {cat} <span style={{ opacity: 0.5, fontSize: "var(--font-size-2xs)" }}>{count}</span>
+            </button>
           );
         })}
       </div>
+      {/* List for selected category */}
+      {activeCat && (
+        <div style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-lg)",
+          overflow: "hidden",
+        }}>
+          {items.map((pitch, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: "var(--space-3)",
+              padding: "var(--space-3) var(--space-4)",
+              borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
+            }}>
+              <span style={{
+                flex: 1, fontSize: "var(--font-size-sm)",
+                color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)",
+              }}>
+                {pitch.text}
+              </span>
+              <CopyButton text={pitch.text} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
