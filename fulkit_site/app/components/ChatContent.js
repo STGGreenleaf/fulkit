@@ -440,7 +440,7 @@ export default function ChatContent({ isPopout = false }) {
                           onClick={() => setShowChapters(prev => !prev)}
                           style={toolbarBtn(showChapters)}
                         >
-                          <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ transform: showChapters ? "rotate(180deg)" : "none" }} />
+                          <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
                           {!effectiveCompact && "Chapters"}
                         </button>
                       )}
@@ -449,7 +449,7 @@ export default function ChatContent({ isPopout = false }) {
                         onClick={() => sandbox.dumpSandbox()}
                         style={toolbarBtn(false)}
                       >
-                        <X size={isMobile ? 18 : 12} strokeWidth={2} />
+                        <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
                         {!effectiveCompact && "End & Save"}
                       </button>
                     </>
@@ -459,7 +459,7 @@ export default function ChatContent({ isPopout = false }) {
                       onClick={sandbox.startSandbox}
                       style={toolbarBtn(false)}
                     >
-                      <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} />
+                      <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
                       {!effectiveCompact && "Sandbox"}
                     </button>
                   )}
@@ -527,7 +527,7 @@ export default function ChatContent({ isPopout = false }) {
                   }}
                   style={toolbarBtn(showPins)}
                 >
-                  <Pin size={isMobile ? 18 : 12} strokeWidth={2} />
+                  <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
                   {!effectiveCompact && "Pins"}
                 </button>
               )}
@@ -544,7 +544,7 @@ export default function ChatContent({ isPopout = false }) {
                   }}
                   style={toolbarBtn(showHistory)}
                 >
-                  <Clock size={isMobile ? 18 : 12} strokeWidth={2} />
+                  <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
                   {!effectiveCompact && "History"}
                 </button>
               )}
@@ -556,7 +556,7 @@ export default function ChatContent({ isPopout = false }) {
                   onClick={handleStartNewChat}
                   style={toolbarBtn(false)}
                 >
-                  <Plus size={isMobile ? 18 : 12} strokeWidth={2} />
+                  <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
                   {!effectiveCompact && "New"}
                 </button>
               )}
@@ -1338,7 +1338,7 @@ export default function ChatContent({ isPopout = false }) {
                       Pinned
                     </span>
                     <button type="button" onClick={() => { setShowPins(false); window.history.replaceState(null, "", "/chat"); }} style={toolbarBtn(false)}>
-                      <X size={18} strokeWidth={2} />
+                      <X size={18} strokeWidth={2} style={{ pointerEvents: "none" }} />
                     </button>
                   </div>
                   <div style={{ flex: 1, overflowY: "auto" }}>

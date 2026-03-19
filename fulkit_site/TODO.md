@@ -58,6 +58,12 @@
 
 ---
 
+## From Signals (2026-03-19)
+
+- [ ] **Chat LCP slow (4-6s)** — Every /chat load fires slow_lcp on mobile and desktop. AuthGuard splash + Supabase auth + conversation load chain. Needs investigation — biggest perf win available.
+- [ ] **Slow streams (5-6s first token)** — 15 context items + API call = 5-6s before first token. Consider lazy context loading or reducing default context size.
+- [x] **SVG rage clicks on toolbar buttons** — Lucide SVG icons eating taps on mobile. Fix: pointerEvents:"none" on icons.
+
 ## Still Open (carried forward)
 
 > Items from earlier phases that are external or infrastructure tasks.
