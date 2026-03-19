@@ -1436,7 +1436,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                             <button
                               onClick={() => setTopicFilter(null)}
                               style={{
-                                fontSize: "var(--font-size-2xs)", padding: "2px 6px", borderRadius: "var(--radius-sm)",
+                                fontSize: "var(--font-size-xs)", padding: "4px 10px", borderRadius: "var(--radius-sm)",
                                 border: "1px solid var(--color-border)", background: "transparent",
                                 color: "var(--color-text-muted)", cursor: "pointer", fontFamily: "var(--font-primary)",
                               }}
@@ -1447,10 +1447,10 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                               key={topic}
                               onClick={() => setTopicFilter(topicFilter === topic ? null : topic)}
                               style={{
-                                fontSize: "var(--font-size-2xs)", padding: "2px 6px", borderRadius: "var(--radius-sm)",
-                                border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border-light)"}`,
+                                fontSize: "var(--font-size-xs)", padding: "4px 10px", borderRadius: "var(--radius-sm)",
+                                border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border)"}`,
                                 background: topicFilter === topic ? "var(--color-bg-alt)" : "transparent",
-                                color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-dim)",
+                                color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-muted)",
                                 cursor: "pointer", fontFamily: "var(--font-primary)",
                                 fontWeight: topicFilter === topic ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
                               }}
