@@ -117,10 +117,10 @@ function ogNotes() {
 function igPostHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      {brandMark(88, true)}
-      <div style={{ fontSize: 22, fontWeight: 400, color: SEC, marginTop: 16, letterSpacing: 2 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 60 }}>{"I\u2019ll be your bestie."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      {brandMark(100, true)}
+      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 20, letterSpacing: 3 }}>{"/ fu:l\u00B7kit /"}</div>
+      <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, marginTop: 60 }}>{"I\u2019ll be your bestie."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 24, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
