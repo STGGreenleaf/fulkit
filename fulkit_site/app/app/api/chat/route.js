@@ -2395,6 +2395,38 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(trelloToken ? TRELLO_TOOLS : []),
       ...(ghToken ? GITHUB_TOOLS : []),
     ];
+
+    // ─── Debug payload ───────────────────────────────────────
+    const debugPayload = {
+      model: config.model,
+      maxTokens: config.maxTokens,
+      isByok: config.isByok,
+      seat: profile?.seat_type || "unknown",
+      role: profile?.role || "unknown",
+      messagesIn: messages.length,
+      messagesCompressed: compressed.length,
+      wasCompressed: compressed.length < messages.length,
+      systemPromptChars: system.length,
+      systemPromptEstTokens: Math.ceil(system.length / 4),
+      contextItems: context.length,
+      contextTitles: context.map(c => c.title),
+      memoriesCount: memories.length,
+      memories: memories.map(m => m.key.replace("memory:", "")),
+      prefsCount: prefs.length,
+      prefs: prefs.map(p => `${p.key}=${p.value}`),
+      helperName: helperName || "(default)",
+      tools: allTools.map(t => t.name),
+      integrations: {
+        numbrly: !!nblKey, truegauge: !!tgKey, square: !!sqToken,
+        shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
+        trello: !!trelloToken, github: !!ghToken,
+      },
+      broadcasts: broadcastsResult.map(b => b.title),
+      ownerDocs: ownerDocsResult.map(b => b.title),
+      fuelUsed: profile?.messages_this_month || 0,
+      conversationId: conversationId || null,
+    };
+
     const baseOpts = {
       model: config.model,
       max_tokens: config.maxTokens,
@@ -2406,6 +2438,13 @@ Never skip the preview step. The user must see and approve changes before they g
     const readable = new ReadableStream({
       async start(controller) {
         try {
+          // Send debug payload as first SSE event
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ debug: debugPayload })}\n\n`)
+            );
+          } catch { /* client disconnected */ }
+
           let loopMessages = compressed.map((m) => ({
             role: m.role,
             content: m.content,
@@ -2413,6 +2452,10 @@ Never skip the preview step. The user must see and approve changes before they g
 
           let needsFinalResponse = false;
           let totalApiCost = 0; // accumulate cost across tool rounds
+          let totalInputTokens = 0;
+          let totalOutputTokens = 0;
+          let totalRounds = 0;
+          const toolsUsed = [];
           const loopStart = Date.now();
           const MAX_LOOP_MS = 50000; // 50s total — stay under Vercel's 60s limit
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -2456,11 +2499,16 @@ Never skip the preview step. The user must see and approve changes before they g
 
             // Track cost from this round's token usage
             if (finalMessage.usage) {
+              totalInputTokens += finalMessage.usage.input_tokens || 0;
+              totalOutputTokens += finalMessage.usage.output_tokens || 0;
               totalApiCost += estimateCost(config.model, finalMessage.usage.input_tokens || 0, finalMessage.usage.output_tokens || 0);
             }
 
             // If Claude didn't request tools, we're done
-            if (finalMessage.stop_reason !== "tool_use") break;
+            if (finalMessage.stop_reason !== "tool_use") {
+              totalRounds = round + 1;
+              break;
+            }
 
             // Check if client disconnected before executing tools
             if (request.signal?.aborted) break;
@@ -2470,8 +2518,10 @@ Never skip the preview step. The user must see and approve changes before they g
 
             // Execute each tool call
             const toolResults = [];
+            totalRounds = round + 1;
             for (const block of finalMessage.content) {
               if (block.type !== "tool_use") continue;
+              toolsUsed.push(block.name);
 
               // Actions tools (actions_create, actions_list, actions_update)
               if (block.name.startsWith("actions_") && userId) {
@@ -2737,6 +2787,21 @@ Never skip the preview step. The user must see and approve changes before they g
           if (userId && totalApiCost > 0 && !config.isByok && profile?.role !== "owner") {
             trackApiSpend(getSupabaseAdmin(), userId, totalApiCost).catch(() => {});
           }
+
+          // Send post-stream debug with token usage + timing
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ debugPost: {
+                rounds: totalRounds,
+                inputTokens: totalInputTokens,
+                outputTokens: totalOutputTokens,
+                totalCost: Math.round(totalApiCost * 10000) / 10000,
+                toolsUsed,
+                elapsedMs: Date.now() - loopStart,
+                stopReason: needsFinalResponse ? "timeout" : "end_turn",
+              } })}\n\n`)
+            );
+          } catch {}
 
           try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
           try { controller.close(); } catch {}

@@ -411,7 +411,18 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
           }
 
           try {
-            const { text: chunk, error } = JSON.parse(payload);
+            const parsed = JSON.parse(payload);
+            if (parsed.debug) {
+              console.log("[chat:debug] ─── REQUEST ───");
+              console.log("[chat:debug]", JSON.stringify(parsed.debug, null, 2));
+              continue;
+            }
+            if (parsed.debugPost) {
+              console.log("[chat:debug] ─── RESPONSE ───");
+              console.log("[chat:debug]", JSON.stringify(parsed.debugPost, null, 2));
+              continue;
+            }
+            const { text: chunk, error } = parsed;
             if (error) {
               // Flush any buffered content first, then show error
               if (chunkBufferRef.current) {
