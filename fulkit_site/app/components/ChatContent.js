@@ -1166,8 +1166,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                   maxWidth: isMobile ? "none" : 640,
                   width: "100%",
                   margin: "0 auto",
-                  flexShrink: 0,
-                  flexGrow: 0,
+                  flex: "none",
                 }}
               >
                 <div
@@ -1178,6 +1177,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                     border: "1px solid var(--color-border)",
                     borderRadius: isMobile ? "var(--radius-full)" : "var(--radius-lg)",
                     padding: isMobile ? "var(--space-1-5) var(--space-2)" : "var(--space-1)",
+                    maxHeight: 160,
                   }}
                 >
                   <button
