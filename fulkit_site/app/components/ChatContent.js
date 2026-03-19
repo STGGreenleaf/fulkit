@@ -1166,6 +1166,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                   maxWidth: isMobile ? "none" : 640,
                   width: "100%",
                   margin: "0 auto",
+                  flexShrink: 0,
                 }}
               >
                 <div
