@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VaultGate from "./VaultGate";
@@ -133,6 +133,8 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
   const [showChapters, setShowChapters] = useState(false);
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
+  const [swipedConv, setSwipedConv] = useState(null); // conversation id with delete revealed
+  const swipeStartRef = useRef(null);
 
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
@@ -1460,41 +1462,71 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                         </div>
                       );
                     })()}
-                    {/* Conversation list */}
+                    {/* Conversation list — swipe left to reveal delete */}
                     {chat.conversations
                       .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
                       .map((conv) => (
-                        <button
+                        <div
                           key={conv.id}
-                          onClick={() => { chat.openConversation(conv); setShowHistory(false); window.history.replaceState(null, "", "/chat"); }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "var(--space-2)",
-                            padding: "var(--space-2-5) var(--space-2)",
-                            borderRadius: "var(--radius-sm)",
-                            border: "none",
-                            borderBottom: "1px solid var(--color-border-light)",
-                            background: conv.id === chat.conversationId ? "var(--color-bg-alt)" : "transparent",
-                            cursor: "pointer",
-                            textAlign: "left",
-                            width: "100%",
-                            fontFamily: "var(--font-primary)",
-                          }}
+                          style={{ position: "relative", overflow: "hidden", borderBottom: "1px solid var(--color-border-light)" }}
                         >
-                          <span style={{
-                            fontSize: "var(--font-size-sm)",
-                            color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
-                            fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
-                          }}>
-                            {conv.title}
-                          </span>
-                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>
-                            {timeAgo(conv.updated_at)}
-                          </span>
-                        </button>
+                          {/* Delete button behind the row */}
+                          <button
+                            onClick={() => { chat.deleteConversation(conv.id); setSwipedConv(null); }}
+                            style={{
+                              position: "absolute", right: 0, top: 0, bottom: 0,
+                              width: 64, display: "flex", alignItems: "center", justifyContent: "center",
+                              background: "var(--color-text-dim)", border: "none", cursor: "pointer",
+                            }}
+                          >
+                            <Skull size={20} strokeWidth={2} color="var(--color-bg)" />
+                          </button>
+                          {/* Swipeable row */}
+                          <button
+                            onTouchStart={(e) => { swipeStartRef.current = { x: e.touches[0].clientX, id: conv.id }; }}
+                            onTouchEnd={(e) => {
+                              if (!swipeStartRef.current || swipeStartRef.current.id !== conv.id) return;
+                              const dx = e.changedTouches[0].clientX - swipeStartRef.current.x;
+                              if (dx < -50) setSwipedConv(conv.id);
+                              else if (dx > 30) setSwipedConv(null);
+                              swipeStartRef.current = null;
+                            }}
+                            onClick={() => {
+                              if (swipedConv === conv.id) { setSwipedConv(null); return; }
+                              chat.openConversation(conv); setShowHistory(false);
+                              window.history.replaceState(null, "", "/chat");
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: "var(--space-2)",
+                              padding: "var(--space-2-5) var(--space-2)",
+                              border: "none",
+                              background: conv.id === chat.conversationId ? "var(--color-bg-alt)" : "var(--color-bg)",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              width: "100%",
+                              fontFamily: "var(--font-primary)",
+                              transition: "transform 0.2s ease",
+                              transform: swipedConv === conv.id ? "translateX(-64px)" : "translateX(0)",
+                              position: "relative",
+                              zIndex: 1,
+                            }}
+                          >
+                            <span style={{
+                              fontSize: "var(--font-size-sm)",
+                              color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
+                              fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                            }}>
+                              {conv.title}
+                            </span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                              {timeAgo(conv.updated_at)}
+                            </span>
+                          </button>
+                        </div>
                       ))}
                     {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
                       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
@@ -1756,47 +1788,72 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                   {chat.conversations
                     .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
                     .map((conv) => (
-                    <button
+                    <div
                       key={conv.id}
-                      onClick={() => chat.openConversation(conv)}
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "var(--space-2)",
-                        padding: "var(--space-2) var(--space-2-5)",
+                        gap: "var(--space-1)",
                         borderRadius: "var(--radius-sm)",
-                        border: "none",
                         background: conv.id === chat.conversationId ? "var(--color-bg-alt)" : "transparent",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        width: "100%",
-                        fontFamily: "var(--font-primary)",
                       }}
                     >
-                      <span
+                      <button
+                        onClick={() => chat.openConversation(conv)}
                         style={{
-                          fontSize: "var(--font-size-xs)",
-                          color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
-                          fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "var(--space-2)",
+                          padding: "var(--space-2) var(--space-2-5)",
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          textAlign: "left",
                           flex: 1,
+                          minWidth: 0,
+                          fontFamily: "var(--font-primary)",
                         }}
                       >
-                        {conv.title}
-                      </span>
-                      <span
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
+                            fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            flex: 1,
+                          }}
+                        >
+                          {conv.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-2xs)",
+                            color: "var(--color-text-dim)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {timeAgo(conv.updated_at)}
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); chat.deleteConversation(conv.id); }}
+                        title="Delete"
                         style={{
-                          fontSize: "var(--font-size-2xs)",
-                          color: "var(--color-text-dim)",
-                          flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28, flexShrink: 0,
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "var(--color-text-dim)", borderRadius: "var(--radius-sm)",
+                          opacity: 0.4, transition: "opacity 0.15s",
                         }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.4"; }}
                       >
-                        {timeAgo(conv.updated_at)}
-                      </span>
-                    </button>
+                        <Skull size={13} strokeWidth={2} />
+                      </button>
+                    </div>
                   ))}
                   {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
