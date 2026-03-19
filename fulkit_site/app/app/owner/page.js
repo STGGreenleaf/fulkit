@@ -3567,11 +3567,19 @@ const SITE_ASSETS = [
 ];
 
 const PITCHES = [
-  { cat: "Value Props", text: `${TIERS.pro.priceLabel} for a personal AI that actually knows you.` },
-  { cat: "Value Props", text: `You\u2019re paying $88/mo for 10 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
-  { cat: "Value Props", text: `F\u00FClkit pays for itself 12x over. $${(88 - TIERS.standard.price) * 12}/year in savings.` },
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo. No onboarding. It read your notes.` },
+  { cat: "Value Props", text: `You\u2019re paying $92/mo for 8 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
   { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
-  { cat: "Value Props", text: "Stop catching AI up to speed. F\u00FClkit already knows what you\u2019re working on." },
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo. AI chat. Voice capture. Task manager. Note system. Decision log. One app.` },
+  { cat: "Value Props", text: `ChatGPT Plus is $20. It doesn\u2019t know your name. F\u00FClkit is $${TIERS.standard.price}. It knows your week.` },
+  { cat: "Value Props", text: "You spend the first 3 messages catching AI up to speed. F\u00FClkit starts at message zero." },
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo is less than one lunch. F\u00FClkit remembers every lunch meeting you\u2019ve ever had.` },
+  { cat: "Value Props", text: "Cancel 3 subscriptions. Keep F\u00FClkit. You\u2019re still saving money." },
+  { cat: "Value Props", text: "Every other AI starts with a blank page. F\u00FClkit starts with yours." },
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo for an AI that texts you first.` },
+  { cat: "Value Props", text: `Notes app: $10. AI chat: $20. Voice recorder: $17. Or F\u00FClkit: $${TIERS.standard.price}. All of it.` },
+  { cat: "Value Props", text: "The most expensive app is the one you forgot you\u2019re paying for. F\u00FClkit is the one you actually open." },
+  { cat: "Value Props", text: "You\u2019re paying for 8 apps. You use 3. F\u00FClkit is the 1." },
   { cat: "Comparisons", text: `10 apps. $88/month. Or F\u00FClkit. $${TIERS.standard.price}.` },
   { cat: "Comparisons", text: "Average knowledge worker uses 9.4 apps daily. F\u00FClkit replaces them with 1." },
   { cat: "Comparisons", text: "Workers spend 3.6 hours a day searching for information. F\u00FClkit finds it in seconds." },
