@@ -2208,60 +2208,109 @@ export async function POST(request) {
       system += `\n\n## Recent Conversations\nTopics discussed recently:\n<conversation-history>\n${convoBlock}\n</conversation-history>`;
     }
 
-    // Inject vault context
+    // ─── Budget-gated context injection ─────────────────────
+    // Only include what's relevant. System prompt budget: 40K tokens.
+    // Priority: base prompt > memories/prefs > vault context > relevant KB docs
+    const SYSTEM_TOKEN_BUDGET = 40000;
+    const systemBaseTokens = estimateTokens(system);
+    let systemTokensUsed = systemBaseTokens;
+    const kbIncluded = [];
+    const kbExcluded = [];
+
+    // Helper: apply {{pricing}} replacements to a block string
+    function applyPricing(block) {
+      if (!block.includes("{{")) return block;
+      const replacements = {
+        "{{free_limit}}": String(SEAT_LIMITS.free),
+        "{{standard_limit}}": String(SEAT_LIMITS.standard),
+        "{{pro_limit}}": String(SEAT_LIMITS.pro),
+        "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
+        "{{pro_price}}": stripePrices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
+        "{{credits_price}}": stripePrices?.credits || CREDITS.priceLabel,
+      };
+      for (const [token, value] of Object.entries(replacements)) {
+        block = block.replaceAll(token, value);
+      }
+      return block;
+    }
+
+    // Score a doc against the conversation (keyword overlap)
+    function scoreDoc(doc, query) {
+      const titleLower = (doc.title || "").toLowerCase();
+      const contentPreview = (doc.content || "").slice(0, 500).toLowerCase();
+      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      let score = 0;
+      for (const w of queryWords) {
+        if (titleLower.includes(w)) score += 3; // title match is strong
+        if (contentPreview.includes(w)) score += 1;
+      }
+      return score;
+    }
+
+    // Build conversation query from recent messages for relevance scoring
+    const lastUserMsg = messages.filter(m => m.role === "user").map(m =>
+      typeof m.content === "string" ? m.content : ""
+    ).slice(-3).join(" ");
+
+    // Inject vault context (user's notes — always included, already capped at 15 client-side)
     if (Array.isArray(context) && context.length > 0) {
       const contextBlock = context
         .map((c) => `### ${c.title}\n${c.content}`)
         .join("\n\n---\n\n");
-      // Check if any context items are uploaded files
-      const hasUploads = context.some((c) => c.title?.startsWith("[Uploaded]"));
-      const contextIntro = hasUploads
-        ? "The following includes uploaded files and notes. Items marked [Uploaded] were just shared by the user — analyze them proactively when the user asks about them or references them. Other items are vault notes — use them naturally as background context."
-        : "The following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.";
-      system += `\n\n## User's Notes & Context\n${contextIntro}\n<user-documents>\n${contextBlock}\n</user-documents>`;
+      const contextTokens = estimateTokens(contextBlock);
+      if (systemTokensUsed + contextTokens <= SYSTEM_TOKEN_BUDGET) {
+        const hasUploads = context.some((c) => c.title?.startsWith("[Uploaded]"));
+        const contextIntro = hasUploads
+          ? "The following includes uploaded files and notes. Items marked [Uploaded] were just shared by the user — analyze them proactively when the user asks about them or references them. Other items are vault notes — use them naturally as background context."
+          : "The following are notes and documents from the user's vault. Use them to inform your responses naturally. Reference this knowledge when relevant but don't announce that you have access to notes unless the user asks.";
+        system += `\n\n## User's Notes & Context\n${contextIntro}\n<user-documents>\n${contextBlock}\n</user-documents>`;
+        systemTokensUsed += contextTokens;
+      }
     }
 
-    // Inject broadcast context (pre-fetched)
-    if (broadcastsResult.length > 0) {
-      let broadcastBlock = broadcastsResult
-        .map(b => `### ${b.title}\n${b.content}`)
-        .join("\n\n");
-      // Dynamic pricing injection — replace {{placeholder}} tokens with live Stripe prices
-      if (broadcastBlock.includes("{{")) {
-        const replacements = {
-          "{{free_limit}}": String(SEAT_LIMITS.free),
-          "{{standard_limit}}": String(SEAT_LIMITS.standard),
-          "{{pro_limit}}": String(SEAT_LIMITS.pro),
-          "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
-          "{{pro_price}}": stripePrices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
-          "{{credits_price}}": stripePrices?.credits || CREDITS.priceLabel,
-        };
-        for (const [token, value] of Object.entries(replacements)) {
-          broadcastBlock = broadcastBlock.replaceAll(token, value);
-        }
+    // Score and rank broadcasts + owner docs, include only what's relevant and fits
+    const allKbDocs = [
+      ...broadcastsResult.map(b => ({ ...b, source: "broadcast" })),
+      ...ownerDocsResult.map(b => ({ ...b, source: "owner" })),
+    ];
+
+    const scoredDocs = allKbDocs
+      .map(doc => ({
+        ...doc,
+        score: scoreDoc(doc, lastUserMsg),
+        tokens: estimateTokens(doc.content),
+        rendered: applyPricing(`### ${doc.title}\n${doc.content}`),
+      }))
+      .sort((a, b) => b.score - a.score); // highest relevance first
+
+    const includedBroadcasts = [];
+    const includedOwnerDocs = [];
+
+    for (const doc of scoredDocs) {
+      // Skip docs with zero relevance (no keyword overlap with conversation)
+      if (doc.score === 0) {
+        kbExcluded.push(doc.title);
+        continue;
       }
-      system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${broadcastBlock}\n</fulkit-knowledge>`;
+      if (systemTokensUsed + doc.tokens > SYSTEM_TOKEN_BUDGET) {
+        kbExcluded.push(doc.title);
+        continue;
+      }
+      if (doc.source === "broadcast") {
+        includedBroadcasts.push(doc.rendered);
+      } else {
+        includedOwnerDocs.push(doc.rendered);
+      }
+      kbIncluded.push(doc.title);
+      systemTokensUsed += doc.tokens;
     }
 
-    // Inject owner-only knowledge base docs (pre-fetched)
-    if (ownerDocsResult.length > 0) {
-      let ownerBlock = ownerDocsResult
-        .map(b => `### ${b.title}\n${b.content}`)
-        .join("\n\n");
-      if (ownerBlock.includes("{{")) {
-        const replacements = {
-          "{{free_limit}}": String(SEAT_LIMITS.free),
-          "{{standard_limit}}": String(SEAT_LIMITS.standard),
-          "{{pro_limit}}": String(SEAT_LIMITS.pro),
-          "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
-          "{{pro_price}}": stripePrices?.pro || TIERS.pro.priceLabel.replace("/mo", ""),
-          "{{credits_price}}": stripePrices?.credits || CREDITS.priceLabel,
-        };
-        for (const [token, value] of Object.entries(replacements)) {
-          ownerBlock = ownerBlock.replaceAll(token, value);
-        }
-      }
-      system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${ownerBlock}\n</owner-knowledge>`;
+    if (includedBroadcasts.length > 0) {
+      system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${includedBroadcasts.join("\n\n")}\n</fulkit-knowledge>`;
+    }
+
+    if (includedOwnerDocs.length > 0) {
+      system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${includedOwnerDocs.join("\n\n")}\n</owner-knowledge>`;
     }
 
     // Referral whisper context (pre-fetched)
@@ -2421,8 +2470,10 @@ Never skip the preview step. The user must see and approve changes before they g
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken,
       },
-      broadcasts: broadcastsResult.map(b => b.title),
-      ownerDocs: ownerDocsResult.map(b => b.title),
+      kbIncluded,
+      kbExcluded,
+      systemTokenBudget: SYSTEM_TOKEN_BUDGET,
+      systemTokensUsed,
       fuelUsed: profile?.messages_this_month || 0,
       conversationId: conversationId || null,
     };
