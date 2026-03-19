@@ -4725,53 +4725,58 @@ function SocialsTab() {
 
 function PitchesTab() {
   const isMobile = useIsMobile();
+  const [activeCat, setActiveCat] = useState(PITCH_CATEGORIES[0]);
+  const items = PITCHES.filter(p => p.cat === activeCat);
   return (
     <div>
-      <div style={TAB_TITLE}>Pitches</div>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "var(--space-2)" : "var(--space-4)" }}>
+      <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{PITCHES.length}</span></div>
+      {/* Category pills */}
+      <div style={{
+        display: "flex", gap: "var(--space-1-5)", overflowX: "auto", paddingBottom: "var(--space-3)",
+        WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
+      }}>
         {PITCH_CATEGORIES.map((cat) => {
-          const items = PITCHES.filter(p => p.cat === cat);
+          const active = activeCat === cat;
+          const count = PITCHES.filter(p => p.cat === cat).length;
           return (
-            <div key={cat}>
-              <div style={{
-                fontSize: "var(--font-size-2xs)",
-                fontWeight: "var(--font-weight-semibold)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-wider)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-2)",
-              }}>
-                {cat} <span style={{ fontWeight: "var(--font-weight-normal)", opacity: 0.5 }}>{items.length}</span>
-              </div>
-              <div style={{
-                background: "var(--color-bg-elevated)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-lg)",
-                overflow: "hidden",
-              }}>
-                {items.map((pitch, i) => (
-                  <div key={i} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    padding: "var(--space-3) var(--space-4)",
-                    borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
-                  }}>
-                    <span style={{
-                      flex: 1,
-                      fontSize: "var(--font-size-sm)",
-                      color: "var(--color-text)",
-                      lineHeight: "var(--line-height-relaxed)",
-                    }}>
-                      {pitch.text}
-                    </span>
-                    <CopyButton text={pitch.text} />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+              display: "flex", alignItems: "center", gap: "var(--space-1)",
+              padding: "var(--space-2) var(--space-3)",
+              borderRadius: "var(--radius-md)",
+              border: active ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
+              background: active ? "var(--color-bg-alt)" : "transparent",
+              color: active ? "var(--color-text)" : "var(--color-text-muted)",
+              fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+              fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+              cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+            }}>
+              {cat} <span style={{ opacity: 0.5, fontSize: "var(--font-size-2xs)" }}>{count}</span>
+            </button>
           );
         })}
+      </div>
+      {/* Pitch list */}
+      <div style={{
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+      }}>
+        {items.map((pitch, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: "var(--space-3)",
+            padding: "var(--space-3) var(--space-4)",
+            borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
+          }}>
+            <span style={{
+              flex: 1, fontSize: "var(--font-size-sm)",
+              color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)",
+            }}>
+              {pitch.text}
+            </span>
+            <CopyButton text={pitch.text} />
+          </div>
+        ))}
       </div>
     </div>
   );
