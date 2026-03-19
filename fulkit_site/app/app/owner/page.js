@@ -3794,6 +3794,7 @@ function SocialsTab() {
   const [socialSize, setSocialSize] = useState("og");
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
+  const [socialConceptIdx, setSocialConceptIdx] = useState(0);
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
 
   // Load current metadata
@@ -4432,61 +4433,88 @@ function SocialsTab() {
                 )}
               </div>
 
-              {/* Right: Concept gallery */}
-              <div>
-                {/* Hero concept — large */}
-                {(() => {
-                  const heroUrl = `/api/social/template?concept=hero&size=${sizeParam}`;
-                  return (
+              {/* Right: Concept carousel */}
+              {(() => {
+                const idx = Math.min(socialConceptIdx, concepts.length - 1);
+                const concept = concepts[idx];
+                const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
+                const prev = () => setSocialConceptIdx((idx - 1 + concepts.length) % concepts.length);
+                const next = () => setSocialConceptIdx((idx + 1) % concepts.length);
+                return (
+                  <div>
+                    {/* Main preview */}
                     <div
-                      onClick={() => setPreviewTemplate({ url: heroUrl, concept: "hero", size: active.label, aspect: active.aspect, sizeKey: active.key })}
+                      onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
                         width: "100%", aspectRatio: active.aspect,
                         border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)",
                         overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                        marginBottom: "var(--space-3)",
+                        marginBottom: "var(--space-2)",
                       }}
                     >
-                      <img src={heroUrl} alt="hero" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                      <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
                     </div>
-                  );
-                })()}
-                {/* Other concepts — grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)" }}>
-                  {concepts.filter(c => c !== "hero").map(concept => {
-                    const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
-                    return (
-                      <div key={concept}>
-                        <div
-                          onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
-                          style={{
-                            width: "100%", aspectRatio: active.aspect,
-                            border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
-                            overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                          }}
-                        >
-                          <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
-                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
-                          <a
-                            href={url}
-                            download={`fulkit-${concept}-${active.key}.png`}
-                            style={{
-                              display: "flex", alignItems: "center", padding: "2px 6px",
-                              background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-                              borderRadius: "var(--radius-sm)", fontSize: 8, fontWeight: "var(--font-weight-semibold)",
-                              fontFamily: "var(--font-primary)", textDecoration: "none", cursor: "pointer",
-                            }}
-                          >
-                            <Download size={8} />
-                          </a>
-                        </div>
+
+                    {/* Controls: prev / label / next / download / delete */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                      <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                        <ChevronRight size={20} style={{ transform: "rotate(180deg)" }} />
+                      </button>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textTransform: "capitalize" }}>
+                          #{idx + 1} {concept}
+                        </span>
+                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
+                          {idx + 1}/{concepts.length}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                        <ChevronRight size={20} />
+                      </button>
+                      <a
+                        href={url}
+                        download={`fulkit-${concept}-${active.key}.png`}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          padding: "var(--space-1-5) var(--space-3)",
+                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                          textDecoration: "none", cursor: "pointer",
+                        }}
+                      >
+                        <Download size={10} /> PNG
+                      </a>
+                    </div>
+
+                    {/* Thumbnail strip */}
+                    <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+                      {concepts.map((c, i) => {
+                        const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
+                        const isActive = i === idx;
+                        return (
+                          <div key={c} style={{ flexShrink: 0, textAlign: "center" }}>
+                            <div
+                              onClick={() => setSocialConceptIdx(i)}
+                              style={{
+                                width: 80, aspectRatio: active.aspect,
+                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-border)",
+                                borderRadius: "var(--radius-sm)",
+                                overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                              }}
+                            >
+                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                            </div>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
+                              #{i + 1}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         );
