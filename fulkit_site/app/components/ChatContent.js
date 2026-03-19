@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, Box, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle } from "lucide-react";
+import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
 import { useAuth } from "../lib/auth";
@@ -429,7 +429,7 @@ export default function ChatContent({ isPopout = false }) {
                         padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
                       }}
                     >
-                      <Box size={isMobile ? 18 : 12} strokeWidth={2} />
+                      <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} />
                       {!effectiveCompact && "Sandbox"}
                     </button>
                   )}
