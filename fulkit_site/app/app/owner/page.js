@@ -3567,25 +3567,60 @@ const SITE_ASSETS = [
 ];
 
 const PITCHES = [
-  { cat: "Value Props", text: `$${TIERS.standard.price}/mo. No onboarding. It read your notes.` },
+  // ── Value Props ──
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo. No onboarding. It read your notes.`, star: true },
   { cat: "Value Props", text: `You\u2019re paying $92/mo for 8 apps. F\u00FClkit replaces them for $${TIERS.standard.price}.` },
   { cat: "Value Props", text: "ChatGPT forgets you between threads. F\u00FClkit never does." },
   { cat: "Value Props", text: `$${TIERS.standard.price}/mo. AI chat. Voice capture. Task manager. Note system. Decision log. One app.` },
-  { cat: "Value Props", text: `ChatGPT Plus is $20. It doesn\u2019t know your name. F\u00FClkit is $${TIERS.standard.price}. It knows your week.` },
+  { cat: "Value Props", text: `ChatGPT Plus is $20. It doesn\u2019t know your name. F\u00FClkit is $${TIERS.standard.price}. It knows your week.`, star: true },
   { cat: "Value Props", text: "You spend the first 3 messages catching AI up to speed. F\u00FClkit starts at message zero." },
-  { cat: "Value Props", text: `$${TIERS.standard.price}/mo is less than one lunch. F\u00FClkit remembers every lunch meeting you\u2019ve ever had.` },
+  { cat: "Value Props", text: `$${TIERS.standard.price}/mo is less than one lunch. F\u00FClkit remembers every lunch meeting you\u2019ve ever had.`, star: true },
   { cat: "Value Props", text: "Cancel 3 subscriptions. Keep F\u00FClkit. You\u2019re still saving money." },
-  { cat: "Value Props", text: "Every other AI starts with a blank page. F\u00FClkit starts with yours." },
+  { cat: "Value Props", text: "Every other AI starts with a blank page. F\u00FClkit starts with yours.", star: true },
   { cat: "Value Props", text: `$${TIERS.standard.price}/mo for an AI that texts you first.` },
   { cat: "Value Props", text: `Notes app: $10. AI chat: $20. Voice recorder: $17. Or F\u00FClkit: $${TIERS.standard.price}. All of it.` },
   { cat: "Value Props", text: "The most expensive app is the one you forgot you\u2019re paying for. F\u00FClkit is the one you actually open." },
   { cat: "Value Props", text: "You\u2019re paying for 8 apps. You use 3. F\u00FClkit is the 1." },
-  { cat: "Comparisons", text: `10 apps. $88/month. Or F\u00FClkit. $${TIERS.standard.price}.` },
-  { cat: "Comparisons", text: "Average knowledge worker uses 9.4 apps daily. F\u00FClkit replaces them with 1." },
-  { cat: "Comparisons", text: "Workers spend 3.6 hours a day searching for information. F\u00FClkit finds it in seconds." },
-  { cat: "Comparisons", text: "Only 15% of saved knowledge is ever found again. F\u00FClkit retrieves it \u2014 proactively." },
-  { cat: "Comparisons", text: "Context switching costs 23 minutes to return to focus. With F\u00FClkit, everything\u2019s in one place." },
+  // ── Ful-Up ──
+  { cat: "Ful-Up", text: "Share a link. Get $1/mo off. Every friend, every month." },
+  { cat: "Ful-Up", text: `${REFERRALS.freeAtStandard} friends. $0/mo. Standard is free. Math, not marketing.` },
+  { cat: "Ful-Up", text: `${REFERRALS.freeAtPro} friends and Pro is free. 25 friends and F\u00FClkit pays you.` },
+  { cat: "Ful-Up", text: "Most referral programs give you a coupon. Ful-Up gives you a paycheck.", star: true },
+  { cat: "Ful-Up", text: "Your referral link is permanent. Every friend who joins keeps paying you back." },
+  { cat: "Ful-Up", text: "$1/mo per friend. It compounds. They stay, you save." },
+  { cat: "Ful-Up", text: "At 25 referrals, F\u00FClkit starts writing you checks. Real ones." },
+  { cat: "Ful-Up", text: "Free app. Cash back. No catch. Just a link." },
+  { cat: "Ful-Up", text: "You don\u2019t need a promo code. You are the promo code." },
+  { cat: "Ful-Up", text: `F\u00FClkit is $${TIERS.standard.price}/mo. Or $0/mo with ${REFERRALS.freeAtStandard} friends. Your move.` },
+  { cat: "Ful-Up", text: "Refer 25 people and F\u00FClkit becomes a side hustle that runs itself." },
+  { cat: "Ful-Up", text: "F\u00FCl you, pay me.", star: true },
+  { cat: "Ful-Up", text: "Nothing\u2019s better than getting paid to F\u00FClkit.", star: true },
+  { cat: "Ful-Up", text: "Get your F\u00FClkit free. Then get paid for it." },
+  { cat: "Ful-Up", text: "F\u00FClkit around and find out how much you earn.", star: true },
+  { cat: "Ful-Up", text: "Give a F\u00FCl. Get paid." },
+  { cat: "Ful-Up", text: "The more F\u00FClkits you give, the more you get back." },
+  { cat: "Ful-Up", text: "Stop paying for F\u00FClkit. Start getting paid for it.", star: true },
+  { cat: "Ful-Up", text: "F\u00FClkit pays for itself. Then it pays for lunch.", star: true },
+  { cat: "Ful-Up", text: "Tell your friends to get their F\u00FClkit together. You\u2019ll both save money." },
+  { cat: "Ful-Up", text: "Share the F\u00FCl. Split the bill. Actually \u2014 delete the bill." },
+  { cat: "Ful-Up", text: "No F\u00FClks given? That\u2019s money left on the table.", star: true },
+  { cat: "Ful-Up", text: "F\u00FClkit your friends. They\u2019ll thank you. Your wallet will too." },
+  { cat: "Ful-Up", text: "Who gives a F\u00FCl? You do. And you get $1/mo for each one." },
+  // ── Comparisons ──
   { cat: "Comparisons", text: "ChatGPT, Claude, Gemini, Copilot \u2014 they all sit there with a cursor blinking until you type. F\u00FClkit texts first." },
+  { cat: "Comparisons", text: "Notion remembers your pages. F\u00FClkit remembers your thoughts." },
+  { cat: "Comparisons", text: "Obsidian is a vault. F\u00FClkit is a vault that talks back." },
+  { cat: "Comparisons", text: "ChatGPT has memory now. It remembers your name. F\u00FClkit remembers your Friday.", star: true },
+  { cat: "Comparisons", text: "Apple Notes is free. You get what you pay for.", star: true },
+  { cat: "Comparisons", text: "Todoist tracks what you type. F\u00FClkit writes the list for you." },
+  { cat: "Comparisons", text: "Your AI assistant has amnesia. Ours has a journal.", star: true },
+  { cat: "Comparisons", text: "Every AI app: \u201CHow can I help you today?\u201D F\u00FClkit: \u201CYou left 3 things unfinished Friday. Start with the pitch deck.\u201D", star: true },
+  { cat: "Comparisons", text: "Notion is a workspace. F\u00FClkit is a workmate." },
+  { cat: "Comparisons", text: "Siri can set a timer. F\u00FClkit can set your priorities." },
+  { cat: "Comparisons", text: "Google Keep keeps notes. F\u00FClkit keeps up." },
+  { cat: "Comparisons", text: "You can talk to ChatGPT. You can talk with F\u00FClkit. There\u2019s a difference.", star: true },
+  { cat: "Comparisons", text: "Every productivity app is a filing cabinet. F\u00FClkit is the person who knows where everything is." },
+  { cat: "Comparisons", text: "Alexa, Siri, and Google listen to commands. F\u00FClkit listens to context." },
   { cat: "Features", text: "The Hum: talk to an orb, not a transcript. It silently files your thoughts." },
   { cat: "Features", text: "Whispers: proactive suggestions that drift in and fade out. Like a text from a friend." },
   { cat: "Features", text: "Your notes talk back. Ask a question, get an answer from your own knowledge." },
@@ -3676,7 +3711,7 @@ const PITCHES = [
   { cat: "Entrepreneurs", text: "You have 14 hours a day and 40 priorities. F\u00FClkit remembers all of them." },
 ];
 
-const PITCH_CATEGORIES = ["Value Props", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
+const PITCH_CATEGORIES = ["Value Props", "Ful-Up", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
 
 /* ─── Socials Tab ─── */
 
@@ -4782,9 +4817,11 @@ function PitchesTab() {
               padding: "var(--space-3) var(--space-4)",
               borderBottom: i < items.length - 1 ? "1px solid var(--color-border-light)" : "none",
             }}>
+              {pitch.star && <span style={{ color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)", flexShrink: 0 }}>{"\u2605"}</span>}
               <span style={{
                 flex: 1, fontSize: "var(--font-size-sm)",
                 color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)",
+                fontWeight: pitch.star ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
               }}>
                 {pitch.text}
               </span>
