@@ -3,6 +3,34 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session — 2026-03-19: Chappie 2.0 (ALL 9 PHASES CODE-COMPLETE)
+
+**Scope:** Full context architecture redesign. 136 tasks across 9 phases, ~120 shipped in one session.
+
+### What shipped:
+- **Phase 0:** Prompt caching (`cache_control: ephemeral`), circuit breaker wired, billing state machine (5 states), killed eager integration loads, COST_BASIS updated, cost ceilings fixed, dashboard labels
+- **Phase 1:** `ful-legend.js` (single source of truth), `ful-config.js` re-exports from legend, trial enforcement (1 integration, 10 notes, 14-day expiry CTA), Stripe annual prices created ($90/yr Standard, $150/yr Pro), monthly/annual toggle on landing, checkout route + webhook wired, dashboard polish (BYOK count, credit revenue, Conv %, projections dynamic)
+- **Phase 2:** Anchor context computed in greeting route, cached as `anchor_context`, injected as `## Daily Context` in system prompt. Coverage hint lists loaded notes + connected integrations.
+- **Phase 3:** Habit Engine v1 — `user_patterns` table, post-conversation logging (trigger words, ecosystem, frequency, time_of_day), pre-message pattern matching (ecosystem scoring), ecosystem stickiness (last 3 msgs), speculative prefetch (top 2 ecosystems cached), cold-start seed (first message → keyword → ecosystem at freq 3). High-confidence ecosystem → only that ecosystem's tools loaded.
+- **Phase 4:** Server-side semantic context — Voyage embedding in Promise.all, match_notes RPC, merge + dedupe with client notes, reactive budget cap (8K Sonnet / 15K Opus), fallback chain (embedding → 5min cache → keyword)
+- **Phase 5:** KB docs as tool — `kb_search` tool + executor, KB injection removed from system prompt (saves ~0-10K tokens/msg)
+- **Phase 6:** Value-framed upsells — HEADS_UP shows credits + Pro + annual savings
+- **Phase 7:** Retry logic — 3 attempts with exponential backoff on 429/529, "AI busy, retrying" client indicator
+- **Phase 8:** Cost/msg + net ARPU fields in both dashboards
+
+### Remaining (deploy-verify only):
+- Cache hit verification (0.3-0.4)
+- Circuit breaker live test (0.6)
+- Integration/notes limit test (0.17-0.18)
+- Proration test in Stripe (1.24)
+- Anchor/semantic/KB/retry live tests
+- Compression protocol: 10 conversations × 20+ messages (8.1-8.5)
+
+### Key files created/modified:
+- **NEW:** `lib/ful-legend.js`, `scripts/habit-engine-setup.sql`
+- **MAJOR:** `app/api/chat/route.js` (Habit Engine + semantic + retry + caching + circuit breaker + KB tool)
+- **Updated:** `ful-config.js`, `cost-guard.js`, `referral-engine.js`, `vault-tokens.js`, `use-chat.js`, `use-chat-context.js`, `ChatContent.js`, `landing/page.js`, `settings/page.js`, `owner/page.js`, `stripe/checkout/route.js`, `stripe/webhook/route.js`, `chat/greeting/route.js`, `referrals/admin/route.js`
+
 ---
 
 ## Session 18 — 2026-03-18: Next 10 + Launch Readiness Audit
