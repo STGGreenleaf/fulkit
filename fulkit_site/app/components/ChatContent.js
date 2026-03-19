@@ -94,6 +94,16 @@ export default function ChatContent({ isPopout = false }) {
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
   const isMobile = useIsMobile();
 
+  // Width-only narrow check — pointer:coarse not required (fixes DevTools + desktop-touch combos)
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsNarrow(mq.matches);
+    const h = (e) => setIsNarrow(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+
   // ─── Sandbox hook ────────────────────────────────────────
   const sandbox = useSandbox();
 
@@ -1282,7 +1292,7 @@ export default function ChatContent({ isPopout = false }) {
               )}
 
               {/* Mobile pins takeover — inside messages column (position:relative parent) */}
-              {showPins && isMobile && (
+              {showPins && isNarrow && (
                 <div
                   style={{
                     position: "absolute",
@@ -1329,7 +1339,7 @@ export default function ChatContent({ isPopout = false }) {
                             display: "flex",
                             flexDirection: "column",
                             gap: "var(--space-1)",
-                            padding: "var(--space-3)",
+                            padding: "var(--space-3) var(--space-3) var(--space-3) var(--space-4)",
                             background: "transparent",
                             cursor: "pointer",
                             textAlign: "left",
@@ -1337,6 +1347,7 @@ export default function ChatContent({ isPopout = false }) {
                             fontFamily: "var(--font-primary)",
                             border: "none",
                             borderBottom: "1px solid var(--color-border-light)",
+                            borderLeft: "2px solid var(--color-border)",
                           }}
                         >
                           <span style={{
@@ -1372,7 +1383,7 @@ export default function ChatContent({ isPopout = false }) {
             </div>
 
             {/* Pins panel — desktop sidebar */}
-            {showPins && !isMobile && (
+            {showPins && !isNarrow && (
                 <>
                   <div style={{ width: 1, background: "var(--color-border-light)", flexShrink: 0 }} />
                   <div
@@ -1408,9 +1419,10 @@ export default function ChatContent({ isPopout = false }) {
                           display: "flex",
                           flexDirection: "column",
                           gap: 2,
-                          padding: "var(--space-2) var(--space-2-5)",
+                          padding: "var(--space-2) var(--space-2-5) var(--space-2) var(--space-3)",
                           borderRadius: "var(--radius-sm)",
                           border: "1px solid var(--color-border-light)",
+                          borderLeft: "2px solid var(--color-border)",
                           background: "transparent",
                           cursor: "pointer",
                           textAlign: "left",
