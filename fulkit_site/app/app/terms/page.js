@@ -25,8 +25,20 @@ export default function Terms() {
       <DocSection title="Subscriptions and billing">
         <p>
           {TIERS.standard.label} ({TIERS.standard.priceLabel}) and {TIERS.pro.label} ({TIERS.pro.priceLabel}) plans are billed monthly. Credits
-          ({CREDITS.description}) are one-time purchases. Referral credits reduce your
-          monthly bill but cannot be cashed out. Cancel anytime from Settings.
+          ({CREDITS.description}) are one-time purchases. Cancel anytime from Settings.
+          No refunds on partial months.
+        </p>
+      </DocSection>
+
+      <DocSection title="Referral program (Ful-Up)">
+        <p>
+          Each active referral earns you $1/mo off your subscription. At 25+
+          referrals (Builder tier), excess credit converts to cash payouts via
+          Stripe, subject to a $10 minimum. An "active" referral is someone who
+          signed up through your link and maintains an active account. Fülkit
+          reserves the right to modify the referral program, pause payouts, or
+          revoke credits earned through abuse (self-referral, fake accounts, or
+          incentivized signups).
         </p>
       </DocSection>
 
