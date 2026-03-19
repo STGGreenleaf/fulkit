@@ -9,10 +9,12 @@ import { TIERS } from "../../../../lib/ful-config";
 const SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const STRIPE_API = "https://api.stripe.com/v1";
 
-// Price ID → seat_type mapping
+// Price ID → seat_type mapping (monthly + annual → same seat)
 const PRICE_TO_SEAT = {
   [process.env.STRIPE_PRICE_STANDARD]: "standard",
   [process.env.STRIPE_PRICE_PRO]: "pro",
+  [process.env.STRIPE_PRICE_STANDARD_ANNUAL]: "standard",
+  [process.env.STRIPE_PRICE_PRO_ANNUAL]: "pro",
 };
 
 function verifySignature(payload, signature, secret) {

@@ -36,15 +36,18 @@ export async function GET(request) {
     { data: allProfiles },
     { data: allPayouts },
     { data: recentLedger },
+    { data: byokRows },
   ] = await Promise.all([
     admin.from("referrals").select("referrer_id, referred_id, status, credit_ful_per_month, created_at, activated_at, deactivated_at"),
     admin.from("profiles").select("id, name, email, seat_type, total_active_referrals, referral_tier, lifetime_ful_earned, stripe_connect_account_id, api_spend_this_month, message_count, created_at"),
     admin.from("payouts").select("id, user_id, amount_ful, amount_usd, status, created_at").order("created_at", { ascending: false }).limit(100),
     admin.from("ful_ledger").select("id, user_id, type, amount_ful, description, created_at").order("created_at", { ascending: false }).limit(200),
+    admin.from("preferences").select("user_id").eq("key", "byok_key").not("value", "is", null),
   ]);
 
   // ── Subscriber breakdown ──
-  const subscribers = { free: 0, standard: 0, pro: 0 };
+  const byokCount = new Set((byokRows || []).map(r => r.user_id)).size;
+  const subscribers = { free: 0, standard: 0, pro: 0, byok: byokCount };
   const referrers = {};
   let totalApiSpend = 0;
   let totalMessages = 0;
@@ -96,6 +99,13 @@ export async function GET(request) {
   const payouts = allPayouts || [];
   const totalPaidOut = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount_usd || 0), 0);
   const pendingPayouts = payouts.filter(p => p.status === "pending").reduce((s, p) => s + (p.amount_usd || 0), 0);
+
+  // ── Credit revenue (from ful_ledger — type "credit_purchase") ──
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const creditRevenue = (recentLedger || [])
+    .filter(l => l.type === "credit_purchase" && l.created_at >= monthStart)
+    .reduce((s, l) => s + Math.abs(l.amount_ful || 0) / 100, 0); // Ful → dollars
 
   // ── Monthly signups (dynamic range) ──
   const url = new URL(request.url);
@@ -164,6 +174,7 @@ export async function GET(request) {
 
     // Costs
     actualApiCost,
+    creditRevenue: Math.round(creditRevenue * 100) / 100,
 
     // Payouts
     totalPaidOut: Math.round(totalPaidOut * 100) / 100,

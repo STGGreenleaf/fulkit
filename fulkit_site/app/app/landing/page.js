@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
-import { TIERS, CREDITS } from "../../lib/ful-config";
+import { TIERS, CREDITS, REFERRALS } from "../../lib/ful-config";
+import { PLANS } from "../../lib/ful-legend";
 import { useIsMobile } from "../../lib/use-mobile";
 
 const apps = [
@@ -69,6 +71,114 @@ function GridCell({ value }) {
       </span>
     );
   return <X size={13} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />;
+}
+
+function PricingGrid({ isMobile }) {
+  const [annual, setAnnual] = useState(false);
+
+  const plans = [
+    {
+      tier: TIERS.standard.label,
+      price: annual ? `$${Math.round(PLANS.standard.priceAnnual / 12)}` : `$${TIERS.standard.price}`,
+      period: annual ? "/mo" : "/mo",
+      note: annual ? `$${PLANS.standard.priceAnnual}/yr — save $${PLANS.standard.priceMonthly * 12 - PLANS.standard.priceAnnual}` : null,
+      msgs: `~${TIERS.standard.messages} messages`,
+      detail: `~${Math.round(TIERS.standard.messages / 30)}/day. Plenty for most people.`,
+      plan: annual ? "standard_annual" : "standard",
+    },
+    {
+      tier: TIERS.pro.label,
+      price: annual ? `$${Math.round(PLANS.pro.priceAnnual / 12)}` : `$${TIERS.pro.price}`,
+      period: annual ? "/mo" : "/mo",
+      note: annual ? `$${PLANS.pro.priceAnnual}/yr — save $${PLANS.pro.priceMonthly * 12 - PLANS.pro.priceAnnual}` : null,
+      msgs: `~${TIERS.pro.messages} messages`,
+      detail: `~${Math.round(TIERS.pro.messages / 30)}/day. For power thinkers.`,
+      plan: annual ? "pro_annual" : "pro",
+    },
+    {
+      tier: "Credits",
+      price: CREDITS.priceLabel,
+      period: `/${CREDITS.amount}`,
+      msgs: "On demand",
+      detail: "Top up when you need more.",
+      plan: "credits",
+    },
+  ];
+
+  const toggleStyle = {
+    display: "inline-flex",
+    gap: 0,
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--radius-full)",
+    overflow: "hidden",
+    marginBottom: "var(--space-6)",
+  };
+  const pillStyle = (active) => ({
+    padding: "var(--space-1-5) var(--space-4)",
+    fontSize: "var(--font-size-xs)",
+    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+    fontFamily: "var(--font-primary)",
+    background: active ? "var(--color-accent)" : "transparent",
+    color: active ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+    border: "none",
+    cursor: "pointer",
+  });
+
+  return (
+    <>
+      <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", textAlign: "center", marginBottom: "var(--space-6)" }}>
+        {PLANS.trial.durationDays} days free. {PLANS.trial.fulTotal} messages. See what F&uuml;lkit does for you.
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div style={toggleStyle}>
+          <button style={pillStyle(!annual)} onClick={() => setAnnual(false)}>Monthly</button>
+          <button style={pillStyle(annual)} onClick={() => setAnnual(true)}>Annual</button>
+        </div>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
+          gap: "0",
+          borderTop: "2px solid var(--color-text)",
+        }}
+      >
+        {plans.map((plan, i) => (
+          <div
+            key={i}
+            style={{
+              padding: "var(--space-8) var(--space-6)",
+              textAlign: "center",
+              ...(i > 0 && !isMobile ? { borderLeft: "1px solid var(--color-border-light)" } : {}),
+            }}
+          >
+            <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)" }}>
+              {plan.tier}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-1)", justifyContent: "center" }}>
+              <span style={{ fontSize: "var(--font-size-5xl)", fontWeight: "var(--font-weight-black)", fontFamily: "var(--font-mono)", lineHeight: "var(--line-height-none)", letterSpacing: "-1.5px" }}>
+                {plan.price}
+              </span>
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>
+                {plan.period}
+              </span>
+            </div>
+            {plan.note && (
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
+                {plan.note}
+              </div>
+            )}
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)", marginTop: "var(--space-4)" }}>
+              {plan.msgs}
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
+              {plan.detail}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 export default function Landing() {
@@ -811,100 +921,8 @@ export default function Landing() {
           Fair. Not infinite.
         </h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
-            gap: "0",
-            borderTop: "2px solid var(--color-text)",
-          }}
-        >
-          {[
-            {
-              tier: TIERS.standard.label,
-              price: `$${TIERS.standard.price}`,
-              period: "/mo",
-              msgs: `~${TIERS.standard.messages} messages`,
-              detail: `~${Math.round(TIERS.standard.messages / 30)}/day. Plenty for most people.`,
-            },
-            {
-              tier: TIERS.pro.label,
-              price: `$${TIERS.pro.price}`,
-              period: "/mo",
-              msgs: `~${TIERS.pro.messages} messages`,
-              detail: `~${Math.round(TIERS.pro.messages / 30)}/day. For power thinkers.`,
-            },
-            {
-              tier: "Credits",
-              price: CREDITS.priceLabel,
-              period: `/${CREDITS.amount}`,
-              msgs: "On demand",
-              detail: "Top up when you need more.",
-            },
-          ].map((plan, i) => (
-            <div
-              key={i}
-              style={{
-                padding: "var(--space-8) var(--space-6)",
-                textAlign: "center",
-                ...(i > 0 ? { borderLeft: "1px solid var(--color-border-light)" } : {}),
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  textTransform: "uppercase",
-                  letterSpacing: "var(--letter-spacing-wider)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "var(--space-6)",
-                }}
-              >
-                {plan.tier}
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-1)", justifyContent: "center" }}>
-                <span
-                  style={{
-                    fontSize: "var(--font-size-5xl)",
-                    fontWeight: "var(--font-weight-black)",
-                    fontFamily: "var(--font-mono)",
-                    lineHeight: "var(--line-height-none)",
-                    letterSpacing: "-1.5px",
-                  }}
-                >
-                  {plan.price}
-                </span>
-                <span
-                  style={{
-                    fontSize: "var(--font-size-sm)",
-                    color: "var(--color-text-dim)",
-                  }}
-                >
-                  {plan.period}
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: "var(--font-weight-medium)",
-                  color: "var(--color-text-secondary)",
-                  marginTop: "var(--space-4)",
-                }}
-              >
-                {plan.msgs}
-              </div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  marginTop: "var(--space-1)",
-                }}
-              >
-                {plan.detail}
-              </div>
-            </div>
-          ))}
-        </div>
+        <PricingGrid isMobile={isMobile} />
+
         <p
           style={{
             fontSize: "var(--font-size-sm)",
@@ -916,7 +934,7 @@ export default function Landing() {
         >
           Friends get benefits. Every friend who joins earns you $1/mo off your subscription.{" "}
           <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-secondary)" }}>
-            7 friends = free forever.
+            {REFERRALS.freeAtStandard} friends = free forever.
           </span>
         </p>
       </section>

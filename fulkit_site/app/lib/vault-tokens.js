@@ -28,7 +28,7 @@ function relevanceScore(note, message) {
   return score;
 }
 
-export function selectContext(notes, message, budget = TOKEN_BUDGET) {
+export function selectContext(notes, message, budget = TOKEN_BUDGET, maxNotes = Infinity) {
   if (!notes || notes.length === 0) return [];
 
   // Step 1: Filter out 'off' notes entirely
@@ -62,6 +62,7 @@ export function selectContext(notes, message, budget = TOKEN_BUDGET) {
 
   // Always notes go in first
   for (const note of priority) {
+    if (selected.length >= maxNotes) break;
     const noteTokens = estimateTokens(note.content);
     selected.push({ title: note.title, content: note.content });
     tokens += noteTokens;
@@ -69,6 +70,7 @@ export function selectContext(notes, message, budget = TOKEN_BUDGET) {
 
   // Fill remaining budget with highest-relevance available notes
   for (const note of scored) {
+    if (selected.length >= maxNotes) break;
     const noteTokens = estimateTokens(note.content);
     if (tokens + noteTokens > budget) continue;
     selected.push({ title: note.title, content: note.content });
@@ -78,7 +80,7 @@ export function selectContext(notes, message, budget = TOKEN_BUDGET) {
   return selected;
 }
 
-export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET) {
+export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET, maxNotes = Infinity) {
   if (!notes || notes.length === 0) {
     return { selected: [], metadata: { includedCount: 0, alwaysCount: 0, totalTokens: 0 } };
   }
@@ -114,6 +116,7 @@ export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET)
 
   // Always notes go in first
   for (const note of priority) {
+    if (selected.length >= maxNotes) break;
     const noteTokens = estimateTokens(note.content);
     selected.push({ title: note.title, content: note.content });
     tokens += noteTokens;
@@ -121,6 +124,7 @@ export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET)
 
   // Fill remaining budget with highest-relevance available notes
   for (const note of scored) {
+    if (selected.length >= maxNotes) break;
     const noteTokens = estimateTokens(note.content);
     if (tokens + noteTokens > budget) continue;
     selected.push({ title: note.title, content: note.content });

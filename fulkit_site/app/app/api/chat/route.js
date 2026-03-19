@@ -2195,7 +2195,36 @@ export async function POST(request) {
     const memories = prefsResult.filter(p => p.key.startsWith("memory:"));
     const helperNamePref = prefsResult.find(p => p.key === "helper_name");
     const helperName = helperNamePref?.value || null;
-    const [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken] = integrationTokens;
+
+    // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
+    const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
+    if (isTrial) {
+      const maxInt = PLANS.trial.integrations; // 1
+      const slots = [
+        { ref: "nblKey", val: nblKey }, { ref: "tgKey", val: tgKey },
+        { ref: "sqToken", val: sqToken }, { ref: "shopifyToken", val: shopifyToken },
+        { ref: "stripeToken", val: stripeToken }, { ref: "toastToken", val: toastToken },
+        { ref: "trelloToken", val: trelloToken }, { ref: "ghToken", val: ghToken },
+      ];
+      let count = 0;
+      for (const s of slots) {
+        if (s.val) {
+          count++;
+          if (count > maxInt) {
+            // Null out excess integration tokens so their tools aren't registered
+            if (s.ref === "nblKey") nblKey = null;
+            else if (s.ref === "tgKey") tgKey = null;
+            else if (s.ref === "sqToken") sqToken = null;
+            else if (s.ref === "shopifyToken") shopifyToken = null;
+            else if (s.ref === "stripeToken") stripeToken = null;
+            else if (s.ref === "toastToken") toastToken = null;
+            else if (s.ref === "trelloToken") trelloToken = null;
+            else if (s.ref === "ghToken") ghToken = null;
+          }
+        }
+      }
+    }
 
     // Build system prompt
     let system = helperName
@@ -2273,7 +2302,10 @@ export async function POST(request) {
       typeof m.content === "string" ? m.content : ""
     ).slice(-3).join(" ");
 
-    // Inject vault context (user's notes — always included, already capped at 15 client-side)
+    // Inject vault context (user's notes — trial: 10 max, paid: 15 client / 20 server)
+    if (isTrial && Array.isArray(context) && context.length > PLANS.trial.vaultNotes) {
+      context = context.slice(0, PLANS.trial.vaultNotes);
+    }
     if (Array.isArray(context) && context.length > 0) {
       const contextBlock = context
         .map((c) => `### ${c.title}\n${c.content}`)

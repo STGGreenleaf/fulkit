@@ -108,6 +108,16 @@ export default function ChatContent({ isPopout = false }) {
     softWarningShownRef.current = true;
   }
 
+  // Trial expiry check (14-day limit)
+  const trialStarted = profile?.trial_started_at ? new Date(profile.trial_started_at) : null;
+  const trialDaysLeft = trialStarted
+    ? Math.max(0, 14 - Math.floor((Date.now() - trialStarted.getTime()) / 86400000))
+    : 14;
+  const isTrialExpired = !isByokOrOwner && (profile?.seat_type || "free") === "free" && trialStarted && trialDaysLeft <= 0;
+
+  // Trial expiry overrides billing state
+  if (isTrialExpired) billingState = "LIMIT";
+
   // Legacy compat — existing code references these
   const isLow = billingState === "SOFT_WARNING" || billingState === "HEADS_UP" || billingState === "WRAP_UP";
   const isCapped = billingState === "LIMIT";
@@ -1169,6 +1179,16 @@ export default function ChatContent({ isPopout = false }) {
                 </div>
               )}
 
+              {/* Trial countdown */}
+              {!isByokOrOwner && (profile?.seat_type || "free") === "free" && trialStarted && trialDaysLeft > 0 && trialDaysLeft <= 3 && billingState !== "LIMIT" && (
+                <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
+                    {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left on your trial —{" "}
+                    <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>subscribe to keep everything</Link>
+                  </span>
+                </div>
+              )}
+
               {/* Billing state warnings */}
               {billingState === "SOFT_WARNING" && softWarningShownRef.current && (
                 <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
@@ -1203,10 +1223,12 @@ export default function ChatContent({ isPopout = false }) {
                 <div style={{ padding: "var(--space-3) var(--space-6) var(--space-5)", maxWidth: 640, width: "100%", margin: "0 auto" }}>
                   <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", textAlign: "center" }}>
                     <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
-                      That's a wrap for this month.
+                      {isTrialExpired ? "Your 14 days are up." : "That's a wrap for this month."}
                     </div>
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                      Everything you've built is still here — history, pins, notes, all of it. ReFül or I'll see you on the 1st.
+                      {isTrialExpired
+                        ? "Everything you built is still here. Subscribe to pick up where you left off."
+                        : "Everything you've built is still here — history, pins, notes, all of it. ReFül or I'll see you on the 1st."}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                       <Link href="/settings?tab=billing" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>

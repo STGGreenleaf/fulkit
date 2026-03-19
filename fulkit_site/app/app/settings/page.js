@@ -3192,6 +3192,7 @@ function ReferralsTab() {
                     { label: "Trial", count: adminStats.subscribers.free },
                     { label: "Std", count: adminStats.subscribers.standard },
                     { label: "Pro", count: adminStats.subscribers.pro },
+                    { label: "BYOK", count: adminStats.subscribers.byok || 0 },
                   ].map((s, i) => (
                     <div key={i} style={{ flex: 1 }}>
                       <div style={smallNumStyle}>{s.count}</div>
@@ -3871,6 +3872,7 @@ function BillingTab() {
               {[
                 { label: `Standard ($${TIERS.standard.price}/mo)`, count: adminStats.subscribers.standard, revenue: stdRevenue },
                 { label: `Pro ($${TIERS.pro.price}/mo)`, count: adminStats.subscribers.pro, revenue: proRevenue },
+                { label: "Credit purchases", count: null, revenue: adminStats.creditRevenue || 0 },
                 { label: "Trial", count: adminStats.subscribers.free, revenue: 0 },
               ].map((plan, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) 0", borderBottom: i < 2 ? "1px solid var(--color-border-light)" : "none" }}>

@@ -9,7 +9,17 @@ const SECRET = process.env.STRIPE_CLIENT_SECRET;
 const PRICE_MAP = {
   standard: process.env.STRIPE_PRICE_STANDARD,
   pro: process.env.STRIPE_PRICE_PRO,
+  standard_annual: process.env.STRIPE_PRICE_STANDARD_ANNUAL,
+  pro_annual: process.env.STRIPE_PRICE_PRO_ANNUAL,
   credits: process.env.STRIPE_PRICE_CREDITS,
+};
+
+// Map annual plans to their base seat type
+const PLAN_TO_SEAT = {
+  standard: "standard",
+  pro: "pro",
+  standard_annual: "standard",
+  pro_annual: "pro",
 };
 
 async function stripePost(endpoint, params) {
@@ -61,6 +71,7 @@ export async function POST(request) {
     await admin.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
 
     const isSubscription = plan !== "credits";
+    const seatType = PLAN_TO_SEAT[plan] || plan;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
 
     const params = {
@@ -79,7 +90,9 @@ export async function POST(request) {
       params["payment_intent_data[metadata][amount]"] = "100";
     } else {
       params["subscription_data[metadata][user_id]"] = user.id;
-      params["subscription_data[metadata][plan]"] = plan;
+      params["subscription_data[metadata][plan]"] = seatType;
+      // 14-day trial for new subscribers
+      params["subscription_data[trial_period_days]"] = "14";
     }
 
     const session = await stripePost("/checkout/sessions", params);
