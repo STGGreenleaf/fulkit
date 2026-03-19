@@ -115,12 +115,12 @@
 
 *Goal: Claude knows who it's talking to and what it can reach.*
 
-- [ ] **2.1** In `app/api/chat/greeting/route.js`: after generating greeting, compute anchor context block (~500 tokens)
-- [ ] **2.2** Anchor includes: recent conversation topics (from conversations.topics), active tasks (top 5 from actions), connected integrations, hot notes (5 most recent titles)
-- [ ] **2.3** Cache anchor in preferences table (key: `anchor_context`, same pattern as `cached_greeting`, 1hr TTL)
-- [ ] **2.4** In `app/api/chat/route.js`: fetch `anchor_context` in the Promise.all data block
-- [ ] **2.5** Inject anchor into system prompt as `## Daily Context` section (after base prompt)
-- [ ] **2.6** Add coverage hint to end of system prompt (~100 tokens): "Notes: N of total loaded (use notes_search for others). KB: Brand Voice loaded. Use kb_search for others. Integrations: [list] connected — use their tools for live data."
+- [x] **2.1** Compute anchor context in greeting route (topics, tasks, integrations, memories)
+- [x] **2.2** Anchor includes: conversation topics, active tasks (5), connected integrations, memories (5)
+- [x] **2.3** Cache anchor in preferences (key: `anchor_context`, 1hr TTL, same pattern as greeting)
+- [x] **2.4** Fetch `anchor_context` from prefsResult in chat route (no extra query needed)
+- [x] **2.5** Inject anchor as `## Daily Context` section after base prompt
+- [x] **2.6** Coverage hint at end of system prompt: notes count, KB status, connected integrations list
 - [ ] **2.7** Test: open app, check `[chat:debug]` — anchor context should reflect recent activity
 - [ ] **2.8** Test: ask about a topic NOT in anchor — Claude should use tools to fetch, not hallucinate
 

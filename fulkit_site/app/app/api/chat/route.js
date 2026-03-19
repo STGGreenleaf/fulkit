@@ -2241,6 +2241,87 @@ export async function POST(request) {
       system += `\n\n## Daily Context\n${anchorContext}`;
     }
 
+    // ─── Habit Engine: pattern matching ─────────────────────
+    let habitEcosystem = null;
+    let habitConfidence = 0;
+    if (userId && messages.length > 0) {
+      try {
+        // Use last 3 user messages for ecosystem stickiness across turns
+        const recentUserMsgs = messages.filter(m => m.role === "user").slice(-3);
+        const msgText = recentUserMsgs.map(m => typeof m.content === "string" ? m.content : "").join(" ");
+        const keywords = msgText.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/\s+/).filter(w => w.length > 3).slice(0, 10);
+
+        if (keywords.length > 0) {
+          const { data: patterns } = await admin
+            .from("user_patterns")
+            .select("ecosystem, frequency, trigger_phrase")
+            .eq("user_id", userId)
+            .order("frequency", { ascending: false })
+            .limit(20)
+            .abortSignal(AbortSignal.timeout(3000));
+
+          // Cold start: if no patterns exist, seed from first message keywords
+          if ((!patterns || patterns.length === 0) && keywords.length > 0) {
+            const SEED_KEYWORDS = {
+              square: ["inventory", "shop", "store", "orders", "catalog", "customers", "sales", "pos", "checkout"],
+              trello: ["board", "cards", "tasks", "project", "kanban", "backlog", "sprint"],
+              numbrly: ["margin", "cost", "vendor", "build", "recipe", "food cost", "pricing"],
+              notes: ["notes", "vault", "journal", "ideas", "writing", "document"],
+              spotify: ["music", "playlist", "song", "album", "artist", "listening"],
+              truegauge: ["profit", "pace", "cash", "expenses", "revenue", "financial"],
+            };
+            for (const [eco, seedWords] of Object.entries(SEED_KEYWORDS)) {
+              if (keywords.some(kw => seedWords.some(sw => kw.includes(sw) || sw.includes(kw)))) {
+                // Seed this ecosystem at frequency 3
+                admin.from("user_patterns").insert({
+                  user_id: userId,
+                  trigger_phrase: keywords.join(" "),
+                  action_taken: `${eco}_seed`,
+                  ecosystem: eco,
+                  frequency: 3,
+                  last_seen: new Date().toISOString(),
+                }).then(() => {}).catch(() => {});
+                habitEcosystem = eco;
+                habitConfidence = 0.7; // moderate confidence from seed
+                break;
+              }
+            }
+          }
+
+          if (patterns && patterns.length > 0) {
+            // Score each pattern against current keywords
+            const ecosystemScores = {};
+            for (const p of patterns) {
+              const pWords = (p.trigger_phrase || "").split(/\s+/);
+              let overlap = 0;
+              for (const kw of keywords) {
+                if (pWords.some(pw => pw.includes(kw) || kw.includes(pw))) overlap++;
+              }
+              if (overlap > 0 && p.ecosystem) {
+                const score = overlap * p.frequency;
+                ecosystemScores[p.ecosystem] = (ecosystemScores[p.ecosystem] || 0) + score;
+              }
+            }
+
+            // Find dominant ecosystem
+            const sorted = Object.entries(ecosystemScores).sort((a, b) => b[1] - a[1]);
+            if (sorted.length > 0) {
+              const totalScore = sorted.reduce((s, [, v]) => s + v, 0);
+              const topScore = sorted[0][1];
+              habitConfidence = totalScore > 0 ? topScore / totalScore : 0;
+
+              if (habitConfidence >= 0.9 && patterns.some(p => p.ecosystem === sorted[0][0] && p.frequency >= 10)) {
+                habitEcosystem = sorted[0][0];
+              } else if (habitConfidence >= 0.5 && habitConfidence < 0.9) {
+                // Split confidence — inject clarifying hint
+                system += `\n\nNote: the user's message could relate to ${sorted.slice(0, 2).map(s => s[0]).join(" or ")}. If unclear, ask a short clarifying question ("The shop or your numbers?" style) before proceeding.`;
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
     // Inject preferences
     if (prefs && prefs.length > 0) {
       const prefBlock = prefs
@@ -2499,19 +2580,42 @@ Never skip the preview step. The user must see and approve changes before they g
       if (str.length <= MAX_TOOL_RESULT_CHARS) return str;
       return str.slice(0, MAX_TOOL_RESULT_CHARS) + '... [truncated — result too large]';
     }
+    // Build tools — Habit Engine can narrow to a single ecosystem
+    const ECOSYSTEM_TOOLS = {
+      numbrly: () => nblKey ? NUMBRLY_TOOLS : [],
+      truegauge: () => tgKey ? TRUEGAUGE_TOOLS : [],
+      square: () => sqToken ? SQUARE_TOOLS : [],
+      shopify: () => shopifyToken ? SHOPIFY_TOOLS : [],
+      stripe: () => stripeToken ? STRIPE_TOOLS : [],
+      toast: () => toastToken ? TOAST_TOOLS : [],
+      trello: () => trelloToken ? TRELLO_TOOLS : [],
+      github: () => ghToken ? GITHUB_TOOLS : [],
+    };
+
+    let integrationTools;
+    if (habitEcosystem && ECOSYSTEM_TOOLS[habitEcosystem]) {
+      // High confidence — only load the predicted ecosystem's tools
+      integrationTools = ECOSYSTEM_TOOLS[habitEcosystem]();
+    } else {
+      // No prediction or low confidence — load all connected
+      integrationTools = [
+        ...(nblKey ? NUMBRLY_TOOLS : []),
+        ...(tgKey ? TRUEGAUGE_TOOLS : []),
+        ...(sqToken ? SQUARE_TOOLS : []),
+        ...(shopifyToken ? SHOPIFY_TOOLS : []),
+        ...(stripeToken ? STRIPE_TOOLS : []),
+        ...(toastToken ? TOAST_TOOLS : []),
+        ...(trelloToken ? TRELLO_TOOLS : []),
+        ...(ghToken ? GITHUB_TOOLS : []),
+      ];
+    }
+
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
-      ...(nblKey ? NUMBRLY_TOOLS : []),
-      ...(tgKey ? TRUEGAUGE_TOOLS : []),
-      ...(sqToken ? SQUARE_TOOLS : []),
-      ...(shopifyToken ? SHOPIFY_TOOLS : []),
-      ...(stripeToken ? STRIPE_TOOLS : []),
-      ...(toastToken ? TOAST_TOOLS : []),
-      ...(trelloToken ? TRELLO_TOOLS : []),
-      ...(ghToken ? GITHUB_TOOLS : []),
+      ...integrationTools,
     ];
 
     // ─── Debug payload ───────────────────────────────────────
@@ -2910,6 +3014,111 @@ Never skip the preview step. The user must see and approve changes before they g
           // Track API spend (fire-and-forget) — BYOK and owners exempt
           if (userId && totalApiCost > 0 && !config.isByok && profile?.role !== "owner") {
             trackApiSpend(getSupabaseAdmin(), userId, totalApiCost).catch(() => {});
+          }
+
+          // ─── Habit Engine: log patterns (fire-and-forget) ───────
+          if (userId && toolsUsed.length > 0) {
+            try {
+              // Map tools to ecosystem
+              const TOOL_ECOSYSTEM = {
+                numbrly: "numbrly", square: "square", shopify: "shopify",
+                stripe: "stripe", toast: "toast", trello: "trello",
+                github: "github", truegauge: "truegauge",
+                notes: "notes", memory: "notes", actions: "actions",
+              };
+              const detectedEcosystem = (() => {
+                for (const t of toolsUsed) {
+                  const prefix = t.split("_")[0];
+                  if (TOOL_ECOSYSTEM[prefix]) return TOOL_ECOSYSTEM[prefix];
+                }
+                return null;
+              })();
+
+              // Extract trigger words from user messages (reuse stopword approach)
+              const userText = messages
+                .filter(m => m.role === "user")
+                .map(m => typeof m.content === "string" ? m.content : "")
+                .slice(-2)
+                .join(" ");
+              const triggerWords = userText
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, " ")
+                .split(/\s+/)
+                .filter(w => w.length > 3)
+                .slice(0, 5)
+                .join(" ");
+
+              // Time of day bucket
+              const hour = new Date().getHours();
+              const tod = hour < 5 ? "evening" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+
+              if (triggerWords && detectedEcosystem) {
+                const admin = getSupabaseAdmin();
+                const action = toolsUsed.join(",");
+                const now = new Date().toISOString();
+                // Check if pattern exists
+                admin.from("user_patterns")
+                  .select("id, frequency")
+                  .eq("user_id", userId)
+                  .eq("trigger_phrase", triggerWords)
+                  .eq("action_taken", action)
+                  .maybeSingle()
+                  .then(({ data }) => {
+                    if (data) {
+                      // Existing pattern — increment frequency
+                      admin.from("user_patterns")
+                        .update({ frequency: data.frequency + 1, last_seen: now, time_of_day: tod })
+                        .eq("id", data.id)
+                        .then(() => {}).catch(() => {});
+                    } else {
+                      // New pattern
+                      admin.from("user_patterns")
+                        .insert({
+                          user_id: userId,
+                          trigger_phrase: triggerWords,
+                          action_taken: action,
+                          ecosystem: detectedEcosystem,
+                          context_loaded: toolsUsed,
+                          frequency: 1,
+                          last_seen: now,
+                          time_of_day: tod,
+                        })
+                        .then(() => {}).catch(() => {});
+                    }
+                  })
+                  .catch(() => {});
+              }
+            } catch {}
+          }
+
+          // ─── Habit Engine: speculative prefetch (fire-and-forget) ──
+          // Predict top 2 likely next ecosystems, cache for next message
+          if (userId) {
+            try {
+              const admin = getSupabaseAdmin();
+              const { data: topPatterns } = await admin
+                .from("user_patterns")
+                .select("ecosystem, frequency")
+                .eq("user_id", userId)
+                .order("frequency", { ascending: false })
+                .limit(10)
+                .abortSignal(AbortSignal.timeout(2000));
+
+              if (topPatterns && topPatterns.length > 0) {
+                const ecoFreq = {};
+                for (const p of topPatterns) {
+                  if (p.ecosystem) ecoFreq[p.ecosystem] = (ecoFreq[p.ecosystem] || 0) + p.frequency;
+                }
+                const top2 = Object.entries(ecoFreq)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 2)
+                  .map(([eco]) => eco);
+                admin.from("preferences").upsert(
+                  { user_id: userId, key: "prefetch_ecosystems", value: JSON.stringify(top2), updated_at: new Date().toISOString() },
+                  { onConflict: "user_id,key" }
+                ).then(() => {}).catch(() => {});
+              }
+            } catch {}
           }
 
           // Send post-stream debug with token usage + timing
