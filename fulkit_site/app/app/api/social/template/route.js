@@ -353,13 +353,23 @@ export async function GET(request) {
   const concept = searchParams.get("concept") || "hero";
   const size = searchParams.get("size") || "og";
 
-  const dim = SIZES[size];
-  if (!dim) return Response.json({ error: "size must be og, ig-post, or ig-stories" }, { status: 400 });
+  let dim, renderKey;
+  if (size === "custom") {
+    const w = Math.min(Math.max(Number(searchParams.get("w")) || 1080, 100), 4096);
+    const h = Math.min(Math.max(Number(searchParams.get("h")) || 1080, 100), 4096);
+    dim = { w, h };
+    // Pick the closest renderer based on aspect ratio
+    renderKey = w / h >= 1.2 ? "og" : h / w >= 1.2 ? "ig-post" : "ig-post";
+  } else {
+    dim = SIZES[size];
+    renderKey = size;
+  }
+  if (!dim) return Response.json({ error: "size must be og, ig-post, ig-stories, or custom" }, { status: 400 });
 
   const renderers = RENDERERS[concept];
   if (!renderers) return Response.json({ error: "unknown concept" }, { status: 400 });
 
-  const render = renderers[size];
+  const render = renderers[renderKey];
   if (!render) return Response.json({ error: "no renderer for this combo" }, { status: 400 });
 
   try {

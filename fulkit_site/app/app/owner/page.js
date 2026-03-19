@@ -3791,6 +3791,9 @@ function SocialsTab() {
   const [uploading, setUploading] = useState(null);
   const [metaOpen, setMetaOpen] = useState(false);
   const [socialsOpen, setSocialsOpen] = useState(false);
+  const [socialSize, setSocialSize] = useState("og");
+  const [customW, setCustomW] = useState(1080);
+  const [customH, setCustomH] = useState(1080);
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
 
   // Load current metadata
@@ -4377,74 +4380,117 @@ function SocialsTab() {
       {/* ── DOWNLOAD THE APP ── */}
       <DownloadAppCard />
 
-      {/* ── SOCIAL TEMPLATES ── */}
-      <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
-        <div style={sectionLabel}>Social Templates</div>
-        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
-          Ready-to-use designs across 3 sizes. Download as PNG.
-        </div>
-        {[
-          { key: "og", label: "OG / Bluesky", dims: "1200 \u00D7 630", aspect: "1200/630", thumbW: 300 },
-          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350", thumbW: 300 },
-          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920", thumbW: 300 },
-        ].map(row => (
-          <div key={row.key} style={{ marginBottom: "var(--space-5)" }}>
-            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-widest)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-              {row.label} {"\u00B7"} {row.dims}
+      {/* ── SOCIAL KIT ── */}
+      {(() => {
+        const PLATFORMS = [
+          { key: "og", label: "Bluesky / OG", dims: "1200 \u00D7 630", aspect: "1200/630" },
+          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350" },
+          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920" },
+          { key: "custom", label: "Custom", dims: `${customW} \u00D7 ${customH}`, aspect: `${customW}/${customH}` },
+        ];
+        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
+        const sizeParam = socialSize === "custom" ? `custom&w=${customW}&h=${customH}` : socialSize;
+        return (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+            <div style={sectionLabel}>Social Kit</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
+              Pick a platform, browse concepts, download as PNG.
             </div>
-            <div style={{ display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
-              {["hero", "price", "memory", "stack", "voice", "bestie", "notes"].map(concept => {
-                const url = `/api/social/template?concept=${concept}&size=${row.key}`;
-                return (
-                  <div key={concept} style={{ flexShrink: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: "var(--space-5)" }}>
+              {/* Left: Platform picker */}
+              <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: "var(--space-2)", overflowX: isMobile ? "auto" : "visible" }}>
+                {PLATFORMS.map(p => (
+                  <button
+                    key={p.key}
+                    onClick={() => setSocialSize(p.key)}
+                    style={{
+                      display: "flex", flexDirection: "column", gap: 2,
+                      padding: "var(--space-2-5) var(--space-3)",
+                      borderRadius: "var(--radius-md)",
+                      border: socialSize === p.key ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
+                      borderLeft: socialSize === p.key ? "3px solid var(--color-accent)" : "3px solid transparent",
+                      background: socialSize === p.key ? "var(--color-bg-alt)" : "transparent",
+                      cursor: "pointer", textAlign: "left", fontFamily: "var(--font-primary)",
+                      flexShrink: 0, minWidth: isMobile ? 140 : "auto",
+                    }}
+                  >
+                    <span style={{
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: socialSize === p.key ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                      color: socialSize === p.key ? "var(--color-text)" : "var(--color-text-secondary)",
+                    }}>{p.label}</span>
+                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{p.dims}</span>
+                  </button>
+                ))}
+                {socialSize === "custom" && (
+                  <div style={{ display: "flex", gap: "var(--space-2)", padding: "var(--space-1) 0" }}>
+                    <input type="number" value={customW} onChange={e => setCustomW(Number(e.target.value) || 100)} style={{ ...inputStyle, width: 70, fontSize: "var(--font-size-2xs)", padding: "var(--space-1)" }} />
+                    <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", alignSelf: "center" }}>{"\u00D7"}</span>
+                    <input type="number" value={customH} onChange={e => setCustomH(Number(e.target.value) || 100)} style={{ ...inputStyle, width: 70, fontSize: "var(--font-size-2xs)", padding: "var(--space-1)" }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Concept gallery */}
+              <div>
+                {/* Hero concept — large */}
+                {(() => {
+                  const heroUrl = `/api/social/template?concept=hero&size=${sizeParam}`;
+                  return (
                     <div
-                      onClick={() => setPreviewTemplate({ url, concept, size: row.label, aspect: row.aspect, sizeKey: row.key })}
+                      onClick={() => setPreviewTemplate({ url: heroUrl, concept: "hero", size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
-                        width: row.thumbW,
-                        aspectRatio: row.aspect,
-                        border: "1px solid var(--color-border-light)",
-                        borderRadius: "var(--radius-md)",
-                        overflow: "hidden",
-                        background: "var(--color-bg-alt)",
-                        cursor: "pointer",
+                        width: "100%", aspectRatio: active.aspect, maxHeight: 400,
+                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)",
+                        overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                        marginBottom: "var(--space-3)",
                       }}
                     >
-                      <img
-                        src={url}
-                        alt={`${concept} ${row.key}`}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                        loading="lazy"
-                      />
+                      <img src={heroUrl} alt="hero" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
-                      <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
-                      <a
-                        href={url}
-                        download={`fulkit-${concept}-${row.key}.png`}
-                        style={{
-                          display: "flex", alignItems: "center",
-                          padding: "2px 6px",
-                          background: "var(--color-text)",
-                          color: "var(--color-bg)",
-                          border: "none",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: 8,
-                          fontWeight: "var(--font-weight-semibold)",
-                          fontFamily: "var(--font-primary)",
-                          textDecoration: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Download size={8} />
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })()}
+                {/* Other concepts — grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)" }}>
+                  {concepts.filter(c => c !== "hero").map(concept => {
+                    const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
+                    return (
+                      <div key={concept}>
+                        <div
+                          onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
+                          style={{
+                            width: "100%", aspectRatio: active.aspect,
+                            border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+                            overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                          }}
+                        >
+                          <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
+                          <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
+                          <a
+                            href={url}
+                            download={`fulkit-${concept}-${active.key}.png`}
+                            style={{
+                              display: "flex", alignItems: "center", padding: "2px 6px",
+                              background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                              borderRadius: "var(--radius-sm)", fontSize: 8, fontWeight: "var(--font-weight-semibold)",
+                              fontFamily: "var(--font-primary)", textDecoration: "none", cursor: "pointer",
+                            }}
+                          >
+                            <Download size={8} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
 
       {/* Template Preview Modal */}
@@ -4454,6 +4500,7 @@ function SocialsTab() {
           { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
           { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
           { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
+          { key: "custom", label: "Custom", aspect: `${customW}/${customH}` },
         ];
         const ci = concepts.indexOf(previewTemplate.concept);
         const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
