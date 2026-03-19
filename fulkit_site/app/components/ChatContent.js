@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import VaultGate from "./VaultGate";
 import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
@@ -82,7 +83,7 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
   );
 }
 
-export default function ChatContent({ isPopout = false }) {
+export default function ChatContent({ isPopout = false, initialPanel = null }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state ──────────────────────────────────────
@@ -93,6 +94,7 @@ export default function ChatContent({ isPopout = false }) {
   const isCapped = !isOwner && remaining <= 0;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
   const isMobile = useIsMobile();
+  const router = useRouter();
 
   // Width-only narrow check — pointer:coarse not required (fixes DevTools + desktop-touch combos)
   const [isNarrow, setIsNarrow] = useState(false);
@@ -120,57 +122,17 @@ export default function ChatContent({ isPopout = false }) {
   });
 
   // ─── UI-only state ────────────────────────────────────────
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(initialPanel === "history");
   const [historyWidth, setHistoryWidth] = useState(260);
   const [topicFilter, setTopicFilter] = useState(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
-  const [showPins, setShowPins] = useState(false);
+  const [showPins, setShowPins] = useState(initialPanel === "pinned");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
-
-  // ─── URL sync — /chat/c/{id} ────────────────────────────
-  // Read conversation ID from URL on mount
-  useEffect(() => {
-    if (isPopout) return;
-    const match = window.location.pathname.match(/^\/chat\/c\/([a-f0-9-]+)$/);
-    if (match && match[1] && !chat.conversationId) {
-      chat.openConversation({ id: match[1] });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sync URL bar when conversationId changes (replaceState — no history entry)
-  const navIntentRef = useRef(false); // true when user clicked a pin/history item
-  useEffect(() => {
-    if (isPopout) return;
-    const path = chat.conversationId ? `/chat/c/${chat.conversationId}` : "/chat";
-    if (window.location.pathname !== path) {
-      if (navIntentRef.current) {
-        window.history.pushState(null, "", path);
-        navIntentRef.current = false;
-      } else {
-        window.history.replaceState(null, "", path);
-      }
-    }
-  }, [chat.conversationId, isPopout]);
-
-  // Back button support
-  useEffect(() => {
-    if (isPopout) return;
-    const onPop = () => {
-      const match = window.location.pathname.match(/^\/chat\/c\/([a-f0-9-]+)$/);
-      if (match) {
-        chat.openConversation({ id: match[1] });
-      } else {
-        chat.startNewChat();
-      }
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
@@ -546,7 +508,7 @@ export default function ChatContent({ isPopout = false }) {
               {(
                 <button
                   type="button"
-                  onClick={() => setShowPins(prev => !prev)}
+                  onClick={() => isNarrow ? router.push("/chat/pinned") : setShowPins(prev => !prev)}
                   style={toolbarBtn(showPins)}
                 >
                   <Pin size={isMobile ? 18 : 12} strokeWidth={2} />
@@ -558,7 +520,7 @@ export default function ChatContent({ isPopout = false }) {
               {chat.conversations.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowHistory(prev => !prev)}
+                  onClick={() => isNarrow ? router.push("/chat/history") : setShowHistory(prev => !prev)}
                   style={toolbarBtn(showHistory)}
                 >
                   <Clock size={isMobile ? 18 : 12} strokeWidth={2} />
@@ -1354,7 +1316,7 @@ export default function ChatContent({ isPopout = false }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       Pinned
                     </span>
-                    <button type="button" onClick={() => setShowPins(false)} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => router.push("/chat")} style={toolbarBtn(false)}>
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
@@ -1373,9 +1335,8 @@ export default function ChatContent({ isPopout = false }) {
                         <button
                           key={pin.id}
                           onClick={() => {
-                            navIntentRef.current = true;
                             chat.openConversation({ id: pin.conversation_id });
-                            setShowPins(false);
+                            router.push("/chat");
                           }}
                           style={{
                             display: "flex",
@@ -1456,7 +1417,7 @@ export default function ChatContent({ isPopout = false }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       History
                     </span>
-                    <button type="button" onClick={() => setShowHistory(false)} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => router.push("/chat")} style={toolbarBtn(false)}>
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
@@ -1504,7 +1465,7 @@ export default function ChatContent({ isPopout = false }) {
                       .map((conv) => (
                         <button
                           key={conv.id}
-                          onClick={() => { navIntentRef.current = true; chat.openConversation(conv); setShowHistory(false); }}
+                          onClick={() => { chat.openConversation(conv); router.push("/chat"); }}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -1796,7 +1757,7 @@ export default function ChatContent({ isPopout = false }) {
                     .map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => { navIntentRef.current = true; chat.openConversation(conv); }}
+                      onClick={() => chat.openConversation(conv)}
                       style={{
                         display: "flex",
                         alignItems: "center",
