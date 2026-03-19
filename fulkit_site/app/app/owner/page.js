@@ -4741,7 +4741,7 @@ function PitchesTab() {
                 color: "var(--color-text-muted)",
                 marginBottom: "var(--space-2)",
               }}>
-                {cat}
+                {cat} <span style={{ fontWeight: "var(--font-weight-normal)", opacity: 0.5 }}>{items.length}</span>
               </div>
               <div style={{
                 background: "var(--color-bg-elevated)",
