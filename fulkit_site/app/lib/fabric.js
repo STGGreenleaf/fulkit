@@ -207,17 +207,18 @@ export function FabricProvider({ children }) {
     }).catch(() => setStatusChecked(true));
   }, [accessToken, apiFetch]);
 
-  // Fetch playlists when connected
+  // Fetch playlists when connected (only on fabric page)
   useEffect(() => {
-    if (!connected || !accessToken) return;
+    if (!connected || !accessToken || !onFabricPage) return;
     apiFetch("/api/fabric/playlists").then((data) => {
       if (data?.playlists) setPlaylists(data.playlists);
     });
-  }, [connected, accessToken, apiFetch]);
+  }, [connected, accessToken, apiFetch, onFabricPage]);
 
-  // Poll now playing every 4s when connected
+  // Poll now playing every 4s when connected (only on fabric page or if already playing)
   useEffect(() => {
     if (!connected || !accessToken) return;
+    if (!onFabricPage && !isPlaying) return;
 
     let failCount = 0;
     const fetchNowPlaying = async () => {
@@ -308,7 +309,7 @@ export function FabricProvider({ children }) {
     const interval = onFabricPage ? 4000 : 30000;
     pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [connected, accessToken, apiFetch, onFabricPage]);
+  }, [connected, accessToken, apiFetch, onFabricPage, isPlaying]);
 
   // Smooth progress interpolation between polls
   useEffect(() => {

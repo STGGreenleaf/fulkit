@@ -32,9 +32,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const [hasContext, setHasContext] = useState(false);
+  const fetchingRef = useRef(null); // dedup guard — prevents double-fetch on mount
 
   // Fetch profile from DB + check for context (onboarded OR has notes)
   const fetchProfile = useCallback(async (userId) => {
+    // Dedup: if already fetching for the same user, return existing promise
+    if (fetchingRef.current === userId) return;
+    fetchingRef.current = userId;
     const results = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId),
@@ -114,6 +118,7 @@ export function AuthProvider({ children }) {
         // integrations table may not have expected columns — skip silently
       }
     }
+    fetchingRef.current = null; // allow future refreshes (e.g. after message sent)
     return data;
   }, []);
 
