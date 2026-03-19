@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import { join } from "path";
+// Note: readFile/join still used for font loading below
 import { TIERS } from "../../../../lib/ful-config";
 
 const SIZES = {
@@ -18,30 +19,14 @@ const MUTED = "#8A8784";
 const SEC = "#5C5955";
 const DIM = "#B0ADA8";
 
-// SVG aspect ratio from fulkit.svg viewBox (888.78 / 257.63)
-const SVG_RATIO = 888.78 / 257.63;
 
-// Brand wordmark using actual fulkit.svg — pixel-perfect square-dot umlaut
-let _darkUri = null;
-let _lightUri = null;
-let _mutedUri = null;
-
-async function loadBrandSvg() {
-  if (_darkUri) return;
-  const svgRaw = await readFile(join(process.cwd(), "public/assets/brand/fulkit.svg"), "utf-8");
-  const svgDark = svgRaw.replace(/#2b2725/gi, TEXT);
-  const svgLight = svgRaw.replace(/#2b2725/gi, TEXT_INV);
-  const svgMuted = svgRaw.replace(/#2b2725/gi, SEC);
-  _darkUri = `data:image/svg+xml;base64,${Buffer.from(svgDark).toString("base64")}`;
-  _lightUri = `data:image/svg+xml;base64,${Buffer.from(svgLight).toString("base64")}`;
-  _mutedUri = `data:image/svg+xml;base64,${Buffer.from(svgMuted).toString("base64")}`;
-}
-
+// Brand wordmark as text — D-DIN handles ü natively
 function brandMark(height, isDark = false, variant = "default") {
-  const width = Math.round(height * SVG_RATIO);
-  const src = variant === "muted" ? _mutedUri : (isDark ? _lightUri : _darkUri);
+  const color = variant === "muted" ? DIM : (isDark ? TEXT_INV : TEXT);
   return (
-    <img src={src} width={width} height={height} style={{ display: "block" }} />
+    <span style={{ fontSize: height, fontWeight: 700, color, fontFamily: "D-DIN", letterSpacing: -1, lineHeight: 1 }}>
+      {"F\u00FClkit"}
+    </span>
   );
 }
 
@@ -143,7 +128,7 @@ function igPostMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       <div style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 12 }}>{brandMark(38, true)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 12 }}>{brandMark(52, true)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
       <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, marginTop: 60, textAlign: "center" }}>{"Every conversation starts"}</div>
       <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"from what you\u2019ve saved."}</div>
       <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
@@ -378,8 +363,6 @@ export async function GET(request) {
       readFile(join(process.cwd(), "public/assets/fonts/d-din-bold.otf")),
       readFile(join(process.cwd(), "public/assets/fonts/inter-regular.ttf")),
     ]);
-
-    await loadBrandSvg();
 
     return new ImageResponse(render(), {
       width: dim.w,
