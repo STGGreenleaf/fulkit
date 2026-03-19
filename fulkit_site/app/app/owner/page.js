@@ -1336,9 +1336,13 @@ function DeveloperTab() {
   const openCount = tickets.filter(t => t.status === "open").length;
 
   // ── Drawer states ──
-  const [switchesOpen, setSwitchesOpen] = useState(false);
-  const [factsOpen, setFactsOpen] = useState(false);
-  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
+  const [switchesOpen, setSwitchesOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-switchesOpen") === "true");
+  const [factsOpen, setFactsOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-factsOpen") === "true");
+  const [announcementsOpen, setAnnouncementsOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-announcementsOpen") === "true");
+
+  useEffect(() => { localStorage.setItem("owner-switchesOpen", switchesOpen); }, [switchesOpen]);
+  useEffect(() => { localStorage.setItem("owner-factsOpen", factsOpen); }, [factsOpen]);
+  useEffect(() => { localStorage.setItem("owner-announcementsOpen", announcementsOpen); }, [announcementsOpen]);
 
   // ── Broadcasts ──
   const [broadcasts, setBroadcasts] = useState([]);
@@ -3789,14 +3793,19 @@ function SocialsTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
-  const [metaOpen, setMetaOpen] = useState(false);
-  const [socialsOpen, setSocialsOpen] = useState(false);
+  const [metaOpen, setMetaOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-metaOpen") === "true");
+  const [socialsOpen, setSocialsOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialsOpen") === "true");
   const [socialSize, setSocialSize] = useState("og");
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
   const [socialConceptIdx, setSocialConceptIdx] = useState(0);
-  const [socialKitOpen, setSocialKitOpen] = useState(false);
+  const [socialKitOpen, setSocialKitOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialKitOpen") === "true");
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
+
+  // Persist drawer state
+  useEffect(() => { localStorage.setItem("owner-metaOpen", metaOpen); }, [metaOpen]);
+  useEffect(() => { localStorage.setItem("owner-socialsOpen", socialsOpen); }, [socialsOpen]);
+  useEffect(() => { localStorage.setItem("owner-socialKitOpen", socialKitOpen); }, [socialKitOpen]);
 
   // Load current metadata
   useEffect(() => {
