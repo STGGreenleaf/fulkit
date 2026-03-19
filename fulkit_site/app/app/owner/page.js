@@ -4405,7 +4405,7 @@ function SocialsTab() {
               {socialKitOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
             </button>
             {socialKitOpen && (<>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: "var(--space-5)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "140px 1fr", gap: "var(--space-4)", overflow: "hidden" }}>
               {/* Left: Platform picker */}
               <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: "var(--space-2)", overflowX: isMobile ? "auto" : "visible" }}>
                 {PLATFORMS.map(p => (
@@ -4414,7 +4414,7 @@ function SocialsTab() {
                     onClick={() => setSocialSize(p.key)}
                     style={{
                       display: "flex", flexDirection: "column", gap: 2,
-                      padding: "var(--space-2-5) var(--space-3)",
+                      padding: "var(--space-2) var(--space-2-5)",
                       borderRadius: "var(--radius-md)",
                       border: socialSize === p.key ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
                       borderLeft: socialSize === p.key ? "3px solid var(--color-accent)" : "3px solid transparent",
@@ -4448,12 +4448,12 @@ function SocialsTab() {
                 const prev = () => setSocialConceptIdx((idx - 1 + concepts.length) % concepts.length);
                 const next = () => setSocialConceptIdx((idx + 1) % concepts.length);
                 return (
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     {/* Main preview */}
                     <div
                       onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
-                        width: "100%", aspectRatio: active.aspect,
+                        width: "100%", maxWidth: "100%", aspectRatio: active.aspect,
                         border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
                         overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                         marginBottom: "var(--space-2)",
