@@ -2195,6 +2195,8 @@ export async function POST(request) {
     const memories = prefsResult.filter(p => p.key.startsWith("memory:"));
     const helperNamePref = prefsResult.find(p => p.key === "helper_name");
     const helperName = helperNamePref?.value || null;
+    const anchorPref = prefsResult.find(p => p.key === "anchor_context");
+    const anchorContext = anchorPref?.value || null;
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
@@ -2233,6 +2235,11 @@ export async function POST(request) {
     system += `\n\nToday is ${userToday}. The user's timezone is ${timezone || "UTC"}.`;
 
     // Low fuel notice removed — billing state machine handles this client-side now (0 tokens saved)
+
+    // Inject anchor context (cached daily orientation — ~500 tokens)
+    if (anchorContext) {
+      system += `\n\n## Daily Context\n${anchorContext}`;
+    }
 
     // Inject preferences
     if (prefs && prefs.length > 0) {
@@ -2428,6 +2435,15 @@ Never skip the preview step. The user must see and approve changes before they g
         system += `\n\n## GitHub Repositories\nThe user has ${connectedRepos.length} connected GitHub repo${connectedRepos.length > 1 ? "s" : ""}: ${connectedRepos.join(", ")}. The repository file trees are in the context above. Use the github_fetch_files tool to read specific source files when discussing code.`;
       }
     }
+
+    // Coverage hint — tell Claude what's loaded and what needs tools (~100 tokens)
+    const connectedProviders = [
+      nblKey && "Numbrly", tgKey && "TrueGauge", sqToken && "Square",
+      shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
+      trelloToken && "Trello", ghToken && "GitHub",
+    ].filter(Boolean);
+    const contextCount = Array.isArray(context) ? context.length : 0;
+    system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
 
     // Increment message count (Fül cap) — atomic, skip for BYOK users (they pay their own tokens)
     if (userId && !config.isByok) {

@@ -35,7 +35,7 @@ export async function GET(request) {
         admin.from("profiles").select("name, seat_type, onboarded").eq("id", user.id).single().abortSignal(AbortSignal.timeout(5000)),
         admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString()).order("priority").limit(10).abortSignal(AbortSignal.timeout(5000)),
         admin.from("preferences").select("key, value").eq("user_id", user.id).like("key", "memory:%").abortSignal(AbortSignal.timeout(5000)),
-        admin.from("conversations").select("title, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5).abortSignal(AbortSignal.timeout(5000)),
+        admin.from("conversations").select("title, topics, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5).abortSignal(AbortSignal.timeout(5000)),
         admin.from("integrations").select("provider").eq("user_id", user.id).abortSignal(AbortSignal.timeout(5000)),
         admin.from("vault_broadcasts").select("content").eq("channel", "owner-context").eq("active", true).eq("title", "Fulkit_VoiceGreeting").single().abortSignal(AbortSignal.timeout(5000)),
       ]);
@@ -92,9 +92,29 @@ Reply with ONLY the greeting text. Nothing else.`,
     const greeting = response.content[0]?.text?.trim() || null;
     if (!greeting) return Response.json({ greeting: null });
 
-    // Cache the result (fire-and-forget)
+    // Build anchor context (~500 tokens) — cached for chat route to pick up
+    const recentConvoTopics = (convosRes?.data || [])
+      .flatMap(c => c.topics || [])
+      .filter((t, i, a) => a.indexOf(t) === i)
+      .slice(0, 10);
+    const hotNotes = [];
+    // Hot notes will be populated when notes table has recent_titles — for now, skip
+    const anchorBlock = [
+      `User: ${name}`,
+      recentConvoTopics.length > 0 ? `Recent topics: ${recentConvoTopics.join(", ")}` : null,
+      actions.length > 0 ? `Active tasks: ${actions.slice(0, 5).join(", ")}` : null,
+      providers.length > 0 ? `Connected: ${providers.join(", ")}` : null,
+      memories.length > 0 ? `Knows: ${memories.slice(0, 5).join("; ")}` : null,
+    ].filter(Boolean).join("\n");
+
+    // Cache both greeting and anchor (fire-and-forget)
+    const now = new Date().toISOString();
     admin.from("preferences").upsert(
-      { user_id: user.id, key: "cached_greeting", value: greeting, updated_at: new Date().toISOString() },
+      { user_id: user.id, key: "cached_greeting", value: greeting, updated_at: now },
+      { onConflict: "user_id,key" }
+    ).then(() => {}).catch(() => {});
+    admin.from("preferences").upsert(
+      { user_id: user.id, key: "anchor_context", value: anchorBlock, updated_at: now },
       { onConflict: "user_id,key" }
     ).then(() => {}).catch(() => {});
 
