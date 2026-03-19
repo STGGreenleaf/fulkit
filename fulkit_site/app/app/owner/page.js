@@ -3941,7 +3941,7 @@ function SocialsTab() {
     <div>
       <button onClick={() => setSocialsOpen(prev => !prev)} style={{
         ...TAB_TITLE,
-        background: "var(--color-bg)", border: "1px solid var(--color-border-light)", cursor: "pointer",
+        background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
         display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
         padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
       }}>
