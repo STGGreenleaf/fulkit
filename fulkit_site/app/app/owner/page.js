@@ -46,7 +46,7 @@ import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 import LoadingMark from "../../components/LoadingMark";
 import LogoMark from "../../components/LogoMark";
-import { TIERS, CREDITS, COST_BASIS } from "../../lib/ful-config";
+import { TIERS, CREDITS, COST_BASIS, REFERRALS } from "../../lib/ful-config";
 import { useIsMobile } from "../../lib/use-mobile";
 
 const TAB_ICON_SIZE = 14;
