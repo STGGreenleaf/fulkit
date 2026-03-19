@@ -1167,6 +1167,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                   width: "100%",
                   margin: "0 auto",
                   flexShrink: 0,
+                  flexGrow: 0,
                 }}
               >
                 <div
