@@ -143,7 +143,7 @@ function igPostMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       <div style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12 }}>{brandMark(52, true)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 12 }}>{brandMark(38, true)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
       <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, marginTop: 60, textAlign: "center" }}>{"Every conversation starts"}</div>
       <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"from what you\u2019ve saved."}</div>
       <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
