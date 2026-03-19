@@ -520,8 +520,10 @@ export default function ChatContent({ isPopout = false }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowPins(prev => !prev);
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", showPins ? "/chat" : "/chat/pinned");
+                    const opening = !showPins;
+                    setShowPins(opening);
+                    if (isNarrow) { setShowHistory(false); }
+                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
                   }}
                   style={toolbarBtn(showPins)}
                 >
@@ -535,8 +537,10 @@ export default function ChatContent({ isPopout = false }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowHistory(prev => !prev);
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", showHistory ? "/chat" : "/chat/history");
+                    const opening = !showHistory;
+                    setShowHistory(opening);
+                    if (isNarrow) { setShowPins(false); }
+                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
                   }}
                   style={toolbarBtn(showHistory)}
                 >
