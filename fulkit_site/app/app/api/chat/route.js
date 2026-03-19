@@ -2146,7 +2146,7 @@ export async function POST(request) {
 
     // Validate inputs from client
     const timezone = (typeof rawTz === "string" && rawTz.length < 50) ? rawTz : "UTC";
-    const context = Array.isArray(rawContext)
+    let context = Array.isArray(rawContext)
       ? rawContext.filter(c => c && typeof c.title === "string" && typeof c.content === "string").slice(0, 20)
       : [];
     const chapterSummaries = Array.isArray(rawChapters)

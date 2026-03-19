@@ -112,7 +112,6 @@ export async function GET(request) {
   // ── Monthly signups (dynamic range) ──
   const url = new URL(request.url);
   const monthsParam = parseInt(url.searchParams.get("months") || "6", 10);
-  const now = new Date();
 
   // Start from earliest user signup (dynamic)
   const firstProfile = (allProfiles || []).reduce((min, p) => (!min || (p.created_at && p.created_at < min) ? p.created_at : min), null);
