@@ -1338,10 +1338,11 @@ export default function ChatContent({ isPopout = false }) {
                           }}
                           style={{
                             display: "flex",
-                            alignItems: "flex-start",
+                            alignItems: "center",
                             gap: "var(--space-2-5)",
                             padding: "var(--space-3)",
                             marginLeft: "var(--space-3)",
+                            height: 80,
                             background: "transparent",
                             cursor: "pointer",
                             textAlign: "left",
@@ -1349,14 +1350,15 @@ export default function ChatContent({ isPopout = false }) {
                             fontFamily: "var(--font-primary)",
                             border: "none",
                             borderBottom: "1px solid var(--color-border-light)",
+                            overflow: "hidden",
                           }}
                         >
                           <div style={{
-                            width: 2,
-                            height: 40,
+                            width: 3,
+                            height: 48,
                             flexShrink: 0,
                             background: "var(--color-border)",
-                            borderRadius: 1,
+                            borderRadius: 1.5,
                           }} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, overflow: "hidden" }}>
                             <span style={{
@@ -1427,9 +1429,10 @@ export default function ChatContent({ isPopout = false }) {
                         }}
                         style={{
                           display: "flex",
-                          alignItems: "flex-start",
+                          alignItems: "center",
                           gap: "var(--space-2)",
                           padding: "var(--space-2) var(--space-2-5)",
+                          height: 64,
                           borderRadius: "var(--radius-sm)",
                           border: "1px solid var(--color-border-light)",
                           background: "transparent",
@@ -1437,14 +1440,15 @@ export default function ChatContent({ isPopout = false }) {
                           textAlign: "left",
                           width: "100%",
                           fontFamily: "var(--font-primary)",
+                          overflow: "hidden",
                         }}
                       >
                         <div style={{
-                          width: 2,
-                          height: 40,
+                          width: 3,
+                          height: 36,
                           flexShrink: 0,
                           background: "var(--color-border)",
-                          borderRadius: 1,
+                          borderRadius: 1.5,
                         }} />
                         <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, overflow: "hidden" }}>
                           <span
