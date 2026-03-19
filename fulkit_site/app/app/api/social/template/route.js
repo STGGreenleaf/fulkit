@@ -35,9 +35,9 @@ function brandMark(height, isDark = false, variant = "default") {
 function ogHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      {brandMark(120)}
-      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, marginTop: 20, letterSpacing: 2 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: SEC, marginTop: 40 }}>{"I\u2019ll be your bestie."}</div>
+      {brandMark(130)}
+      <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginTop: 20, letterSpacing: 3 }}>{"/ fu:l\u00B7kit /"}</div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: SEC, marginTop: 40 }}>{"I\u2019ll be your bestie."}</div>
     </div>
   );
 }
@@ -46,7 +46,7 @@ function ogPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
       <div style={{ fontSize: 140, fontWeight: 700, color: TEXT, letterSpacing: -5, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
-      <div style={{ fontSize: 28, fontWeight: 400, color: SEC, marginTop: 24 }}>{"Your AI bestie."}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: SEC, marginTop: 24 }}>{"Your AI bestie."}</div>
     </div>
   );
 }
@@ -54,8 +54,8 @@ function ogPrice() {
 function ogMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 52, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 8 }}>{brandMark(52)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
+      <div style={{ fontSize: 56, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 8 }}>{brandMark(56)}<span style={{ fontSize: 56, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
     </div>
   );
 }
@@ -63,8 +63,8 @@ function ogMemory() {
 function ogStack() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 48, fontWeight: 400, color: MUTED, letterSpacing: -1, lineHeight: 1.2 }}>{"10 apps. $88/month."}</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 12 }}>{"Or"}</span>{brandMark(52)}<span style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 4 }}>{`. $${TIERS.standard.price}.`}</span></div>
+      <div style={{ fontSize: 52, fontWeight: 400, color: MUTED, letterSpacing: -1, lineHeight: 1.2 }}>{"10 apps. $88/month."}</div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", marginTop: 16 }}><span style={{ fontSize: 68, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginRight: 12 }}>{"Or"}</span>{brandMark(68)}<span style={{ fontSize: 68, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.2, marginLeft: 4 }}>{`. $${TIERS.standard.price}.`}</span></div>
     </div>
   );
 }
@@ -72,8 +72,8 @@ function ogStack() {
 function ogVoice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 72, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1 }}>{"Talk. Save. Remember."}</div>
-      <div style={{ fontSize: 22, fontWeight: 400, color: MUTED, marginTop: 24, letterSpacing: 1 }}>{"The Hum \u2014 voice mode"}</div>
+      <div style={{ fontSize: 76, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1 }}>{"Talk. Save. Remember."}</div>
+      <div style={{ fontSize: 30, fontWeight: 400, color: MUTED, marginTop: 24, letterSpacing: 2 }}>{"The Hum \u2014 voice mode"}</div>
     </div>
   );
 }
@@ -81,8 +81,8 @@ function ogVoice() {
 function ogBestie() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, lineHeight: 1.3 }}>{"A chatbot waits for instructions."}</div>
-      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, lineHeight: 1.3, marginTop: 12 }}>{"A bestie anticipates."}</div>
+      <div style={{ fontSize: 46, fontWeight: 400, color: MUTED, lineHeight: 1.3 }}>{"A chatbot waits for instructions."}</div>
+      <div style={{ fontSize: 54, fontWeight: 700, color: TEXT, lineHeight: 1.3, marginTop: 12 }}>{"A bestie anticipates."}</div>
     </div>
   );
 }
@@ -90,9 +90,9 @@ function ogBestie() {
 function ogNotes() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN" }}>
-      <div style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Your notes"}</div>
-      <div style={{ fontSize: 64, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"talk back to you."}</div>
-      <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, marginTop: 32, letterSpacing: 3 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 68, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Your notes"}</div>
+      <div style={{ fontSize: 68, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"talk back to you."}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: MUTED, marginTop: 32, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
