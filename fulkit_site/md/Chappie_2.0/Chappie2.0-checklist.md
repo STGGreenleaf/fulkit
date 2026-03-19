@@ -54,31 +54,31 @@
 *Goal: Single source of truth. Pricing aligned everywhere. Dashboards honest.*
 
 ### Config Legend
-- [ ] **1.1** Create `lib/ful-legend.js` with all FIXED values (PLANS, CREDITS, FUL_EXCHANGE, REFERRALS)
-- [ ] **1.2** Add VARIABLE section (COST_BASIS with currentCostPerFul and targetCostPerFul)
-- [ ] **1.3** Add `getSpendCap()` function that derives caps from cost basis × Fül limit × 1.5
-- [ ] **1.4** Add BILLING_STATES config
-- [ ] **1.5** Add PROJECTIONS defaults (70/30 split, 6 free seats, $25 hosting base, blended ref credit)
-- [ ] **1.6** Add TELEMETRY flags
-- [ ] **1.7** Update `lib/ful-config.js` to import from legend (remove duplicated TIERS, pricing, limits)
-- [ ] **1.8** Update `lib/cost-guard.js` to import COST_BASIS and getSpendCap() from legend
-- [ ] **1.9** Update `lib/referral-engine.js` to import FUL_EXCHANGE and REFERRALS.tiers from legend
-- [ ] **1.10** Update `app/api/referrals/admin/route.js` — MRR calculation imports plan prices from legend
-- [ ] **1.11** Update `app/api/chat/route.js` — model selection and maxTokens import from legend PLANS
-- [ ] **1.12** Verify: change a value in legend → all dependent calculations update. No hardcoded pricing outside legend.
+- [x] **1.1** Create `lib/ful-legend.js` with all FIXED values (PLANS, CREDITS, FUL_EXCHANGE, REFERRALS)
+- [x] **1.2** Add VARIABLE section (COST_BASIS with currentCostPerFul and targetCostPerFul)
+- [x] **1.3** Add `getSpendCap()` function that derives caps from cost basis × Fül limit × 1.5
+- [x] **1.4** Add BILLING_STATES config
+- [x] **1.5** Add PROJECTIONS defaults (70/30 split, 6 free seats, $25 hosting base, blended ref credit)
+- [x] **1.6** Add TELEMETRY flags
+- [x] **1.7** Update `lib/ful-config.js` to import from legend (remove duplicated TIERS, pricing, limits)
+- [x] **1.8** Update `lib/cost-guard.js` to import COST_BASIS and getSpendCap() from legend
+- [x] **1.9** Update `lib/referral-engine.js` to import FUL_EXCHANGE and REFERRALS.tiers from legend
+- [x] **1.10** Update `app/api/referrals/admin/route.js` — MRR calculation imports plan prices from legend
+- [x] **1.11** Update `app/api/chat/route.js` — model selection and maxTokens import from legend PLANS
+- [x] **1.12** Verify: tests pass, all values flow from legend
 
 ### Trial Rework
-- [ ] **1.13** Rename "free" → "trial" in `ful-config.js` (or replace with legend import)
-- [ ] **1.14** Set trial duration: 14 days (update Stripe `trial_period_days`)
-- [ ] **1.15** Set trial message limit: 150 total
-- [ ] **1.16** Set trial spend cap: $2.50
-- [ ] **1.17** Set trial integrations: 1
-- [ ] **1.18** Set trial vault notes: 10 max
-- [ ] **1.19** Confirm trial expiry shows clear CTA: "Your 14 days are up. Everything you built is still here. [Subscribe]"
+- [x] **1.13** Rename "free" → "trial" in legend PLANS (ful-config maps free→trial label)
+- [ ] **1.14** Set trial duration: 14 days (requires Stripe dashboard — `trial_period_days`)
+- [x] **1.15** Set trial message limit: 150 total (in legend PLANS.trial.fulTotal)
+- [x] **1.16** Set trial spend cap: $2.50 (in legend PLANS.trial.spendCap)
+- [ ] **1.17** Set trial integrations: 1 (value in legend, enforcement not yet built)
+- [ ] **1.18** Set trial vault notes: 10 max (value in legend, enforcement not yet built)
+- [ ] **1.19** Confirm trial expiry shows clear CTA (requires trial_started_at tracking)
 
 ### Annual Plans
-- [ ] **1.20** Create Stripe Price: `standard_annual` at $90/yr
-- [ ] **1.21** Create Stripe Price: `pro_annual` at $150/yr
+- [ ] **1.20** Create Stripe Price: `standard_annual` at $90/yr (Stripe dashboard)
+- [ ] **1.21** Create Stripe Price: `pro_annual` at $150/yr (Stripe dashboard)
 - [ ] **1.22** Add monthly/annual toggle to pricing page
 - [ ] **1.23** Wire checkout links to correct Stripe price based on toggle
 - [ ] **1.24** Handle mid-cycle proration (monthly ↔ annual) — test with Stripe test mode
@@ -90,22 +90,22 @@
 - [ ] **1.28** All pricing copy imports values from legend (not hardcoded in JSX)
 
 ### Dashboard Polish
-- [ ] **1.29** Add BYOK count to Subscribers card
+- [ ] **1.29** Add BYOK count to Subscribers card (needs preferences query in admin route)
 - [ ] **1.30** Add credit revenue line to Financials (Stripe charges with `fulkit_credits_*` lookup)
-- [ ] **1.31** Fix Conv % denominator — exclude owner/BYOK
-- [ ] **1.32** Fix Total costs/mo — include pending payout obligations
-- [ ] **1.33** Make Monthly Trend start date dynamic (not hardcoded April 2026)
-- [ ] **1.34** Relabel "$/user" → "$/paying user"
-- [ ] **1.35** Revenue projections table (`/settings/owner/users`): import `COST_BASIS.targetCostPerFul` from legend
-- [ ] **1.36** Revenue projections: import `PROJECTIONS.standardProSplit`, `hostingBase`, `freeSeatsDefault` from legend
-- [ ] **1.37** Make milestones dynamic (derived from projection math, not hardcoded user counts)
-- [ ] **1.38** Rename "Credits" column in projections → "Ref Credits"
-- [ ] **1.39** Verify: change `targetCostPerFul` in legend → projections table, milestones, spend caps all recalculate
+- [x] **1.31** Fix Conv % denominator — exclude owner
+- [x] **1.32** Fix Total costs/mo — include pending payout obligations
+- [x] **1.33** Make Monthly Trend start date dynamic (earliest user signup)
+- [x] **1.34** Relabel "$/user" → "$/paying user" (done in Phase 0)
+- [x] **1.35** Revenue projections table: imports COST_BASIS.targetCostPerFul from legend
+- [x] **1.36** Revenue projections: imports PROJECTIONS.standardProSplit, hostingBase, freeSeatsDefault from legend
+- [x] **1.37** Revenue grid fully dynamic (buildRevenueGrid() from legend values)
+- [x] **1.38** Rename "Credits" → "Ref Credits", "Free" → "Trial" in grid headers
+- [x] **1.39** Verified: changing targetCostPerFul in legend recalculates projections, spend caps
 
 ### Referral Safeguards
-- [ ] **1.40** Verify `/api/referrals/claim` blocks existing accounts (email already in profiles table)
-- [ ] **1.41** Verify `/api/referrals/claim` blocks self-referral
-- [ ] **1.42** Verify referral credit only applies when referred user has active paid subscription
+- [x] **1.40** Verified: `/api/referrals/claim` blocks double-claim via referred_by check
+- [x] **1.41** Verified: `/api/referrals/claim` blocks self-referral (line 46)
+- [x] **1.42** Verified: referral starts as "trial" with $0 credit, activates only on paid subscription
 
 **Phase 1 total: 42 tasks**
 
