@@ -1353,17 +1353,19 @@ export default function ChatContent({ isPopout = false }) {
                         >
                           <div style={{
                             width: 2,
+                            height: 40,
                             flexShrink: 0,
-                            alignSelf: "stretch",
-                            maxHeight: "2.8em",
                             background: "var(--color-border)",
                             borderRadius: 1,
                           }} />
-                          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", minWidth: 0 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, overflow: "hidden" }}>
                             <span style={{
                               fontSize: "var(--font-size-xs)",
                               fontWeight: "var(--font-weight-semibold)",
                               color: "var(--color-text-muted)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}>
                               {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"}
                             </span>
@@ -1376,13 +1378,10 @@ export default function ChatContent({ isPopout = false }) {
                                 display: "-webkit-box",
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: "vertical",
-                                lineHeight: "var(--line-height-normal)",
+                                lineHeight: "var(--line-height-snug)",
                               }}
                             >
                               {pin.content}
-                            </span>
-                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                              {timeAgo(pin.pinned_at)}
                             </span>
                           </div>
                         </button>
@@ -1442,13 +1441,12 @@ export default function ChatContent({ isPopout = false }) {
                       >
                         <div style={{
                           width: 2,
+                          height: 40,
                           flexShrink: 0,
-                          alignSelf: "stretch",
-                          maxHeight: "2.4em",
                           background: "var(--color-border)",
                           borderRadius: 1,
                         }} />
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, overflow: "hidden" }}>
                           <span
                             style={{
                               fontSize: "var(--font-size-xs)",
@@ -1456,7 +1454,7 @@ export default function ChatContent({ isPopout = false }) {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               display: "-webkit-box",
-                              WebkitLineClamp: 3,
+                              WebkitLineClamp: 2,
                               WebkitBoxOrient: "vertical",
                             }}
                           >
@@ -1466,6 +1464,9 @@ export default function ChatContent({ isPopout = false }) {
                             style={{
                               fontSize: "var(--font-size-2xs)",
                               color: "var(--color-text-dim)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
                             {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
