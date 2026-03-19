@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import VaultGate from "./VaultGate";
 import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
@@ -83,7 +82,7 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
   );
 }
 
-export default function ChatContent({ isPopout = false, initialPanel = null }) {
+export default function ChatContent({ isPopout = false }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state ──────────────────────────────────────
@@ -94,8 +93,6 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
   const isCapped = !isOwner && remaining <= 0;
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
   const isMobile = useIsMobile();
-  const router = useRouter();
-
   // Width-only narrow check — pointer:coarse not required (fixes DevTools + desktop-touch combos)
   const [isNarrow, setIsNarrow] = useState(false);
   useEffect(() => {
@@ -122,19 +119,31 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
   });
 
   // ─── UI-only state ────────────────────────────────────────
-  const [showHistory, setShowHistory] = useState(initialPanel === "history");
+  const [showHistory, setShowHistory] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/history");
   const [historyWidth, setHistoryWidth] = useState(260);
   const [topicFilter, setTopicFilter] = useState(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
-  const [showPins, setShowPins] = useState(initialPanel === "pinned");
+  const [showPins, setShowPins] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/pinned");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
   const [swipedConv, setSwipedConv] = useState(null); // conversation id with delete revealed
   const swipeStartRef = useRef(null);
+
+  // Back button support for shallow URL sync
+  useEffect(() => {
+    if (isPopout) return;
+    const onPop = () => {
+      const p = window.location.pathname;
+      setShowPins(p === "/chat/pinned");
+      setShowHistory(p === "/chat/history");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [isPopout]);
 
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
@@ -510,7 +519,10 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
               {(
                 <button
                   type="button"
-                  onClick={() => isNarrow ? router.push("/chat/pinned") : setShowPins(prev => !prev)}
+                  onClick={() => {
+                    setShowPins(prev => !prev);
+                    if (isNarrow && !isPopout) window.history.pushState(null, "", showPins ? "/chat" : "/chat/pinned");
+                  }}
                   style={toolbarBtn(showPins)}
                 >
                   <Pin size={isMobile ? 18 : 12} strokeWidth={2} />
@@ -522,7 +534,10 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
               {chat.conversations.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => isNarrow ? router.push("/chat/history") : setShowHistory(prev => !prev)}
+                  onClick={() => {
+                    setShowHistory(prev => !prev);
+                    if (isNarrow && !isPopout) window.history.pushState(null, "", showHistory ? "/chat" : "/chat/history");
+                  }}
                   style={toolbarBtn(showHistory)}
                 >
                   <Clock size={isMobile ? 18 : 12} strokeWidth={2} />
@@ -1166,7 +1181,6 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                   maxWidth: isMobile ? "none" : 640,
                   width: "100%",
                   margin: "0 auto",
-                  flex: "none",
                 }}
               >
                 <div
@@ -1177,7 +1191,6 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                     border: "1px solid var(--color-border)",
                     borderRadius: isMobile ? "var(--radius-full)" : "var(--radius-lg)",
                     padding: isMobile ? "var(--space-1-5) var(--space-2)" : "var(--space-1)",
-                    maxHeight: 160,
                   }}
                 >
                   <button
