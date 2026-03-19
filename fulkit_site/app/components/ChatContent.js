@@ -337,6 +337,27 @@ export default function ChatContent({ isPopout = false }) {
   const effectiveCompact = isPopout || compactMode || isMobile;
   const maxHistoryWidth = isPopout ? 200 : 400;
 
+  // Shared toolbar button style — proper hit targets on all devices
+  const toolbarBtn = (active) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "var(--space-1)",
+    fontSize: "var(--font-size-xs)",
+    color: active ? "var(--color-text)" : "var(--color-text-muted)",
+    background: active ? "var(--color-bg-alt)" : "none",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: "var(--font-primary)",
+    padding: isMobile ? "var(--space-2) var(--space-3)" : "var(--space-2) var(--space-2-5)",
+    minHeight: isMobile ? 44 : 32,
+    minWidth: isMobile ? 44 : 32,
+    borderRadius: "var(--radius-sm)",
+    touchAction: "manipulation",
+    WebkitTapHighlightColor: "transparent",
+    userSelect: "none",
+  });
+
   // ─── Render ───────────────────────────────────────────────
 
   return (
@@ -391,28 +412,18 @@ export default function ChatContent({ isPopout = false }) {
                       </span>
                       {sandbox.chapters.length > 0 && (
                         <button
-                          onClick={() => setShowChapters(!showChapters)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: "var(--space-1)",
-                            fontSize: "var(--font-size-xs)", color: showChapters ? "var(--color-text)" : "var(--color-text-muted)",
-                            background: showChapters ? "var(--color-bg-alt)" : "none",
-                            border: "none", cursor: "pointer", fontFamily: "var(--font-primary)",
-                            padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
-                          }}
+                          type="button"
+                          onClick={() => setShowChapters(prev => !prev)}
+                          style={toolbarBtn(showChapters)}
                         >
                           <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ transform: showChapters ? "rotate(180deg)" : "none" }} />
                           {!effectiveCompact && "Chapters"}
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={() => sandbox.dumpSandbox()}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)",
-                          background: "none", border: "none", cursor: "pointer",
-                          fontFamily: "var(--font-primary)",
-                          padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
-                        }}
+                        style={toolbarBtn(false)}
                       >
                         <X size={isMobile ? 18 : 12} strokeWidth={2} />
                         {!effectiveCompact && "End & Save"}
@@ -420,14 +431,9 @@ export default function ChatContent({ isPopout = false }) {
                     </>
                   ) : (
                     <button
+                      type="button"
                       onClick={sandbox.startSandbox}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "var(--space-1)",
-                        fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)",
-                        background: "none", border: "none", cursor: "pointer",
-                        fontFamily: "var(--font-primary)",
-                        padding: "var(--space-1) var(--space-2)", borderRadius: "var(--radius-sm)",
-                      }}
+                      style={toolbarBtn(false)}
                     >
                       <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} />
                       {!effectiveCompact && "Sandbox"}
@@ -488,20 +494,9 @@ export default function ChatContent({ isPopout = false }) {
               {/* Pins toggle */}
               {(
                 <button
-                  onClick={() => setShowPins(!showPins)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-xs)",
-                    color: showPins ? "var(--color-text)" : "var(--color-text-muted)",
-                    background: showPins ? "var(--color-bg-alt)" : "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-primary)",
-                    padding: "var(--space-1) var(--space-2)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
+                  type="button"
+                  onClick={() => setShowPins(prev => !prev)}
+                  style={toolbarBtn(showPins)}
                 >
                   <Pin size={isMobile ? 18 : 12} strokeWidth={2} />
                   {!effectiveCompact && "Pins"}
@@ -511,20 +506,9 @@ export default function ChatContent({ isPopout = false }) {
               {/* History toggle */}
               {chat.conversations.length > 0 && (
                 <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-xs)",
-                    color: showHistory ? "var(--color-text)" : "var(--color-text-muted)",
-                    background: showHistory ? "var(--color-bg-alt)" : "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-primary)",
-                    padding: "var(--space-1) var(--space-2)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
+                  type="button"
+                  onClick={() => setShowHistory(prev => !prev)}
+                  style={toolbarBtn(showHistory)}
                 >
                   <Clock size={isMobile ? 18 : 12} strokeWidth={2} />
                   {!effectiveCompact && "History"}
@@ -534,20 +518,9 @@ export default function ChatContent({ isPopout = false }) {
               {/* New chat */}
               {(chat.messages.length > 0 || chat.conversationId) && (
                 <button
+                  type="button"
                   onClick={handleStartNewChat}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-muted)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-primary)",
-                    padding: "var(--space-1) var(--space-2)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
+                  style={toolbarBtn(false)}
                 >
                   <Plus size={12} strokeWidth={2} />
                   {!effectiveCompact && "New"}
@@ -1307,80 +1280,169 @@ export default function ChatContent({ isPopout = false }) {
                 </div>
               </div>
               )}
-            </div>
 
-            {/* Pins panel */}
-            {showPins && (
-              <>
-                <div style={{ width: 1, background: "var(--color-border-light)", flexShrink: 0 }} />
+              {/* Mobile pins takeover — inside messages column (position:relative parent) */}
+              {showPins && isMobile && (
                 <div
                   style={{
-                    width: 260,
-                    overflowY: "auto",
-                    padding: "var(--space-3)",
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 20,
+                    background: "var(--color-bg)",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "var(--space-2)",
                   }}
                 >
-                  {pinnedMessages.length === 0 && (
-                    <p
-                      style={{
-                        fontSize: "var(--font-size-xs)",
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "var(--space-2-5) var(--space-3)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                  }}>
+                    <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                      Pinned
+                    </span>
+                    <button type="button" onClick={() => setShowPins(false)} style={toolbarBtn(false)}>
+                      <X size={18} strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {pinnedMessages.length === 0 ? (
+                      <p style={{
+                        fontSize: "var(--font-size-sm)",
                         color: "var(--color-text-dim)",
                         textAlign: "center",
-                        padding: "var(--space-4) 0",
-                      }}
-                    >
-                      No pinned responses yet
-                    </p>
-                  )}
-                  {pinnedMessages.map((pin) => (
-                    <button
-                      key={pin.id}
-                      onClick={() => {
-                        chat.openConversation({ id: pin.conversation_id });
-                        setShowPins(false);
-                      }}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                        padding: "var(--space-2) var(--space-2-5)",
-                        borderRadius: "var(--radius-sm)",
-                        border: "1px solid var(--color-border-light)",
-                        background: "transparent",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        width: "100%",
-                        fontFamily: "var(--font-primary)",
-                      }}
-                    >
-                      <span
+                        padding: "var(--space-8) var(--space-4)",
+                      }}>
+                        No pinned responses yet
+                      </p>
+                    ) : (
+                      pinnedMessages.map((pin) => (
+                        <button
+                          key={pin.id}
+                          onClick={() => {
+                            chat.openConversation({ id: pin.conversation_id });
+                            setShowPins(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "var(--space-1)",
+                            padding: "var(--space-3)",
+                            background: "transparent",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            width: "100%",
+                            fontFamily: "var(--font-primary)",
+                            border: "none",
+                            borderBottom: "1px solid var(--color-border-light)",
+                          }}
+                        >
+                          <span style={{
+                            fontSize: "var(--font-size-xs)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            color: "var(--color-text-muted)",
+                          }}>
+                            {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "var(--font-size-sm)",
+                              color: "var(--color-text)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              lineHeight: "var(--line-height-normal)",
+                            }}
+                          >
+                            {pin.content}
+                          </span>
+                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                            {timeAgo(pin.pinned_at)}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pins panel — desktop sidebar */}
+            {showPins && !isMobile && (
+                <>
+                  <div style={{ width: 1, background: "var(--color-border-light)", flexShrink: 0 }} />
+                  <div
+                    style={{
+                      width: 260,
+                      overflowY: "auto",
+                      padding: "var(--space-3)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    {pinnedMessages.length === 0 && (
+                      <p
                         style={{
                           fontSize: "var(--font-size-xs)",
-                          color: "var(--color-text)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                        }}
-                      >
-                        {pin.content}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "var(--font-size-2xs)",
                           color: "var(--color-text-dim)",
+                          textAlign: "center",
+                          padding: "var(--space-4) 0",
                         }}
                       >
-                        {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
+                        No pinned responses yet
+                      </p>
+                    )}
+                    {pinnedMessages.map((pin) => (
+                      <button
+                        key={pin.id}
+                        onClick={() => {
+                          chat.openConversation({ id: pin.conversation_id });
+                          setShowPins(false);
+                        }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                          padding: "var(--space-2) var(--space-2-5)",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--color-border-light)",
+                          background: "transparent",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          width: "100%",
+                          fontFamily: "var(--font-primary)",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-xs)",
+                            color: "var(--color-text)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                          }}
+                        >
+                          {pin.content}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "var(--font-size-2xs)",
+                            color: "var(--color-text-dim)",
+                          }}
+                        >
+                          {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
             )}
 
             {/* Chapter browser panel */}
