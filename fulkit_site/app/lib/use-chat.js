@@ -218,6 +218,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     let safetyTimeout = null;
     let fetchStart = Date.now();
     let msgCount = 0;
+    let sandboxMode = false;
     const msgTimestamp = Date.now();
     const assistantTs = Date.now();
 
@@ -241,7 +242,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       apiMessages = [{ role: "assistant", content: greetingText }, ...apiMessages];
     }
     // In sandbox mode, only send current chapter messages (bounded window)
-    const sandboxMode = sandbox?.sandboxActive && sandbox?.currentChapter;
+    sandboxMode = sandbox?.sandboxActive && sandbox?.currentChapter;
     if (sandboxMode) {
       const chapterMsgs = sandbox.currentChapter.messages.map((m) => ({
         role: m.role,
