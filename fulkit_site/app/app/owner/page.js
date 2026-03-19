@@ -3621,12 +3621,38 @@ const PITCHES = [
   { cat: "Comparisons", text: "You can talk to ChatGPT. You can talk with F\u00FClkit. There\u2019s a difference.", star: true },
   { cat: "Comparisons", text: "Every productivity app is a filing cabinet. F\u00FClkit is the person who knows where everything is." },
   { cat: "Comparisons", text: "Alexa, Siri, and Google listen to commands. F\u00FClkit listens to context." },
-  { cat: "Features", text: "The Hum: talk to an orb, not a transcript. It silently files your thoughts." },
-  { cat: "Features", text: "Whispers: proactive suggestions that drift in and fade out. Like a text from a friend." },
-  { cat: "Features", text: "Your notes talk back. Ask a question, get an answer from your own knowledge." },
-  { cat: "Features", text: "Three vault modes: local-first, encrypted sync, or F\u00FClkit-managed. Your data, your rules." },
-  { cat: "Features", text: "Voice mode that auto-files: ramble for 5 minutes, open your notes, everything\u2019s organized." },
-  { cat: "Features", text: "Proactive chat: F\u00FClkit opens the conversation based on what it knows about you. No other AI does this." },
+  // ── Features ──
+  { cat: "Features", text: "You talked for 5 minutes. You never looked at a screen. Everything was filed." },
+  { cat: "Features", text: "No transcript. No typing. Just an orb that breathes while you think out loud.", star: true },
+  { cat: "Features", text: "Voice mode for people who think better when they talk." },
+  { cat: "Features", text: "Most apps notify. F\u00FClkit whispers.", star: true },
+  { cat: "Features", text: "A suggestion drifted in at 9am. By 10am it was the best idea you had all week." },
+  { cat: "Features", text: "Like a text from a friend who actually pays attention." },
+  { cat: "Features", text: "Your notes used to just sit there. Now they argue back.", star: true },
+  { cat: "Features", text: "Ask your notes a question. Get an answer you forgot you knew." },
+  { cat: "Features", text: "You wrote it Tuesday. F\u00FClkit connected it to something from March. You didn\u2019t ask it to.", star: true },
+  { cat: "Features", text: "Your data. Three locks. You pick which one." },
+  { cat: "Features", text: "Local-first, encrypted sync, or managed. Most apps don\u2019t give you a choice. We give you three." },
+  { cat: "Features", text: "You didn\u2019t write a to-do list. F\u00FClkit read your notes and wrote one for you.", star: true },
+  { cat: "Features", text: "Friday brain dump. Monday morning: sorted, prioritized, waiting for you." },
+  // ── Fabric ──
+  { cat: "Fabric", text: "Your music has a shape. Fabric shows it to you.", star: true },
+  { cat: "Fabric", text: "Hit play. Watch the wave come alive. That\u2019s your song \u2014 no two look the same." },
+  { cat: "Fabric", text: "A waveform that breathes with the beat. Not a screensaver. A fingerprint." },
+  { cat: "Fabric", text: "The breakdown goes flat. The drop hits hard. The wave doesn\u2019t fake it.", star: true },
+  { cat: "Fabric", text: "Fullscreen. One orb. Breathing. You\u2019ll forget it\u2019s an app.", star: true },
+  { cat: "Fabric", text: "There\u2019s a guy behind the counter. He only talks music. And he\u2019s better than your algorithm.", star: true },
+  { cat: "Fabric", text: "Ask for jazz. He won\u2019t give you a playlist. He\u2019ll give you a pressing." },
+  { cat: "Fabric", text: "He doesn\u2019t recommend what\u2019s popular. He recommends what\u2019s right.", star: true },
+  { cat: "Fabric", text: "Not an algorithm. A record store guy with opinions." },
+  { cat: "Fabric", text: "\u201CNo. Not that. This.\u201D", star: true },
+  { cat: "Fabric", text: "Build sets like a DJ. Not like a consumer.", star: true },
+  { cat: "Fabric", text: "Import your Spotify playlist. Refine it. Push it back. The original stays untouched." },
+  { cat: "Fabric", text: "Thumbs down means gone. From everything. Forever. Spotify took that away. We brought it back.", star: true },
+  { cat: "Fabric", text: "Your playlists, your order, your taste. No algorithm overriding you." },
+  { cat: "Fabric", text: "Every song you play gets understood. Not just heard. Understood.", star: true },
+  { cat: "Fabric", text: "Same song. Same shape. Every time. That\u2019s not random \u2014 that\u2019s honest." },
+  { cat: "Fabric", text: "Print your favorite song. 11\u00D717. The actual shape of the sound." },
   { cat: "One-Liners", text: "I\u2019ll be your bestie." },
   { cat: "One-Liners", text: "One app. One bestie. Everything else is noise." },
   { cat: "One-Liners", text: "A friend with benefits \u2014 and the benefits are real." },
@@ -3711,7 +3737,7 @@ const PITCHES = [
   { cat: "Entrepreneurs", text: "You have 14 hours a day and 40 priorities. F\u00FClkit remembers all of them." },
 ];
 
-const PITCH_CATEGORIES = ["Value Props", "Ful-Up", "Comparisons", "Features", "Security", "One-Liners", "Brand", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
+const PITCH_CATEGORIES = ["Value Props", "Ful-Up", "Comparisons", "Features", "Fabric", "Security", "One-Liners", "Brand", "Social Posts", "Cynics", "Developers", "Creatives", "Entrepreneurs"];
 
 /* ─── Socials Tab ─── */
 
