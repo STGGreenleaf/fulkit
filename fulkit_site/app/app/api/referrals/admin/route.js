@@ -93,7 +93,9 @@ export async function GET(request) {
   const convertibleUsers = totalUsers - ownerCount;
   const conversionRate = convertibleUsers > 0 ? Math.round((totalPaying / convertibleUsers) * 100) : 0;
   const arpu = totalPaying > 0 ? Math.round((mrr / totalPaying) * 100) / 100 : 0;
+  const netArpu = totalPaying > 0 ? Math.round(((mrr - actualApiCost) / totalPaying) * 100) / 100 : 0;
   const ltv = arpu * 12; // Simple 12-month LTV
+  const costPerMessage = totalMessages > 0 ? Math.round((totalApiSpend / totalMessages) * 10000) / 10000 : 0;
 
   // ── Payout totals ──
   const payouts = allPayouts || [];
@@ -158,6 +160,8 @@ export async function GET(request) {
     netIncome: Math.round(netIncome * 100) / 100,
     margin,
     arpu,
+    netArpu,
+    costPerMessage,
     ltv,
     conversionRate,
     totalUsers,

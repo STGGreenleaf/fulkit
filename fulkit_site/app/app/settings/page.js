@@ -3173,6 +3173,8 @@ function ReferralsTab() {
                   { label: "Paying", value: adminStats.totalPaying },
                   { label: "Conv %", value: `${adminStats.conversionRate}%` },
                   { label: "ARPU", value: `$${adminStats.arpu}` },
+                  { label: "Net ARPU", value: `$${adminStats.netArpu}` },
+                  { label: "$/msg", value: `$${adminStats.costPerMessage}` },
                   { label: "LTV (12mo)", value: `$${adminStats.ltv}` },
                 ].map((f, i) => (
                   <div key={i}>
@@ -3953,6 +3955,8 @@ function BillingTab() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", textAlign: "center" }}>
                 {[
                   { label: "ARPU", value: `$${adminStats.arpu}` },
+                  { label: "Net ARPU", value: `$${adminStats.netArpu}` },
+                  { label: "$/msg", value: `$${adminStats.costPerMessage}` },
                   { label: "LTV (12mo)", value: `$${adminStats.ltv}` },
                   { label: "CAC", value: "$0" },
                 ].map((m, i) => (
