@@ -3795,6 +3795,7 @@ function SocialsTab() {
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
   const [socialConceptIdx, setSocialConceptIdx] = useState(0);
+  const [socialKitOpen, setSocialKitOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
 
   // Load current metadata
@@ -4394,10 +4395,16 @@ function SocialsTab() {
         const sizeParam = socialSize === "custom" ? `custom&w=${customW}&h=${customH}` : socialSize;
         return (
           <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
-            <div style={sectionLabel}>Social Kit</div>
-            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", marginTop: "calc(-1 * var(--space-2))", lineHeight: "var(--line-height-relaxed)" }}>
-              Pick a platform, browse concepts, download as PNG.
-            </div>
+            <button onClick={() => setSocialKitOpen(prev => !prev)} style={{
+              ...TAB_TITLE,
+              background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
+              padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
+            }}>
+              Social Kit
+              {socialKitOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            </button>
+            {socialKitOpen && (<>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: "var(--space-5)" }}>
               {/* Left: Platform picker */}
               <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: "var(--space-2)", overflowX: isMobile ? "auto" : "visible" }}>
@@ -4516,6 +4523,7 @@ function SocialsTab() {
                 );
               })()}
             </div>
+            </>)}
           </div>
         );
       })()}
