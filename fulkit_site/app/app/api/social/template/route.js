@@ -194,23 +194,23 @@ function igPostNotes() {
 function igStoriesHero() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80)}</div>
-      <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(90)}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, letterSpacing: 3, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
+      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"1."}</span>{"Your second brain that talks back."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"1."}</span>{"Your second brain that talks back."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"2."}</span>{"A feeling \u2014 a tool designed to feel right."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"2."}</span>{"A feeling \u2014 a tool designed to feel right."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"3."}</span>{"The last app you\u2019ll ever need."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"3."}</span>{"The last app you\u2019ll ever need."}
         </div>
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32 }} />
       <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -218,16 +218,16 @@ function igStoriesHero() {
 function igStoriesPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(80)}</div>
-      <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
-      <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4, marginBottom: 64 }}>
-        <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"1."}</span>{"Everything you need, nothing you don\u2019t."}
+      <div style={{ display: "flex", marginBottom: 16 }}>{brandMark(90)}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, letterSpacing: 3, marginBottom: 48 }}>{"/ fu:l\u00B7kit /"}</div>
+      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
+      <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4, marginBottom: 64 }}>
+        <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"1."}</span>{"Everything you need, nothing you don\u2019t."}
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32 }} />
       <div style={{ fontSize: 120, fontWeight: 700, color: TEXT, letterSpacing: -4, lineHeight: 1 }}>{`$${TIERS.pro.price}`}</div>
       <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 8 }}>{"/month"}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -240,8 +240,8 @@ function igStoriesMemory() {
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32, marginTop: 16 }} />
       {brandMark(60)}
       <div style={{ fontSize: 60, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1.15 }}>{"never does."}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 48 }}>{"Every conversation starts from you."}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginTop: 48 }}>{"Every conversation starts from you."}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -249,14 +249,14 @@ function igStoriesMemory() {
 function igStoriesStack() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginBottom: 8 }}>{"You\u2019re paying for"}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, marginBottom: 8 }}>{"You\u2019re paying for"}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1 }}>{"10 apps"}</div>
-      <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginTop: 8, marginBottom: 48 }}>{"$88/month"}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, marginTop: 8, marginBottom: 48 }}>{"$88/month"}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 48 }} />
-      <div style={{ fontSize: 32, fontWeight: 400, color: MUTED, marginBottom: 8 }}>{"You need"}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, marginBottom: 8 }}>{"You need"}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -2, lineHeight: 1 }}>{"1 app"}</div>
-      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, marginTop: 8 }}>{`$${TIERS.standard.price}/month`}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: SEC, marginTop: 8 }}>{`$${TIERS.standard.price}/month`}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -264,14 +264,14 @@ function igStoriesStack() {
 function igStoriesVoice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
-      <div style={{ fontSize: 22, fontWeight: 400, color: MUTED, letterSpacing: 3, marginBottom: 32 }}>{"THE HUM"}</div>
+      <div style={{ fontSize: 30, fontWeight: 400, color: MUTED, letterSpacing: 4, marginBottom: 32 }}>{"THE HUM"}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -3, lineHeight: 1, marginBottom: 16 }}>{"Talk."}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -3, lineHeight: 1, marginBottom: 16 }}>{"Save."}</div>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -3, lineHeight: 1, marginBottom: 48 }}>{"Remember."}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginBottom: 32 }} />
-      <div style={{ fontSize: 24, fontWeight: 400, color: SEC, lineHeight: 1.5 }}>{"Voice mode. No transcript."}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: SEC, lineHeight: 1.5 }}>{"AI files everything for you."}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.5 }}>{"Voice mode. No transcript."}</div>
+      <div style={{ fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.5 }}>{"AI files everything for you."}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -280,20 +280,20 @@ function igStoriesBestie() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -3, lineHeight: 1, marginBottom: 16 }}>{"Bestie"}</div>
-      <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ best-ee /"}</div>
-      <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, letterSpacing: 3, marginBottom: 48 }}>{"/ best-ee /"}</div>
+      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun."}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"1."}</span>{"Someone who knows what you need before you ask."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"1."}</span>{"Someone who knows what you need before you ask."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"2."}</span>{"Not a chatbot. A thinking partner."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"2."}</span>{"Not a chatbot. A thinking partner."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"3."}</span><span style={{ display: "flex", alignItems: "center" }}><span>{"See: "}</span>{brandMark(22, false, "muted")}<span>{"."}</span></span>
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"3."}</span><span style={{ display: "flex", alignItems: "center" }}><span>{"See: "}</span>{brandMark(28, false, "muted")}<span>{"."}</span></span>
         </div>
       </div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -302,22 +302,22 @@ function igStoriesNotes() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: BG, fontFamily: "D-DIN", padding: "120px 80px", position: "relative" }}>
       <div style={{ fontSize: 80, fontWeight: 700, color: TEXT, letterSpacing: -3, lineHeight: 1, marginBottom: 16 }}>{"Notes"}</div>
-      <div style={{ fontSize: 20, fontWeight: 400, color: MUTED, letterSpacing: 2, marginBottom: 48 }}>{"/ nohts /"}</div>
-      <div style={{ fontSize: 18, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun, plural."}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, letterSpacing: 3, marginBottom: 48 }}>{"/ nohts /"}</div>
+      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, fontStyle: "italic", marginBottom: 32 }}>{"noun, plural."}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"1."}</span>{"Ideas that used to just sit there."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"1."}</span>{"Ideas that used to just sit there."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"2."}</span>{"Now they talk back."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"2."}</span>{"Now they talk back."}
         </div>
-        <div style={{ display: "flex", gap: 12, fontSize: 26, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
-          <span style={{ color: DIM, fontSize: 20, minWidth: 28 }}>{"3."}</span>{"AI connects them before you do."}
+        <div style={{ display: "flex", gap: 12, fontSize: 32, fontWeight: 400, color: SEC, lineHeight: 1.4 }}>
+          <span style={{ color: DIM, fontSize: 26, minWidth: 32 }}>{"3."}</span>{"AI connects them before you do."}
         </div>
       </div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT, marginTop: 48, marginBottom: 32 }} />
       <div style={{ fontSize: 48, fontWeight: 700, color: TEXT, letterSpacing: -1, lineHeight: 1 }}>{TIERS.pro.priceLabel}</div>
-      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 16, fontWeight: 400, color: MUTED, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ position: "absolute", bottom: 100, left: 80, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
