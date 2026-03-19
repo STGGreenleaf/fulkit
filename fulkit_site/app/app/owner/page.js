@@ -4441,13 +4441,13 @@ function SocialsTab() {
                     <div
                       onClick={() => setPreviewTemplate({ url: heroUrl, concept: "hero", size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
-                        width: "100%", aspectRatio: active.aspect, maxHeight: 400,
-                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-lg)",
+                        width: "100%", aspectRatio: active.aspect,
+                        border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)",
                         overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                         marginBottom: "var(--space-3)",
                       }}
                     >
-                      <img src={heroUrl} alt="hero" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+                      <img src={heroUrl} alt="hero" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
                     </div>
                   );
                 })()}
@@ -4461,11 +4461,11 @@ function SocialsTab() {
                           onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                           style={{
                             width: "100%", aspectRatio: active.aspect,
-                            border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+                            border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
                             overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                           }}
                         >
-                          <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+                          <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "var(--space-1)" }}>
                           <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textTransform: "capitalize" }}>{concept}</span>
