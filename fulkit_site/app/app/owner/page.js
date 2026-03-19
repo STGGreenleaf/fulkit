@@ -126,6 +126,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
           return (
             <Tooltip key={t.id} label={null}>
               <button
+                type="button"
                 onClick={() => {
                   setTab(t.id);
                   window.history.replaceState({}, "", `${urlPrefix}/${t.id}`);
@@ -135,6 +136,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                   alignItems: "center",
                   gap: "var(--space-1-5)",
                   padding: isMobile ? "var(--space-2-5) var(--space-2-5)" : "var(--space-2-5) var(--space-3)",
+                  minHeight: 36,
                   border: "none",
                   outline: "none",
                   background: active ? "var(--color-bg-alt)" : "transparent",
@@ -147,14 +149,15 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                   transition: `all var(--duration-fast) var(--ease-default)`,
                 }}
               >
-                <t.icon size={isMobile ? 18 : TAB_ICON_SIZE} strokeWidth={1.8} />
+                <t.icon size={isMobile ? 18 : TAB_ICON_SIZE} strokeWidth={1.8} style={{ pointerEvents: "none" }} />
                 {t.id === "radio" && maydayAlert && (
                   <span style={{
                     width: 6, height: 6, borderRadius: "50%",
                     background: "var(--color-error, #e53e3e)",
                     flexShrink: 0,
-                    marginLeft: -4,
+                    marginLeft: 2,
                     alignSelf: "flex-start",
+                    pointerEvents: "none",
                   }} />
                 )}
                 {!compactMode && !isMobile && t.label}

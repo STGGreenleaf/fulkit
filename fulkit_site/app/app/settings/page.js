@@ -361,6 +361,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
             return (
               <Tooltip key={t.id} label={compactMode ? t.label : null}>
                 <button
+                  type="button"
                   onClick={() => {
                     setTab(t.id);
                     window.history.replaceState({}, "", `/settings/${t.id}`);
@@ -370,6 +371,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                     alignItems: "center",
                     gap: "var(--space-1-5)",
                     padding: isMobile ? "var(--space-3) var(--space-3)" : "var(--space-2-5) var(--space-3)",
+                    minHeight: 36,
                     border: "none",
                     outline: "none",
                     background: active ? "var(--color-bg-alt)" : "transparent",
@@ -382,7 +384,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
                     transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                   }}
                 >
-                  <t.icon size={isMobile ? 20 : TAB_ICON_SIZE} strokeWidth={1.8} />
+                  <t.icon size={isMobile ? 20 : TAB_ICON_SIZE} strokeWidth={1.8} style={{ pointerEvents: "none" }} />
                   {!compactMode && !isMobile && t.label}
                   {t.id === "owner" && ownerMayday && (
                     <span style={{
