@@ -4454,7 +4454,7 @@ function SocialsTab() {
                       onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
                         width: "100%", aspectRatio: active.aspect,
-                        border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)",
+                        border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
                         overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                         marginBottom: "var(--space-2)",
                       }}
@@ -4505,7 +4505,7 @@ function SocialsTab() {
                               onClick={() => setSocialConceptIdx(i)}
                               style={{
                                 width: 80, aspectRatio: active.aspect,
-                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-border)",
+                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
                                 borderRadius: "var(--radius-sm)",
                                 overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                               }}
