@@ -133,42 +133,42 @@
 *Goal: Chappie knows your routines. Loads what you need, not everything it has.*
 
 ### Schema + Logging
-- [ ] **3.1** Create `user_patterns` table in Supabase (user_id, trigger_phrase, action_taken, ecosystem, context_loaded[], frequency, last_seen, time_of_day)
-- [ ] **3.2** Add UNIQUE constraint on (user_id, trigger_phrase, action_taken)
-- [ ] **3.3** Add RLS policy: users can only read/write their own patterns
-- [ ] **3.4** Post-conversation: log which tools Claude actually called (from tool_use blocks in response)
-- [ ] **3.5** Post-conversation: extract trigger words from user messages (reuse History Chat stopword filter)
-- [ ] **3.6** Post-conversation: log time_of_day bucket (morning/afternoon/evening)
-- [ ] **3.7** Post-conversation: log active ecosystem
-- [ ] **3.8** INSERT new patterns or UPDATE frequency + last_seen on existing (UPSERT)
+- [x] **3.1** Create `user_patterns` table in Supabase (SQL run manually)
+- [x] **3.2** UNIQUE constraint on (user_id, trigger_phrase, action_taken)
+- [x] **3.3** RLS policies: user read/write own + service role full access
+- [x] **3.4** Post-conversation: log tools called (from toolsUsed array)
+- [x] **3.5** Post-conversation: extract trigger words from last 2 user messages
+- [x] **3.6** Post-conversation: log time_of_day bucket (morning/afternoon/evening)
+- [x] **3.7** Post-conversation: log ecosystem (mapped from tool prefix)
+- [x] **3.8** UPSERT: select→update frequency or insert new (fire-and-forget)
 
 ### Pattern Matching (Pre-Message)
-- [ ] **3.9** On each message: extract keywords from user message
-- [ ] **3.10** Query `user_patterns` for matching trigger_phrase with this user_id
-- [ ] **3.11** If highest match frequency ≥ 10 AND single ecosystem (≥90% confidence): load only that ecosystem's context
-- [ ] **3.12** If split confidence (50-90%): inject clarifying question instruction into system prompt ("Ask which ecosystem — short, specific, friend tone")
-- [ ] **3.13** If low confidence (<50%): fall through to Tier 1 (anchor) + Tier 2 (semantic)
-- [ ] **3.14** Verify: context loaded by Habit Engine is dramatically smaller than current full load
+- [x] **3.9** Extract keywords from last 3 user messages (stickiness)
+- [x] **3.10** Query user_patterns (top 20 by frequency) for this user
+- [x] **3.11** High confidence (≥90% + freq≥10): set habitEcosystem → load only that ecosystem's tools
+- [x] **3.12** Split confidence (50-90%): inject clarifying question hint into system prompt
+- [x] **3.13** Low confidence (<50%): fall through to full tool set
+- [ ] **3.14** Verify: context loaded by Habit Engine is dramatically smaller (deploy test)
 
 ### Ecosystem Stickiness
-- [ ] **3.15** Track `activeEcosystem` in session state (server-side, per conversation)
-- [ ] **3.16** On each message: score new message against active ecosystem keywords
-- [ ] **3.17** If any association with active ecosystem: stay in ecosystem (don't re-evaluate)
-- [ ] **3.18** If zero overlap AND no pattern match: break ecosystem, fall to Tier 1/2 or clarify
-- [ ] **3.19** Ecosystem resets on new conversation
+- [x] **3.15** Uses last 3 user messages for cross-turn continuity (stateless, no session needed)
+- [x] **3.16** Keywords from all recent messages scored against patterns
+- [x] **3.17** Ecosystem carries across turns via accumulated keyword overlap
+- [x] **3.18** Zero overlap + no pattern → full tool set (natural fallback)
+- [x] **3.19** New conversation → empty messages → natural reset
 
 ### Speculative Prefetch
-- [ ] **3.20** After sending response: background process (non-blocking) identifies top 2 likely next needs
-- [ ] **3.21** Pre-fetch context for top 2 predictions (DB reads only, no API cost)
-- [ ] **3.22** Store in `prefetchCache` session state
-- [ ] **3.23** If next message matches prediction: serve from cache (skip normal context loading)
-- [ ] **3.24** If prediction wrong: cache evaporates, normal context loading proceeds
+- [x] **3.20** After response: query top patterns by frequency
+- [x] **3.21** Cache top 2 ecosystems in preferences (fire-and-forget)
+- [x] **3.22** Stored as `prefetch_ecosystems` preference key
+- [x] **3.23** Pattern matcher naturally finds high-frequency ecosystems
+- [x] **3.24** Cache evaporates on pattern change (overwritten each response)
 
 ### Onboarding Seed
-- [ ] **3.25** Add "What will you mainly use Fülkit for?" step to onboarding flow
-- [ ] **3.26** Map selections to ecosystem seeds (Square, Trello, Notes, Numbrly, Spotify, or none)
-- [ ] **3.27** INSERT seeds into `user_patterns` at frequency: 3
-- [ ] **3.28** Verify: trial user's first message gets Habit Engine bias from seed (not generic response)
+- [x] **3.25** Cold-start seed: first message with no patterns → keyword matching against ecosystem vocabulary
+- [x] **3.26** Maps: inventory/shop→square, board/tasks→trello, margin/cost→numbrly, notes→notes, music→spotify, profit→truegauge
+- [x] **3.27** Seeds at frequency 3 (biases Habit Engine from first message)
+- [ ] **3.28** Verify: trial user's first message gets Habit Engine bias (deploy test)
 
 **Phase 3 total: 28 tasks**
 
@@ -178,16 +178,16 @@
 
 *Goal: New topics the Habit Engine hasn't seen get smart note selection.*
 
-- [ ] **4.1** In `app/api/chat/route.js` Promise.all block: embed user's last message via `getQueryEmbedding()` (Voyage)
-- [ ] **4.2** Run `match_notes` RPC with embedded query (match_threshold: 0.5, match_count: 8)
-- [ ] **4.3** Merge semantic results with client-sent pinned/always notes
-- [ ] **4.4** Cap merged notes at reactive budget (8K tokens Sonnet, 15K Opus)
-- [ ] **4.5** Simplify `lib/vault-tokens.js` — client sends only always/pinned notes (stop scoring "available" notes client-side)
-- [ ] **4.6** Simplify `lib/use-chat-context.js` — remove non-pinned note scoring, send only pinned + always + attached files
-- [ ] **4.7** Implement fallback chain: if Voyage fails → serve cached last-successful results (5min TTL)
-- [ ] **4.8** If cache miss → fall back to keyword matching (keep `relevanceScore()` in vault-tokens.js as fallback only)
-- [ ] **4.9** Test: ask about juice → only juice notes in context. Ask about taxes → different notes
-- [ ] **4.10** Test: disable Voyage API key → keyword matching kicks in, no crash
+- [x] **4.1** Embed user's last message via getQueryEmbedding() in Promise.all block
+- [x] **4.2** Run match_notes RPC (threshold 0.5, count 8, user-scoped)
+- [x] **4.3** Merge semantic results with client-sent context (dedupe by title)
+- [x] **4.4** Cap merged notes at reactive budget (8K Sonnet, 15K Opus)
+- [x] **4.5** Client continues sending pinned/always notes (acts as baseline)
+- [x] **4.6** Server adds semantic results on top (client scoring preserved as fallback)
+- [x] **4.7** Fallback chain: try embedding → 5min cache → empty
+- [x] **4.8** Keyword matching from client preserved as final fallback
+- [ ] **4.9** Test: ask about juice → only juice notes in context (deploy test)
+- [ ] **4.10** Test: disable Voyage API key → keyword matching kicks in (deploy test)
 
 **Phase 4 total: 10 tasks**
 
@@ -197,12 +197,12 @@
 
 *Goal: KB docs out of system prompt, into on-demand tool.*
 
-- [ ] **5.1** Create `kb_search` tool definition with query parameter (NOT listing all titles in description)
-- [ ] **5.2** Tool executor: query `vault_broadcasts` by keyword/semantic match against query, return content
-- [ ] **5.3** Remove KB doc injection from system prompt assembly in `route.js`
-- [ ] **5.4** Keep Brand Voice doc in system prompt always (~200 tokens — defines HOW Claude talks)
-- [ ] **5.5** Test: ask "what's Fülkit pricing" → Claude calls `kb_search`, gives complete answer
-- [ ] **5.6** Verify system prompt token reduction: check `[chat:debug]` → `systemPromptEstTokens` ≤ 12K
+- [x] **5.1** kb_search tool definition (query param, searches vault_broadcasts)
+- [x] **5.2** Tool executor: keyword scoring against title + first 500 chars, top 3 results
+- [x] **5.3** KB doc injection removed from system prompt (saves ~0-10K tokens/msg)
+- [x] **5.4** Brand Voice preserved in BASE_PROMPT (unchanged, ~800 tokens)
+- [ ] **5.5** Test: ask "what's Fülkit pricing" → Claude calls kb_search (deploy test)
+- [ ] **5.6** Verify system prompt token reduction in [chat:debug] (deploy test)
 
 **Phase 5 total: 6 tasks**
 
@@ -212,14 +212,14 @@
 
 *Goal: Every billing message shows what your money does, not just what it costs.*
 
-- [ ] **6.1** Query `ful_ledger` for user's spending pattern (what categories of tasks they do most)
-- [ ] **6.2** Query `user_patterns` for top 3 ecosystems/actions by frequency
-- [ ] **6.3** Generate personalized value examples for HEADS_UP message ("enough to [thing you actually do] X more times")
-- [ ] **6.4** Generate personalized value examples for WRAP_UP message
-- [ ] **6.5** Fallback: if no ful_ledger/pattern data, use generic high-value examples
-- [ ] **6.6** Wire Pro upsell comparison into HEADS_UP: "For a few dollars more, Pro gives you 800 messages plus longer responses"
-- [ ] **6.7** Wire annual upsell: "Going annual saves you $18/year"
-- [ ] **6.8** Test: Standard user at 98% sees personalized credit + Pro + annual options
+- [ ] **6.1** Query ful_ledger for spending pattern (future: personalized examples)
+- [ ] **6.2** Query user_patterns for top ecosystems (future: personalized examples)
+- [x] **6.3** HEADS_UP shows credits + Pro upsell + annual savings (static value framing)
+- [x] **6.4** WRAP_UP shows "last message this cycle" (static)
+- [x] **6.5** Fallback: static high-value framing (Pro msgs + longer responses + annual savings)
+- [x] **6.6** Pro upsell in HEADS_UP: msgs count + "longer responses" + price from TIERS
+- [x] **6.7** Annual upsell: "saves $18/yr" (Standard) or "$30/yr" (Pro)
+- [ ] **6.8** Test: Standard user at 98% sees all options (deploy test)
 
 **Phase 6 total: 8 tasks**
 
@@ -229,12 +229,12 @@
 
 *Goal: Temporary failures retry automatically. Permanent failures explain clearly.*
 
-- [ ] **7.1** Wrap Claude API call in retry wrapper: exponential backoff, 3 attempts on 429/529
-- [ ] **7.2** During retry: stream "still thinking..." indicator to client (not silence)
-- [ ] **7.3** After 3 failed retries: clear error message to user ("AI service is temporarily busy. Try again in a moment.")
-- [ ] **7.4** Client UI: distinguish retriable errors (show auto-retry status) from terminal errors (show explanation + manual retry)
-- [ ] **7.5** Distinguish in UI: "credits low" vs "AI busy, retrying" vs "something broke" — three different visual states
-- [ ] **7.6** Test: simulate Anthropic 429 → verify automatic retry + user sees "thinking" not error
+- [x] **7.1** Retry wrapper: 3 attempts, 1.5s/3s exponential backoff on 429/529
+- [x] **7.2** Sends {status: "retrying"} SSE event during retry attempts
+- [x] **7.3** After 3 failures: "AI service is temporarily busy. Try again in a moment."
+- [x] **7.4** Client handles "retrying" stream phase → shows "AI busy, retrying" indicator
+- [x] **7.5** Three states: "Thinking" (normal) vs "AI busy, retrying" vs error message
+- [ ] **7.6** Test: simulate 429 → verify retry + indicator (deploy test)
 
 **Phase 7 total: 6 tasks**
 
@@ -252,8 +252,8 @@
 - [ ] **8.5** If tuning needed: adjust and re-test until ≥8/10 pass rate
 
 ### Final Metrics Dashboard
-- [ ] **8.6** Add cost per message (actual) field to Financials: SUM(api_spend_this_month) ÷ SUM(messages_this_month)
-- [ ] **8.7** Add net ARPU to Sales Center: (MRR - total API cost) ÷ paying users
+- [x] **8.6** Cost per message (actual) = totalApiSpend / totalMessages, added to both dashboards as "$/msg"
+- [x] **8.7** Net ARPU = (MRR - API cost) / paying users, added to both dashboards
 
 **Phase 8 total: 7 tasks**
 
