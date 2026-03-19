@@ -348,6 +348,7 @@ export default function ChatContent({ isPopout = false }) {
   const maxHistoryWidth = isPopout ? 200 : 400;
 
   // Shared toolbar button style — proper hit targets on all devices
+  const touch = isMobile || isNarrow;
   const toolbarBtn = (active) => ({
     display: "flex",
     alignItems: "center",
@@ -359,9 +360,9 @@ export default function ChatContent({ isPopout = false }) {
     border: "none",
     cursor: "pointer",
     fontFamily: "var(--font-primary)",
-    padding: isMobile ? "var(--space-2) var(--space-3)" : "var(--space-2) var(--space-2-5)",
-    minHeight: isMobile ? 44 : 32,
-    minWidth: isMobile ? 44 : 32,
+    padding: touch ? "var(--space-2) var(--space-3)" : "var(--space-2) var(--space-2-5)",
+    minHeight: touch ? 44 : 32,
+    minWidth: touch ? 44 : 32,
     borderRadius: "var(--radius-sm)",
     touchAction: "manipulation",
     WebkitTapHighlightColor: "transparent",
@@ -1339,11 +1340,12 @@ export default function ChatContent({ isPopout = false }) {
                             display: "flex",
                             flexDirection: "column",
                             gap: "var(--space-1)",
-                            padding: "var(--space-3) var(--space-3) var(--space-3) var(--space-4)",
+                            padding: "var(--space-3) var(--space-3) var(--space-3) var(--space-3)",
+                            marginLeft: "var(--space-3)",
                             background: "transparent",
                             cursor: "pointer",
                             textAlign: "left",
-                            width: "100%",
+                            width: "auto",
                             fontFamily: "var(--font-primary)",
                             border: "none",
                             borderBottom: "1px solid var(--color-border-light)",
