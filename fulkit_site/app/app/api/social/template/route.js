@@ -128,13 +128,13 @@ function igPostHero() {
 function igPostPrice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      {brandMark(72, true)}
-      <div style={{ fontSize: 20, fontWeight: 400, color: SEC, marginTop: 14, letterSpacing: 2, marginBottom: 80 }}>{"/ fu:l\u00B7kit /"}</div>
+      {brandMark(80, true)}
+      <div style={{ fontSize: 28, fontWeight: 400, color: SEC, marginTop: 16, letterSpacing: 3, marginBottom: 80 }}>{"/ fu:l\u00B7kit /"}</div>
       <div style={{ fontSize: 160, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{`$${TIERS.pro.price}`}</div>
       <div style={{ fontSize: 36, fontWeight: 400, color: SEC, letterSpacing: 3, marginTop: 4, marginBottom: 80 }}>{"/month"}</div>
-      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"An AI with a memory."}</div>
-      <div style={{ fontSize: 26, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"Your notes. Your voice. Your bestie."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"An AI with a memory."}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"Your notes. Your voice. Your bestie."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -142,11 +142,11 @@ function igPostPrice() {
 function igPostMemory() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      <div style={{ fontSize: 48, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12 }}>{brandMark(48, true)}<span style={{ fontSize: 48, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 60, textAlign: "center" }}>{"Every conversation starts"}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"from what you\u2019ve saved."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, textAlign: "center" }}>{"ChatGPT forgets you."}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12 }}>{brandMark(52, true)}<span style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.2, marginLeft: 12 }}>{"never does."}</span></div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, marginTop: 60, textAlign: "center" }}>{"Every conversation starts"}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"from what you\u2019ve saved."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -155,11 +155,11 @@ function igPostStack() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       <div style={{ fontSize: 120, fontWeight: 700, color: SEC, letterSpacing: -3, lineHeight: 1 }}>{"10"}</div>
-      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 8, marginBottom: 20 }}>{"apps. $88/month."}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, marginTop: 8, marginBottom: 20 }}>{"apps. $88/month."}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT_INV, marginBottom: 20 }} />
       <div style={{ fontSize: 120, fontWeight: 700, color: TEXT_INV, letterSpacing: -3, lineHeight: 1 }}>{"1"}</div>
-      <div style={{ fontSize: 28, fontWeight: 400, color: MUTED, marginTop: 8 }}>{`app. $${TIERS.standard.price}/month.`}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, marginTop: 8 }}>{`app. $${TIERS.standard.price}/month.`}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -167,13 +167,13 @@ function igPostStack() {
 function igPostVoice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      <div style={{ fontSize: 22, fontWeight: 400, color: SEC, letterSpacing: 2, marginBottom: 40 }}>{"THE HUM"}</div>
+      <div style={{ fontSize: 28, fontWeight: 400, color: SEC, letterSpacing: 3, marginBottom: 40 }}>{"THE HUM"}</div>
       <div style={{ fontSize: 64, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Talk."}</div>
       <div style={{ fontSize: 64, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Save."}</div>
       <div style={{ fontSize: 64, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Remember."}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 48, textAlign: "center" }}>{"Voice mode. No transcript on screen."}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"AI silently files everything."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, marginTop: 48, textAlign: "center" }}>{"Voice mode. No transcript on screen."}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"AI silently files everything."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -181,12 +181,12 @@ function igPostVoice() {
 function igPostBestie() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, lineHeight: 1.3, textAlign: "center" }}>{"A chatbot waits"}</div>
-      <div style={{ fontSize: 36, fontWeight: 400, color: MUTED, lineHeight: 1.3, textAlign: "center" }}>{"for instructions."}</div>
+      <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, lineHeight: 1.3, textAlign: "center" }}>{"A chatbot waits"}</div>
+      <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, lineHeight: 1.3, textAlign: "center" }}>{"for instructions."}</div>
       <div style={{ width: 60, height: 3, backgroundColor: TEXT_INV, marginTop: 40, marginBottom: 40 }} />
-      <div style={{ fontSize: 44, fontWeight: 700, color: TEXT_INV, lineHeight: 1.3, textAlign: "center" }}>{"A bestie"}</div>
-      <div style={{ fontSize: 44, fontWeight: 700, color: TEXT_INV, lineHeight: 1.3, textAlign: "center" }}>{"anticipates."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, lineHeight: 1.3, textAlign: "center" }}>{"A bestie"}</div>
+      <div style={{ fontSize: 52, fontWeight: 700, color: TEXT_INV, lineHeight: 1.3, textAlign: "center" }}>{"anticipates."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
@@ -194,12 +194,12 @@ function igPostBestie() {
 function igPostNotes() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      <div style={{ fontSize: 56, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"Your notes"}</div>
-      <div style={{ fontSize: 56, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"talk back"}</div>
-      <div style={{ fontSize: 56, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"to you."}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, marginTop: 48, textAlign: "center" }}>{"AI connects your ideas"}</div>
-      <div style={{ fontSize: 24, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"before you do."}</div>
-      <div style={{ position: "absolute", bottom: 70, fontSize: 16, fontWeight: 400, color: SEC, letterSpacing: 5 }}>{"FULKIT.APP"}</div>
+      <div style={{ fontSize: 60, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"Your notes"}</div>
+      <div style={{ fontSize: 60, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"talk back"}</div>
+      <div style={{ fontSize: 60, fontWeight: 700, color: TEXT_INV, letterSpacing: -1, lineHeight: 1.15, textAlign: "center" }}>{"to you."}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, marginTop: 48, textAlign: "center" }}>{"AI connects your ideas"}</div>
+      <div style={{ fontSize: 34, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"before you do."}</div>
+      <div style={{ position: "absolute", bottom: 70, fontSize: 28, fontWeight: 700, color: MUTED, letterSpacing: 6 }}>{"FULKIT.APP"}</div>
     </div>
   );
 }
