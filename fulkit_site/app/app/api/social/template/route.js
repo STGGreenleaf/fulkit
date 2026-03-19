@@ -24,7 +24,7 @@ const DIM = "#B0ADA8";
 function brandMark(height, isDark = false, variant = "default") {
   const color = variant === "muted" ? DIM : (isDark ? TEXT_INV : TEXT);
   return (
-    <span style={{ fontSize: height, fontWeight: 700, color, fontFamily: "D-DIN", letterSpacing: -1, lineHeight: 1 }}>
+    <span style={{ fontSize: height, fontWeight: 700, color, fontFamily: "D-DIN", letterSpacing: -1, lineHeight: 1.2 }}>
       {"F\u00FClkit"}
     </span>
   );
