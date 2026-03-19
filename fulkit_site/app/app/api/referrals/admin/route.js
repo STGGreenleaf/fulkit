@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import { getTierForCount, calculateMonthlyFul, fulToDollars } from "../../../../lib/referral-engine";
-import { TIERS } from "../../../../lib/ful-config";
+import { PLANS } from "../../../../lib/ful-legend";
 
 async function getUser(request) {
   const authHeader = request.headers.get("authorization");
@@ -79,13 +79,16 @@ export async function GET(request) {
   const totalMonthlyDollars = fulToDollars(totalMonthlyFul);
 
   // ── Revenue math ──
-  const mrr = (subscribers.standard * TIERS.standard.price) + (subscribers.pro * TIERS.pro.price);
+  const mrr = (subscribers.standard * PLANS.standard.priceMonthly) + (subscribers.pro * PLANS.pro.priceMonthly);
   const totalPaying = subscribers.standard + subscribers.pro;
   const totalUsers = (allProfiles || []).length;
   const actualApiCost = Math.round(totalApiSpend * 100) / 100;
   const netIncome = mrr - totalMonthlyDollars - actualApiCost;
   const margin = mrr > 0 ? Math.round((netIncome / mrr) * 100) : 0;
-  const conversionRate = totalUsers > 0 ? Math.round((totalPaying / totalUsers) * 100) : 0;
+  // Exclude owner from conversion denominator (owner is not a conversion target)
+  const ownerCount = (allProfiles || []).filter(p => p.id === user.id).length;
+  const convertibleUsers = totalUsers - ownerCount;
+  const conversionRate = convertibleUsers > 0 ? Math.round((totalPaying / convertibleUsers) * 100) : 0;
   const arpu = totalPaying > 0 ? Math.round((mrr / totalPaying) * 100) / 100 : 0;
   const ltv = arpu * 12; // Simple 12-month LTV
 
@@ -99,8 +102,10 @@ export async function GET(request) {
   const monthsParam = parseInt(url.searchParams.get("months") || "6", 10);
   const now = new Date();
 
-  // Start from April 2026 (launch month)
-  const earliest = new Date(2026, 3, 1); // April 2026
+  // Start from earliest user signup (dynamic)
+  const firstProfile = (allProfiles || []).reduce((min, p) => (!min || (p.created_at && p.created_at < min) ? p.created_at : min), null);
+  const earliest = firstProfile ? new Date(firstProfile) : new Date(now.getFullYear(), now.getMonth(), 1);
+  earliest.setDate(1); // start of that month
   const maxMonths = Math.max(1, (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1);
   const monthCount = monthsParam === 0 ? maxMonths : Math.min(monthsParam, maxMonths);
 

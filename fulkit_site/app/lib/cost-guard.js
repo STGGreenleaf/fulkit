@@ -5,7 +5,8 @@
  * and to track API spend after each response.
  */
 
-import { COST_CEILINGS, CIRCUIT_BREAKER, TIERS, COST_BASIS } from "./ful-config";
+import { PLANS, CIRCUIT_BREAKER, getSpendCap } from "./ful-legend";
+import { COST_CEILINGS } from "./ful-config";
 
 // ── Per-token cost estimates (Anthropic pricing) ──────────────────────
 const TOKEN_COSTS = {

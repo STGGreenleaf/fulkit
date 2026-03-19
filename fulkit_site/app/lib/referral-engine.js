@@ -5,7 +5,7 @@
  * and recalculate referral stats. Pure functions + Supabase admin calls.
  */
 
-import { REFERRALS } from "./ful-config";
+import { REFERRALS, FUL_EXCHANGE } from "./ful-legend";
 
 /**
  * Get the referral tier for a given active referral count.
@@ -47,7 +47,7 @@ export function calculateMonthlyFul(activeRefs) {
  * Convert Fül to dollar value at the current exchange rate.
  */
 export function fulToDollars(ful) {
-  return ful / REFERRALS.fulPerDollar;
+  return ful / FUL_EXCHANGE.fulPerDollar;
 }
 
 /**

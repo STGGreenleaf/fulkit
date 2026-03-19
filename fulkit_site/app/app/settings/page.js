@@ -3901,7 +3901,7 @@ function BillingTab() {
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--space-2)", marginTop: "var(--space-2)", borderTop: "2px solid var(--color-border)" }}>
                 <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)" }}>Total costs/mo</span>
-                <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-black)" }}>${adminStats.actualApiCost + adminStats.totalMonthlyDollars}</span>
+                <span style={{ fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-black)" }}>${Math.round((adminStats.actualApiCost + adminStats.totalMonthlyDollars + (adminStats.pendingPayouts || 0)) * 100) / 100}</span>
               </div>
             </Card>
 

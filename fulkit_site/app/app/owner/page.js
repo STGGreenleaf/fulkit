@@ -46,7 +46,8 @@ import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 import LoadingMark from "../../components/LoadingMark";
 import LogoMark from "../../components/LogoMark";
-import { TIERS, CREDITS, COST_BASIS, REFERRALS } from "../../lib/ful-config";
+import { TIERS, CREDITS, REFERRALS } from "../../lib/ful-config";
+import { PLANS, COST_BASIS, PROJECTIONS } from "../../lib/ful-legend";
 import { useIsMobile } from "../../lib/use-mobile";
 
 const TAB_ICON_SIZE = 14;
@@ -3267,21 +3268,31 @@ function NotesTab() {
 
 /* ─── Revenue Projections Data ─── */
 
-const REVENUE_GRID = [
-  { users: 20, free: 6, std: 10, pro: 4, revenue: 150, apiCost: 90, credits: 14, hosting: 25, net: 21 },
-  { users: 35, free: 6, std: 20, pro: 9, revenue: 315, apiCost: 158, credits: 29, hosting: 25, net: 103 },
-  { users: 50, free: 6, std: 31, pro: 13, revenue: 474, apiCost: 225, credits: 44, hosting: 30, net: 175 },
-  { users: 75, free: 6, std: 48, pro: 21, revenue: 747, apiCost: 338, credits: 69, hosting: 35, net: 305 },
-  { users: 100, free: 6, std: 66, pro: 28, revenue: 1014, apiCost: 450, credits: 94, hosting: 40, net: 430 },
-  { users: 150, free: 6, std: 101, pro: 43, revenue: 1554, apiCost: 675, credits: 144, hosting: 50, net: 685 },
-  { users: 200, free: 6, std: 136, pro: 58, revenue: 2094, apiCost: 900, credits: 194, hosting: 50, net: 950 },
-  { users: 300, free: 6, std: 206, pro: 88, revenue: 3174, apiCost: 1350, credits: 294, hosting: 60, net: 1470 },
-  { users: 500, free: 6, std: 346, pro: 148, revenue: 5334, apiCost: 2250, credits: 494, hosting: 75, net: 2515 },
-  { users: 750, free: 6, std: 521, pro: 223, revenue: 8034, apiCost: 3375, credits: 744, hosting: 100, net: 3815 },
-  { users: 1000, free: 6, std: 696, pro: 298, revenue: 10734, apiCost: 4500, credits: 994, hosting: 200, net: 5040 },
-  { users: 1500, free: 6, std: 1046, pro: 448, revenue: 16134, apiCost: 6750, credits: 1494, hosting: 200, net: 7690 },
-  { users: 2000, free: 6, std: 1396, pro: 598, revenue: 21534, apiCost: 9000, credits: 1994, hosting: 200, net: 10340 },
-];
+// Dynamic revenue grid — all values derived from legend
+function buildRevenueGrid() {
+  const split = PROJECTIONS.standardProSplit;
+  const freeSeats = PROJECTIONS.freeSeatsDefault;
+  const costPerMsg = COST_BASIS.targetCostPerFul;
+  const avgMsgs = PROJECTIONS.avgMsgsPerUserPerMonth;
+  const hostBase = PROJECTIONS.hostingBase;
+  const hostPer100 = PROJECTIONS.hostingPerHundredUsers;
+  const refCredit = PROJECTIONS.blendedRefCreditPerUser;
+  const stdPrice = PLANS.standard.priceMonthly;
+  const proPrice = PLANS.pro.priceMonthly;
+
+  return [20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000].map(users => {
+    const paying = users - freeSeats;
+    const std = Math.round(paying * split);
+    const pro = paying - std;
+    const revenue = (std * stdPrice) + (pro * proPrice);
+    const apiCost = Math.round(users * avgMsgs * costPerMsg);
+    const credits = Math.round(paying * refCredit);
+    const hosting = hostBase + Math.floor(users / 100) * hostPer100;
+    const net = revenue - apiCost - credits - hosting;
+    return { users, free: freeSeats, std, pro, revenue, apiCost, credits, hosting, net };
+  });
+}
+const REVENUE_GRID = buildRevenueGrid();
 
 const MILESTONES = REVENUE_GRID.map(r => r.users);
 
@@ -3464,7 +3475,7 @@ function UsersTab() {
           marginBottom: "var(--space-4)",
         }}>
           <div>{TIERS.standard.label} {TIERS.standard.priceLabel} ({TIERS.standard.messages} msgs) &middot; {TIERS.pro.label} {TIERS.pro.priceLabel} ({TIERS.pro.messages} msgs) &middot; Credits {CREDITS.priceLabel}/{CREDITS.amount}</div>
-          <div>70/30 {TIERS.standard.label}/{TIERS.pro.label} split &middot; 6 free seats &middot; ~{COST_BASIS.targetCostPerMsg * 100}&cent;/msg target API cost &middot; ~$1/mo blended referral credit</div>
+          <div>{Math.round(PROJECTIONS.standardProSplit * 100)}/{Math.round((1 - PROJECTIONS.standardProSplit) * 100)} {TIERS.standard.label}/{TIERS.pro.label} split &middot; {PROJECTIONS.freeSeatsDefault} free seats &middot; ~{COST_BASIS.targetCostPerFul * 100}&cent;/msg target API cost &middot; ~${PROJECTIONS.blendedRefCreditPerUser}/mo blended ref credit</div>
         </div>
 
         {/* Table */}
@@ -3472,7 +3483,7 @@ function UsersTab() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Users", "Free", "Std", "Pro", "Revenue", "API Cost", "Credits", "Hosting", "Net"].map((h, i) => (
+                {["Users", "Trial", "Std", "Pro", "Revenue", "API Cost", "Ref Credits", "Hosting", "Net"].map((h, i) => (
                   <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "right" }}>{h}</th>
                 ))}
               </tr>

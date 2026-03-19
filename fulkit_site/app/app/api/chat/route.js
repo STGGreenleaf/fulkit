@@ -13,7 +13,8 @@ import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
-import { SEAT_LIMITS, TIERS, OWNER, BYOK as BYOK_CONFIG, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
+import { PLANS } from "../../../lib/ful-legend";
+import { SEAT_LIMITS, TIERS, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
 import { checkUserBudget, checkCircuitBreaker, estimateCost, trackApiSpend } from "../../../lib/cost-guard";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -55,18 +56,18 @@ async function getStripePrices() {
 function getModelConfig(role, seatType, hasByok) {
   // BYOK (owner or not) → Opus, unlimited
   if (hasByok) {
-    return { model: BYOK_CONFIG.model, maxTokens: BYOK_CONFIG.maxTokens, compressAt: OWNER.compressAt, isByok: true };
+    return { model: PLANS.byok.model, maxTokens: PLANS.byok.maxTokens, compressAt: PLANS.byok.compressAt, isByok: true };
   }
   // Owner without BYOK → still gets Opus (Fulkit pays)
   if (role === "owner") {
-    return { model: OWNER.model, maxTokens: OWNER.maxTokens, compressAt: OWNER.compressAt, isByok: false };
+    return { model: PLANS.owner.model, maxTokens: PLANS.owner.maxTokens, compressAt: PLANS.owner.compressAt, isByok: false };
   }
   // Pro → Sonnet 4K
   if (seatType === "pro") {
-    return { model: TIERS.pro.model, maxTokens: TIERS.pro.maxTokens, compressAt: 80000, isByok: false };
+    return { model: PLANS.pro.model, maxTokens: PLANS.pro.maxTokens, compressAt: PLANS.pro.compressAt, isByok: false };
   }
-  // Standard/free → Sonnet 2K
-  return { model: TIERS.standard.model, maxTokens: TIERS.standard.maxTokens, compressAt: 80000, isByok: false };
+  // Standard/trial → Sonnet 2K
+  return { model: PLANS.standard.model, maxTokens: PLANS.standard.maxTokens, compressAt: PLANS.standard.compressAt, isByok: false };
 }
 
 const BASE_PROMPT = `You are Fülkit — a thinking partner, not an assistant. You're warm, direct, and useful. You have bestie energy — you care, you push back when needed, and you remember what matters.
