@@ -1476,10 +1476,10 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                             style={{
                               position: "absolute", right: 0, top: 0, bottom: 0,
                               width: 64, display: "flex", alignItems: "center", justifyContent: "center",
-                              background: "var(--color-text-dim)", border: "none", cursor: "pointer",
+                              background: "var(--color-bg)", border: "none", cursor: "pointer",
                             }}
                           >
-                            <Skull size={20} strokeWidth={2} color="var(--color-bg)" />
+                            <Skull size={20} strokeWidth={2} color="var(--color-accent)" />
                           </button>
                           {/* Swipeable row */}
                           <button
@@ -1845,7 +1845,7 @@ export default function ChatContent({ isPopout = false, initialPanel = null }) {
                           display: "flex", alignItems: "center", justifyContent: "center",
                           width: 28, height: 28, flexShrink: 0,
                           background: "none", border: "none", cursor: "pointer",
-                          color: "var(--color-text-dim)", borderRadius: "var(--radius-sm)",
+                          color: "var(--color-accent)", borderRadius: "var(--radius-sm)",
                           opacity: 0.4, transition: "opacity 0.15s",
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
