@@ -3790,6 +3790,7 @@ function SocialsTab() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [socialsOpen, setSocialsOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
 
   // Load current metadata
@@ -3938,8 +3939,16 @@ function SocialsTab() {
 
   return (
     <div>
-      <div style={TAB_TITLE}>Socials & Identity</div>
+      <button onClick={() => setSocialsOpen(prev => !prev)} style={{
+        ...TAB_TITLE,
+        background: "none", border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", textAlign: "left",
+      }}>
+        {socialsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        Socials & Identity
+      </button>
 
+      {socialsOpen && (<>
       {/* ── METADATA + PREVIEWS + IDENTITY ── */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 2fr 1fr", gap: isMobile ? "var(--space-3)" : "var(--space-6)", marginBottom: isMobile ? "var(--space-3)" : "var(--space-6)" }}>
 
@@ -4362,6 +4371,7 @@ function SocialsTab() {
       }}>
         {saved ? "Saved" : saving ? "Saving\u2026" : "Save Changes"}
       </button>
+      </>)}
 
       {/* ── DOWNLOAD THE APP ── */}
       <DownloadAppCard />
