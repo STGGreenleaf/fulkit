@@ -533,7 +533,7 @@ export default function ChatContent({ isPopout = false }) {
                   onClick={handleStartNewChat}
                   style={toolbarBtn(false)}
                 >
-                  <Plus size={12} strokeWidth={2} />
+                  <Plus size={isMobile ? 18 : 12} strokeWidth={2} />
                   {!effectiveCompact && "New"}
                 </button>
               )}
