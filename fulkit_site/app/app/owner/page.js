@@ -4730,12 +4730,12 @@ function PitchesTab() {
     <div>
       <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{PITCHES.length}</span></div>
       {/* Pill group */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)", marginBottom: "var(--space-4)" }}>
         {["All", ...PITCH_CATEGORIES].map((cat) => {
           const active = activeCat === cat;
           const count = cat === "All" ? PITCHES.length : PITCHES.filter(p => p.cat === cat).length;
           return (
-            <button key={cat} onClick={() => setActiveCat(active ? null : cat)} style={{
+            <button key={cat} onClick={() => setActiveCat(active && cat !== "All" ? "All" : cat)} style={{
               padding: "var(--space-2) var(--space-3)",
               borderRadius: "var(--radius-md)",
               border: active ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
