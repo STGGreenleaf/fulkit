@@ -1392,6 +1392,115 @@ export default function ChatContent({ isPopout = false }) {
                   </div>
                 </div>
               )}
+
+              {/* Mobile history takeover — inside messages column (position:relative parent) */}
+              {showHistory && isNarrow && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 20,
+                    background: "var(--color-bg)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "var(--space-2-5) var(--space-3)",
+                    borderBottom: "1px solid var(--color-border-light)",
+                  }}>
+                    <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                      History
+                    </span>
+                    <button type="button" onClick={() => setShowHistory(false)} style={toolbarBtn(false)}>
+                      <X size={18} strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-2) var(--space-3)" }}>
+                    {/* Topic chips */}
+                    {(() => {
+                      const allTopics = {};
+                      chat.conversations.forEach((c) => {
+                        (c.topics || []).forEach((t) => { allTopics[t] = (allTopics[t] || 0) + 1; });
+                      });
+                      const sorted = Object.entries(allTopics).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                      if (sorted.length === 0) return null;
+                      return (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: "var(--space-2)", paddingBottom: "var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
+                          {topicFilter && (
+                            <button
+                              onClick={() => setTopicFilter(null)}
+                              style={{
+                                fontSize: "var(--font-size-2xs)", padding: "2px 6px", borderRadius: "var(--radius-sm)",
+                                border: "1px solid var(--color-border)", background: "transparent",
+                                color: "var(--color-text-muted)", cursor: "pointer", fontFamily: "var(--font-primary)",
+                              }}
+                            >All</button>
+                          )}
+                          {sorted.map(([topic]) => (
+                            <button
+                              key={topic}
+                              onClick={() => setTopicFilter(topicFilter === topic ? null : topic)}
+                              style={{
+                                fontSize: "var(--font-size-2xs)", padding: "2px 6px", borderRadius: "var(--radius-sm)",
+                                border: `1px solid ${topicFilter === topic ? "var(--color-text-muted)" : "var(--color-border-light)"}`,
+                                background: topicFilter === topic ? "var(--color-bg-alt)" : "transparent",
+                                color: topicFilter === topic ? "var(--color-text)" : "var(--color-text-dim)",
+                                cursor: "pointer", fontFamily: "var(--font-primary)",
+                                fontWeight: topicFilter === topic ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                              }}
+                            >{topic}</button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {/* Conversation list */}
+                    {chat.conversations
+                      .filter((conv) => !topicFilter || (conv.topics || []).includes(topicFilter))
+                      .map((conv) => (
+                        <button
+                          key={conv.id}
+                          onClick={() => { chat.openConversation(conv); setShowHistory(false); }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "var(--space-2)",
+                            padding: "var(--space-2-5) var(--space-2)",
+                            borderRadius: "var(--radius-sm)",
+                            border: "none",
+                            borderBottom: "1px solid var(--color-border-light)",
+                            background: conv.id === chat.conversationId ? "var(--color-bg-alt)" : "transparent",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            width: "100%",
+                            fontFamily: "var(--font-primary)",
+                          }}
+                        >
+                          <span style={{
+                            fontSize: "var(--font-size-sm)",
+                            color: conv.id === chat.conversationId ? "var(--color-text)" : "var(--color-text-secondary)",
+                            fontWeight: conv.id === chat.conversationId ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                          }}>
+                            {conv.title}
+                          </span>
+                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                            {timeAgo(conv.updated_at)}
+                          </span>
+                        </button>
+                      ))}
+                    {topicFilter && chat.conversations.filter((c) => (c.topics || []).includes(topicFilter)).length === 0 && (
+                      <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", padding: "var(--space-2)", textAlign: "center" }}>
+                        No conversations with this topic.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pins panel — desktop sidebar */}
@@ -1549,8 +1658,8 @@ export default function ChatContent({ isPopout = false }) {
               </>
             )}
 
-            {/* History + Recall Rail */}
-            {showHistory && (
+            {/* History + Recall Rail — desktop only */}
+            {showHistory && !isNarrow && (
               <>
                 <div
                   onMouseDown={startResize}
