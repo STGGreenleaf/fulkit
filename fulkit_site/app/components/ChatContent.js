@@ -132,6 +132,46 @@ export default function ChatContent({ isPopout = false }) {
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
 
+  // ─── URL sync — /chat/c/{id} ────────────────────────────
+  // Read conversation ID from URL on mount
+  useEffect(() => {
+    if (isPopout) return;
+    const match = window.location.pathname.match(/^\/chat\/c\/([a-f0-9-]+)$/);
+    if (match && match[1] && !chat.conversationId) {
+      chat.openConversation({ id: match[1] });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync URL bar when conversationId changes (replaceState — no history entry)
+  const navIntentRef = useRef(false); // true when user clicked a pin/history item
+  useEffect(() => {
+    if (isPopout) return;
+    const path = chat.conversationId ? `/chat/c/${chat.conversationId}` : "/chat";
+    if (window.location.pathname !== path) {
+      if (navIntentRef.current) {
+        window.history.pushState(null, "", path);
+        navIntentRef.current = false;
+      } else {
+        window.history.replaceState(null, "", path);
+      }
+    }
+  }, [chat.conversationId, isPopout]);
+
+  // Back button support
+  useEffect(() => {
+    if (isPopout) return;
+    const onPop = () => {
+      const match = window.location.pathname.match(/^\/chat\/c\/([a-f0-9-]+)$/);
+      if (match) {
+        chat.openConversation({ id: match[1] });
+      } else {
+        chat.startNewChat();
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const chatFileRef = useRef(null);
   const copiedTimerRef = useRef(null);
   const draggingRef = useRef(false);
@@ -1333,6 +1373,7 @@ export default function ChatContent({ isPopout = false }) {
                         <button
                           key={pin.id}
                           onClick={() => {
+                            navIntentRef.current = true;
                             chat.openConversation({ id: pin.conversation_id });
                             setShowPins(false);
                           }}
@@ -1463,7 +1504,7 @@ export default function ChatContent({ isPopout = false }) {
                       .map((conv) => (
                         <button
                           key={conv.id}
-                          onClick={() => { chat.openConversation(conv); setShowHistory(false); }}
+                          onClick={() => { navIntentRef.current = true; chat.openConversation(conv); setShowHistory(false); }}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -1755,7 +1796,7 @@ export default function ChatContent({ isPopout = false }) {
                     .map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => chat.openConversation(conv)}
+                      onClick={() => { navIntentRef.current = true; chat.openConversation(conv); }}
                       style={{
                         display: "flex",
                         alignItems: "center",
