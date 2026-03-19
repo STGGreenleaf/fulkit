@@ -1964,6 +1964,52 @@ async function executeNoteUpdate(input, userId) {
   return { updated: true, id: data.id, title: data.title, folder: data.folder };
 }
 
+// ── KB Search Tool ──────────────────────────────────────────────────
+const KB_TOOLS = [
+  {
+    name: "kb_search",
+    description: "Search the Fulkit knowledge base for product info, pricing, features, policies, or how-to guides. Use when the user asks about Fulkit itself.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "What to search for in the knowledge base" },
+      },
+      required: ["query"],
+    },
+  },
+];
+
+async function executeKbSearch(input, userId) {
+  const admin = getSupabaseAdmin();
+  const query = (input.query || "").toLowerCase();
+  if (!query) return { results: [] };
+
+  const { data: docs } = await admin
+    .from("vault_broadcasts")
+    .select("title, content")
+    .eq("active", true)
+    .in("channel", ["context", "owner-context"])
+    .abortSignal(AbortSignal.timeout(5000));
+
+  if (!docs || docs.length === 0) return { results: [], message: "No knowledge base docs found." };
+
+  // Score by keyword overlap
+  const queryWords = query.split(/\s+/).filter(w => w.length > 2);
+  const scored = docs.map(d => {
+    const titleLower = (d.title || "").toLowerCase();
+    const contentLower = (d.content || "").slice(0, 500).toLowerCase();
+    let score = 0;
+    for (const w of queryWords) {
+      if (titleLower.includes(w)) score += 3;
+      if (contentLower.includes(w)) score += 1;
+    }
+    return { ...d, score };
+  }).filter(d => d.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
+
+  if (scored.length === 0) return { results: [], message: "No matching KB docs found for: " + query };
+  return { results: scored.map(d => ({ title: d.title, content: d.content })) };
+}
+
 export async function POST(request) {
   try {
     // Authenticate user via Supabase
@@ -2468,50 +2514,9 @@ export async function POST(request) {
       }
     }
 
-    // Score and rank broadcasts + owner docs, include only what's relevant and fits
-    const allKbDocs = [
-      ...broadcastsResult.map(b => ({ ...b, source: "broadcast" })),
-      ...ownerDocsResult.map(b => ({ ...b, source: "owner" })),
-    ];
-
-    const scoredDocs = allKbDocs
-      .map(doc => ({
-        ...doc,
-        score: scoreDoc(doc, lastUserMsg),
-        tokens: estimateTokens(doc.content),
-        rendered: applyPricing(`### ${doc.title}\n${doc.content}`),
-      }))
-      .sort((a, b) => b.score - a.score); // highest relevance first
-
-    const includedBroadcasts = [];
-    const includedOwnerDocs = [];
-
-    for (const doc of scoredDocs) {
-      // Skip docs with zero relevance (no keyword overlap with conversation)
-      if (doc.score === 0) {
-        kbExcluded.push(doc.title);
-        continue;
-      }
-      if (systemTokensUsed + doc.tokens > SYSTEM_TOKEN_BUDGET) {
-        kbExcluded.push(doc.title);
-        continue;
-      }
-      if (doc.source === "broadcast") {
-        includedBroadcasts.push(doc.rendered);
-      } else {
-        includedOwnerDocs.push(doc.rendered);
-      }
-      kbIncluded.push(doc.title);
-      systemTokensUsed += doc.tokens;
-    }
-
-    if (includedBroadcasts.length > 0) {
-      system += `\n\n## Fülkit Knowledge Base\n<fulkit-knowledge>\n${includedBroadcasts.join("\n\n")}\n</fulkit-knowledge>`;
-    }
-
-    if (includedOwnerDocs.length > 0) {
-      system += `\n\n## Owner Knowledge Base (Internal)\nThis is internal operational knowledge for the owner only. Never share margin math, retention percentages, cost ceilings, circuit breaker thresholds, or business economics with users.\n<owner-knowledge>\n${includedOwnerDocs.join("\n\n")}\n</owner-knowledge>`;
-    }
+    // KB docs moved to kb_search tool — no longer injected into system prompt
+    // (saves ~0-10K tokens per message)
+    kbExcluded.push(...broadcastsResult.map(b => b.title), ...ownerDocsResult.map(b => b.title));
 
     // Referral whisper context (pre-fetched)
     if (refProfileResult) {
@@ -2674,6 +2679,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
+      ...(userId ? KB_TOOLS : []),
       ...integrationTools,
     ];
 
@@ -2874,6 +2880,16 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name === "threads_create" && userId) {
                 try {
                   const result = await withTimeout(() => executeThreadCreate(block.input || {}, userId, conversationId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              if (block.name === "kb_search" && userId) {
+                try {
+                  const result = await withTimeout(() => executeKbSearch(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
