@@ -1338,9 +1338,9 @@ export default function ChatContent({ isPopout = false }) {
                           }}
                           style={{
                             display: "flex",
-                            flexDirection: "column",
-                            gap: "var(--space-1)",
-                            padding: "var(--space-3) var(--space-3) var(--space-3) var(--space-3)",
+                            alignItems: "flex-start",
+                            gap: "var(--space-2-5)",
+                            padding: "var(--space-3)",
                             marginLeft: "var(--space-3)",
                             background: "transparent",
                             cursor: "pointer",
@@ -1349,33 +1349,42 @@ export default function ChatContent({ isPopout = false }) {
                             fontFamily: "var(--font-primary)",
                             border: "none",
                             borderBottom: "1px solid var(--color-border-light)",
-                            borderLeft: "2px solid var(--color-border)",
                           }}
                         >
-                          <span style={{
-                            fontSize: "var(--font-size-xs)",
-                            fontWeight: "var(--font-weight-semibold)",
-                            color: "var(--color-text-muted)",
-                          }}>
-                            {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "var(--font-size-sm)",
-                              color: "var(--color-text)",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              lineHeight: "var(--line-height-normal)",
-                            }}
-                          >
-                            {pin.content}
-                          </span>
-                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                            {timeAgo(pin.pinned_at)}
-                          </span>
+                          <div style={{
+                            width: 2,
+                            flexShrink: 0,
+                            alignSelf: "stretch",
+                            maxHeight: "2.8em",
+                            background: "var(--color-border)",
+                            borderRadius: 1,
+                          }} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", minWidth: 0 }}>
+                            <span style={{
+                              fontSize: "var(--font-size-xs)",
+                              fontWeight: "var(--font-weight-semibold)",
+                              color: "var(--color-text-muted)",
+                            }}>
+                              {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "var(--font-size-sm)",
+                                color: "var(--color-text)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                lineHeight: "var(--line-height-normal)",
+                              }}
+                            >
+                              {pin.content}
+                            </span>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                              {timeAgo(pin.pinned_at)}
+                            </span>
+                          </div>
                         </button>
                       ))
                     )}
@@ -1419,12 +1428,11 @@ export default function ChatContent({ isPopout = false }) {
                         }}
                         style={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: 2,
-                          padding: "var(--space-2) var(--space-2-5) var(--space-2) var(--space-3)",
+                          alignItems: "flex-start",
+                          gap: "var(--space-2)",
+                          padding: "var(--space-2) var(--space-2-5)",
                           borderRadius: "var(--radius-sm)",
                           border: "1px solid var(--color-border-light)",
-                          borderLeft: "2px solid var(--color-border)",
                           background: "transparent",
                           cursor: "pointer",
                           textAlign: "left",
@@ -1432,27 +1440,37 @@ export default function ChatContent({ isPopout = false }) {
                           fontFamily: "var(--font-primary)",
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize: "var(--font-size-xs)",
-                            color: "var(--color-text)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                          }}
-                        >
-                          {pin.content}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "var(--font-size-2xs)",
-                            color: "var(--color-text-dim)",
-                          }}
-                        >
-                          {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
-                        </span>
+                        <div style={{
+                          width: 2,
+                          flexShrink: 0,
+                          alignSelf: "stretch",
+                          maxHeight: "2.4em",
+                          background: "var(--color-border)",
+                          borderRadius: 1,
+                        }} />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontSize: "var(--font-size-xs)",
+                              color: "var(--color-text)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                            }}
+                          >
+                            {pin.content}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "var(--font-size-2xs)",
+                              color: "var(--color-text-dim)",
+                            }}
+                          >
+                            {(Array.isArray(pin.conversations) ? pin.conversations[0]?.title : pin.conversations?.title) || "Chat"} &middot; {timeAgo(pin.pinned_at)}
+                          </span>
+                        </div>
                       </button>
                     ))}
                   </div>
