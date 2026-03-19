@@ -3464,7 +3464,7 @@ function UsersTab() {
           marginBottom: "var(--space-4)",
         }}>
           <div>{TIERS.standard.label} {TIERS.standard.priceLabel} ({TIERS.standard.messages} msgs) &middot; {TIERS.pro.label} {TIERS.pro.priceLabel} ({TIERS.pro.messages} msgs) &middot; Credits {CREDITS.priceLabel}/{CREDITS.amount}</div>
-          <div>70/30 {TIERS.standard.label}/{TIERS.pro.label} split &middot; 6 free seats &middot; ~{COST_BASIS.avgCostPerMsg * 100}&cent;/msg API cost &middot; ~$1/mo blended referral credit</div>
+          <div>70/30 {TIERS.standard.label}/{TIERS.pro.label} split &middot; 6 free seats &middot; ~{COST_BASIS.targetCostPerMsg * 100}&cent;/msg target API cost &middot; ~$1/mo blended referral credit</div>
         </div>
 
         {/* Table */}

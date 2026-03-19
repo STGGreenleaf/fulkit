@@ -87,16 +87,19 @@ export const LOW_FUEL_THRESHOLD = 0.8;  // 80% usage triggers system prompt nudg
 
 // ── Cost basis (internal — for margin calculations) ───────────────────
 export const COST_BASIS = {
-  avgCostPerMsg: 0.015,     // $0.015 (~1.5 cents) blended API cost
+  currentCostPerMsg: 0.09,  // $0.09 actual cost pre-optimization (30K+ input tokens)
+  targetCostPerMsg: 0.012,  // $0.012 target post-optimization (caching + context redesign)
+  lastUpdated: "2026-03-19",
 };
 
 // ── Cost ceilings (per-user API spend caps per month) ─────────────────
 // Safeguard: max API cost the platform absorbs per user per month.
-// If a user's api_spend_this_month exceeds this, they get a "tank empty" response.
+// Must never fire before the Fül limit. Set at fulLimit × currentCost × 1.5 buffer.
+// Post-optimization targets: free=$2.50, standard=$8.10, pro=$14.40
 export const COST_CEILINGS = {
-  free: 1.50,               // 100 msgs × ~$0.015
-  standard: 13.50,          // headroom above expected cost
-  pro: 12.00,               // 800 msgs × ~$0.015
+  free: 15.00,              // 100 msgs × $0.09 × ~1.5 buffer (will tighten post-optimization)
+  standard: 65.00,          // 450 msgs × $0.09 × ~1.5 buffer
+  pro: 110.00,              // 800 msgs × $0.09 × ~1.5 buffer
 };
 
 // ── Global circuit breaker ────────────────────────────────────────────

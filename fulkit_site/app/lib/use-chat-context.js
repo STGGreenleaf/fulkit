@@ -47,39 +47,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     load();
   }, [accessToken, authFetch, githubConnected]);
 
-  // ─── Load Numbrly context ─────────────────────────────────
-
-  useEffect(() => {
-    if (!accessToken ) return;
-    authFetch("/api/numbrly/status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.connected) return null;
-        return authFetch("/api/numbrly/context");
-      })
-      .then((r) => (r?.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.message) setNblContext(data.message);
-      })
-      .catch(() => setNblError(true));
-  }, [accessToken, authFetch]);
-
-  // ─── Load TrueGauge context ───────────────────────────────
-
-  useEffect(() => {
-    if (!accessToken ) return;
-    authFetch("/api/truegauge/status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.connected) return null;
-        return authFetch("/api/truegauge/context");
-      })
-      .then((r) => (r?.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.message) setTgContext(data.message);
-      })
-      .catch(() => setTgError(true));
-  }, [accessToken, authFetch]);
+  // Numbrly + TrueGauge eager loads removed — integrations fire on-demand via tools only
 
   // ─── Fetch alerts ─────────────────────────────────────────
 
@@ -297,15 +265,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
       context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
     }
 
-    // Numbrly
-    if (nblContext) {
-      context.push({ title: "Numbrly (Business Data)", content: nblContext });
-    }
-
-    // TrueGauge
-    if (tgContext) {
-      context.push({ title: "TrueGauge (Profitability Analytics)", content: tgContext });
-    }
+    // Numbrly + TrueGauge context removed — on-demand via tools only
 
     // Client-side cap — server caps at 20, but sending 100+ items wastes bandwidth
     if (context.length > 15) {
@@ -313,7 +273,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     }
 
     return { context, annotatedMessages };
-  }, [isReady, getContextWithMeta, recalledNotes, user, ghContext, nblContext, tgContext, sandbox]);
+  }, [isReady, getContextWithMeta, recalledNotes, user, ghContext, sandbox]);
 
   // ─── Dismiss alerts ───────────────────────────────────────
 
@@ -337,10 +297,10 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
   return {
     // Context data
     ghContext,
-    nblContext,
-    nblError,
-    tgContext,
-    tgError,
+    nblContext: null,
+    nblError: false,
+    tgContext: null,
+    tgError: false,
     contextMeta,
     contextDropped,
     // Files

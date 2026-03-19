@@ -155,3 +155,6 @@
 - `entre-integrations`: "Stripe, Shopify, Square, GitHub — already connected. Your business data in your bestie's brain."
 - `entre-no-deck`: "It's not a pitch deck tool. It's the thing that makes your pitch deck honest."
 - `entre-time`: "You have 14 hours a day and 40 priorities. Fülkit remembers all of them."
+
+### For Investors
+- `investor-thesis`: "Convenience layer for fragmented SaaS. Habit Engine cuts per-message cost 87% while improving accuracy. Referral-driven growth with $0 acquisition cost per referred user and always-positive unit economics. $6.48 average margin per Standard user."

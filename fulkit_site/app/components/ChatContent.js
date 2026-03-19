@@ -85,12 +85,32 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 export default function ChatContent({ isPopout = false }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
-  // ─── Fül cap state ──────────────────────────────────────
+  // ─── Fül cap state + billing state machine ──────────────
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = Math.max(0, seatLimit - messagesUsed);
-  const isLow = !isOwner && remaining > 0 && remaining <= Math.ceil(seatLimit * 0.1);
-  const isCapped = !isOwner && remaining <= 0;
+  const fuelPct = seatLimit > 0 ? Math.round((messagesUsed / seatLimit) * 100) : 0;
+
+  // Billing state machine: NORMAL → SOFT_WARNING → HEADS_UP → WRAP_UP → LIMIT
+  // BYOK/Owner skip entirely (always NORMAL)
+  const isByokOrOwner = isOwner || profile?.seat_type === "byok";
+  let billingState = "NORMAL";
+  if (!isByokOrOwner) {
+    if (fuelPct >= 100) billingState = "LIMIT";
+    else if (fuelPct >= 99) billingState = "WRAP_UP";
+    else if (fuelPct >= 98) billingState = "HEADS_UP";
+    else if (fuelPct >= 90) billingState = "SOFT_WARNING";
+  }
+
+  // Track whether soft warning has been shown this session (show once)
+  const softWarningShownRef = useRef(false);
+  if (billingState === "SOFT_WARNING" && !softWarningShownRef.current) {
+    softWarningShownRef.current = true;
+  }
+
+  // Legacy compat — existing code references these
+  const isLow = billingState === "SOFT_WARNING" || billingState === "HEADS_UP" || billingState === "WRAP_UP";
+  const isCapped = billingState === "LIMIT";
   const { getContextWithMeta, recallNotes, isReady, storageMode, directoryHandle } = useVaultContext();
   const isMobile = useIsMobile();
   // Width-only narrow check — pointer:coarse not required (fixes DevTools + desktop-touch combos)
@@ -1149,11 +1169,31 @@ export default function ChatContent({ isPopout = false }) {
                 </div>
               )}
 
-              {/* Low-fuel warning */}
-              {isLow && !isCapped && (
+              {/* Billing state warnings */}
+              {billingState === "SOFT_WARNING" && softWarningShownRef.current && (
+                <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)" }}>
+                    {remaining} message{remaining !== 1 ? "s" : ""} left this month
+                  </span>
+                </div>
+              )}
+              {billingState === "HEADS_UP" && (
+                <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
+                    {remaining} message{remaining !== 1 ? "s" : ""} left —{" "}
+                    <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
+                      {profile?.seat_type === "free" ? "upgrade" : `grab ${CREDITS.amount} more for ${CREDITS.priceLabel}`}
+                    </Link>
+                    {profile?.seat_type === "standard" && (
+                      <>{" "}or <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>go Pro for longer responses</Link></>
+                    )}
+                  </div>
+                </div>
+              )}
+              {billingState === "WRAP_UP" && (
                 <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
                   <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
-                    heads up — {remaining} message{remaining !== 1 ? "s" : ""} left this month
+                    last message this cycle — make it count
                   </span>
                 </div>
               )}
@@ -1163,15 +1203,22 @@ export default function ChatContent({ isPopout = false }) {
                 <div style={{ padding: "var(--space-3) var(--space-6) var(--space-5)", maxWidth: 640, width: "100%", margin: "0 auto" }}>
                   <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "var(--space-4)", textAlign: "center" }}>
                     <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
-                      You burned through your Fül this month.
+                      That's a wrap for this month.
                     </div>
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-                      Grab more messages or drop in your own API key.
+                      Everything you've built is still here — history, pins, notes, all of it. ReFül or I'll see you on the 1st.
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                       <Link href="/settings?tab=billing" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
-                        {profile?.seat_type === "free" ? `Upgrade — from ${TIERS.standard.priceLabel}` : `Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel}`}
+                        {profile?.seat_type === "free"
+                          ? `Start with ${TIERS.standard.label} — ${TIERS.standard.priceLabel}`
+                          : `Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel}`}
                       </Link>
+                      {profile?.seat_type === "standard" && (
+                        <Link href="/settings?tab=billing" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "transparent", color: "var(--color-text-muted)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", textDecoration: "none", border: "1px solid var(--color-border-light)" }}>
+                          Go Pro — {TIERS.pro.messages} messages + longer responses — {TIERS.pro.priceLabel}
+                        </Link>
+                      )}
                       <Link href="/settings?tab=ai" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "transparent", color: "var(--color-text-muted)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", textDecoration: "none", border: "1px solid var(--color-border-light)" }}>
                         Or bring your own key — unlimited
                       </Link>

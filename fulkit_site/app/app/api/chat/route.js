@@ -13,8 +13,8 @@ import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
-import { SEAT_LIMITS, TIERS, OWNER, BYOK as BYOK_CONFIG, LOW_FUEL_THRESHOLD, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
-import { checkUserBudget, estimateCost, trackApiSpend } from "../../../lib/cost-guard";
+import { SEAT_LIMITS, TIERS, OWNER, BYOK as BYOK_CONFIG, CREDITS, COST_CEILINGS } from "../../../lib/ful-config";
+import { checkUserBudget, checkCircuitBreaker, estimateCost, trackApiSpend } from "../../../lib/cost-guard";
 
 const defaultAnthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -2048,6 +2048,34 @@ export async function POST(request) {
       }
     }
 
+    // Global circuit breaker — throttle if API spend exceeds MRR threshold
+    if (!config.isByok) {
+      try {
+        const { data: spendRows } = await admin
+          .from("profiles")
+          .select("seat_type, api_spend_this_month")
+          .abortSignal(AbortSignal.timeout(3000));
+        if (spendRows && spendRows.length > 0) {
+          let totalSpend = 0;
+          let mrr = 0;
+          for (const r of spendRows) {
+            totalSpend += parseFloat(r.api_spend_this_month || 0);
+            const tier = TIERS[r.seat_type];
+            if (tier) mrr += tier.price;
+          }
+          const cb = checkCircuitBreaker(totalSpend, mrr);
+          if (cb.status === "red") {
+            config.maxTokens = Math.min(config.maxTokens, cb.throttledMaxTokens);
+            console.warn("[chat] circuit breaker RED — throttling max_tokens to", cb.throttledMaxTokens);
+          } else if (cb.status === "yellow") {
+            console.warn("[chat] circuit breaker YELLOW — API spend at", Math.round((totalSpend / mrr) * 100) + "% of MRR");
+          }
+        }
+      } catch (err) {
+        console.warn("[chat] circuit breaker check failed:", err.message);
+      }
+    }
+
     // Use BYOK client if available, otherwise default
     const anthropic = byokKey
       ? new Anthropic({ apiKey: byokKey })
@@ -2174,15 +2202,7 @@ export async function POST(request) {
       : BASE_PROMPT;
     system += `\n\nToday is ${userToday}. The user's timezone is ${timezone || "UTC"}.`;
 
-    // BYOK nudge — if non-BYOK user is burning through Fül, mention it naturally (once per session)
-    if (userId && !config.isByok && profile?.role !== "owner") {
-      const fuelLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
-      const fuelUsed = profile?.messages_this_month || 0;
-      const fuelPct = fuelLimit > 0 ? fuelUsed / fuelLimit : 0;
-      if (fuelPct >= LOW_FUEL_THRESHOLD) {
-        system += `\n\n## Low Fuel Notice\nThe user has used ${fuelUsed} of ${fuelLimit} messages this month (${Math.round(fuelPct * 100)}%). If it comes up naturally — not forced — mention that they can drop in their own Anthropic API key in Settings to get unlimited messages with no monthly cap. Don't lead with this, don't repeat it, and don't make it the focus. Just a gentle mention if the moment is right.`;
-      }
-    }
+    // Low fuel notice removed — billing state machine handles this client-side now (0 tokens saved)
 
     // Inject preferences
     if (prefs && prefs.length > 0) {
@@ -2481,7 +2501,7 @@ Never skip the preview step. The user must see and approve changes before they g
     const baseOpts = {
       model: config.model,
       max_tokens: config.maxTokens,
-      system,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
       ...(allTools.length > 0 ? { tools: allTools } : {}),
     };
 
@@ -2505,6 +2525,8 @@ Never skip the preview step. The user must see and approve changes before they g
           let totalApiCost = 0; // accumulate cost across tool rounds
           let totalInputTokens = 0;
           let totalOutputTokens = 0;
+          let totalCacheCreation = 0;
+          let totalCacheRead = 0;
           let totalRounds = 0;
           const toolsUsed = [];
           const loopStart = Date.now();
@@ -2552,6 +2574,8 @@ Never skip the preview step. The user must see and approve changes before they g
             if (finalMessage.usage) {
               totalInputTokens += finalMessage.usage.input_tokens || 0;
               totalOutputTokens += finalMessage.usage.output_tokens || 0;
+              totalCacheCreation += finalMessage.usage.cache_creation_input_tokens || 0;
+              totalCacheRead += finalMessage.usage.cache_read_input_tokens || 0;
               totalApiCost += estimateCost(config.model, finalMessage.usage.input_tokens || 0, finalMessage.usage.output_tokens || 0);
             }
 
@@ -2812,7 +2836,7 @@ Never skip the preview step. The user must see and approve changes before they g
               const finalStream = anthropic.messages.stream({
                 model: config.model,
                 max_tokens: config.maxTokens,
-                system,
+                system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
                 messages: loopMessages,
               });
               for await (const event of finalStream) {
@@ -2846,6 +2870,8 @@ Never skip the preview step. The user must see and approve changes before they g
                 rounds: totalRounds,
                 inputTokens: totalInputTokens,
                 outputTokens: totalOutputTokens,
+                cacheCreationTokens: totalCacheCreation,
+                cacheReadTokens: totalCacheRead,
                 totalCost: Math.round(totalApiCost * 10000) / 10000,
                 toolsUsed,
                 elapsedMs: Date.now() - loopStart,

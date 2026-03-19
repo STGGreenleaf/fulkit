@@ -3189,7 +3189,7 @@ function ReferralsTab() {
                 <div style={{ ...kpiStyle, marginBottom: "var(--space-3)" }}>Subscribers</div>
                 <div style={{ display: "flex", justifyContent: "space-between", textAlign: "center" }}>
                   {[
-                    { label: "Free", count: adminStats.subscribers.free },
+                    { label: "Trial", count: adminStats.subscribers.free },
                     { label: "Std", count: adminStats.subscribers.standard },
                     { label: "Pro", count: adminStats.subscribers.pro },
                   ].map((s, i) => (
@@ -3871,7 +3871,7 @@ function BillingTab() {
               {[
                 { label: `Standard ($${TIERS.standard.price}/mo)`, count: adminStats.subscribers.standard, revenue: stdRevenue },
                 { label: `Pro ($${TIERS.pro.price}/mo)`, count: adminStats.subscribers.pro, revenue: proRevenue },
-                { label: "Free", count: adminStats.subscribers.free, revenue: 0 },
+                { label: "Trial", count: adminStats.subscribers.free, revenue: 0 },
               ].map((plan, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) 0", borderBottom: i < 2 ? "1px solid var(--color-border-light)" : "none" }}>
                   <div>
@@ -3887,9 +3887,9 @@ function BillingTab() {
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
               <div style={{ ...kpiLabel, marginBottom: "var(--space-3)" }}>Costs</div>
               {[
-                { label: "API spend (actual)", value: `$${adminStats.actualApiCost}`, note: `$${adminStats.totalPaying > 0 ? (adminStats.actualApiCost / adminStats.totalPaying).toFixed(2) : "0"}/user` },
+                { label: "API spend (actual)", value: `$${adminStats.actualApiCost}`, note: `$${adminStats.totalPaying > 0 ? (adminStats.actualApiCost / adminStats.totalPaying).toFixed(2) : "0"}/paying user` },
                 { label: "Referral credits", value: `$${adminStats.totalMonthlyDollars}`, note: `${adminStats.totalMonthlyFul.toLocaleString()} F\u00FCl` },
-                { label: "Payout obligations", value: `$${adminStats.totalPaidOut}`, note: "Total paid to date" },
+                { label: "Total paid out", value: `$${adminStats.totalPaidOut}`, note: adminStats.pendingPayouts > 0 ? `$${adminStats.pendingPayouts} pending` : "all-time" },
               ].map((cost, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-2) 0", borderBottom: i < 2 ? "1px solid var(--color-border-light)" : "none" }}>
                   <div>
