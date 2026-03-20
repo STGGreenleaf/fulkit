@@ -15,7 +15,7 @@
  * - Mobile: no sidebar, bottom tab bar handled by MobileTabBar in layout
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useIsMobile } from "../lib/use-mobile";
@@ -76,12 +76,13 @@ export default function AppShell({ children }) {
 
   const pageName = getPageName(pathname);
   const isAuthenticated = !!user;
+  const contextValue = useMemo(() => ({ setToolbar }), [setToolbar]);
 
   // Public pages — no shell, they handle their own layout
-  if (!isAuthenticated) return <ToolbarContext.Provider value={{ setToolbar }}>{children}</ToolbarContext.Provider>;
+  if (!isAuthenticated) return <ToolbarContext.Provider value={contextValue}>{children}</ToolbarContext.Provider>;
 
   return (
-    <ToolbarContext.Provider value={{ setToolbar }}>
+    <ToolbarContext.Provider value={contextValue}>
       <div style={{
         display: "flex",
         width: "100%",

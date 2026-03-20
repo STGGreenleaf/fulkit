@@ -415,8 +415,14 @@ export default function ChatContent({ isPopout = false }) {
   });
 
   // ─── Toolbar (AppShell header buttons) ─────────────────────
+  // Cleanup only on unmount — AppShell also clears on navigation
   useEffect(() => {
-    if (isPopout) return; // Popout manages its own header
+    return () => setToolbar(null);
+  }, [setToolbar]);
+
+  // Set toolbar when visual deps change (no cleanup between runs — avoids flash)
+  useEffect(() => {
+    if (isPopout) return;
     setToolbar(
       <>
         {/* Sandbox toggle + chapter indicator */}
@@ -557,8 +563,7 @@ export default function ChatContent({ isPopout = false }) {
         )}
       </>
     );
-    return () => setToolbar(null);
-  }, [isPopout, sandbox.sandboxActive, sandbox.chapters.length, sandbox.currentChapter?.turnCount, showChapters, showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, compactMode, isMobile, isNarrow, effectiveCompact, ctx.contextMeta?.includedCount, ctx.contextMeta?.totalTokens, ctx.contextDropped, ctx.recalledNotes.length]);
+  }, [isPopout, sandbox.sandboxActive, sandbox.chapters.length, sandbox.currentChapter?.turnCount, showChapters, showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, compactMode, isMobile, isNarrow, effectiveCompact, ctx.contextMeta?.includedCount, ctx.contextMeta?.totalTokens, ctx.contextDropped, ctx.recalledNotes.length, setToolbar]);
 
   // ─── Render ───────────────────────────────────────────────
 

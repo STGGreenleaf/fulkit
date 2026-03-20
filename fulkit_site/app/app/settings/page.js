@@ -278,6 +278,10 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
 
   // ─── Toolbar (mobile owner Crown button) ────────────────
   useEffect(() => {
+    return () => setToolbar(null);
+  }, [setToolbar]);
+
+  useEffect(() => {
     if (isMobile && isOwner) {
       setToolbar(
         <button
@@ -309,8 +313,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
     } else {
       setToolbar(null);
     }
-    return () => setToolbar(null);
-  }); // No deps — runs every render so closures stay fresh
+  }, [isMobile, isOwner, tab, ownerMayday, setToolbar]);
 
   return (
     <AuthGuard>

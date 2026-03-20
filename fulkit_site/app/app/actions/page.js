@@ -232,6 +232,10 @@ export default function Actions() {
 
   // ─── Toolbar (AppShell header buttons) ──────────────────
   useEffect(() => {
+    return () => setToolbar(null);
+  }, [setToolbar]);
+
+  useEffect(() => {
     setToolbar(
       <button
         onClick={() => setAdding(true)}
@@ -256,8 +260,7 @@ export default function Actions() {
         {!compactMode && "Add"}
       </button>
     );
-    return () => setToolbar(null);
-  }); // No deps — runs every render so closures stay fresh
+  }, [compactMode, setToolbar]);
 
   return (
     <AuthGuard>
