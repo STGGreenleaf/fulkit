@@ -299,6 +299,7 @@ export default function Actions() {
               return (
                 <Tooltip key={key} label={compactMode ? label : null}>
                   <button
+                    type="button"
                     onClick={() => { setLens(key); setExpandedId(null); setConfirmClear(false); }}
                     style={{
                       display: "flex",
@@ -317,7 +318,7 @@ export default function Actions() {
                       transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                     }}
                   >
-                    <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                    <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} style={{ pointerEvents: "none" }} />
                     {!compactMode && label}
                   </button>
                 </Tooltip>
@@ -341,6 +342,7 @@ export default function Actions() {
                 return (
                   <Tooltip key={key} label={null}>
                     <button
+                      type="button"
                       onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}
                       style={{
                         display: "flex",
@@ -360,7 +362,7 @@ export default function Actions() {
                         transition: `background var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default)`,
                       }}
                     >
-                      <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} />
+                      <Icon size={TAB_ICON_SIZE} strokeWidth={1.8} style={{ pointerEvents: "none" }} />
                       {!compactMode && key}
                       {counts[key] > 0 && (
                         <span
@@ -846,6 +848,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                 const active = action.priority === value;
                 return (
                   <button
+                    type="button"
                     key={value}
                     disabled={loading}
                     onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { priority: active ? null : value }); }}
@@ -867,7 +870,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                       opacity: loading ? 0.4 : 1,
                     }}
                   >
-                    <Icon size={10} strokeWidth={2} />
+                    <Icon size={10} strokeWidth={2} style={{ pointerEvents: "none" }} />
                     {label}
                   </button>
                 );
@@ -887,6 +890,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                 const active = (action.bucket || null) === value;
                 return (
                   <button
+                    type="button"
                     key={label}
                     disabled={loading}
                     onClick={(e) => { e.stopPropagation(); onUpdateAction(action.id, { bucket: active ? null : value }); }}
@@ -908,7 +912,7 @@ function ActionRow({ action, filter, onUpdateStatus, onUpdateAction, expanded, o
                       opacity: loading ? 0.4 : 1,
                     }}
                   >
-                    <Icon size={10} strokeWidth={2} />
+                    <Icon size={10} strokeWidth={2} style={{ pointerEvents: "none" }} />
                     {label}
                   </button>
                 );
