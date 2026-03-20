@@ -73,7 +73,7 @@ export default function Sidebar() {
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <Tooltip key={item.id} label={compactMode ? item.label : null}>
+            <Tooltip key={item.id} label={item.label}>
               <Link
                 href={item.href}
                 style={{

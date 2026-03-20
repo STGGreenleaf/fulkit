@@ -495,7 +495,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   onDragLeave={isDropTarget ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverFolder(null); } : undefined}
                   onDrop={isDropTarget ? (e) => handleFolderDrop(e, f.key) : undefined}
                 >
-                  <Tooltip label={compactMode ? f.label : null}>
+                  <Tooltip label={f.label}>
                     <button
                       onClick={() => { setFolder(f.key); setSelectedId(null); setMenuFolder(null); updateThreadsUrl(f.key, view); }}
                       style={{
@@ -807,7 +807,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                 {VIEWS.map((v) => {
                   const isActive = view === v.key;
                   return (
-                    <Tooltip key={v.key} label={compactMode ? v.label : null}>
+                    <Tooltip key={v.key} label={v.label}>
                       <button
                         onClick={() => setViewPersist(v.key)}
                         style={{

@@ -124,7 +124,7 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
-            <Tooltip key={t.id} label={null}>
+            <Tooltip key={t.id} label={t.label}>
               <button
                 type="button"
                 onClick={() => {
