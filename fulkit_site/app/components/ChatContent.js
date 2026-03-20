@@ -511,7 +511,11 @@ export default function ChatContent({ isPopout = false }) {
                           border: "1px solid var(--color-border-light)",
                           borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
                         }}>
-                          <ThinkingIndicator />
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            {[0, 1, 2].map((dot) => (
+                              <span key={dot} style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-muted)", animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out` }} />
+                            ))}
+                          </span>
                         </div>
                       </div>
                     ) : greeting ? (
