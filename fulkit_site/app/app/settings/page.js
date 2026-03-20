@@ -495,16 +495,30 @@ function SettingsFooter() {
         padding: "var(--space-3) var(--space-6)",
         borderTop: "1px solid var(--color-border-light)",
       }}>
-        <a
-          href="https://bsky.app/profile/fulkit.bsky.social"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textDecoration: "none" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
-        >
-          Bluesky
-        </a>
+        <Tooltip label="Bluesky">
+          <a
+            href="https://bsky.app/profile/fulkit.bsky.social"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "flex", color: "var(--color-text-muted)", transition: "color var(--duration-fast) var(--ease-default)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.1c2.2 1.7 4.6 5.1 5.4 7 .9 2.2.5 4.4-.7 5.3-.8.6-1.8.7-2.7.4.3 1.2.8 2.4 2.1 3.5-.1 0-3.6 1-5.1-2.1-1.5 3.1-5 2.1-5.1 2.1 1.3-1.1 1.8-2.3 2.1-3.5-.9.3-1.9.2-2.7-.4-1.2-.9-1.6-3.1-.7-5.3.8-1.9 3.2-5.3 5.4-7L12 2.1z"/></svg>
+          </a>
+        </Tooltip>
+        <Tooltip label="Instagram">
+          <a
+            href="https://instagram.com/getfulkit"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "flex", color: "var(--color-text-muted)", transition: "color var(--duration-fast) var(--ease-default)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--color-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+        </Tooltip>
 
         <Tooltip label="Report a bug">
           <button
