@@ -115,7 +115,7 @@ export default function DevInspector() {
         onClick={() => setActive(true)}
         style={{
           position: "fixed",
-          bottom: 56,
+          bottom: 106,
           right: 16,
           zIndex: 99999,
           width: 32,
@@ -150,7 +150,7 @@ export default function DevInspector() {
         onClick={() => { setActive(false); setInfo(null); }}
         style={{
           position: "fixed",
-          bottom: 56,
+          bottom: 106,
           right: 16,
           zIndex: 99999,
           width: 32,
@@ -175,7 +175,7 @@ export default function DevInspector() {
           data-dev-inspector
           style={{
             position: "fixed",
-            bottom: 96,
+            bottom: 146,
             right: 16,
             zIndex: 99999,
             background: "#1a1a1a",
