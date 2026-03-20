@@ -4954,6 +4954,135 @@ function SocialsTab() {
           </div>
         );
       })()}
+
+      {/* ─── Publish to Bluesky ─── */}
+      <PublishSection accessToken={accessToken} />
+    </div>
+  );
+}
+
+function PublishSection({ accessToken }) {
+  const [text, setText] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [altText, setAltText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [result, setResult] = useState(null);
+  const [publishOpen, setPublishOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-publishOpen") === "true");
+
+  useEffect(() => { localStorage.setItem("owner-publishOpen", publishOpen); }, [publishOpen]);
+
+  async function handlePost() {
+    if (!text.trim()) return;
+    setPosting(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/bluesky/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ text: text.trim(), imageUrl: imageUrl || undefined, altText: altText || undefined }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResult({ ok: true, uri: data.uri });
+        setText("");
+        setImageUrl("");
+        setAltText("");
+      } else {
+        setResult({ ok: false, error: data.error });
+      }
+    } catch (err) {
+      setResult({ ok: false, error: err.message });
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: "var(--space-6)" }}>
+      <button
+        onClick={() => setPublishOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+          background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)",
+          borderRadius: publishOpen ? "var(--radius-md) var(--radius-md) 0 0" : "var(--radius-md)",
+          cursor: "pointer", padding: "var(--space-3) var(--space-4)", fontFamily: "var(--font-primary)",
+        }}
+      >
+        <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
+          Publish
+        </span>
+        <ChevronDown size={14} strokeWidth={2} style={{
+          color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
+          transform: publishOpen ? "rotate(0deg)" : "rotate(-90deg)",
+        }} />
+      </button>
+      {publishOpen && (
+        <div style={{
+          background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderTop: "none",
+          borderRadius: "0 0 var(--radius-md) var(--radius-md)", padding: "var(--space-4)",
+          display: "flex", flexDirection: "column", gap: "var(--space-3)",
+        }}>
+          <div>
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="What's on your mind..."
+              rows={3}
+              style={{
+                width: "100%", resize: "vertical", border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)", padding: "var(--space-2-5) var(--space-3)",
+                fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
+                background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+              }}
+            />
+            <div style={{ fontSize: "var(--font-size-2xs)", color: text.length > 280 ? "var(--color-error)" : "var(--color-text-dim)", textAlign: "right", marginTop: 2 }}>
+              {text.length}/300
+            </div>
+          </div>
+          <input
+            value={imageUrl}
+            onChange={e => setImageUrl(e.target.value)}
+            placeholder="Image URL (paste from social templates above)"
+            style={{
+              width: "100%", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)",
+              padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-xs)",
+              fontFamily: "var(--font-primary)", background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+            }}
+          />
+          {imageUrl && (
+            <input
+              value={altText}
+              onChange={e => setAltText(e.target.value)}
+              placeholder="Alt text for image (accessibility)"
+              style={{
+                width: "100%", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)",
+                padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-xs)",
+                fontFamily: "var(--font-primary)", background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+              }}
+            />
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <button
+              onClick={handlePost}
+              disabled={!text.trim() || text.length > 300 || posting}
+              style={{
+                padding: "var(--space-2) var(--space-4)", borderRadius: "var(--radius-sm)",
+                border: "none", cursor: text.trim() && !posting ? "pointer" : "default",
+                background: text.trim() && !posting ? "var(--color-text)" : "var(--color-border)",
+                color: "var(--color-bg)", fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+              }}
+            >
+              {posting ? "Posting..." : "Post to Bluesky"}
+            </button>
+            {result && (
+              <span style={{ fontSize: "var(--font-size-xs)", color: result.ok ? "var(--color-text-muted)" : "var(--color-error)" }}>
+                {result.ok ? "Posted" : result.error}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
