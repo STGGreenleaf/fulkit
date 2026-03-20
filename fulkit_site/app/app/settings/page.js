@@ -27,7 +27,7 @@ import {
   BookOpenText,
   Bug,
 } from "lucide-react";
-// Sidebar moved to layout via SidebarShell
+import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
@@ -276,6 +276,74 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
 
   return (
     <AuthGuard>
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: "100dvh",
+          overflow: "hidden",
+          paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0,
+        }}
+      >
+        {!isMobile && <Sidebar />}
+
+        {/* ─── Main ─── */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <div
+          style={{
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
+            borderBottom: "1px solid var(--color-border-light)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+          }}
+        >
+          <span style={{
+            fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-black)",
+            letterSpacing: "var(--letter-spacing-tight)",
+            color: "var(--color-text)",
+          }}>
+            Fülkit
+          </span>
+          {!compactMode && !isMobile && (
+            <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+          )}
+          {!compactMode && !isMobile && (
+            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+              Settings
+            </span>
+          )}
+          {isMobile && isOwner && (
+            <button
+              onClick={() => { setTab("owner"); window.history.replaceState({}, "", "/settings/owner"); }}
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 28,
+                height: 28,
+                background: tab === "owner" ? "var(--color-bg-alt)" : "none",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                color: tab === "owner" ? "var(--color-text)" : "var(--color-text-muted)",
+                position: "relative",
+              }}
+            >
+              <Crown size={14} strokeWidth={1.8} />
+              {ownerMayday && (
+                <span style={{
+                  position: "absolute", top: 6, right: 6,
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: "var(--color-error, #e53e3e)",
+                }} />
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Horizontal tab bar */}
         <div
@@ -346,6 +414,8 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
 
         {/* Footer — pinned to bottom, consistent across all tabs */}
         {tab !== "owner" && <SettingsFooter />}
+        </div>
+      </div>
     </AuthGuard>
   );
 }

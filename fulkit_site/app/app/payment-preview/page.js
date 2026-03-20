@@ -8,7 +8,7 @@ import {
   RotateCcw,
   Users,
 } from "lucide-react";
-// Sidebar moved to layout via SidebarShell
+import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { TIERS, SEAT_LIMITS, CREDITS } from "../../lib/ful-config";
 import { useIsMobile } from "../../lib/use-mobile";
@@ -149,6 +149,9 @@ export default function PaymentPreview() {
 
   return (
     <AuthGuard>
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div
             style={{
@@ -908,6 +911,8 @@ export default function PaymentPreview() {
             )}
           </div>
           </div>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

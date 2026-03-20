@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// Sidebar moved to layout via SidebarShell
+import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
@@ -121,6 +121,35 @@ export default function Dashboard() {
 
   return (
     <AuthGuard>
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
+
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
+            borderBottom: "1px solid var(--color-border-light)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+          }}>
+            <span style={{
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+            )}
+            {!compactMode && (
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                Home
+              </span>
+            )}
+          </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "var(--space-3) var(--space-3) var(--space-4)" : "var(--space-4) var(--space-6) var(--space-6)" }}>
             <div>
@@ -493,6 +522,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

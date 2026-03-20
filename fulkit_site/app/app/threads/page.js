@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "rea
 import { useSearchParams } from "next/navigation";
 import { DynamicIcon, iconNames } from "lucide-react/dynamic";
 import { Plus, Search, X, LayoutGrid, List, CalendarDays, Table2, MoreVertical } from "lucide-react";
-// Sidebar moved to layout via SidebarShell
+import Sidebar from "../../components/Sidebar";
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
 import ThreadBoard from "../../components/ThreadBoard";
@@ -468,6 +468,35 @@ function ThreadsContent({ initialFolder, initialView }) {
   // --- Render ---
   return (
     <AuthGuard>
+      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
+        {!isMobile && <Sidebar />}
+
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          {/* Header */}
+          <div style={{
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
+            borderBottom: "1px solid var(--color-border-light)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+          }}>
+            <span style={{
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              Fülkit
+            </span>
+            {!compactMode && (
+              <>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
+                  Threads
+                </span>
+              </>
+            )}
+          </div>
 
           {/* Tab bar: folder tabs left, view toggle + actions right */}
           <div style={{
@@ -1097,6 +1126,8 @@ function ThreadsContent({ initialFolder, initialView }) {
               </>
             )}
           </div>
+        </div>
+      </div>
     </AuthGuard>
   );
 }
