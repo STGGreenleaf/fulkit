@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
   Settings as SettingsIcon,
   User,
@@ -281,7 +281,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
     return () => setToolbar(null);
   }, [setToolbar]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isMobile && isOwner) {
       setToolbar(
         <button

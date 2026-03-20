@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
@@ -404,7 +404,7 @@ export default function ChatContent({ isPopout = false }) {
     return () => setToolbar(null);
   }, [setToolbar]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isPopout) return;
     setToolbar(
       <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -235,7 +235,7 @@ export default function Actions() {
     return () => setToolbar(null);
   }, [setToolbar]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setToolbar(
       <button
         onClick={() => setAdding(true)}
