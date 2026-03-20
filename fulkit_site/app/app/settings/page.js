@@ -766,24 +766,31 @@ function AccountTab() {
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>
-        <button
-          onClick={() => setSmartOpen(o => !o)}
-          style={{
-            display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
-            background: "none", border: "none", cursor: "pointer", padding: "0 0 var(--space-2) 0",
-            fontFamily: "var(--font-primary)",
-          }}
-        >
-          <ChevronDown size={14} strokeWidth={2} style={{
-            color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
-            transform: smartOpen ? "rotate(0deg)" : "rotate(-90deg)",
-          }} />
-          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
-            Smart Features
-          </span>
-        </button>
+        <div style={{
+          background: "var(--color-bg-elevated)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--color-border-light)",
+          overflow: "hidden",
+        }}>
+          <button
+            onClick={() => setSmartOpen(o => !o)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+              background: "none", border: "none", cursor: "pointer",
+              padding: "var(--space-3) var(--space-4)",
+              fontFamily: "var(--font-primary)",
+            }}
+          >
+            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
+              Smart Features
+            </span>
+            <ChevronDown size={14} strokeWidth={2} style={{
+              color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
+              transform: smartOpen ? "rotate(0deg)" : "rotate(-90deg)",
+            }} />
+          </button>
         {smartOpen && (
-          <Card>
+          <div style={{ padding: "0 var(--space-4) var(--space-4)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
               {[
                 { key: "smart_threads_enabled", label: "Smart Threads", value: smartThreads, setter: setSmartThreads,
@@ -817,8 +824,9 @@ function AccountTab() {
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         )}
+        </div>
       </div>
 
       <div style={{ marginTop: "var(--space-8)" }}>
