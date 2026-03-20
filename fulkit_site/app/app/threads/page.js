@@ -17,7 +17,7 @@ import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
 import { useIsMobile } from "../../lib/use-mobile";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 
 const DEFAULT_FOLDERS = [
   { key: "all", label: "All", icon: "layers" },

@@ -14,7 +14,7 @@ import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { useIsMobile } from "../../lib/use-mobile";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 
 // Minimal pause mark — two vertical lines
 function PauseLines({ size = 16, color = "currentColor", strokeWidth = 2.5 }) {

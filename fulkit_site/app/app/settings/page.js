@@ -37,7 +37,7 @@ import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
 import { OwnerPanel } from "../owner/page";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 import { TIERS, SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";

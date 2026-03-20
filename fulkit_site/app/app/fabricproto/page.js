@@ -4,7 +4,7 @@ import { Play, Pause, ChevronLeft, ChevronRight, Disc3, Box, Plus, ListX, Turnta
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 
 // ── Mock Data ──
 

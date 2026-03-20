@@ -7,7 +7,7 @@ import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
 import { useToolbar } from "../../components/AppShell";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";

@@ -50,7 +50,7 @@ import { TIERS, CREDITS, REFERRALS } from "../../lib/ful-config";
 import { PLANS, COST_BASIS, PROJECTIONS } from "../../lib/ful-legend";
 import { useIsMobile } from "../../lib/use-mobile";
 
-const TAB_ICON_SIZE = 14;
+const TAB_ICON_SIZE = 16;
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
