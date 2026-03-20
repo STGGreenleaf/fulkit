@@ -58,6 +58,46 @@
 
 ---
 
+## Chappie 2.0 — Verification Queue (115/136 done, 21 remain)
+
+> All code shipped. These are production verification tasks. Run in order.
+> Pattern: do the thing → check debug output → confirm it works.
+
+### Quick wins (minutes each)
+- [ ] **0.6** Circuit breaker — set threshold low in cost-guard, send a message, confirm it blocks with clear error
+- [ ] **0.17** Send a non-business message ("what's the weather like"), confirm zero integration tools fire in `[chat:debug]`
+- [ ] **0.18** Same test — verify `[chat:debug]` shows no integration tokens loaded
+- [ ] **5.5** Ask "what's Fülkit pricing" — confirm Claude calls `kb_search` tool and gives a complete answer
+- [ ] **5.6** Confirm `systemPromptEstTokens` ≤ 12K in `[chat:debug]` (already seen: 9,167)
+
+### Medium (need specific scenario)
+- [ ] **3.14** Habit Engine context reduction — do inventory lookups a few times, check if subsequent messages load less context
+- [ ] **3.28** Trial user cold start — first message gets Habit Engine bias from keyword seed
+- [ ] **4.9** Semantic search accuracy — ask about juice → only juice notes in context. Ask about taxes → context titles change.
+- [ ] **4.10** Voyage fallback — disable Voyage API key temporarily → keyword matching kicks in
+- [ ] **6.8** Standard user at 98% usage sees credits + Pro upsell + annual savings
+- [ ] **7.6** Retry on 429 — may need Claude Code to help mock a 429 response
+
+### Stripe (one and done)
+- [ ] **1.24** Proration test — switch a test account between monthly ↔ annual in Stripe test mode, confirm invoice prorates correctly
+
+### Compression (schedule a focused session)
+- [ ] **8.1** Run 10 real conversations × 20+ messages across different topics
+- [ ] **8.2** Verify thread maintenance after compression triggers (80K threshold for Sonnet)
+- [ ] **8.3** Verify early conversation context still referenced post-compression
+- [ ] **8.4** Grade: ≥8/10 pass = done. <8/10 = tune the 60% recent window
+- [ ] **8.5** If tuning needed: adjust and re-test
+
+### Parked (need real user data)
+- [ ] **6.1** Personalized upsells from `ful_ledger` spending patterns — needs user history to accumulate
+- [ ] **6.2** Personalized upsells from `user_patterns` top ecosystems — same, lights up naturally
+
+### Deploy-verify (confirm on next relevant test)
+- [ ] **2.7** Open app, check `[chat:debug]` — anchor context reflects recent activity
+- [ ] **2.8** Ask about a topic NOT in anchor — Claude uses tools to fetch, not hallucinate
+
+---
+
 ## From Signals (2026-03-19)
 
 - [ ] **Chat LCP slow (4-6s)** — Every /chat load fires slow_lcp on mobile and desktop. AuthGuard splash + Supabase auth + conversation load chain. Needs investigation — biggest perf win available.
