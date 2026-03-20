@@ -83,8 +83,10 @@ export default function SidebarShell({ children }) {
               </div>
             )}
           </div>
-          {/* Page content */}
-          {children}
+          {/* Page content — flex:1 so it fills remaining space, overflow handled per-page */}
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
+            {children}
+          </div>
         </div>
       </div>
     </HeaderContext.Provider>
