@@ -71,6 +71,7 @@ export default function AuthGuard({ children }) {
   return (
     <div
       style={{
+        flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
         animation: "authFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
       }}
     >
