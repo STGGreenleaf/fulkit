@@ -8,10 +8,9 @@ import {
   RotateCcw,
   Users,
 } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import { TIERS, SEAT_LIMITS, CREDITS } from "../../lib/ful-config";
-import { useIsMobile } from "../../lib/use-mobile";
 
 const GATEWAY_STEPS = [
   { id: "plans", label: "Choose Plan" },
@@ -28,7 +27,6 @@ const MOCK_PLANS = [
 ];
 
 export default function PaymentPreview() {
-  const isMobile = useIsMobile();
   const [gwStep, setGwStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [webhookEvents, setWebhookEvents] = useState([]);
@@ -149,55 +147,6 @@ export default function PaymentPreview() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <div
-            style={{
-              padding: "var(--space-2-5) var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <span style={{
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-black)",
-                letterSpacing: "var(--letter-spacing-tight)",
-                color: "var(--color-text)",
-              }}>
-                {"F\u00fclkit"}
-              </span>
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                Payment Gateway
-              </span>
-            </div>
-            {gwStep > 0 && (
-              <button
-                onClick={resetGateway}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  padding: "var(--space-1) var(--space-2)",
-                  fontSize: "var(--font-size-2xs)",
-                  color: "var(--color-text-dim)",
-                  background: "transparent",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-primary)",
-                }}
-              >
-                <RotateCcw size={11} /> Reset
-              </button>
-            )}
-          </div>
-
           {/* Scrollable content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6) var(--space-6)" }}>
 
@@ -911,8 +860,6 @@ export default function PaymentPreview() {
             )}
           </div>
           </div>
-        </div>
-      </div>
     </AuthGuard>
   );
 }

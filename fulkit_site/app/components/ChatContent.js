@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
+import { useToolbar } from "./AppShell";
 import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
 import { supabase } from "../lib/supabase";
@@ -83,6 +84,7 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 }
 
 export default function ChatContent({ isPopout = false }) {
+  const { setToolbar } = useToolbar();
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state + billing state machine ──────────────
@@ -412,227 +414,156 @@ export default function ChatContent({ isPopout = false }) {
     userSelect: "none",
   });
 
+  // ─── Toolbar (AppShell header buttons) ─────────────────────
+  useEffect(() => {
+    if (isPopout) return; // Popout manages its own header
+    setToolbar(
+      <>
+        {/* Sandbox toggle + chapter indicator */}
+        {sandbox.sandboxActive ? (
+          <>
+            <span style={{
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              fontFamily: "var(--font-mono)",
+              padding: "var(--space-1) var(--space-2)",
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-sm)",
+              letterSpacing: "0.02em",
+            }}>
+              Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
+            </span>
+            {sandbox.chapters.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowChapters(prev => !prev)}
+                style={toolbarBtn(showChapters)}
+              >
+                <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
+                {!effectiveCompact && "Chapters"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => sandbox.dumpSandbox()}
+              style={toolbarBtn(false)}
+            >
+              <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+              {!effectiveCompact && "End & Save"}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={sandbox.startSandbox}
+            style={toolbarBtn(false)}
+          >
+            <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            {!effectiveCompact && "Sandbox"}
+          </button>
+        )}
+
+        {/* Context indicator */}
+        {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              padding: "var(--space-1) var(--space-2)",
+            }}
+          >
+            <FileText size={11} strokeWidth={1.8} />
+            {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
+          </span>
+        )}
+        {ctx.contextDropped && (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-warning, #b7791f)",
+              padding: "var(--space-1) var(--space-2)",
+            }}
+          >
+            <AlertTriangle size={11} strokeWidth={1.8} />
+            Context unavailable — response may lack vault knowledge
+          </span>
+        )}
+        {ctx.recalledNotes.length > 0 && !compactMode && (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-secondary)",
+              padding: "var(--space-1) var(--space-2)",
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <Search size={10} strokeWidth={2} />
+            {`${ctx.recalledNotes.length} recalled`}
+          </span>
+        )}
+
+        {/* Pins toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            const opening = !showPins;
+            setShowPins(opening);
+            if (isNarrow) { setShowHistory(false); }
+            if (isNarrow) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
+          }}
+          style={toolbarBtn(showPins)}
+        >
+          <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          {!effectiveCompact && "Pins"}
+        </button>
+
+        {/* History toggle */}
+        {chat.conversations.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              const opening = !showHistory;
+              setShowHistory(opening);
+              if (isNarrow) { setShowPins(false); }
+              if (isNarrow) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
+            }}
+            style={toolbarBtn(showHistory)}
+          >
+            <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            {!effectiveCompact && "History"}
+          </button>
+        )}
+
+        {/* New chat */}
+        {(chat.messages.length > 0 || chat.conversationId) && (
+          <button
+            type="button"
+            onClick={handleStartNewChat}
+            style={toolbarBtn(false)}
+          >
+            <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            {!effectiveCompact && "New"}
+          </button>
+        )}
+      </>
+    );
+    return () => setToolbar(null);
+  }); // No deps — runs every render so closures stay fresh
+
   // ─── Render ───────────────────────────────────────────────
 
   return (
     <>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <div
-            style={{
-              padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-            }}
-          >
-            <span style={{
-              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}>
-              {isPopout ? "Chappie" : "Fülkit"}
-            </span>
-            {!isPopout && !effectiveCompact && (
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-            )}
-            {!isPopout && !effectiveCompact && (
-              <span style={{
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-semibold)",
-              }}>
-                Chat
-              </span>
-            )}
-
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
-              {/* Sandbox toggle + chapter indicator */}
-              {(
-                <>
-                  {sandbox.sandboxActive ? (
-                    <>
-                      <span style={{
-                        fontSize: "var(--font-size-2xs)",
-                        color: "var(--color-text-dim)",
-                        fontFamily: "var(--font-mono)",
-                        padding: "var(--space-1) var(--space-2)",
-                        background: "var(--color-bg-alt)",
-                        borderRadius: "var(--radius-sm)",
-                        letterSpacing: "0.02em",
-                      }}>
-                        Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
-                      </span>
-                      {sandbox.chapters.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowChapters(prev => !prev)}
-                          style={toolbarBtn(showChapters)}
-                        >
-                          <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
-                          {!effectiveCompact && "Chapters"}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => sandbox.dumpSandbox()}
-                        style={toolbarBtn(false)}
-                      >
-                        <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                        {!effectiveCompact && "End & Save"}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={sandbox.startSandbox}
-                      style={toolbarBtn(false)}
-                    >
-                      <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                      {!effectiveCompact && "Sandbox"}
-                    </button>
-                  )}
-                </>
-              )}
-
-              {/* Context indicator */}
-              {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-dim)",
-                    padding: "var(--space-1) var(--space-2)",
-                  }}
-                >
-                  <FileText size={11} strokeWidth={1.8} />
-                  {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
-                </span>
-              )}
-              {ctx.contextDropped && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-warning, #b7791f)",
-                    padding: "var(--space-1) var(--space-2)",
-                  }}
-                >
-                  <AlertTriangle size={11} strokeWidth={1.8} />
-                  Context unavailable — response may lack vault knowledge
-                </span>
-              )}
-              {ctx.recalledNotes.length > 0 && !compactMode && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-secondary)",
-                    padding: "var(--space-1) var(--space-2)",
-                    background: "var(--color-bg-alt)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  <Search size={10} strokeWidth={2} />
-                  {`${ctx.recalledNotes.length} recalled`}
-                </span>
-              )}
-
-              {/* Pins toggle */}
-              {(
-                <button
-                  type="button"
-                  onClick={() => {
-                    const opening = !showPins;
-                    setShowPins(opening);
-                    if (isNarrow) { setShowHistory(false); }
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
-                  }}
-                  style={toolbarBtn(showPins)}
-                >
-                  <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "Pins"}
-                </button>
-              )}
-
-              {/* History toggle */}
-              {chat.conversations.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const opening = !showHistory;
-                    setShowHistory(opening);
-                    if (isNarrow) { setShowPins(false); }
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
-                  }}
-                  style={toolbarBtn(showHistory)}
-                >
-                  <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "History"}
-                </button>
-              )}
-
-              {/* New chat */}
-              {(chat.messages.length > 0 || chat.conversationId) && (
-                <button
-                  type="button"
-                  onClick={handleStartNewChat}
-                  style={toolbarBtn(false)}
-                >
-                  <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "New"}
-                </button>
-              )}
-
-              {/* Popout window controls */}
-              {isPopout && (
-                <>
-                  <button
-                    onClick={() => window.open("/chat", "_blank")}
-                    title="Expand"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-muted)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "var(--space-1) var(--space-2)",
-                      borderRadius: "var(--radius-sm)",
-                    }}
-                  >
-                    <Maximize2 size={12} strokeWidth={2} />
-                  </button>
-                  <button
-                    onClick={() => window.close()}
-                    title="Close window"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-muted)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "var(--space-1) var(--space-2)",
-                      borderRadius: "var(--radius-sm)",
-                    }}
-                  >
-                    <X size={13} strokeWidth={2} />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
           {/* Main area — messages + history on right */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {/* Messages area */}
@@ -1965,7 +1896,6 @@ export default function ChatContent({ isPopout = false }) {
               </>
             )}
           </div>
-        </div>
 
         {/* Sandbox chapter toast */}
         {sandbox.chapterToast && (

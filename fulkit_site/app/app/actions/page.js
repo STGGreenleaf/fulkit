@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
+import { useToolbar } from "../../components/AppShell";
 
 const TAB_ICON_SIZE = 14;
 import { useAuth } from "../../lib/auth";
@@ -94,6 +95,7 @@ const fieldInputStyle = {
 export default function Actions() {
   const { user, compactMode } = useAuth();
   const isMobile = useIsMobile();
+  const { setToolbar } = useToolbar();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "actions" }); }, []);
   useOnboardingTrigger("actions");
@@ -228,63 +230,37 @@ export default function Actions() {
     }
   }
 
+  // ─── Toolbar (AppShell header buttons) ──────────────────
+  useEffect(() => {
+    setToolbar(
+      <button
+        onClick={() => setAdding(true)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-1)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-muted)",
+          background: "none",
+          border: "none",
+          outline: "none",
+          cursor: "pointer",
+          fontFamily: "var(--font-primary)",
+          padding: 0,
+          borderRadius: "var(--radius-sm)",
+          lineHeight: 1,
+        }}
+        title="Add action"
+      >
+        <Plus size={12} strokeWidth={2} />
+        {!compactMode && "Add"}
+      </button>
+    );
+    return () => setToolbar(null);
+  }); // No deps — runs every render so closures stay fresh
+
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <div
-            style={{
-              padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-            }}
-          >
-            <span style={{
-              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}>
-              Fülkit
-            </span>
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-            )}
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                Actions
-              </span>
-            )}
-            <button
-              onClick={() => setAdding(true)}
-              style={{
-                marginLeft: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-muted)",
-                background: "none",
-                border: "none",
-                outline: "none",
-                cursor: "pointer",
-                fontFamily: "var(--font-primary)",
-                padding: 0,
-                borderRadius: "var(--radius-sm)",
-                lineHeight: 1,
-              }}
-              title="Add action"
-            >
-              <Plus size={12} strokeWidth={2} />
-              {!compactMode && "Add"}
-            </button>
-          </div>
-
           {/* Main tab bar — lenses */}
           <div
             style={{
@@ -551,8 +527,6 @@ export default function Actions() {
             </div>
             </div>
           </div>
-        </div>
-      </div>
     </AuthGuard>
   );
 }

@@ -1,0 +1,144 @@
+"use client";
+
+/**
+ * AppShell — The one grid that rules them all.
+ *
+ * Provides:
+ * - Persistent sidebar (never remounts across navigation)
+ * - Persistent glassy header with "Fülkit" + page name
+ * - Toolbar slot for per-page buttons (via useToolbar hook)
+ * - Consistent grid for both app and public pages
+ *
+ * Architecture:
+ * - Authenticated: sidebar column + content column (header + scrollable content)
+ * - Unauthenticated: content column only (header adapts, no sidebar)
+ * - Mobile: no sidebar, bottom tab bar handled by MobileTabBar in layout
+ */
+
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { useAuth } from "../lib/auth";
+import { useIsMobile } from "../lib/use-mobile";
+import Sidebar from "./Sidebar";
+
+// ─── Toolbar Context ──────────────────────────────────────
+const ToolbarContext = createContext({ setToolbar: () => {} });
+
+export function useToolbar() {
+  return useContext(ToolbarContext);
+}
+
+// ─── Page Names ───────────────────────────────────────────
+const PAGE_NAMES = {
+  "/": null,
+  "/home": null,
+  "/chat": "Chat",
+  "/actions": "Actions",
+  "/threads": "Threads",
+  "/settings": "Settings",
+  "/fabric": "Fabric",
+  "/owner": "Owner",
+  "/import": "Import",
+  "/hum": "The Hum",
+  "/landing": null,
+  "/login": null,
+  "/about": null,
+  "/privacy": "Privacy",
+  "/terms": "Terms",
+  "/wtf": null,
+  "/onboarding": null,
+};
+
+function getPageName(pathname) {
+  if (PAGE_NAMES[pathname] !== undefined) return PAGE_NAMES[pathname];
+  for (const [path, name] of Object.entries(PAGE_NAMES)) {
+    if (path !== "/" && pathname.startsWith(path + "/")) return name;
+  }
+  return null;
+}
+
+// ─── AppShell ─────────────────────────────────────────────
+export default function AppShell({ children }) {
+  const { user, compactMode } = useAuth();
+  const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const [toolbar, setToolbarRaw] = useState(null);
+  const setToolbar = useCallback((content) => setToolbarRaw(content), []);
+
+  // Clear toolbar on navigation
+  const prevPathRef = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== prevPathRef.current) {
+      setToolbarRaw(null);
+      prevPathRef.current = pathname;
+    }
+  }, [pathname]);
+
+  const pageName = getPageName(pathname);
+  const isAuthenticated = !!user;
+
+  return (
+    <ToolbarContext.Provider value={{ setToolbar }}>
+      <div style={{
+        display: "flex",
+        width: "100%",
+        height: "100dvh",
+        overflow: "hidden",
+        paddingBottom: isMobile && isAuthenticated ? "var(--tab-bar-height, 56px)" : 0,
+      }}>
+        {/* Sidebar column — authenticated desktop only */}
+        {isAuthenticated && !isMobile && <Sidebar />}
+
+        {/* Content column */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* Glassy header — persistent, sticky feel */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
+            minHeight: 44,
+            background: "rgba(239, 237, 232, 0.6)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(42, 40, 38, 0.08)",
+            flexShrink: 0,
+          }}>
+            <span style={{
+              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-black)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              color: "var(--color-text)",
+            }}>
+              F{"\u00FC"}lkit
+            </span>
+            {!compactMode && !isMobile && pageName && (
+              <>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontWeight: "var(--font-weight-medium)" }}>/</span>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", fontWeight: "var(--font-weight-semibold)" }}>{pageName}</span>
+              </>
+            )}
+            {toolbar && (
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
+                {toolbar}
+              </div>
+            )}
+            {/* Public pages: sign-in link when not authenticated */}
+            {!isAuthenticated && (
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
+                <a href="/about" style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", textDecoration: "none", fontWeight: "var(--font-weight-medium)" }}>WTF</a>
+                <a href="/login" style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", textDecoration: "none", fontWeight: "var(--font-weight-semibold)" }}>Sign in</a>
+              </div>
+            )}
+          </div>
+
+          {/* Page content — fills remaining space */}
+          <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    </ToolbarContext.Provider>
+  );
+}

@@ -39,7 +39,7 @@ import {
   BookOpen,
   Settings2,
 } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
 import { useAuth } from "../../lib/auth";
@@ -188,7 +188,6 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
 /* ─── Standalone /owner page ─── */
 export default function Owner({ initialTab }) {
   const { isOwner, loading } = useAuth();
-  const isMobile = useIsMobile();
   const router = useRouter();
 
   useEffect(() => {
@@ -197,12 +196,7 @@ export default function Owner({ initialTab }) {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <OwnerPanel initialTab={initialTab} urlPrefix="/owner" />
-        </div>
-      </div>
+      <OwnerPanel initialTab={initialTab} urlPrefix="/owner" />
     </AuthGuard>
   );
 }
