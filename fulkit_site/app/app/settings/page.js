@@ -681,6 +681,25 @@ function AccountTab() {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(profile?.name || user?.user_metadata?.full_name || "");
   const [nameSaving, setNameSaving] = useState(false);
+  const [smartThreads, setSmartThreads] = useState(true);
+
+  // Load Smart Threads preference
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("preferences").select("value").eq("user_id", user.id).eq("key", "smart_threads_enabled").maybeSingle()
+      .then(({ data }) => { if (data?.value === "false") setSmartThreads(false); });
+  }, [user?.id]);
+
+  async function toggleSmartThreads() {
+    const newVal = !smartThreads;
+    setSmartThreads(newVal);
+    await supabase.from("preferences").upsert({
+      user_id: user.id,
+      key: "smart_threads_enabled",
+      value: String(newVal),
+      updated_at: new Date().toISOString(),
+    }).catch(() => {});
+  }
 
   async function saveName() {
     if (!accessToken || !nameValue.trim()) return;
@@ -738,6 +757,36 @@ function AccountTab() {
           </div>
         </div>
       </Card>
+
+      <div style={{ marginTop: "var(--space-8)" }}>
+        <SectionTitle>Smart Threads</SectionTitle>
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
+                Auto-create threads from conversations
+              </div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                Chappie extracts action items and decisions after longer conversations and saves them to Threads.
+              </div>
+            </div>
+            <button
+              onClick={toggleSmartThreads}
+              style={{
+                width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer", flexShrink: 0,
+                background: smartThreads ? "var(--color-text)" : "var(--color-border)",
+                position: "relative", transition: "background var(--duration-fast) var(--ease-default)",
+              }}
+            >
+              <span style={{
+                position: "absolute", top: 2, left: smartThreads ? 20 : 2,
+                width: 18, height: 18, borderRadius: "50%", background: "var(--color-bg)",
+                transition: "left var(--duration-fast) var(--ease-default)",
+              }} />
+            </button>
+          </div>
+        </Card>
+      </div>
 
       <div style={{ marginTop: "var(--space-8)" }}>
         <SectionTitle>API Key</SectionTitle>

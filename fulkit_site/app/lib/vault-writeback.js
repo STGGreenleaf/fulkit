@@ -4,6 +4,11 @@
 
 import { supabase } from "./supabase";
 
+// Check if text looks like a file path or code dump — never thread these
+function isFilePath(text) {
+  return /^(fulkit\/|app\/|lib\/|components\/|src\/|\.\/|\/)[^\s]*\.(js|ts|jsx|tsx|md|css|json|html|py|sql)$/i.test(text.trim());
+}
+
 // Extract structured artifacts from Claude's response
 // Looks for action items, decisions, key facts, plans, and insights
 export function extractArtifacts(response) {
@@ -17,6 +22,10 @@ export function extractArtifacts(response) {
   };
 
   if (!response) return artifacts;
+
+  // Skip if response is primarily code/tool output (>60% code blocks)
+  const codeBlockChars = (response.match(/```[\s\S]*?```/g) || []).join("").length;
+  if (codeBlockChars > response.length * 0.6) return artifacts;
 
   const lines = response.split("\n");
 
@@ -52,6 +61,15 @@ export function extractArtifacts(response) {
       artifacts.keyFacts.push(trimmed.replace(/^[-*•]\s*/, ""));
     }
   }
+
+  // Filter out garbage: file paths, questions, too-short items
+  const clean = (arr) => arr.filter(item =>
+    item.length >= 10 && !item.endsWith("?") && !isFilePath(item)
+  );
+  artifacts.actionItems = clean(artifacts.actionItems);
+  artifacts.decisions = clean(artifacts.decisions);
+  artifacts.plans = clean(artifacts.plans);
+  artifacts.keyFacts = clean(artifacts.keyFacts);
 
   return artifacts;
 }

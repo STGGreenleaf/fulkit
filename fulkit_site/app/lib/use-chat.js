@@ -563,16 +563,29 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         }
       } catch {}
 
-      // Write-back artifacts
+      // Write-back artifacts (Smart Threads — gated on preference + conversation length)
       try {
-          const artifacts = extractArtifacts(fullResponse);
-          const hasArtifacts = artifacts.actionItems.length > 0 || artifacts.decisions.length > 0 || artifacts.plans.length > 0 || artifacts.keyFacts.length > 0;
-          if (hasArtifacts) {
-            const title = text.slice(0, 60) || "Chat";
-            if (storageMode === "local" && directoryHandle) {
-              writeBackLocal(directoryHandle, artifacts, title).catch((err) => { signal("writeback_failed", "warning", { storageMode: "local", error: err?.message, conversationId: convId }); });
-            } else if (user) {
-              writeBackSupabase(user.id, artifacts, title, null, convId).catch((err) => { signal("writeback_failed", "warning", { storageMode: "supabase", error: err?.message, conversationId: convId }); });
+          // Only extract from conversations with 3+ user messages (skip drive-bys)
+          const userMsgCount = apiMessages.filter(m => m.role === "user").length;
+          if (userMsgCount >= 3) {
+            // Check Smart Threads preference (default: ON)
+            let smartThreadsEnabled = true;
+            try {
+              const { data: pref } = await supabase.from("preferences").select("value").eq("user_id", user?.id).eq("key", "smart_threads_enabled").maybeSingle();
+              if (pref?.value === "false") smartThreadsEnabled = false;
+            } catch {}
+
+            if (smartThreadsEnabled) {
+              const artifacts = extractArtifacts(fullResponse);
+              const hasArtifacts = artifacts.actionItems.length > 0 || artifacts.decisions.length > 0 || artifacts.plans.length > 0 || artifacts.keyFacts.length > 0;
+              if (hasArtifacts) {
+                const title = text.slice(0, 60) || "Chat";
+                if (storageMode === "local" && directoryHandle) {
+                  writeBackLocal(directoryHandle, artifacts, title).catch((err) => { signal("writeback_failed", "warning", { storageMode: "local", error: err?.message, conversationId: convId }); });
+                } else if (user) {
+                  writeBackSupabase(user.id, artifacts, title, null, convId).catch((err) => { signal("writeback_failed", "warning", { storageMode: "supabase", error: err?.message, conversationId: convId }); });
+                }
+              }
             }
           }
         } catch {}
