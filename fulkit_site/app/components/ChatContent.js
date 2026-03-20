@@ -12,6 +12,7 @@ import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
 import { useSandbox } from "../lib/sandbox";
 import { SEAT_LIMITS, TIERS, CREDITS } from "../lib/ful-config";
+import { useHeaderActions } from "./SidebarShell";
 import { useIsMobile } from "../lib/use-mobile";
 
 function timeAgo(dateStr) {
@@ -417,36 +418,16 @@ export default function ChatContent({ isPopout = false }) {
   return (
     <>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
+          {/* Chat toolbar — buttons only, title handled by persistent header */}
           <div
             style={{
-              padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
-              borderBottom: "1px solid var(--color-border-light)",
+              padding: isMobile ? "var(--space-1) var(--space-3)" : "var(--space-1) var(--space-6)",
               display: "flex",
               alignItems: "center",
               gap: "var(--space-2)",
+              flexShrink: 0,
             }}
           >
-            <span style={{
-              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}>
-              {isPopout ? "Chappie" : "Fülkit"}
-            </span>
-            {!isPopout && !effectiveCompact && (
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-            )}
-            {!isPopout && !effectiveCompact && (
-              <span style={{
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-semibold)",
-              }}>
-                Chat
-              </span>
-            )}
-
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
               {/* Sandbox toggle + chapter indicator */}
               {(

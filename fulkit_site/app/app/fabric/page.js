@@ -1995,32 +1995,7 @@ export default function FabricPage() {
           prev={prev}
         />
       )}
-          {/* Header */}
-          <div style={{
-            padding: "var(--space-2-5) var(--space-6)",
-            borderBottom: "1px solid var(--color-border-light)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            flexShrink: 0,
-          }}>
-            <span style={{
-              fontSize: "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}>
-              Fülkit
-            </span>
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-            )}
-            {!compactMode && (
-              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                Fabric
-              </span>
-            )}
-          </div>
+          {/* Header removed — persistent header in SidebarShell */}
 
           {/* Content area */}
           <div style={{ flex: 1, height: 0, position: "relative", overflow: deckExpanded ? "auto" : "hidden", display: "flex", flexDirection: "column" }}>

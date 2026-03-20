@@ -468,31 +468,6 @@ function ThreadsContent({ initialFolder, initialView }) {
   // --- Render ---
   return (
     <AuthGuard>
-          {/* Header */}
-          <div style={{
-            padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
-            borderBottom: "1px solid var(--color-border-light)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}>
-            <span style={{
-              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-black)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              color: "var(--color-text)",
-            }}>
-              Fülkit
-            </span>
-            {!compactMode && (
-              <>
-                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>/</span>
-                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)" }}>
-                  Threads
-                </span>
-              </>
-            )}
-          </div>
 
           {/* Tab bar: folder tabs left, view toggle + actions right */}
           <div style={{
