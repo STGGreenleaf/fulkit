@@ -123,11 +123,9 @@ export default function AppShell({ children }) {
                 <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", fontWeight: "var(--font-weight-semibold)" }}>{pageName}</span>
               </>
             )}
-            {toolbar && (
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
-                {toolbar}
-              </div>
-            )}
+            <div id="appshell-toolbar" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
+              {toolbar}
+            </div>
             {/* Public pages bypass AppShell entirely — no unauthenticated header needed */}
           </div>
 

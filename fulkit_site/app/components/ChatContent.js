@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
-import { useToolbar } from "./AppShell";
 import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
 import { supabase } from "../lib/supabase";
@@ -84,8 +84,13 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 }
 
 export default function ChatContent({ isPopout = false }) {
-  const { setToolbar } = useToolbar();
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
+
+  // Portal target for toolbar buttons in AppShell header
+  const [toolbarSlot, setToolbarSlot] = useState(null);
+  useEffect(() => {
+    if (!isPopout) setToolbarSlot(document.getElementById("appshell-toolbar"));
+  }, [isPopout]);
 
   // ─── Fül cap state + billing state machine ──────────────
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
@@ -414,161 +419,126 @@ export default function ChatContent({ isPopout = false }) {
     userSelect: "none",
   });
 
-  // ─── Toolbar (AppShell header buttons) ─────────────────────
-  // Cleanup only on unmount — AppShell also clears on navigation
-  useEffect(() => {
-    return () => setToolbar(null);
-  }, [setToolbar]);
-
-  // Set toolbar when visual deps change (no cleanup between runs — avoids flash)
-  useEffect(() => {
-    if (isPopout) return;
-    setToolbar(
-      <>
-        {/* Sandbox toggle + chapter indicator */}
-        {sandbox.sandboxActive ? (
-          <>
-            <span style={{
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              fontFamily: "var(--font-mono)",
-              padding: "var(--space-1) var(--space-2)",
-              background: "var(--color-bg-alt)",
-              borderRadius: "var(--radius-sm)",
-              letterSpacing: "0.02em",
-            }}>
-              Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
-            </span>
-            {sandbox.chapters.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowChapters(prev => !prev)}
-                style={toolbarBtn(showChapters)}
-              >
-                <ChevronDown size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
-                {!effectiveCompact && "Chapters"}
-              </button>
-            )}
+  // ─── Toolbar JSX (rendered via portal into AppShell header) ─────
+  const toolbarJSX = !isPopout && (
+    <>
+      {/* Sandbox toggle + chapter indicator */}
+      {sandbox.sandboxActive ? (
+        <>
+          <span style={{
+            fontSize: "var(--font-size-2xs)",
+            color: "var(--color-text-dim)",
+            fontFamily: "var(--font-mono)",
+            padding: "var(--space-1) var(--space-2)",
+            background: "var(--color-bg-alt)",
+            borderRadius: "var(--radius-sm)",
+            letterSpacing: "0.02em",
+          }}>
+            Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
+          </span>
+          {sandbox.chapters.length > 0 && (
             <button
               type="button"
-              onClick={() => sandbox.dumpSandbox()}
-              style={toolbarBtn(false)}
+              onClick={() => setShowChapters(prev => !prev)}
+              style={toolbarBtn(showChapters)}
             >
-              <X size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
-              {!effectiveCompact && "End & Save"}
+              <ChevronDown size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
+              {!effectiveCompact && "Chapters"}
             </button>
-          </>
-        ) : (
+          )}
           <button
             type="button"
-            onClick={sandbox.startSandbox}
+            onClick={() => sandbox.dumpSandbox()}
             style={toolbarBtn(false)}
           >
-            <SquarePen size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
-            {!effectiveCompact && "Sandbox"}
+            <X size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            {!effectiveCompact && "End & Save"}
           </button>
-        )}
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={sandbox.startSandbox}
+          style={toolbarBtn(false)}
+        >
+          <SquarePen size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          {!effectiveCompact && "Sandbox"}
+        </button>
+      )}
 
-        {/* Context indicator */}
-        {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              padding: "var(--space-1) var(--space-2)",
-            }}
-          >
-            <FileText size={11} strokeWidth={1.8} />
-            {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
-          </span>
-        )}
-        {ctx.contextDropped && (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-warning, #b7791f)",
-              padding: "var(--space-1) var(--space-2)",
-            }}
-          >
-            <AlertTriangle size={11} strokeWidth={1.8} />
-            Context unavailable — response may lack vault knowledge
-          </span>
-        )}
-        {ctx.recalledNotes.length > 0 && !compactMode && (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-secondary)",
-              padding: "var(--space-1) var(--space-2)",
-              background: "var(--color-bg-alt)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <Search size={10} strokeWidth={2} />
-            {`${ctx.recalledNotes.length} recalled`}
-          </span>
-        )}
+      {/* Context indicator */}
+      {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
+        <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", padding: "var(--space-1) var(--space-2)" }}>
+          <FileText size={11} strokeWidth={1.8} />
+          {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
+        </span>
+      )}
+      {ctx.contextDropped && (
+        <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--font-size-2xs)", color: "var(--color-warning, #b7791f)", padding: "var(--space-1) var(--space-2)" }}>
+          <AlertTriangle size={11} strokeWidth={1.8} />
+          Context unavailable — response may lack vault knowledge
+        </span>
+      )}
+      {ctx.recalledNotes.length > 0 && !compactMode && (
+        <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-secondary)", padding: "var(--space-1) var(--space-2)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)" }}>
+          <Search size={10} strokeWidth={2} />
+          {`${ctx.recalledNotes.length} recalled`}
+        </span>
+      )}
 
-        {/* Pins toggle */}
+      {/* Pins toggle */}
+      <button
+        type="button"
+        onClick={() => {
+          const opening = !showPins;
+          setShowPins(opening);
+          if (isNarrow) { setShowHistory(false); }
+          if (isNarrow) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
+        }}
+        style={toolbarBtn(showPins)}
+      >
+        <Pin size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
+        {!effectiveCompact && "Pins"}
+      </button>
+
+      {/* History toggle */}
+      {chat.conversations.length > 0 && (
         <button
           type="button"
           onClick={() => {
-            const opening = !showPins;
-            setShowPins(opening);
-            if (isNarrow) { setShowHistory(false); }
-            if (isNarrow) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
+            const opening = !showHistory;
+            setShowHistory(opening);
+            if (isNarrow) { setShowPins(false); }
+            if (isNarrow) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
           }}
-          style={toolbarBtn(showPins)}
+          style={toolbarBtn(showHistory)}
         >
-          <Pin size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
-          {!effectiveCompact && "Pins"}
+          <Clock size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          {!effectiveCompact && "History"}
         </button>
+      )}
 
-        {/* History toggle */}
-        {chat.conversations.length > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              const opening = !showHistory;
-              setShowHistory(opening);
-              if (isNarrow) { setShowPins(false); }
-              if (isNarrow) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
-            }}
-            style={toolbarBtn(showHistory)}
-          >
-            <Clock size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
-            {!effectiveCompact && "History"}
-          </button>
-        )}
-
-        {/* New chat */}
-        {(chat.messages.length > 0 || chat.conversationId) && (
-          <button
-            type="button"
-            onClick={handleStartNewChat}
-            style={toolbarBtn(false)}
-          >
-            <Plus size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
-            {!effectiveCompact && "New"}
-          </button>
-        )}
-      </>
-    );
-  }, [isPopout, sandbox.sandboxActive, sandbox.chapters.length, sandbox.currentChapter?.turnCount, showChapters, showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, compactMode, isMobile, isNarrow, effectiveCompact, ctx.contextMeta?.includedCount, ctx.contextMeta?.totalTokens, ctx.contextDropped, ctx.recalledNotes.length, setToolbar]);
+      {/* New chat */}
+      {(chat.messages.length > 0 || chat.conversationId) && (
+        <button
+          type="button"
+          onClick={handleStartNewChat}
+          style={toolbarBtn(false)}
+        >
+          <Plus size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          {!effectiveCompact && "New"}
+        </button>
+      )}
+    </>
+  );
 
   // ─── Render ───────────────────────────────────────────────
 
   return (
     <>
+          {/* Toolbar — portaled into AppShell header */}
+          {toolbarSlot && toolbarJSX && createPortal(toolbarJSX, toolbarSlot)}
+
           {/* Main area — messages + history on right */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden", height: "100%" }}>
             {/* Messages area */}
