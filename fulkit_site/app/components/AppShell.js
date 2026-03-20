@@ -129,8 +129,8 @@ export default function AppShell({ children }) {
             {/* Public pages bypass AppShell entirely — no unauthenticated header needed */}
           </div>
 
-          {/* Page content — fills remaining space */}
-          <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
+          {/* Page content — fills remaining space, pages manage own scroll */}
+          <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {children}
           </div>
         </div>
