@@ -67,11 +67,16 @@ export default function AuthGuard({ children }) {
 
   if (!user) return null;
 
-  // Page content — fade in
+  // Page content — fade in (flex: 1 to fill SidebarShell content area)
   return (
     <div
       style={{
         animation: "authFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        overflow: "hidden",
       }}
     >
       <style>{`@keyframes authFadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
