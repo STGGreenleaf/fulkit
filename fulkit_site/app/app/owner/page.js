@@ -4354,7 +4354,16 @@ function SocialsTab() {
                         <Download size={10} /> PNG
                       </a>
                       <button
-                        onClick={() => { navigator.clipboard.writeText(window.location.origin + url); }}
+                        onClick={(e) => {
+                          const btn = e.currentTarget;
+                          const imgUrl = window.location.origin + url;
+                          navigator.clipboard.writeText(imgUrl).then(() => {
+                            btn.textContent = "Copied!";
+                            setTimeout(() => { btn.textContent = ""; btn.innerHTML = ""; }, 1500);
+                          }).catch(() => {
+                            window.prompt("Copy this URL:", imgUrl);
+                          });
+                        }}
                         style={{
                           display: "flex", alignItems: "center", gap: "var(--space-1)",
                           padding: "var(--space-1-5) var(--space-3)",
@@ -4535,7 +4544,16 @@ function SocialsTab() {
                   <Download size={10} /> PNG
                 </a>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(window.location.origin + previewTemplate.url); }}
+                  onClick={(e) => {
+                    const btn = e.currentTarget;
+                    const imgUrl = window.location.origin + previewTemplate.url;
+                    navigator.clipboard.writeText(imgUrl).then(() => {
+                      btn.textContent = "Copied!";
+                      setTimeout(() => { btn.textContent = ""; }, 1500);
+                    }).catch(() => {
+                      window.prompt("Copy this URL:", imgUrl);
+                    });
+                  }}
                   style={{
                     display: "flex", alignItems: "center", gap: "var(--space-1)",
                     padding: "var(--space-1-5) var(--space-3)",
