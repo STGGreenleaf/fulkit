@@ -4992,36 +4992,65 @@ function PublishSection({ accessToken }) {
   const [imageUrl, setImageUrl] = useState("");
   const [altText, setAltText] = useState("");
   const [posting, setPosting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [results, setResults] = useState({});
+  const [platforms, setPlatforms] = useState({ bluesky: true });
   const [publishOpen, setPublishOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-publishOpen") === "true");
 
   useEffect(() => { localStorage.setItem("owner-publishOpen", publishOpen); }, [publishOpen]);
 
-  async function handlePost() {
-    if (!text.trim()) return;
-    setPosting(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/bluesky/post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ text: text.trim(), imageUrl: imageUrl || undefined, altText: altText || undefined }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setResult({ ok: true, uri: data.uri });
-        setText("");
-        setImageUrl("");
-        setAltText("");
-      } else {
-        setResult({ ok: false, error: data.error });
-      }
-    } catch (err) {
-      setResult({ ok: false, error: err.message });
-    } finally {
-      setPosting(false);
-    }
+  const PLATFORMS = [
+    { key: "bluesky", label: "Bluesky", available: true },
+    { key: "instagram", label: "Instagram", available: false },
+  ];
+
+  function togglePlatform(key) {
+    setPlatforms(prev => ({ ...prev, [key]: !prev[key] }));
   }
+
+  const selectedCount = Object.values(platforms).filter(Boolean).length;
+
+  async function handlePublish() {
+    if (!text.trim() || selectedCount === 0) return;
+    setPosting(true);
+    setResults({});
+    const newResults = {};
+
+    if (platforms.bluesky) {
+      try {
+        const res = await fetch("/api/bluesky/post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ text: text.trim(), imageUrl: imageUrl || undefined, altText: altText || undefined }),
+        });
+        const data = await res.json();
+        newResults.bluesky = data.success ? { ok: true } : { ok: false, error: data.error };
+      } catch (err) {
+        newResults.bluesky = { ok: false, error: err.message };
+      }
+    }
+
+    // Instagram: future — API requires Meta Business approval
+    if (platforms.instagram) {
+      newResults.instagram = { ok: false, error: "Instagram API not yet connected" };
+    }
+
+    setResults(newResults);
+    const allOk = Object.values(newResults).every(r => r.ok);
+    if (allOk) { setText(""); setImageUrl(""); setAltText(""); }
+    setPosting(false);
+  }
+
+  const pillStyle = (active, available) => ({
+    display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+    padding: "var(--space-1-5) var(--space-3)", borderRadius: "var(--radius-sm)",
+    border: `1px solid ${active ? "var(--color-text-muted)" : "var(--color-border)"}`,
+    background: active ? "var(--color-bg-alt)" : "transparent",
+    color: active ? "var(--color-text)" : "var(--color-text-dim)",
+    fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+    fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+    cursor: available ? "pointer" : "default",
+    opacity: available ? 1 : 0.4,
+  });
 
   return (
     <div style={{ marginTop: "var(--space-6)" }}>
@@ -5048,6 +5077,17 @@ function PublishSection({ accessToken }) {
           borderRadius: "0 0 var(--radius-md) var(--radius-md)", padding: "var(--space-4)",
           display: "flex", flexDirection: "column", gap: "var(--space-3)",
         }}>
+          {/* Platform selectors */}
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            {PLATFORMS.map(p => (
+              <button key={p.key} onClick={() => p.available && togglePlatform(p.key)} style={pillStyle(platforms[p.key], p.available)} title={p.available ? p.label : `${p.label} — coming soon`}>
+                {p.label}
+                {!p.available && <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>soon</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Composer */}
           <div>
             <textarea
               value={text}
@@ -5087,25 +5127,27 @@ function PublishSection({ accessToken }) {
               }}
             />
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+
+          {/* Publish button + results */}
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
             <button
-              onClick={handlePost}
-              disabled={!text.trim() || text.length > 300 || posting}
+              onClick={handlePublish}
+              disabled={!text.trim() || text.length > 300 || posting || selectedCount === 0}
               style={{
                 padding: "var(--space-2) var(--space-4)", borderRadius: "var(--radius-sm)",
-                border: "none", cursor: text.trim() && !posting ? "pointer" : "default",
-                background: text.trim() && !posting ? "var(--color-text)" : "var(--color-border)",
+                border: "none", cursor: text.trim() && !posting && selectedCount > 0 ? "pointer" : "default",
+                background: text.trim() && !posting && selectedCount > 0 ? "var(--color-text)" : "var(--color-border)",
                 color: "var(--color-bg)", fontSize: "var(--font-size-xs)",
                 fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
               }}
             >
-              {posting ? "Posting..." : "Post to Bluesky"}
+              {posting ? "Publishing..." : `Publish${selectedCount > 1 ? ` to ${selectedCount} platforms` : ""}`}
             </button>
-            {result && (
-              <span style={{ fontSize: "var(--font-size-xs)", color: result.ok ? "var(--color-text-muted)" : "var(--color-error)" }}>
-                {result.ok ? "Posted" : result.error}
+            {Object.entries(results).map(([key, r]) => (
+              <span key={key} style={{ fontSize: "var(--font-size-xs)", color: r.ok ? "var(--color-text-muted)" : "var(--color-error)" }}>
+                {key}: {r.ok ? "posted" : r.error}
               </span>
-            )}
+            ))}
           </div>
         </div>
       )}
