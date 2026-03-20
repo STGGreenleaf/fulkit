@@ -26,17 +26,7 @@ function timeAgo(dateStr) {
   return `${days}d`;
 }
 
-function ThinkingIndicator({ phase, startedAt, onStop }) {
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    if (!startedAt) return;
-    const tick = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
-    return () => clearInterval(tick);
-  }, [startedAt]);
-
-  const label = phase === "preparing" ? "Preparing" : phase === "connecting" ? "Connecting" : phase === "retrying" ? "AI busy, retrying" : "Thinking";
-  const showTime = elapsed >= 4;
-
+function ThinkingIndicator({ onStop }) {
   return (
     <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -53,9 +43,6 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
             }}
           />
         ))}
-      </span>
-      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", userSelect: "none" }}>
-        {label}{showTime ? ` · ${elapsed}s` : ""}
       </span>
       {onStop && (
         <button
@@ -162,6 +149,7 @@ export default function ChatContent({ isPopout = false }) {
   const [showChapters, setShowChapters] = useState(false);
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
+  const [greetingDelay, setGreetingDelay] = useState(false);
   const [swipedConv, setSwipedConv] = useState(null); // conversation id with delete revealed
   const swipeStartRef = useRef(null);
 
@@ -197,13 +185,20 @@ export default function ChatContent({ isPopout = false }) {
   useEffect(() => {
     if (!user || !accessToken || chat.messages.length > 0 || chat.conversationId || greetingFetchedRef.current) return;
     greetingFetchedRef.current = true;
-    setGreetingLoading(true);
+    setGreetingDelay(true);
 
-    authFetch("/api/chat/greeting")
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.greeting) setGreeting(data.greeting); })
-      .catch(() => {})
-      .finally(() => setGreetingLoading(false));
+    // Pause before showing dots — feels like the AI noticed you arrived
+    const delayTimer = setTimeout(() => {
+      setGreetingDelay(false);
+      setGreetingLoading(true);
+      authFetch("/api/chat/greeting")
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.greeting) setGreeting(data.greeting); })
+        .catch(() => {})
+        .finally(() => setGreetingLoading(false));
+    }, 800);
+
+    return () => clearTimeout(delayTimer);
   }, [user, accessToken, chat.messages.length, chat.conversationId]);
 
   async function loadPinnedMessages() {
@@ -494,7 +489,7 @@ export default function ChatContent({ isPopout = false }) {
                     <VaultGate />
 
                     {/* Proactive greeting or static fallback */}
-                    {greetingLoading ? (
+                    {greetingDelay ? null : greetingLoading ? (
                       <div style={{
                         maxWidth: 640,
                         width: "100%",
@@ -508,7 +503,7 @@ export default function ChatContent({ isPopout = false }) {
                           border: "1px solid var(--color-border-light)",
                           borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)",
                         }}>
-                          <ThinkingIndicator phase="connecting" startedAt={Date.now()} />
+                          <ThinkingIndicator />
                         </div>
                       </div>
                     ) : greeting ? (
@@ -672,8 +667,6 @@ export default function ChatContent({ isPopout = false }) {
                         </div>
                       ) : chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
                         <ThinkingIndicator
-                          phase={chat.streamPhase}
-                          startedAt={chat.streamStartedAt}
                           onStop={chat.stopStreaming}
                         />
                       ) : (
