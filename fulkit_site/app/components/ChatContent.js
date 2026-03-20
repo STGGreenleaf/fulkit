@@ -26,46 +26,22 @@ function timeAgo(dateStr) {
   return `${days}d`;
 }
 
-function ThinkingIndicator({ onStop }) {
+function ThinkingIndicator() {
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-        {[0, 1, 2].map((dot) => (
-          <span
-            key={dot}
-            style={{
-              display: "inline-block",
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: "var(--color-text-muted)",
-              animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
-            }}
-          />
-        ))}
-      </span>
-      {typeof onStop === "function" && (
-        <button
-          onClick={onStop}
-          title="Stop"
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+      {[0, 1, 2].map((dot) => (
+        <span
+          key={dot}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 18,
-            height: 18,
-            padding: 0,
-            background: "none",
-            border: "1px solid var(--color-border-light)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--color-text-muted)",
-            cursor: "pointer",
-            flexShrink: 0,
+            display: "inline-block",
+            width: 5,
+            height: 5,
+            borderRadius: "50%",
+            background: "var(--color-text-muted)",
+            animation: `typingBounce 1.2s ${dot * 0.15}s infinite ease-in-out`,
           }}
-        >
-          <Square size={8} fill="currentColor" strokeWidth={0} />
-        </button>
-      )}
+        />
+      ))}
     </span>
   );
 }
@@ -679,7 +655,6 @@ export default function ChatContent({ isPopout = false }) {
                         </div>
                       ) : chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
                         <ThinkingIndicator
-                          onStop={chat.stopStreaming}
                         />
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
