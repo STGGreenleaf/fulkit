@@ -130,7 +130,7 @@ export default function AppShell({ children }) {
           </div>
 
           {/* Page content — fills remaining space */}
-          <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {children}
           </div>
         </div>
