@@ -276,7 +276,7 @@ export default function Actions() {
             {LENSES.map(({ key, label, Icon }) => {
               const active = lens === key;
               return (
-                <Tooltip key={key} label={label}>
+                <Tooltip key={key} label={label} position="bottom">
                   <button
                     type="button"
                     onClick={() => { setLens(key); setExpandedId(null); setConfirmClear(false); }}
@@ -319,7 +319,7 @@ export default function Actions() {
               {FILTERS.map(({ key, Icon }) => {
                 const active = filter === key;
                 return (
-                  <Tooltip key={key} label={key}>
+                  <Tooltip key={key} label={key} position="bottom">
                     <button
                       type="button"
                       onClick={() => { setFilter(key); setExpandedId(null); setConfirmClear(false); }}

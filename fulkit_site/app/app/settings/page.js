@@ -331,7 +331,7 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
             const active = tab === t.id;
             const hiddenOnMobile = t.id === "owner" && isMobile;
             return (
-              <Tooltip key={t.id} label={t.label}>
+              <Tooltip key={t.id} label={t.label} position="bottom">
                 <button
                   type="button"
                   onClick={() => {

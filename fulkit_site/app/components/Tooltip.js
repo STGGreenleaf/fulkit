@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-export default function Tooltip({ label, children, delay = 200, align = "center" }) {
+export default function Tooltip({ label, children, delay = 200, align = "center", position = "top" }) {
   const [visible, setVisible] = useState(false);
   const timeout = useRef(null);
 
@@ -36,7 +36,7 @@ export default function Tooltip({ label, children, delay = 200, align = "center"
         <div
           style={{
             position: "absolute",
-            bottom: "calc(100% + 6px)",
+            ...(position === "top" ? { bottom: "calc(100% + 6px)" } : { top: "calc(100% + 6px)" }),
             ...(align === "center" && { left: "50%", transform: "translateX(-50%)" }),
             ...(align === "left" && { left: 0 }),
             ...(align === "right" && { right: 0 }),
