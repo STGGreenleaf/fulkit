@@ -411,6 +411,11 @@ export default function ChatContent({ isPopout = false }) {
         <button onClick={sandbox.sandboxActive ? () => sandbox.dumpSandbox() : sandbox.startSandbox} style={{ ...toolbarBtnStyle, color: sandbox.sandboxActive ? "var(--color-text)" : "var(--color-text-muted)" }} title={sandbox.sandboxActive ? "End Sandbox" : "Sandbox"}>
           <SquarePen size={18} strokeWidth={2} />
         </button>
+        {sandbox.sandboxActive && (
+          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", whiteSpace: "nowrap" }}>
+            Sandbox — think out loud, nothing saves until you end it
+          </span>
+        )}
         <button onClick={() => setShowPins(p => !p)} style={{ ...toolbarBtnStyle, color: showPins ? "var(--color-text)" : "var(--color-text-muted)" }} title="Pins">
           <Pin size={18} strokeWidth={2} />
         </button>
