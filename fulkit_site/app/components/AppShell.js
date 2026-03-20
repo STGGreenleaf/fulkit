@@ -110,7 +110,7 @@ export default function AppShell({ children }) {
             flexShrink: 0,
           }}>
             <span style={{
-              fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
+              fontSize: "var(--font-size-base)",
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
