@@ -191,12 +191,20 @@ export default function ChatContent({ isPopout = false }) {
     const delayTimer = setTimeout(() => {
       setGreetingDelay(false);
       setGreetingLoading(true);
+      const dotsStart = Date.now();
       authFetch("/api/chat/greeting")
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.greeting) setGreeting(data.greeting); })
-        .catch(() => {})
-        .finally(() => setGreetingLoading(false));
-    }, 800);
+        .then(data => {
+          // Ensure dots animate for at least 3s even if fetch is fast
+          const elapsed = Date.now() - dotsStart;
+          const remaining = Math.max(0, 3000 - elapsed);
+          setTimeout(() => {
+            if (data?.greeting) setGreeting(data.greeting);
+            setGreetingLoading(false);
+          }, remaining);
+        })
+        .catch(() => { setGreetingLoading(false); });
+    }, 2000);
 
     return () => clearTimeout(delayTimer);
   }, [user, accessToken, chat.messages.length, chat.conversationId]);
