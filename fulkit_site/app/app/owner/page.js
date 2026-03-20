@@ -4062,6 +4062,10 @@ function DownloadAppCard() {
 }
 
 function SocialsTab() {
+  // TODO: Pre-launch — publish Meta "Fülkit Social" app before going live.
+  // Dashboard: developers.facebook.com → Fülkit Social → Publish.
+  // Required for non-test-user access to Threads + Facebook posting.
+
   const { accessToken } = useAuth();
   const isMobile = useIsMobile();
   const [meta, setMeta] = useState(null);
@@ -4088,11 +4092,13 @@ function SocialsTab() {
   const [socialConceptIdx, setSocialConceptIdx] = useState(0);
   const [socialKitOpen, setSocialKitOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialKitOpen") === "true");
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
+  const [localAppOpen, setLocalAppOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-localAppOpen") === "true");
 
   // Persist drawer state
   useEffect(() => { localStorage.setItem("owner-metaOpen", metaOpen); }, [metaOpen]);
   useEffect(() => { localStorage.setItem("owner-socialsOpen", socialsOpen); }, [socialsOpen]);
   useEffect(() => { localStorage.setItem("owner-socialKitOpen", socialKitOpen); }, [socialKitOpen]);
+  useEffect(() => { localStorage.setItem("owner-localAppOpen", localAppOpen); }, [localAppOpen]);
 
   // Load current metadata
   useEffect(() => {
@@ -4240,6 +4246,327 @@ function SocialsTab() {
 
   return (
     <div>
+      {/* ─── Publish ─── */}
+      <PublishSection accessToken={accessToken} />
+
+
+      {/* ── SOCIAL KIT ── */}
+      {(() => {
+        const PLATFORMS = [
+          { key: "og", label: "Bluesky / OG", dims: "1200 \u00D7 630", aspect: "1200/630" },
+          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350" },
+          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920" },
+          { key: "square", label: "1:1", dims: "1080 \u00D7 1080", aspect: "1080/1080" },
+        ];
+        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
+        const sizeParam = socialSize;
+        return (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+            <button onClick={() => setSocialKitOpen(prev => !prev)} style={{
+              ...TAB_TITLE,
+              background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
+              padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
+            }}>
+              Social Kit
+              {socialKitOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            </button>
+            {socialKitOpen && (<>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "140px 1fr", gap: "var(--space-4)", overflow: "hidden" }}>
+              {/* Left: Platform picker */}
+              <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: "var(--space-2)", overflowX: isMobile ? "auto" : "visible" }}>
+                {PLATFORMS.map(p => (
+                  <button
+                    key={p.key}
+                    onClick={() => setSocialSize(p.key)}
+                    style={{
+                      display: "flex", flexDirection: "column", gap: 2,
+                      padding: "var(--space-2) var(--space-2-5)",
+                      borderRadius: "var(--radius-md)",
+                      border: socialSize === p.key ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
+                      borderLeft: socialSize === p.key ? "3px solid var(--color-accent)" : "3px solid transparent",
+                      background: socialSize === p.key ? "var(--color-bg-alt)" : "transparent",
+                      cursor: "pointer", textAlign: "left", fontFamily: "var(--font-primary)",
+                      flexShrink: 0, minWidth: isMobile ? 140 : "auto",
+                    }}
+                  >
+                    <span style={{
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: socialSize === p.key ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
+                      color: socialSize === p.key ? "var(--color-text)" : "var(--color-text-secondary)",
+                    }}>{p.label}</span>
+                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{p.dims}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Right: Concept carousel */}
+              {(() => {
+                const idx = Math.min(socialConceptIdx, concepts.length - 1);
+                const concept = concepts[idx];
+                const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
+                const prev = () => setSocialConceptIdx((idx - 1 + concepts.length) % concepts.length);
+                const next = () => setSocialConceptIdx((idx + 1) % concepts.length);
+                return (
+                  <div style={{ minWidth: 0 }}>
+                    {/* Main preview */}
+                    <div
+                      onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
+                      style={{
+                        width: "100%", maxWidth: "100%", aspectRatio: active.aspect,
+                        border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
+                        overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                        marginBottom: "var(--space-2)",
+                      }}
+                    >
+                      <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                    </div>
+
+                    {/* Controls: prev / label / next / download / delete */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                      <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                        <ChevronRight size={20} style={{ transform: "rotate(180deg)" }} />
+                      </button>
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textTransform: "capitalize" }}>
+                          #{idx + 1} {concept}
+                        </span>
+                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
+                          {idx + 1}/{concepts.length}
+                        </span>
+                      </div>
+                      <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                        <ChevronRight size={20} />
+                      </button>
+                      <a
+                        href={url}
+                        download={`fulkit-${concept}-${active.key}.png`}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          padding: "var(--space-1-5) var(--space-3)",
+                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                          textDecoration: "none", cursor: "pointer",
+                        }}
+                      >
+                        <Download size={10} /> PNG
+                      </a>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(window.location.origin + url); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          padding: "var(--space-1-5) var(--space-2-5)",
+                          background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-primary)", cursor: "pointer",
+                        }}
+                        title="Copy image URL"
+                      >
+                        <Copy size={10} />
+                      </button>
+                    </div>
+
+                    {/* Thumbnail strip */}
+                    <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+                      {concepts.map((c, i) => {
+                        const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
+                        const isActive = i === idx;
+                        return (
+                          <div key={c} style={{ flexShrink: 0, textAlign: "center" }}>
+                            <div
+                              onClick={() => setSocialConceptIdx(i)}
+                              style={{
+                                width: 80, aspectRatio: active.aspect,
+                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
+                                borderRadius: "var(--radius-sm)",
+                                overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                              }}
+                            >
+                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                            </div>
+                            <span style={{ fontSize: "var(--font-size-2xs)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
+                              #{i + 1}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            </>)}
+          </div>
+        );
+      })()}
+
+
+      {/* Template Preview Modal */}
+      {previewTemplate && (() => {
+        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const sizes = [
+          { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
+          { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
+          { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
+          { key: "square", label: "1:1", aspect: "1080/1080" },
+        ];
+        const ci = concepts.indexOf(previewTemplate.concept);
+        const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
+        const totalItems = concepts.length * sizes.length;
+        const currentIndex = si * concepts.length + ci;
+        const navigate = (delta) => {
+          const next = (currentIndex + delta + totalItems) % totalItems;
+          const nextSi = Math.floor(next / concepts.length);
+          const nextCi = next % concepts.length;
+          const nextSize = sizes[nextSi];
+          const nextConcept = concepts[nextCi];
+          setPreviewTemplate({
+            url: `/api/social/template?concept=${nextConcept}&size=${nextSize.key}`,
+            concept: nextConcept,
+            size: nextSize.label,
+            aspect: nextSize.aspect,
+            sizeKey: nextSize.key,
+          });
+        };
+        return (
+          <div
+            onClick={() => setPreviewTemplate(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(42,40,38,0.85)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "var(--space-6)",
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: "relative",
+                maxWidth: "80vw",
+                maxHeight: "85vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "var(--space-3)",
+              }}
+            >
+              {/* Close */}
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                style={{
+                  position: "absolute", top: -32, right: 0,
+                  background: "none", border: "none", cursor: "pointer", padding: 0,
+                }}
+              >
+                <X size={20} color="#EFEDE8" />
+              </button>
+
+              {/* Image */}
+              <div style={{
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+                border: "1px solid rgba(239,237,232,0.15)",
+                maxHeight: "75vh",
+                display: "flex",
+              }}>
+                <img
+                  src={previewTemplate.url}
+                  alt={`${previewTemplate.concept} ${previewTemplate.sizeKey}`}
+                  style={{ maxWidth: "80vw", maxHeight: "75vh", objectFit: "contain", display: "block" }}
+                />
+              </div>
+
+              {/* Controls bar */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: "var(--space-4)",
+              }}>
+                {/* Prev */}
+                <button
+                  onClick={() => navigate(-1)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
+                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
+                  }}
+                >
+                  <ChevronRight size={18} style={{ transform: "rotate(180deg)" }} />
+                </button>
+
+                {/* Label */}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "#EFEDE8", textTransform: "capitalize" }}>
+                    {previewTemplate.concept}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "#8A8784" }}>
+                    {previewTemplate.size}
+                  </div>
+                </div>
+
+                {/* Next */}
+                <button
+                  onClick={() => navigate(1)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
+                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
+                  }}
+                >
+                  <ChevronRight size={18} />
+                </button>
+
+                {/* Download */}
+                <a
+                  href={previewTemplate.url}
+                  download={`fulkit-${previewTemplate.concept}-${previewTemplate.sizeKey}.png`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1-5) var(--space-3)",
+                    background: "#EFEDE8",
+                    color: "#2A2826",
+                    border: "none",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "var(--font-size-2xs)",
+                    fontWeight: "var(--font-weight-semibold)",
+                    fontFamily: "var(--font-primary)",
+                    textDecoration: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Download size={10} /> PNG
+                </a>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(window.location.origin + previewTemplate.url); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1-5) var(--space-2-5)",
+                    background: "none", color: "#EFEDE8", border: "1px solid rgba(239,237,232,0.3)",
+                    borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)", cursor: "pointer",
+                  }}
+                  title="Copy image URL"
+                >
+                  <Copy size={10} />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── LOCAL APP ── */}
+      <button onClick={() => setLocalAppOpen(prev => !prev)} style={{
+        ...TAB_TITLE,
+        background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
+        padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
+      }}>
+        Local App
+        {localAppOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+      </button>
+      {localAppOpen && (
+        <DownloadAppCard />
+      )}
+
       <button onClick={() => setSocialsOpen(prev => !prev)} style={{
         ...TAB_TITLE,
         background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
@@ -4675,314 +5002,6 @@ function SocialsTab() {
       </button>
       </>)}
 
-      {/* ── DOWNLOAD THE APP ── */}
-      <DownloadAppCard />
-
-      {/* ── SOCIAL KIT ── */}
-      {(() => {
-        const PLATFORMS = [
-          { key: "og", label: "Bluesky / OG", dims: "1200 \u00D7 630", aspect: "1200/630" },
-          { key: "ig-post", label: "Instagram Post", dims: "1080 \u00D7 1350", aspect: "1080/1350" },
-          { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920" },
-          { key: "square", label: "1:1", dims: "1080 \u00D7 1080", aspect: "1080/1080" },
-        ];
-        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
-        const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
-        const sizeParam = socialSize;
-        return (
-          <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-6)", marginBottom: "var(--space-6)" }}>
-            <button onClick={() => setSocialKitOpen(prev => !prev)} style={{
-              ...TAB_TITLE,
-              background: "#FFFFFF", border: "1px solid var(--color-border-light)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left",
-              padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-3)",
-            }}>
-              Social Kit
-              {socialKitOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-            </button>
-            {socialKitOpen && (<>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "140px 1fr", gap: "var(--space-4)", overflow: "hidden" }}>
-              {/* Left: Platform picker */}
-              <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: "var(--space-2)", overflowX: isMobile ? "auto" : "visible" }}>
-                {PLATFORMS.map(p => (
-                  <button
-                    key={p.key}
-                    onClick={() => setSocialSize(p.key)}
-                    style={{
-                      display: "flex", flexDirection: "column", gap: 2,
-                      padding: "var(--space-2) var(--space-2-5)",
-                      borderRadius: "var(--radius-md)",
-                      border: socialSize === p.key ? "1px solid var(--color-text-muted)" : "1px solid var(--color-border-light)",
-                      borderLeft: socialSize === p.key ? "3px solid var(--color-accent)" : "3px solid transparent",
-                      background: socialSize === p.key ? "var(--color-bg-alt)" : "transparent",
-                      cursor: "pointer", textAlign: "left", fontFamily: "var(--font-primary)",
-                      flexShrink: 0, minWidth: isMobile ? 140 : "auto",
-                    }}
-                  >
-                    <span style={{
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: socialSize === p.key ? "var(--font-weight-semibold)" : "var(--font-weight-normal)",
-                      color: socialSize === p.key ? "var(--color-text)" : "var(--color-text-secondary)",
-                    }}>{p.label}</span>
-                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>{p.dims}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Right: Concept carousel */}
-              {(() => {
-                const idx = Math.min(socialConceptIdx, concepts.length - 1);
-                const concept = concepts[idx];
-                const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
-                const prev = () => setSocialConceptIdx((idx - 1 + concepts.length) % concepts.length);
-                const next = () => setSocialConceptIdx((idx + 1) % concepts.length);
-                return (
-                  <div style={{ minWidth: 0 }}>
-                    {/* Main preview */}
-                    <div
-                      onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
-                      style={{
-                        width: "100%", maxWidth: "100%", aspectRatio: active.aspect,
-                        border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
-                        overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                        marginBottom: "var(--space-2)",
-                      }}
-                    >
-                      <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
-                    </div>
-
-                    {/* Controls: prev / label / next / download / delete */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-                      <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
-                        <ChevronRight size={20} style={{ transform: "rotate(180deg)" }} />
-                      </button>
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textTransform: "capitalize" }}>
-                          #{idx + 1} {concept}
-                        </span>
-                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
-                          {idx + 1}/{concepts.length}
-                        </span>
-                      </div>
-                      <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
-                        <ChevronRight size={20} />
-                      </button>
-                      <a
-                        href={url}
-                        download={`fulkit-${concept}-${active.key}.png`}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-3)",
-                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
-                          textDecoration: "none", cursor: "pointer",
-                        }}
-                      >
-                        <Download size={10} /> PNG
-                      </a>
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(window.location.origin + url); }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-2-5)",
-                          background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border)",
-                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-primary)", cursor: "pointer",
-                        }}
-                        title="Copy image URL"
-                      >
-                        <Copy size={10} />
-                      </button>
-                    </div>
-
-                    {/* Thumbnail strip */}
-                    <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
-                      {concepts.map((c, i) => {
-                        const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
-                        const isActive = i === idx;
-                        return (
-                          <div key={c} style={{ flexShrink: 0, textAlign: "center" }}>
-                            <div
-                              onClick={() => setSocialConceptIdx(i)}
-                              style={{
-                                width: 80, aspectRatio: active.aspect,
-                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
-                                borderRadius: "var(--radius-sm)",
-                                overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                              }}
-                            >
-                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
-                            </div>
-                            <span style={{ fontSize: "var(--font-size-2xs)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
-                              #{i + 1}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            </>)}
-          </div>
-        );
-      })()}
-
-
-      {/* Template Preview Modal */}
-      {previewTemplate && (() => {
-        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
-        const sizes = [
-          { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
-          { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
-          { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
-          { key: "square", label: "1:1", aspect: "1080/1080" },
-        ];
-        const ci = concepts.indexOf(previewTemplate.concept);
-        const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
-        const totalItems = concepts.length * sizes.length;
-        const currentIndex = si * concepts.length + ci;
-        const navigate = (delta) => {
-          const next = (currentIndex + delta + totalItems) % totalItems;
-          const nextSi = Math.floor(next / concepts.length);
-          const nextCi = next % concepts.length;
-          const nextSize = sizes[nextSi];
-          const nextConcept = concepts[nextCi];
-          setPreviewTemplate({
-            url: `/api/social/template?concept=${nextConcept}&size=${nextSize.key}`,
-            concept: nextConcept,
-            size: nextSize.label,
-            aspect: nextSize.aspect,
-            sizeKey: nextSize.key,
-          });
-        };
-        return (
-          <div
-            onClick={() => setPreviewTemplate(null)}
-            style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(42,40,38,0.85)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "var(--space-6)",
-            }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                position: "relative",
-                maxWidth: "80vw",
-                maxHeight: "85vh",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "var(--space-3)",
-              }}
-            >
-              {/* Close */}
-              <button
-                onClick={() => setPreviewTemplate(null)}
-                style={{
-                  position: "absolute", top: -32, right: 0,
-                  background: "none", border: "none", cursor: "pointer", padding: 0,
-                }}
-              >
-                <X size={20} color="#EFEDE8" />
-              </button>
-
-              {/* Image */}
-              <div style={{
-                borderRadius: "var(--radius-lg)",
-                overflow: "hidden",
-                border: "1px solid rgba(239,237,232,0.15)",
-                maxHeight: "75vh",
-                display: "flex",
-              }}>
-                <img
-                  src={previewTemplate.url}
-                  alt={`${previewTemplate.concept} ${previewTemplate.sizeKey}`}
-                  style={{ maxWidth: "80vw", maxHeight: "75vh", objectFit: "contain", display: "block" }}
-                />
-              </div>
-
-              {/* Controls bar */}
-              <div style={{
-                display: "flex", alignItems: "center", gap: "var(--space-4)",
-              }}>
-                {/* Prev */}
-                <button
-                  onClick={() => navigate(-1)}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
-                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
-                  }}
-                >
-                  <ChevronRight size={18} style={{ transform: "rotate(180deg)" }} />
-                </button>
-
-                {/* Label */}
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "#EFEDE8", textTransform: "capitalize" }}>
-                    {previewTemplate.concept}
-                  </div>
-                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "#8A8784" }}>
-                    {previewTemplate.size}
-                  </div>
-                </div>
-
-                {/* Next */}
-                <button
-                  onClick={() => navigate(1)}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)",
-                    color: "#EFEDE8", fontSize: "var(--font-size-lg)", fontFamily: "var(--font-primary)",
-                  }}
-                >
-                  <ChevronRight size={18} />
-                </button>
-
-                {/* Download */}
-                <a
-                  href={previewTemplate.url}
-                  download={`fulkit-${previewTemplate.concept}-${previewTemplate.sizeKey}.png`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--space-1)",
-                    padding: "var(--space-1-5) var(--space-3)",
-                    background: "#EFEDE8",
-                    color: "#2A2826",
-                    border: "none",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "var(--font-size-2xs)",
-                    fontWeight: "var(--font-weight-semibold)",
-                    fontFamily: "var(--font-primary)",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Download size={10} /> PNG
-                </a>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(window.location.origin + previewTemplate.url); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--space-1)",
-                    padding: "var(--space-1-5) var(--space-2-5)",
-                    background: "none", color: "#EFEDE8", border: "1px solid rgba(239,237,232,0.3)",
-                    borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                    fontFamily: "var(--font-primary)", cursor: "pointer",
-                  }}
-                  title="Copy image URL"
-                >
-                  <Copy size={10} />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ─── Publish to Bluesky ─── */}
-      <PublishSection accessToken={accessToken} />
     </div>
   );
 }
