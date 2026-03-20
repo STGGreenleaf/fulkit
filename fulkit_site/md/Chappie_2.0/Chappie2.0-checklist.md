@@ -15,8 +15,8 @@
 ### Prompt Caching
 - [x] **0.1** Verify @anthropic-ai/sdk version in package.json supports `cache_control` (confirmed ^0.78.0 works)
 - [x] **0.2** Add `cache_control: { type: "ephemeral" }` to system prompt block in `app/api/chat/route.js`
-- [ ] **0.3** Verify cache hits in Anthropic dashboard after deploying (check `cache_read_input_tokens` in API response)
-- [ ] **0.4** Confirm cost/msg drops from ~$0.09 to ~$0.035 on multi-turn conversations via `[chat:debug]` output
+- [x] **0.3** Verify cache hits in Anthropic dashboard after deploying (check `cache_read_input_tokens` in API response) — CONFIRMED 2026-03-20: cacheReadTokens 38,190, 100% hit rate on msg 2+
+- [x] **0.4** Confirm cost/msg drops from ~$0.09 to ~$0.035 on multi-turn conversations via `[chat:debug]` output — CONFIRMED 2026-03-20: $0.08 first msg (cache write), $0.03-0.04 subsequent (Opus). Sonnet users ~5x lower.
 
 ### Circuit Breaker
 - [x] **0.5** Add `checkCircuitBreaker()` call in chat route before Claude API call (function exists in `cost-guard.js`, just not called)
