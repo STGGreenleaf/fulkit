@@ -78,8 +78,10 @@ export default function AppShell({ children }) {
   const isAuthenticated = !!user;
   const contextValue = useMemo(() => ({ setToolbar }), [setToolbar]);
 
-  // Public pages — no shell, they handle their own layout
-  if (!isAuthenticated) return <ToolbarContext.Provider value={contextValue}>{children}</ToolbarContext.Provider>;
+  // Standalone pages — no shell, they handle their own layout
+  const standalone = ["/landing", "/login", "/about", "/privacy", "/terms", "/wtf", "/onboarding", "/security"];
+  const isStandalone = standalone.some(p => pathname === p || pathname.startsWith(p + "/"));
+  if (!isAuthenticated || isStandalone) return <ToolbarContext.Provider value={contextValue}>{children}</ToolbarContext.Provider>;
 
   return (
     <ToolbarContext.Provider value={contextValue}>
