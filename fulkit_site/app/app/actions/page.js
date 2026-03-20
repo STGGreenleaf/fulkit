@@ -363,7 +363,7 @@ export default function Actions() {
 
             {/* Action list */}
             <div style={{ padding: isMobile ? "0 var(--space-3) var(--space-6)" : "0 var(--space-6) var(--space-6)" }}>
-            <div style={{ maxWidth: isMobile ? "none" : 640 }}>
+            <div>
               {/* Add action inline */}
               {adding && (
                 <div
