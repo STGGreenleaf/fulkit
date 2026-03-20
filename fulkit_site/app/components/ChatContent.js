@@ -405,7 +405,7 @@ export default function ChatContent({ isPopout = false }) {
     border: "none",
     cursor: "pointer",
     fontFamily: "var(--font-primary)",
-    padding: touch ? "var(--space-2) var(--space-3)" : "var(--space-2) var(--space-2-5)",
+    padding: touch ? "0 var(--space-3)" : "0 var(--space-2-5)",
     minHeight: touch ? 44 : 32,
     minWidth: touch ? 44 : 32,
     borderRadius: "var(--radius-sm)",
