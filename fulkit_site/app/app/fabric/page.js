@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
-import Sidebar from "../../components/Sidebar";
+// Sidebar moved to layout via SidebarShell
 import AuthGuard from "../../components/AuthGuard";
 // LogoMark removed — using text wordmark to match other pages
 import Tooltip from "../../components/Tooltip";
@@ -1995,20 +1995,6 @@ export default function FabricPage() {
           prev={prev}
         />
       )}
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            background: "var(--color-bg)",
-            overflow: "hidden",
-          }}
-        >
           {/* Header */}
           <div style={{
             padding: "var(--space-2-5) var(--space-6)",
@@ -4666,8 +4652,6 @@ export default function FabricPage() {
             </div>
           </div>
           </div>
-        </div>
-      </div>
       <style>{`
         @keyframes typingBounce {
           0%, 60%, 100% { transform: translateY(0); }

@@ -27,7 +27,7 @@ import {
   BookOpenText,
   Bug,
 } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar moved to layout via SidebarShell
 import AuthGuard from "../../components/AuthGuard";
 import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
@@ -276,19 +276,6 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
 
   return (
     <AuthGuard>
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          height: "100dvh",
-          overflow: "hidden",
-          paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0,
-        }}
-      >
-        {!isMobile && <Sidebar />}
-
-        {/* ─── Main ─── */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <div
           style={{
@@ -414,8 +401,6 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
 
         {/* Footer — pinned to bottom, consistent across all tabs */}
         {tab !== "owner" && <SettingsFooter />}
-        </div>
-      </div>
     </AuthGuard>
   );
 }

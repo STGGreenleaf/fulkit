@@ -11,6 +11,7 @@ import { SignalCollector } from "../lib/signal";
 import AnnouncementBanner from "../components/AnnouncementBanner";
 import SignalBoundary from "../components/SignalBoundary";
 import MobileTabBar from "../components/MobileTabBar";
+import SidebarShell from "../components/SidebarShell";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 
 const DEFAULTS = {
@@ -85,7 +86,7 @@ export default function RootLayout({ children }) {
             <SandboxProvider>
             <FabricProvider>
               <SignalBoundary>
-              {children}
+              <SidebarShell>{children}</SidebarShell>
               </SignalBoundary>
               <MobileTabBar />
               <QuickCapture />

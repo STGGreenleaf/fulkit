@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Sidebar from "../../components/Sidebar";
+// Sidebar moved to layout via SidebarShell
 import AuthGuard from "../../components/AuthGuard";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
@@ -121,10 +121,6 @@ export default function Dashboard() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* Header */}
           <div style={{
             padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
@@ -522,8 +518,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </AuthGuard>
   );
 }

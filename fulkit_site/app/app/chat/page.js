@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar moved to layout via SidebarShell
 import AuthGuard from "../../components/AuthGuard";
 import ChatContent from "../../components/ChatContent";
 import { useTrack } from "../../lib/track";
@@ -14,10 +14,7 @@ export default function Chat() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
         <ChatContent />
-      </div>
     </AuthGuard>
   );
 }

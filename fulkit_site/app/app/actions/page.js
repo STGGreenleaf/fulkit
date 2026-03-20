@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
+// Sidebar moved to layout via SidebarShell
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
 
@@ -230,10 +230,6 @@ export default function Actions() {
 
   return (
     <AuthGuard>
-      <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
-        {!isMobile && <Sidebar />}
-
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <div
             style={{
@@ -551,8 +547,6 @@ export default function Actions() {
             </div>
             </div>
           </div>
-        </div>
-      </div>
     </AuthGuard>
   );
 }
