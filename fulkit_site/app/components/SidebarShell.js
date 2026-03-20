@@ -48,19 +48,21 @@ export default function SidebarShell({ children }) {
     <HeaderContext.Provider value={{ setHeaderActions }}>
       <div style={{ display: "flex", width: "100%", height: "100dvh", overflow: "hidden", paddingBottom: isMobile ? "var(--tab-bar-height, 56px)" : 0 }}>
         {!isMobile && <Sidebar />}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {/* Persistent app header — glassy, matches landing nav */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
+          {/* Persistent app header — sticky + glassy, content scrolls behind it */}
           <div style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
             padding: isMobile ? "var(--space-2-5) var(--space-3)" : "var(--space-2-5) var(--space-6)",
             minHeight: 44,
-            background: "rgba(239, 237, 232, 0.3)",
+            background: "rgba(239, 237, 232, 0.6)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
             borderBottom: "1px solid rgba(42, 40, 38, 0.08)",
-            flexShrink: 0,
           }}>
             <span style={{
               fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-sm)",
@@ -83,10 +85,8 @@ export default function SidebarShell({ children }) {
               </div>
             )}
           </div>
-          {/* Page content — flex:1 so it fills remaining space, overflow handled per-page */}
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
-            {children}
-          </div>
+          {/* Page content */}
+          {children}
         </div>
       </div>
     </HeaderContext.Provider>
