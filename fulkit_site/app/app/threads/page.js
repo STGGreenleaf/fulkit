@@ -678,7 +678,7 @@ function ThreadsContent({ initialFolder, initialView }) {
             })}
 
             {/* Tools — add folder, search, view toggle */}
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Add folder */}
               {addingFolder ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
