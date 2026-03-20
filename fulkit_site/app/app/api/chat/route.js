@@ -877,6 +877,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
             catalog_object_id: ch.catalog_object_id,
             location_id: preview.location_id,
             quantity: String(ch.quantity),
+            state: "IN_STOCK",
             occurred_at: new Date().toISOString(),
           },
         }));
