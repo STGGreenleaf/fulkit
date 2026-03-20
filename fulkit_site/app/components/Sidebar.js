@@ -92,7 +92,7 @@ export default function Sidebar() {
                   width: "100%",
                 }}
               >
-                <item.icon size={ICON_SIZE} strokeWidth={1.8} />
+                <item.icon size={ICON_SIZE} strokeWidth={1.8} style={{ pointerEvents: "none" }} />
                 {!compactMode && item.label}
               </Link>
             </Tooltip>
