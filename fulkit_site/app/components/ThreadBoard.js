@@ -286,13 +286,13 @@ export default function ThreadBoard({ notes, columns, selectedId, onSelect, onUp
                     border: "none",
                     borderTop: "1px dashed var(--color-border-light)",
                     cursor: "pointer",
-                    color: "var(--color-text-dim)",
+                    color: "var(--color-text-muted)",
                     fontSize: "var(--font-size-2xs)",
                     fontFamily: "var(--font-primary)",
                     transition: "color var(--duration-fast) var(--ease-default)",
                   }}
                 >
-                  <Plus size={10} strokeWidth={2} />
+                  <Plus size={16} strokeWidth={2} />
                   {!compact && "New thread"}
                 </button>
               )}
@@ -389,11 +389,11 @@ export default function ThreadBoard({ notes, columns, selectedId, onSelect, onUp
                   border: "1px dashed var(--color-border-light)",
                   borderRadius: 0,
                   cursor: "pointer",
-                  color: "var(--color-text-dim)",
+                  color: "var(--color-text-muted)",
                   transition: "all var(--duration-fast) var(--ease-default)",
                 }}
               >
-                <Plus size={14} strokeWidth={2} />
+                <Plus size={16} strokeWidth={2} />
               </button>
             </Tooltip>
           )}
