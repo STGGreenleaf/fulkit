@@ -4781,6 +4781,19 @@ function SocialsTab() {
                       >
                         <Download size={10} /> PNG
                       </a>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(window.location.origin + url); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "var(--space-1)",
+                          padding: "var(--space-1-5) var(--space-2-5)",
+                          background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-primary)", cursor: "pointer",
+                        }}
+                        title="Copy image URL"
+                      >
+                        <Copy size={10} />
+                      </button>
                     </div>
 
                     {/* Thumbnail strip */}
@@ -4949,6 +4962,19 @@ function SocialsTab() {
                 >
                   <Download size={10} /> PNG
                 </a>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(window.location.origin + previewTemplate.url); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1-5) var(--space-2-5)",
+                    background: "none", color: "#EFEDE8", border: "1px solid rgba(239,237,232,0.3)",
+                    borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-primary)", cursor: "pointer",
+                  }}
+                  title="Copy image URL"
+                >
+                  <Copy size={10} />
+                </button>
               </div>
             </div>
           </div>
