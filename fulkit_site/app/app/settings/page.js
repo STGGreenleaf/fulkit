@@ -399,15 +399,15 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
           })}
         </div>
 
-        {/* Tab content */}
+        {/* Tab content — data-heavy tabs stay mounted (hidden) to preserve state across switches */}
         <div style={{ flex: 1, overflowY: "auto", padding: tab === "owner" ? 0 : isMobile ? "var(--space-4) var(--space-3) var(--space-6)" : "var(--space-4) var(--space-6) var(--space-6)" }}>
             {tab === "account" && <AccountTab />}
-            {tab === "sources" && <SourcesTab />}
+            <div style={{ display: tab === "sources" ? "block" : "none" }}><SourcesTab /></div>
             {tab === "manual" && <ManualTab />}
             {tab === "vault" && <VaultTab />}
             {tab === "ai" && <AITab />}
-            {tab === "referrals" && <ReferralsTab />}
-            {tab === "billing" && <BillingTab />}
+            <div style={{ display: tab === "referrals" ? "block" : "none" }}><ReferralsTab /></div>
+            <div style={{ display: tab === "billing" ? "block" : "none" }}><BillingTab /></div>
             {tab === "privacy" && <PrivacyTab />}
             {tab === "owner" && isOwner && <OwnerPanel initialTab={initialOwnerTab} urlPrefix="/settings/owner" onMayday={setOwnerMayday} />}
           </div>
