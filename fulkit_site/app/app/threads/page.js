@@ -739,6 +739,9 @@ function ThreadsContent({ initialFolder, initialView }) {
                 </Tooltip>
               )}
 
+              {/* Spacer — push search + view toggle to the right */}
+              <div style={{ marginLeft: "auto" }} />
+
               {/* Search */}
               {searchOpen ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
@@ -800,7 +803,6 @@ function ThreadsContent({ initialFolder, initialView }) {
                 borderRadius: "var(--radius-md)",
                 padding: 2,
                 gap: 1,
-                marginLeft: "var(--space-2)",
               }}>
                 {VIEWS.map((v) => {
                   const isActive = view === v.key;
