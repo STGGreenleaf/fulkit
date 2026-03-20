@@ -4357,14 +4357,14 @@ function SocialsTab() {
                         onClick={() => { navigator.clipboard.writeText(window.location.origin + url); }}
                         style={{
                           display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-2-5)",
-                          background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border)",
+                          padding: "var(--space-1-5) var(--space-3)",
+                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
                           borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-primary)", cursor: "pointer",
+                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer",
                         }}
                         title="Copy image URL"
                       >
-                        <Copy size={10} />
+                        <Copy size={10} /> Copy URL
                       </button>
                     </div>
 
@@ -4538,14 +4538,14 @@ function SocialsTab() {
                   onClick={() => { navigator.clipboard.writeText(window.location.origin + previewTemplate.url); }}
                   style={{
                     display: "flex", alignItems: "center", gap: "var(--space-1)",
-                    padding: "var(--space-1-5) var(--space-2-5)",
-                    background: "none", color: "#EFEDE8", border: "1px solid rgba(239,237,232,0.3)",
+                    padding: "var(--space-1-5) var(--space-3)",
+                    background: "#EFEDE8", color: "#2A2826", border: "none",
                     borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                    fontFamily: "var(--font-primary)", cursor: "pointer",
+                    fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer",
                   }}
                   title="Copy image URL"
                 >
-                  <Copy size={10} />
+                  <Copy size={10} /> Copy URL
                 </button>
               </div>
             </div>
