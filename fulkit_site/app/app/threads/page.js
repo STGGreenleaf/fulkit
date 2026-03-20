@@ -227,6 +227,19 @@ function ThreadsContent({ initialFolder, initialView }) {
         if (error) console.error("[threads] notes query failed:", error.message);
         if (data) setNotes(data);
       });
+
+    // Auto-archive: move "done" threads older than 7 days to archived (fire-and-forget)
+    supabase.from("preferences").select("value").eq("user_id", user.id).eq("key", "auto_archive_enabled").maybeSingle()
+      .then(({ data: pref }) => {
+        if (pref?.value === "false") return;
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        supabase.from("notes")
+          .update({ status: "archived" })
+          .eq("user_id", user.id)
+          .eq("status", "done")
+          .lt("updated_at", cutoff)
+          .then(() => {});
+      }).catch(() => {});
   }, [user]);
 
   // --- URL param selection ---

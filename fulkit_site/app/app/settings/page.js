@@ -26,6 +26,7 @@ import {
   Crown,
   BookOpenText,
   Bug,
+  ChevronDown,
 } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -682,22 +683,30 @@ function AccountTab() {
   const [nameValue, setNameValue] = useState(profile?.name || user?.user_metadata?.full_name || "");
   const [nameSaving, setNameSaving] = useState(false);
   const [smartThreads, setSmartThreads] = useState(true);
+  const [autoSummarize, setAutoSummarize] = useState(true);
+  const [autoArchive, setAutoArchive] = useState(true);
+  const [smartOpen, setSmartOpen] = useState(false);
 
-  // Load Smart Threads preference
+  // Load Smart Features preferences
   useEffect(() => {
     if (!user?.id) return;
-    supabase.from("preferences").select("value").eq("user_id", user.id).eq("key", "smart_threads_enabled").maybeSingle()
-      .then(({ data }) => { if (data?.value === "false") setSmartThreads(false); });
+    supabase.from("preferences").select("key, value").eq("user_id", user.id)
+      .in("key", ["smart_threads_enabled", "auto_summarize_enabled", "auto_archive_enabled"])
+      .then(({ data }) => {
+        if (!data) return;
+        for (const row of data) {
+          if (row.key === "smart_threads_enabled" && row.value === "false") setSmartThreads(false);
+          if (row.key === "auto_summarize_enabled" && row.value === "false") setAutoSummarize(false);
+          if (row.key === "auto_archive_enabled" && row.value === "false") setAutoArchive(false);
+        }
+      });
   }, [user?.id]);
 
-  async function toggleSmartThreads() {
-    const newVal = !smartThreads;
-    setSmartThreads(newVal);
+  async function togglePref(key, current, setter) {
+    const newVal = !current;
+    setter(newVal);
     await supabase.from("preferences").upsert({
-      user_id: user.id,
-      key: "smart_threads_enabled",
-      value: String(newVal),
-      updated_at: new Date().toISOString(),
+      user_id: user.id, key, value: String(newVal), updated_at: new Date().toISOString(),
     }).catch(() => {});
   }
 
@@ -759,35 +768,62 @@ function AccountTab() {
       </Card>
 
       <div style={{ marginTop: "var(--space-8)" }}>
-        <SectionTitle>Smart Threads</SectionTitle>
-        <Card>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-                Auto-create threads from conversations
-              </div>
-              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
-                {smartThreads
-                  ? "F\u00FClkit extracts action items and decisions after longer conversations and saves them to Threads."
-                  : "Threads are only created when you ask or add them yourself."}
-              </div>
+        <button
+          onClick={() => setSmartOpen(o => !o)}
+          style={{
+            display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%",
+            background: "none", border: "none", cursor: "pointer", padding: "0 0 var(--space-2) 0",
+            fontFamily: "var(--font-primary)",
+          }}
+        >
+          <ChevronDown size={14} strokeWidth={2} style={{
+            color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
+            transform: smartOpen ? "rotate(0deg)" : "rotate(-90deg)",
+          }} />
+          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
+            Smart Features
+          </span>
+        </button>
+        {smartOpen && (
+          <Card>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              {[
+                { key: "smart_threads_enabled", label: "Smart Threads", value: smartThreads, setter: setSmartThreads,
+                  descOn: "F\u00FClkit extracts action items and decisions after longer conversations and saves them to Threads.",
+                  descOff: "Threads are only created when you ask or add them yourself." },
+                { key: "auto_summarize_enabled", label: "Auto-summarize", value: autoSummarize, setter: setAutoSummarize,
+                  descOn: "Conversations are summarized when they end. Helps History previews and gives F\u00FClkit memory across sessions.",
+                  descOff: "Conversations are not summarized automatically." },
+                { key: "auto_archive_enabled", label: "Auto-archive", value: autoArchive, setter: setAutoArchive,
+                  descOn: "Threads marked Done for 7+ days are automatically archived to keep your board clean.",
+                  descOff: "Done threads stay on the board until you archive them." },
+              ].map((feat) => (
+                <div key={feat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)" }}>
+                  <div>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>{feat.label}</div>
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                      {feat.value ? feat.descOn : feat.descOff}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => togglePref(feat.key, feat.value, feat.setter)}
+                    style={{
+                      width: 32, height: 16, borderRadius: 8, border: "1px solid var(--color-border)", cursor: "pointer", flexShrink: 0,
+                      background: feat.value ? "var(--color-text-muted)" : "var(--color-bg-alt)",
+                      position: "relative", transition: "background var(--duration-fast) var(--ease-default)",
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute", top: 2, left: feat.value ? 16 : 2,
+                      width: 10, height: 10, borderRadius: "50%", background: "var(--color-bg)",
+                      transition: "left var(--duration-fast) var(--ease-default)",
+                    }} />
+                  </button>
+                </div>
+              ))}
             </div>
-            <button
-              onClick={toggleSmartThreads}
-              style={{
-                width: 32, height: 16, borderRadius: 8, border: "1px solid var(--color-border)", cursor: "pointer", flexShrink: 0,
-                background: smartThreads ? "var(--color-text-muted)" : "var(--color-bg-alt)",
-                position: "relative", transition: "background var(--duration-fast) var(--ease-default)",
-              }}
-            >
-              <span style={{
-                position: "absolute", top: 2, left: smartThreads ? 16 : 2,
-                width: 10, height: 10, borderRadius: "50%", background: "var(--color-bg)",
-                transition: "left var(--duration-fast) var(--ease-default)",
-              }} />
-            </button>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
 
       <div style={{ marginTop: "var(--space-8)" }}>

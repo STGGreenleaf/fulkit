@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-writeback";
+import { saveConversationSummary } from "./conversation-summary";
 import { useSignal } from "./signal";
 
 // Lightweight topic extraction from message text — no API call
@@ -589,6 +590,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
             }
           }
         } catch {}
+
+      // Auto-summarize conversation (gated on preference)
+      try {
+        if (user && convId && apiMessages.length >= 5) {
+          const { data: sumPref } = await supabase.from("preferences").select("value").eq("user_id", user.id).eq("key", "auto_summarize_enabled").maybeSingle();
+          if (sumPref?.value !== "false") {
+            saveConversationSummary(user.id, convId, apiMessages).catch(() => {});
+          }
+        }
+      } catch {}
 
       // Sandbox: track turn in current chapter
       if (sandboxMode && sandbox.addTurnToChapter) {
