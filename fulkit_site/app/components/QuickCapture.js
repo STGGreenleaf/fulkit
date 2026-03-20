@@ -103,7 +103,7 @@ export default function QuickCapture() {
         onClick={toggleOpen}
         style={{
           position: "fixed",
-          bottom: "var(--space-6)",
+          bottom: 74,
           right: "var(--space-6)",
           width: fabSize,
           height: fabSize,
@@ -131,7 +131,7 @@ export default function QuickCapture() {
     <div
       style={{
         position: "fixed",
-        bottom: "var(--space-6)",
+        bottom: 74,
         right: "var(--space-6)",
         width: "min(320px, calc(100vw - 48px))",
         background: "var(--color-bg-elevated)",
