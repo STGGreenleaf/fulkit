@@ -677,102 +677,8 @@ function ThreadsContent({ initialFolder, initialView }) {
               );
             })}
 
-            {/* Spacer */}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-              {/* View toggle */}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                background: "var(--color-bg-alt)",
-                borderRadius: "var(--radius-md)",
-                padding: 2,
-                gap: 1,
-              }}>
-                {VIEWS.map((v) => {
-                  const isActive = view === v.key;
-                  return (
-                    <Tooltip key={v.key} label={compactMode ? v.label : null}>
-                      <button
-                        onClick={() => setViewPersist(v.key)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "var(--space-1)",
-                          padding: "var(--space-1) var(--space-2)",
-                          border: "none",
-                          outline: "none",
-                          background: isActive ? "var(--color-bg-elevated)" : "transparent",
-                          borderRadius: "var(--radius-sm)",
-                          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
-                          fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-                          fontSize: "var(--font-size-2xs)",
-                          fontFamily: "var(--font-primary)",
-                          cursor: "pointer",
-                          transition: "all var(--duration-fast) var(--ease-default)",
-                          boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
-                        }}
-                      >
-                        <v.Icon size={12} strokeWidth={1.8} />
-                        {!compactMode && v.label}
-                      </button>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-
-              {/* Search */}
-              {searchOpen ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
-                  <Search size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
-                  <input
-                    ref={searchRef}
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") { setSearchQuery(""); setSearchOpen(false); }
-                    }}
-                    placeholder="Search threads..."
-                    style={{
-                      width: 140,
-                      fontSize: "var(--font-size-xs)",
-                      fontFamily: "var(--font-primary)",
-                      background: "transparent",
-                      border: "none",
-                      outline: "none",
-                      padding: "var(--space-1) 0",
-                      color: "var(--color-text)",
-                    }}
-                  />
-                  <button
-                    onClick={() => { setSearchQuery(""); setSearchOpen(false); }}
-                    style={{ display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)" }}
-                  >
-                    <X size={10} strokeWidth={2} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => { setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 0); }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-muted)",
-                    background: "none",
-                    border: "none",
-                    outline: "none",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-primary)",
-                    padding: "var(--space-2-5) var(--space-2)",
-                    lineHeight: 1,
-                  }}
-                  title="Search threads"
-                >
-                  <Search size={12} strokeWidth={2} />
-                </button>
-              )}
-
+            {/* Tools — add folder, search, view toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* Add folder */}
               {addingFolder ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
@@ -832,6 +738,101 @@ function ThreadsContent({ initialFolder, initialView }) {
                   </button>
                 </Tooltip>
               )}
+
+              {/* Search */}
+              {searchOpen ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
+                  <Search size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+                  <input
+                    ref={searchRef}
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") { setSearchQuery(""); setSearchOpen(false); }
+                    }}
+                    placeholder="Search threads..."
+                    style={{
+                      width: 140,
+                      fontSize: "var(--font-size-xs)",
+                      fontFamily: "var(--font-primary)",
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      padding: "var(--space-1) 0",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <button
+                    onClick={() => { setSearchQuery(""); setSearchOpen(false); }}
+                    style={{ display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)" }}
+                  >
+                    <X size={10} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 0); }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-muted)",
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-primary)",
+                    padding: "var(--space-2-5) var(--space-2)",
+                    lineHeight: 1,
+                  }}
+                  title="Search threads"
+                >
+                  <Search size={12} strokeWidth={2} />
+                </button>
+              )}
+
+              {/* View toggle */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                background: "var(--color-bg-alt)",
+                borderRadius: "var(--radius-md)",
+                padding: 2,
+                gap: 1,
+                marginLeft: "var(--space-2)",
+              }}>
+                {VIEWS.map((v) => {
+                  const isActive = view === v.key;
+                  return (
+                    <Tooltip key={v.key} label={compactMode ? v.label : null}>
+                      <button
+                        onClick={() => setViewPersist(v.key)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          padding: "var(--space-1) var(--space-2)",
+                          border: "none",
+                          outline: "none",
+                          background: isActive ? "var(--color-bg-elevated)" : "transparent",
+                          borderRadius: "var(--radius-sm)",
+                          color: isActive ? "var(--color-text)" : "var(--color-text-dim)",
+                          fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                          fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-primary)",
+                          cursor: "pointer",
+                          transition: "all var(--duration-fast) var(--ease-default)",
+                          boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                        }}
+                      >
+                        <v.Icon size={12} strokeWidth={1.8} />
+                        {!compactMode && v.label}
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
