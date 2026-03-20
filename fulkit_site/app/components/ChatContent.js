@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, X, ArrowRight, MessageCircle, Plus, Clock, FileText, Search, Paperclip, Mic, Pin, Download, Copy, Check, ThumbsUp, SquarePen, ChevronDown, ExternalLink, Maximize2, Square, RefreshCw, AlertTriangle, Skull } from "lucide-react";
 import Link from "next/link";
 import VaultGate from "./VaultGate";
+import { useToolbar } from "./AppShell";
 import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
 import { supabase } from "../lib/supabase";
@@ -83,6 +84,7 @@ function ThinkingIndicator({ phase, startedAt, onStop }) {
 }
 
 export default function ChatContent({ isPopout = false }) {
+  const { setToolbar } = useToolbar();
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state + billing state machine ──────────────
@@ -389,6 +391,38 @@ export default function ChatContent({ isPopout = false }) {
 
   const effectiveCompact = isPopout || compactMode || isMobile;
   const maxHistoryWidth = isPopout ? 200 : 400;
+
+  // ─── Toolbar (AppShell header buttons) ─────────────────────
+  const toolbarBtnStyle = {
+    display: "flex", alignItems: "center", background: "none",
+    border: "none", outline: "none", cursor: "pointer", padding: 0,
+    borderRadius: "var(--radius-sm)", lineHeight: 1,
+  };
+
+  useEffect(() => {
+    return () => setToolbar(null);
+  }, [setToolbar]);
+
+  useEffect(() => {
+    if (isPopout) return;
+    setToolbar(
+      <>
+        {(chat.messages.length > 0 || chat.conversationId) && (
+          <button onClick={handleStartNewChat} style={{ ...toolbarBtnStyle, color: "var(--color-text-muted)" }} title="New chat">
+            <SquarePen size={18} strokeWidth={2} />
+          </button>
+        )}
+        <button onClick={() => setShowPins(p => !p)} style={{ ...toolbarBtnStyle, color: showPins ? "var(--color-text)" : "var(--color-text-muted)" }} title="Pins">
+          <Pin size={18} strokeWidth={2} />
+        </button>
+        {chat.conversations.length > 0 && (
+          <button onClick={() => setShowHistory(h => !h)} style={{ ...toolbarBtnStyle, color: showHistory ? "var(--color-text)" : "var(--color-text-muted)" }} title="History">
+            <Clock size={18} strokeWidth={2} />
+          </button>
+        )}
+      </>
+    );
+  }, [showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, setToolbar, isPopout]);
 
   // ─── Render ───────────────────────────────────────────────
 
