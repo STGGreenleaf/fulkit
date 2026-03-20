@@ -4993,13 +4993,14 @@ function PublishSection({ accessToken }) {
   const [altText, setAltText] = useState("");
   const [posting, setPosting] = useState(false);
   const [results, setResults] = useState({});
-  const [platforms, setPlatforms] = useState({ bluesky: true });
+  const [platforms, setPlatforms] = useState({ bluesky: true, threads: true });
   const [publishOpen, setPublishOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-publishOpen") === "true");
 
   useEffect(() => { localStorage.setItem("owner-publishOpen", publishOpen); }, [publishOpen]);
 
   const PLATFORMS = [
     { key: "bluesky", label: "Bluesky", available: true },
+    { key: "threads", label: "Threads", available: true },
     { key: "instagram", label: "Instagram", available: false },
   ];
 
@@ -5026,6 +5027,21 @@ function PublishSection({ accessToken }) {
         newResults.bluesky = data.success ? { ok: true } : { ok: false, error: data.error };
       } catch (err) {
         newResults.bluesky = { ok: false, error: err.message };
+      }
+    }
+
+    // Threads: post via Threads API
+    if (platforms.threads) {
+      try {
+        const res = await fetch("/api/threads/post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ text: text.trim(), imageUrl: imageUrl || undefined }),
+        });
+        const data = await res.json();
+        newResults.threads = data.success ? { ok: true } : { ok: false, error: data.error };
+      } catch (err) {
+        newResults.threads = { ok: false, error: err.message };
       }
     }
 
