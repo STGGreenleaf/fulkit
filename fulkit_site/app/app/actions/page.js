@@ -268,11 +268,9 @@ export default function Actions() {
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-start",
               gap: "var(--space-1)",
               padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
               borderBottom: "1px solid var(--color-border-light)",
-              width: "100%",
             }}
           >
             {LENSES.map(({ key, label, Icon }) => {
@@ -313,11 +311,9 @@ export default function Actions() {
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-start",
                 alignItems: "center",
                 gap: "var(--space-1)",
                 padding: isMobile ? "var(--space-3) var(--space-3)" : "var(--space-3) var(--space-6)",
-                width: "100%",
               }}
             >
               {FILTERS.map(({ key, Icon }) => {
