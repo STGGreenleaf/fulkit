@@ -767,7 +767,9 @@ function AccountTab() {
                 Auto-create threads from conversations
               </div>
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
-                F&#252;lkit extracts action items and decisions after longer conversations and saves them to Threads.
+                {smartThreads
+                  ? "F\u00FClkit extracts action items and decisions after longer conversations and saves them to Threads."
+                  : "Threads are only created when you ask or add them yourself."}
               </div>
             </div>
             <button
