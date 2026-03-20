@@ -114,7 +114,7 @@ export default function AppShell({ children }) {
               fontWeight: "var(--font-weight-black)",
               letterSpacing: "var(--letter-spacing-tight)",
               color: "var(--color-text)",
-              marginTop: 2,
+              marginTop: 4,
             }}>
               F{"\u00FC"}lkit
             </span>
