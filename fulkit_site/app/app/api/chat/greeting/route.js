@@ -52,6 +52,17 @@ export async function GET(request) {
     const providers = (integrationsRes?.data || []).map(i => i.provider);
     const voiceDoc = voiceRes?.data?.content || "";
 
+    // Weekly digest (cached by cron, fresh on Mondays)
+    let weeklyDigest = null;
+    try {
+      const { data: digestPref } = await admin.from("preferences").select("value, updated_at")
+        .eq("user_id", user.id).eq("key", "weekly_digest").maybeSingle();
+      // Only show if less than 2 days old (Monday digest valid through Tuesday)
+      if (digestPref?.value && Date.now() - new Date(digestPref.updated_at).getTime() < 2 * 24 * 60 * 60 * 1000) {
+        weeklyDigest = digestPref.value;
+      }
+    } catch {}
+
     const day = new Date().toLocaleDateString("en-US", { weekday: "long" });
     const hour = new Date().getHours();
     const timeOfDay = hour < 5 ? "late night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
@@ -64,6 +75,7 @@ export async function GET(request) {
       recentTopics.length > 0 ? `Recent topics: ${recentTopics.join(", ")}` : "Recent topics: first visit",
       providers.length > 0 ? `Connected tools: ${providers.join(", ")}` : "Connected tools: none",
       staleRes?.count > 0 ? `Stale threads: ${staleRes.count} threads haven't moved in 30+ days` : null,
+      weeklyDigest ? `Last week: ${weeklyDigest}` : null,
     ].filter(Boolean).join("\n");
 
     const response = await anthropic.messages.create({

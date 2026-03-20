@@ -157,10 +157,12 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     let context = [];
     setContextDropped(false);
 
-    // Vault context
+    // Vault context — pass last 3 user messages for conversational awareness
     if (isReady && getContextWithMeta) {
       try {
-        const result = await getContextWithMeta(text);
+        const recentUserTexts = (apiMessages || []).filter(m => m.role === "user").slice(-3).map(m => m.content);
+        const contextQuery = recentUserTexts.length > 0 ? recentUserTexts : text;
+        const result = await getContextWithMeta(contextQuery);
         if (result?.selected) {
           context = result.selected;
           setContextMeta(result.metadata);

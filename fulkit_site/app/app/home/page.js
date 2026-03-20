@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home } from "lucide-react";
+import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home, Activity } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 // Sidebar + header provided by AppShell in layout
@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [actions, setActions] = useState([]);
   const [notes, setNotes] = useState([]);
   const [whispers, setWhispers] = useState([]);
+  const [patterns, setPatterns] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
 
@@ -87,6 +88,26 @@ export default function Dashboard() {
       .then(({ data, error }) => {
         if (error) console.error("[home] notes query failed:", error.message);
         if (data) setNotes(data);
+      });
+
+    // Fetch pattern insights (top ecosystems by frequency)
+    supabase
+      .from("user_patterns")
+      .select("ecosystem, frequency")
+      .eq("user_id", user.id)
+      .order("frequency", { ascending: false })
+      .limit(50)
+      .abortSignal(AbortSignal.timeout(5000))
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        // Aggregate by ecosystem
+        const eco = {};
+        for (const row of data) {
+          if (!row.ecosystem) continue;
+          eco[row.ecosystem] = (eco[row.ecosystem] || 0) + row.frequency;
+        }
+        const sorted = Object.entries(eco).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        setPatterns(sorted.map(([name, count]) => ({ name, count })));
       });
   }, [user]);
 
@@ -486,6 +507,32 @@ export default function Dashboard() {
                     <ActionList actions={displayActions} onComplete={completeAction} />
                   ) : (
                     <EmptyState message="No action items yet. Tell me what's on your plate." link="/chat" linkLabel="Start chatting" marginBottom="var(--space-8)" />
+                  )}
+
+                  {/* Pattern Insights */}
+                  {patterns.length > 0 && (
+                    <>
+                      <SectionLabel icon={Activity}>Your patterns</SectionLabel>
+                      <div style={{
+                        display: "flex", flexDirection: "column", gap: "var(--space-2)",
+                        padding: "var(--space-3)", background: "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+                      }}>
+                        {patterns.map((p) => (
+                          <div key={p.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>
+                              {p.name}
+                            </span>
+                            <span style={{
+                              fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)",
+                              color: "var(--color-text-dim)", minWidth: 32, textAlign: "right",
+                            }}>
+                              {p.count}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
 
                 </div>

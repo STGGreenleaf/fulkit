@@ -8,12 +8,15 @@ export function estimateTokens(text) {
   return Math.ceil(text.length / 4);
 }
 
-// Score relevance of a note to the current message
+// Score relevance of a note to the conversation context
+// Accepts a single message string or an array of recent messages for conversational awareness
 function relevanceScore(note, message) {
   if (!message) return 0;
 
-  const messageLower = message.toLowerCase();
-  const words = messageLower.split(/\s+/).filter((w) => w.length > 3);
+  // Support array of messages (last 3) for conversational context
+  const texts = Array.isArray(message) ? message : [message];
+  const combined = texts.join(" ").toLowerCase();
+  const words = combined.split(/\s+/).filter((w) => w.length > 3);
   if (words.length === 0) return 0;
 
   const titleLower = (note.title || "").toLowerCase();
@@ -27,6 +30,9 @@ function relevanceScore(note, message) {
 
   return score;
 }
+
+// Minimum score to include a note (filters out completely unrelated notes)
+const MIN_RELEVANCE = 2;
 
 export function selectContext(notes, message, budget = TOKEN_BUDGET, maxNotes = Infinity) {
   if (!notes || notes.length === 0) return [];
@@ -55,6 +61,7 @@ export function selectContext(notes, message, budget = TOKEN_BUDGET, maxNotes = 
       score: relevanceScore(n, message),
       recency: rest.length - i,
     }))
+    .filter((n) => n.score >= MIN_RELEVANCE || !message)
     .sort((a, b) => b.score - a.score || b.recency - a.recency);
 
   let tokens = 0;
@@ -109,6 +116,7 @@ export function selectContextWithMetadata(notes, message, budget = TOKEN_BUDGET,
       score: relevanceScore(n, message),
       recency: rest.length - i,
     }))
+    .filter((n) => n.score >= MIN_RELEVANCE || !message)
     .sort((a, b) => b.score - a.score || b.recency - a.recency);
 
   let tokens = 0;
