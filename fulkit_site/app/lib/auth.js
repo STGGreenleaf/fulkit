@@ -170,7 +170,18 @@ export function AuthProvider({ children }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Refresh auth when tab wakes from sleep (token may have expired)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        supabase.auth.refreshSession().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [fetchProfile]);
 
   const signIn = useCallback(async (provider = "google") => {
