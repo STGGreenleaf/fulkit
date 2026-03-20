@@ -558,7 +558,7 @@ export default function ChatContent({ isPopout = false }) {
       </>
     );
     return () => setToolbar(null);
-  }); // No deps — runs every render so closures stay fresh
+  }, [isPopout, sandbox.sandboxActive, sandbox.chapters.length, sandbox.currentChapter?.turnCount, showChapters, showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, compactMode, isMobile, isNarrow, effectiveCompact, ctx.contextMeta?.includedCount, ctx.contextMeta?.totalTokens, ctx.contextDropped, ctx.recalledNotes.length]);
 
   // ─── Render ───────────────────────────────────────────────
 
