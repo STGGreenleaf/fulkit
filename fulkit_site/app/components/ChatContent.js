@@ -408,11 +408,9 @@ export default function ChatContent({ isPopout = false }) {
     if (isPopout) return;
     setToolbar(
       <>
-        {(chat.messages.length > 0 || chat.conversationId) && (
-          <button onClick={handleStartNewChat} style={{ ...toolbarBtnStyle, color: "var(--color-text-muted)" }} title="New chat">
-            <SquarePen size={18} strokeWidth={2} />
-          </button>
-        )}
+        <button onClick={sandbox.sandboxActive ? () => sandbox.dumpSandbox() : sandbox.startSandbox} style={{ ...toolbarBtnStyle, color: sandbox.sandboxActive ? "var(--color-text)" : "var(--color-text-muted)" }} title={sandbox.sandboxActive ? "End Sandbox" : "Sandbox"}>
+          <SquarePen size={18} strokeWidth={2} />
+        </button>
         <button onClick={() => setShowPins(p => !p)} style={{ ...toolbarBtnStyle, color: showPins ? "var(--color-text)" : "var(--color-text-muted)" }} title="Pins">
           <Pin size={18} strokeWidth={2} />
         </button>
@@ -421,9 +419,14 @@ export default function ChatContent({ isPopout = false }) {
             <Clock size={18} strokeWidth={2} />
           </button>
         )}
+        {(chat.messages.length > 0 || chat.conversationId) && (
+          <button onClick={handleStartNewChat} style={{ ...toolbarBtnStyle, color: "var(--color-text-muted)" }} title="New chat">
+            <Plus size={18} strokeWidth={2} />
+          </button>
+        )}
       </>
     );
-  }, [showPins, showHistory, chat.messages.length, chat.conversationId, chat.conversations.length, setToolbar, isPopout]);
+  }, [showPins, showHistory, sandbox.sandboxActive, chat.messages.length, chat.conversationId, chat.conversations.length, setToolbar, isPopout]);
 
   // ─── Render ───────────────────────────────────────────────
 
