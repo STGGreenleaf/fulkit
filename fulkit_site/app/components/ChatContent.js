@@ -570,7 +570,7 @@ export default function ChatContent({ isPopout = false }) {
   return (
     <>
           {/* Main area — messages + history on right */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div style={{ flex: 1, display: "flex", overflow: "hidden", height: "100%" }}>
             {/* Messages area */}
             <div
               style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative" }}
