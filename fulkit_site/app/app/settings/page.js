@@ -767,20 +767,20 @@ function AccountTab() {
                 Auto-create threads from conversations
               </div>
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
-                Chappie extracts action items and decisions after longer conversations and saves them to Threads.
+                F&#252;lkit extracts action items and decisions after longer conversations and saves them to Threads.
               </div>
             </div>
             <button
               onClick={toggleSmartThreads}
               style={{
-                width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer", flexShrink: 0,
-                background: smartThreads ? "var(--color-text)" : "var(--color-border)",
+                width: 32, height: 16, borderRadius: 8, border: "1px solid var(--color-border)", cursor: "pointer", flexShrink: 0,
+                background: smartThreads ? "var(--color-text-muted)" : "var(--color-bg-alt)",
                 position: "relative", transition: "background var(--duration-fast) var(--ease-default)",
               }}
             >
               <span style={{
-                position: "absolute", top: 2, left: smartThreads ? 20 : 2,
-                width: 18, height: 18, borderRadius: "50%", background: "var(--color-bg)",
+                position: "absolute", top: 2, left: smartThreads ? 16 : 2,
+                width: 10, height: 10, borderRadius: "50%", background: "var(--color-bg)",
                 transition: "left var(--duration-fast) var(--ease-default)",
               }} />
             </button>
