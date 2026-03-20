@@ -77,6 +77,9 @@ export default function AppShell({ children }) {
   const pageName = getPageName(pathname);
   const isAuthenticated = !!user;
 
+  // Public pages — no shell, they handle their own layout
+  if (!isAuthenticated) return <ToolbarContext.Provider value={{ setToolbar }}>{children}</ToolbarContext.Provider>;
+
   return (
     <ToolbarContext.Provider value={{ setToolbar }}>
       <div style={{
@@ -124,13 +127,7 @@ export default function AppShell({ children }) {
                 {toolbar}
               </div>
             )}
-            {/* Public pages: sign-in link when not authenticated */}
-            {!isAuthenticated && (
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-                <a href="/about" style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", textDecoration: "none", fontWeight: "var(--font-weight-medium)" }}>WTF</a>
-                <a href="/login" style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", textDecoration: "none", fontWeight: "var(--font-weight-semibold)" }}>Sign in</a>
-              </div>
-            )}
+            {/* Public pages bypass AppShell entirely — no unauthenticated header needed */}
           </div>
 
           {/* Page content — fills remaining space */}
