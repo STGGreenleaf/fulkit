@@ -256,7 +256,7 @@ export default function Actions() {
         }}
         title="Add action"
       >
-        <Plus size={12} strokeWidth={2} />
+        <Plus size={22} strokeWidth={2} />
         {!compactMode && "Add"}
       </button>
     );
