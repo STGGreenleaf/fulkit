@@ -3,6 +3,41 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session — 2026-03-20 (late night): Nav & UX polish
+
+**Scope:** Fix broken nav, establish uniform layout, polish chat greeting, add tooltips everywhere.
+
+### What shipped:
+- **Infinite render loop fix**: ChatContent toolbar useEffect had no deps → infinite re-render. Fixed with dep array + split cleanup.
+- **AppShell layout**: Content wrapper set to `overflow: hidden` — pages manage own scroll. AuthGuard made flex column so children fill viewport.
+- **Tooltip fix**: Removed `width: 100%` from Tooltip wrapper (was spreading tab icons across full width in compact mode).
+- **Chat toolbar**: Restored 4 buttons (Sandbox, Pins, History, New) via `setToolbar` pattern with `useLayoutEffect` for instant render.
+- **Standalone pages**: `/landing` and `/wtf` bypass AppShell grid even when authenticated.
+- **Icon size hierarchy**: Sidebar nav = 18px, header toolbar = 18px, page tab icons = 16px (bumped from 14), LogoMark = 22px.
+- **Fülkit header text**: Bumped to 14px + nudged down 4px to align with sidebar logo.
+- **Sidebar spacing**: Nav button gap increased from 1px to 8px (`var(--space-2)`).
+- **Actions page**: Removed 640px maxWidth cap, Add (+) icon bumped to 18px.
+- **Threads page**: Toolbar reordered — Plus (add folder) left, Search + View toggle far right. Board `+` icons bumped to 16px + darkened.
+- **Chat greeting**: 2s delay → 3s minimum dots animation → message appears. ThinkingIndicator stripped to dots-only (no "Connecting"/"Thinking" labels).
+- **Tooltips everywhere**: All icon buttons now show dark pill tooltip on hover (not just compact mode). Page tooltips render below buttons to avoid `overflow: hidden` clipping.
+- **QuickCapture FAB**: Bumped up 50px to clear chat input bar.
+
+### Key files modified:
+- `components/AppShell.js` — overflow:hidden, toolbar div always rendered, Fülkit text size/position
+- `components/AuthGuard.js` — flex:1 + display:flex to fix layout chain
+- `components/ChatContent.js` — toolbar via setToolbar, greeting delay, ThinkingIndicator simplified
+- `components/Tooltip.js` — removed width:100%, added position prop (top/bottom)
+- `components/Sidebar.js` — gap spacing, always-on tooltips
+- `components/QuickCapture.js` — bottom position bump
+- `components/ThreadBoard.js` — Plus icon size + color
+- `components/DevInspector.js` — bottom position bump
+- `app/actions/page.js` — maxWidth removed, icon sizes, tooltips, useLayoutEffect
+- `app/threads/page.js` — toolbar reorder, tooltips, icon sizes
+- `app/settings/page.js` — tooltips, useLayoutEffect
+- `app/owner/page.js` — tooltips
+
+---
+
 ## Session — 2026-03-19: Chappie 2.0 (ALL 9 PHASES CODE-COMPLETE)
 
 **Scope:** Full context architecture redesign. 136 tasks across 9 phases, ~120 shipped in one session.
