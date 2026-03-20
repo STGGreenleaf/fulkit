@@ -4993,7 +4993,7 @@ function PublishSection({ accessToken }) {
   const [altText, setAltText] = useState("");
   const [posting, setPosting] = useState(false);
   const [results, setResults] = useState({});
-  const [platforms, setPlatforms] = useState({ bluesky: true, threads: true, instagram: true });
+  const [platforms, setPlatforms] = useState({ bluesky: true, threads: true, instagram: true, facebook: true });
   const [publishOpen, setPublishOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-publishOpen") === "true");
 
   useEffect(() => { localStorage.setItem("owner-publishOpen", publishOpen); }, [publishOpen]);
@@ -5002,6 +5002,7 @@ function PublishSection({ accessToken }) {
     { key: "bluesky", label: "Bluesky", available: true },
     { key: "threads", label: "Threads", available: true },
     { key: "instagram", label: "Instagram", available: true },
+    { key: "facebook", label: "Facebook", available: true },
   ];
 
   function togglePlatform(key) {
@@ -5061,6 +5062,21 @@ function PublishSection({ accessToken }) {
         } catch (err) {
           newResults.instagram = { ok: false, error: err.message };
         }
+      }
+    }
+
+    // Facebook: post via Graph API (text or text + image)
+    if (platforms.facebook) {
+      try {
+        const res = await fetch("/api/facebook/post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ text: text.trim(), imageUrl: imageUrl || undefined }),
+        });
+        const data = await res.json();
+        newResults.facebook = data.success ? { ok: true } : { ok: false, error: data.error };
+      } catch (err) {
+        newResults.facebook = { ok: false, error: err.message };
       }
     }
 
