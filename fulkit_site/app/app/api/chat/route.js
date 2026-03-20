@@ -2188,6 +2188,7 @@ export async function POST(request) {
       integrationTokens,
       stripePrices,
       semanticNotes,
+      conversationSummary,
     ] = await Promise.all([
       // Prefs + memories (combined query)
       userId ? getSupabaseAdmin()
@@ -2270,6 +2271,13 @@ export async function POST(request) {
           return [];
         }
       })() : Promise.resolve([]),
+      // Conversation summary (for session continuity)
+      (conversationId && userId) ? admin
+        .from("conversation_sessions").select("summary, action_items, key_decisions")
+        .eq("id", conversationId).maybeSingle()
+        .then(({ data }) => data)
+        .catch(() => null)
+      : Promise.resolve(null),
     ]);
 
     // Destructure parallel results
@@ -2321,6 +2329,14 @@ export async function POST(request) {
     // Inject anchor context (cached daily orientation — ~500 tokens)
     if (anchorContext) {
       system += `\n\n## Daily Context\n${anchorContext}`;
+    }
+
+    // Inject conversation summary (session continuity — returning to an old conversation)
+    if (conversationSummary?.summary) {
+      system += `\n\n## Previous Session\n${conversationSummary.summary}`;
+      if (conversationSummary.action_items?.length > 0) {
+        system += `\nOpen action items: ${conversationSummary.action_items.join("; ")}`;
+      }
     }
 
     // ─── Habit Engine: pattern matching ─────────────────────

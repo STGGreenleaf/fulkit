@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
-import { extractArtifacts, writeBackLocal, writeBackSupabase } from "./vault-writeback";
+import { extractArtifacts, writeBackLocal, writeBackSupabase, detectEcosystem } from "./vault-writeback";
 import { saveConversationSummary } from "./conversation-summary";
 import { useSignal } from "./signal";
 
@@ -581,10 +581,11 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
               const hasArtifacts = artifacts.actionItems.length > 0 || artifacts.decisions.length > 0 || artifacts.plans.length > 0 || artifacts.keyFacts.length > 0;
               if (hasArtifacts) {
                 const title = text.slice(0, 60) || "Chat";
+                const eco = detectEcosystem(fullResponse + " " + text);
                 if (storageMode === "local" && directoryHandle) {
                   writeBackLocal(directoryHandle, artifacts, title).catch((err) => { signal("writeback_failed", "warning", { storageMode: "local", error: err?.message, conversationId: convId }); });
                 } else if (user) {
-                  writeBackSupabase(user.id, artifacts, title, null, convId).catch((err) => { signal("writeback_failed", "warning", { storageMode: "supabase", error: err?.message, conversationId: convId }); });
+                  writeBackSupabase(user.id, artifacts, title, null, convId, eco).catch((err) => { signal("writeback_failed", "warning", { storageMode: "supabase", error: err?.message, conversationId: convId }); });
                 }
               }
             }

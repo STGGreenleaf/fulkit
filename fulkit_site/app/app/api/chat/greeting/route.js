@@ -29,15 +29,16 @@ export async function GET(request) {
     }
 
     // Gather context (parallel, all with timeouts)
-    let profileRes, actionsRes, memoriesRes, convosRes, integrationsRes, voiceRes;
+    let profileRes, actionsRes, memoriesRes, convosRes, integrationsRes, voiceRes, staleRes;
     try {
-      [profileRes, actionsRes, memoriesRes, convosRes, integrationsRes, voiceRes] = await Promise.all([
+      [profileRes, actionsRes, memoriesRes, convosRes, integrationsRes, voiceRes, staleRes] = await Promise.all([
         admin.from("profiles").select("name, seat_type, onboarded").eq("id", user.id).single().abortSignal(AbortSignal.timeout(5000)),
         admin.from("actions").select("title, status, priority").eq("user_id", user.id).eq("status", "active").or("scheduled_for.is.null,scheduled_for.lte." + new Date().toISOString()).order("priority").limit(10).abortSignal(AbortSignal.timeout(5000)),
         admin.from("preferences").select("key, value").eq("user_id", user.id).like("key", "memory:%").abortSignal(AbortSignal.timeout(5000)),
         admin.from("conversations").select("title, topics, created_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(5).abortSignal(AbortSignal.timeout(5000)),
         admin.from("integrations").select("provider").eq("user_id", user.id).abortSignal(AbortSignal.timeout(5000)),
         admin.from("vault_broadcasts").select("content").eq("channel", "owner-context").eq("active", true).eq("title", "Fulkit_VoiceGreeting").single().abortSignal(AbortSignal.timeout(5000)),
+        admin.from("notes").select("id", { count: "exact", head: true }).eq("user_id", user.id).in("status", ["inbox", "active", "in-progress"]).lt("updated_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).abortSignal(AbortSignal.timeout(5000)),
       ]);
     } catch (err) {
       console.error("[greeting] context fetch failed:", err.message);
@@ -62,7 +63,8 @@ export async function GET(request) {
       memories.length > 0 ? `Known facts: ${memories.join("; ")}` : "Known facts: none yet",
       recentTopics.length > 0 ? `Recent topics: ${recentTopics.join(", ")}` : "Recent topics: first visit",
       providers.length > 0 ? `Connected tools: ${providers.join(", ")}` : "Connected tools: none",
-    ].join("\n");
+      staleRes?.count > 0 ? `Stale threads: ${staleRes.count} threads haven't moved in 30+ days` : null,
+    ].filter(Boolean).join("\n");
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
