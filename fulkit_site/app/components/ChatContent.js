@@ -445,7 +445,7 @@ export default function ChatContent({ isPopout = false }) {
                 onClick={() => setShowChapters(prev => !prev)}
                 style={toolbarBtn(showChapters)}
               >
-                <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
+                <ChevronDown size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
                 {!effectiveCompact && "Chapters"}
               </button>
             )}
@@ -454,7 +454,7 @@ export default function ChatContent({ isPopout = false }) {
               onClick={() => sandbox.dumpSandbox()}
               style={toolbarBtn(false)}
             >
-              <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+              <X size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
               {!effectiveCompact && "End & Save"}
             </button>
           </>
@@ -464,7 +464,7 @@ export default function ChatContent({ isPopout = false }) {
             onClick={sandbox.startSandbox}
             style={toolbarBtn(false)}
           >
-            <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            <SquarePen size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
             {!effectiveCompact && "Sandbox"}
           </button>
         )}
@@ -529,7 +529,7 @@ export default function ChatContent({ isPopout = false }) {
           }}
           style={toolbarBtn(showPins)}
         >
-          <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          <Pin size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
           {!effectiveCompact && "Pins"}
         </button>
 
@@ -545,7 +545,7 @@ export default function ChatContent({ isPopout = false }) {
             }}
             style={toolbarBtn(showHistory)}
           >
-            <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            <Clock size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
             {!effectiveCompact && "History"}
           </button>
         )}
@@ -557,7 +557,7 @@ export default function ChatContent({ isPopout = false }) {
             onClick={handleStartNewChat}
             style={toolbarBtn(false)}
           >
-            <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            <Plus size={isMobile ? 18 : 16} strokeWidth={2} style={{ pointerEvents: "none" }} />
             {!effectiveCompact && "New"}
           </button>
         )}
