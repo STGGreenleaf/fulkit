@@ -29,7 +29,6 @@ export default function Tooltip({ label, children, delay = 200, align = "center"
     <div
       onMouseEnter={show}
       onMouseLeave={hide}
-      onClick={hide}
       style={{ position: "relative", display: "inline-flex", width: "100%" }}
     >
       {children}
