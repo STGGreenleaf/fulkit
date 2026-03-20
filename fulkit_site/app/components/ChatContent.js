@@ -44,7 +44,7 @@ function ThinkingIndicator({ onStop }) {
           />
         ))}
       </span>
-      {onStop && (
+      {typeof onStop === "function" && (
         <button
           onClick={onStop}
           title="Stop"
