@@ -413,206 +413,54 @@ export default function ChatContent({ isPopout = false }) {
     userSelect: "none",
   });
 
+  // ─── Wire chat buttons into persistent header ────────────
+  const { setHeaderActions } = useHeaderActions();
+  useEffect(() => {
+    setHeaderActions(
+      <>
+        {sandbox.sandboxActive ? (
+          <>
+            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", padding: "var(--space-1) var(--space-2)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)", letterSpacing: "0.02em" }}>
+              Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
+            </span>
+            {sandbox.chapters.length > 0 && (
+              <button type="button" onClick={() => setShowChapters(prev => !prev)} style={toolbarBtn(showChapters)}>
+                <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
+              </button>
+            )}
+            <button type="button" onClick={() => sandbox.dumpSandbox()} style={toolbarBtn(false)}>
+              <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={sandbox.startSandbox} style={toolbarBtn(false)}>
+            <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          </button>
+        )}
+        <button type="button" onClick={() => { setShowPins(p => !p); if (isNarrow) setShowHistory(false); }} style={toolbarBtn(showPins)}>
+          <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+        </button>
+        {chat.conversations.length > 0 && (
+          <button type="button" onClick={() => { setShowHistory(h => !h); if (isNarrow) setShowPins(false); }} style={toolbarBtn(showHistory)}>
+            <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          </button>
+        )}
+        {(chat.messages.length > 0 || chat.conversationId) && (
+          <button type="button" onClick={handleStartNewChat} style={toolbarBtn(false)}>
+            <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
+          </button>
+        )}
+      </>
+    );
+    return () => setHeaderActions(null);
+  });
+
   // ─── Render ───────────────────────────────────────────────
 
   return (
     <>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {/* Chat toolbar — buttons only, title handled by persistent header */}
-          <div
-            style={{
-              padding: isMobile ? "var(--space-1) var(--space-3)" : "var(--space-1) var(--space-6)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isMobile ? "var(--space-3)" : "var(--space-2)" }}>
-              {/* Sandbox toggle + chapter indicator */}
-              {(
-                <>
-                  {sandbox.sandboxActive ? (
-                    <>
-                      <span style={{
-                        fontSize: "var(--font-size-2xs)",
-                        color: "var(--color-text-dim)",
-                        fontFamily: "var(--font-mono)",
-                        padding: "var(--space-1) var(--space-2)",
-                        background: "var(--color-bg-alt)",
-                        borderRadius: "var(--radius-sm)",
-                        letterSpacing: "0.02em",
-                      }}>
-                        Ch {sandbox.chapters.length + 1} &middot; {sandbox.currentChapter?.turnCount || 0}/20
-                      </span>
-                      {sandbox.chapters.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowChapters(prev => !prev)}
-                          style={toolbarBtn(showChapters)}
-                        >
-                          <ChevronDown size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none", transform: showChapters ? "rotate(180deg)" : "none" }} />
-                          {!effectiveCompact && "Chapters"}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => sandbox.dumpSandbox()}
-                        style={toolbarBtn(false)}
-                      >
-                        <X size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                        {!effectiveCompact && "End & Save"}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={sandbox.startSandbox}
-                      style={toolbarBtn(false)}
-                    >
-                      <SquarePen size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                      {!effectiveCompact && "Sandbox"}
-                    </button>
-                  )}
-                </>
-              )}
-
-              {/* Context indicator */}
-              {ctx.contextMeta && ctx.contextMeta.includedCount > 0 && !compactMode && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-dim)",
-                    padding: "var(--space-1) var(--space-2)",
-                  }}
-                >
-                  <FileText size={11} strokeWidth={1.8} />
-                  {ctx.contextMeta.includedCount} note{ctx.contextMeta.includedCount !== 1 ? "s" : ""} &middot; {ctx.contextMeta.totalTokens >= 1000 ? `${(ctx.contextMeta.totalTokens / 1000).toFixed(1)}K` : ctx.contextMeta.totalTokens} tokens
-                </span>
-              )}
-              {ctx.contextDropped && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-warning, #b7791f)",
-                    padding: "var(--space-1) var(--space-2)",
-                  }}
-                >
-                  <AlertTriangle size={11} strokeWidth={1.8} />
-                  Context unavailable — response may lack vault knowledge
-                </span>
-              )}
-              {ctx.recalledNotes.length > 0 && !compactMode && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-secondary)",
-                    padding: "var(--space-1) var(--space-2)",
-                    background: "var(--color-bg-alt)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  <Search size={10} strokeWidth={2} />
-                  {`${ctx.recalledNotes.length} recalled`}
-                </span>
-              )}
-
-              {/* Pins toggle */}
-              {(
-                <button
-                  type="button"
-                  onClick={() => {
-                    const opening = !showPins;
-                    setShowPins(opening);
-                    if (isNarrow) { setShowHistory(false); }
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/pinned" : "/chat");
-                  }}
-                  style={toolbarBtn(showPins)}
-                >
-                  <Pin size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "Pins"}
-                </button>
-              )}
-
-              {/* History toggle */}
-              {chat.conversations.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const opening = !showHistory;
-                    setShowHistory(opening);
-                    if (isNarrow) { setShowPins(false); }
-                    if (isNarrow && !isPopout) window.history.pushState(null, "", opening ? "/chat/history" : "/chat");
-                  }}
-                  style={toolbarBtn(showHistory)}
-                >
-                  <Clock size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "History"}
-                </button>
-              )}
-
-              {/* New chat */}
-              {(chat.messages.length > 0 || chat.conversationId) && (
-                <button
-                  type="button"
-                  onClick={handleStartNewChat}
-                  style={toolbarBtn(false)}
-                >
-                  <Plus size={isMobile ? 18 : 12} strokeWidth={2} style={{ pointerEvents: "none" }} />
-                  {!effectiveCompact && "New"}
-                </button>
-              )}
-
-              {/* Popout window controls */}
-              {isPopout && (
-                <>
-                  <button
-                    onClick={() => window.open("/chat", "_blank")}
-                    title="Expand"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-muted)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "var(--space-1) var(--space-2)",
-                      borderRadius: "var(--radius-sm)",
-                    }}
-                  >
-                    <Maximize2 size={12} strokeWidth={2} />
-                  </button>
-                  <button
-                    onClick={() => window.close()}
-                    title="Close window"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-muted)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "var(--space-1) var(--space-2)",
-                      borderRadius: "var(--radius-sm)",
-                    }}
-                  >
-                    <X size={13} strokeWidth={2} />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+          {/* Chat buttons moved to persistent header via useHeaderActions */}
 
           {/* Main area — messages + history on right */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
