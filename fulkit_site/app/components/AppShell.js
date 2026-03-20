@@ -79,7 +79,7 @@ export default function AppShell({ children }) {
   const contextValue = useMemo(() => ({ setToolbar }), [setToolbar]);
 
   // Standalone pages — no shell, they handle their own layout
-  const standalone = ["/landing", "/login", "/about", "/privacy", "/terms", "/wtf", "/onboarding", "/security"];
+  const standalone = ["/landing", "/wtf"];
   const isStandalone = standalone.some(p => pathname === p || pathname.startsWith(p + "/"));
   if (!isAuthenticated || isStandalone) return <ToolbarContext.Provider value={contextValue}>{children}</ToolbarContext.Provider>;
 
