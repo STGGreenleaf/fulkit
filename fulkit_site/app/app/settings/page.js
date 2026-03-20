@@ -981,76 +981,33 @@ function SourcesTab() {
     }
   }, [accessToken, checkGitHub]);
 
-  // Check Fabric connection status on mount
+  // Check all integration statuses in one batch (single effect, single Promise.all)
+  const statusLoadedRef = useRef(false);
   useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/fabric/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setFabricConnected(data.connected); })
-      .catch(() => {});
-  }, [accessToken]);
+    if (!accessToken || statusLoadedRef.current) return;
+    statusLoadedRef.current = true;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const check = (url) => fetch(url, { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
 
-  // Check Numbrly connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/numbrly/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setNumbrlyConnected(data.connected); if (data.lastSynced) setNumbrlyLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check TrueGauge connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/truegauge/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setTgConnected(data.connected); if (data.lastSynced) setTgLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check Square connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/square/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setSquareConnected(data.connected); if (data.lastSynced) setSquareLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check Shopify connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/shopify/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setShopifyConnected(data.connected); if (data.lastSynced) setShopifyLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check Stripe connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/stripe/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setStripeConnected(data.connected); if (data.lastSynced) setStripeLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check Toast connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/toast/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setToastConnected(data.connected); if (data.lastSynced) setToastLastSynced(data.lastSynced); } })
-      .catch(() => {});
-  }, [accessToken]);
-
-  // Check Trello connection status on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch("/api/trello/status", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) { setTrelloConnected(data.connected); if (data.lastSynced) setTrelloLastSynced(data.lastSynced); } })
-      .catch(() => {});
+    Promise.all([
+      check("/api/fabric/status"),
+      check("/api/numbrly/status"),
+      check("/api/truegauge/status"),
+      check("/api/square/status"),
+      check("/api/shopify/status"),
+      check("/api/stripe/status"),
+      check("/api/toast/status"),
+      check("/api/trello/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello]) => {
+      if (fabric) setFabricConnected(fabric.connected);
+      if (numbrly) { setNumbrlyConnected(numbrly.connected); if (numbrly.lastSynced) setNumbrlyLastSynced(numbrly.lastSynced); }
+      if (tg) { setTgConnected(tg.connected); if (tg.lastSynced) setTgLastSynced(tg.lastSynced); }
+      if (square) { setSquareConnected(square.connected); if (square.lastSynced) setSquareLastSynced(square.lastSynced); }
+      if (shopify) { setShopifyConnected(shopify.connected); if (shopify.lastSynced) setShopifyLastSynced(shopify.lastSynced); }
+      if (stripe) { setStripeConnected(stripe.connected); if (stripe.lastSynced) setStripeLastSynced(stripe.lastSynced); }
+      if (toast) { setToastConnected(toast.connected); if (toast.lastSynced) setToastLastSynced(toast.lastSynced); }
+      if (trello) { setTrelloConnected(trello.connected); if (trello.lastSynced) setTrelloLastSynced(trello.lastSynced); }
+    });
   }, [accessToken]);
 
   async function fetchGithubRepos() {
@@ -3026,9 +2983,12 @@ function ReferralsTab() {
   const setOwnerView = (val) => { setOwnerViewRaw(val); localStorage.setItem("fulkit-referrals-owner", String(val)); };
   const [loading, setLoading] = useState(true);
   const [trendRange, setTrendRange] = useState(6);
+  const refLoadedRef = useRef(false);
+  const adminLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || refLoadedRef.current) return;
+    refLoadedRef.current = true;
     const headers = { Authorization: `Bearer ${accessToken}` };
     Promise.all([
       fetch("/api/referrals/code", { headers }).then(r => r.json()),
@@ -3042,6 +3002,9 @@ function ReferralsTab() {
 
   useEffect(() => {
     if (!isOwner || !ownerView || !accessToken) return;
+    // Only guard initial load — allow trendRange changes to re-fetch
+    if (adminLoadedRef.current && trendRange === 6) return;
+    adminLoadedRef.current = true;
     fetch(`/api/referrals/admin?months=${trendRange}`, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.json())
       .then(setAdminStats)
