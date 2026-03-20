@@ -395,7 +395,8 @@ export default function ChatContent({ isPopout = false }) {
   // ─── Toolbar (AppShell header buttons) ─────────────────────
   const toolbarBtnStyle = {
     display: "flex", alignItems: "center", background: "none",
-    border: "none", outline: "none", cursor: "pointer", padding: 0,
+    border: "none", outline: "none", cursor: "pointer",
+    padding: "0 var(--space-2)",
     borderRadius: "var(--radius-sm)", lineHeight: 1,
   };
 
