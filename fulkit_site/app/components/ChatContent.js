@@ -396,7 +396,7 @@ export default function ChatContent({ isPopout = false }) {
   const toolbarBtnStyle = {
     display: "flex", alignItems: "center", background: "none",
     border: "none", outline: "none", cursor: "pointer",
-    padding: "0 var(--space-2)",
+    padding: "0 var(--space-4)",
     borderRadius: "var(--radius-sm)", lineHeight: 1,
   };
 
