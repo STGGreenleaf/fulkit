@@ -683,7 +683,6 @@ function AccountTab() {
   const [nameValue, setNameValue] = useState(profile?.name || user?.user_metadata?.full_name || "");
   const [nameSaving, setNameSaving] = useState(false);
   const [smartThreads, setSmartThreads] = useState(true);
-  const [autoSummarize, setAutoSummarize] = useState(true);
   const [autoArchive, setAutoArchive] = useState(true);
   const [smartOpen, setSmartOpen] = useState(false);
 
@@ -691,12 +690,11 @@ function AccountTab() {
   useEffect(() => {
     if (!user?.id) return;
     supabase.from("preferences").select("key, value").eq("user_id", user.id)
-      .in("key", ["smart_threads_enabled", "auto_summarize_enabled", "auto_archive_enabled"])
+      .in("key", ["smart_threads_enabled", "auto_archive_enabled"])
       .then(({ data }) => {
         if (!data) return;
         for (const row of data) {
           if (row.key === "smart_threads_enabled" && row.value === "false") setSmartThreads(false);
-          if (row.key === "auto_summarize_enabled" && row.value === "false") setAutoSummarize(false);
           if (row.key === "auto_archive_enabled" && row.value === "false") setAutoArchive(false);
         }
       });
@@ -791,9 +789,6 @@ function AccountTab() {
                 { key: "smart_threads_enabled", label: "Smart Threads", value: smartThreads, setter: setSmartThreads,
                   descOn: "F\u00FClkit extracts action items and decisions after longer conversations and saves them to Threads.",
                   descOff: "Threads are only created when you ask or add them yourself." },
-                { key: "auto_summarize_enabled", label: "Auto-summarize", value: autoSummarize, setter: setAutoSummarize,
-                  descOn: "Conversations are summarized when they end. Helps History previews and gives F\u00FClkit memory across sessions.",
-                  descOff: "Conversations are not summarized automatically." },
                 { key: "auto_archive_enabled", label: "Auto-archive", value: autoArchive, setter: setAutoArchive,
                   descOn: "Threads marked Done for 7+ days are automatically archived to keep your board clean.",
                   descOff: "Done threads stay on the board until you archive them." },
