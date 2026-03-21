@@ -74,6 +74,43 @@ export async function POST(request) {
     const seatType = PLAN_TO_SEAT[plan] || plan;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
 
+    // If upgrading/switching plans, update existing subscription instead of creating new one
+    if (isSubscription) {
+      const subsRes = await fetch(
+        `${STRIPE_API}/subscriptions?customer=${customerId}&status=active&limit=1`,
+        { headers: { Authorization: `Bearer ${SECRET}` } }
+      ).then(r => r.json());
+
+      const activeSub = subsRes.data?.[0];
+      // Also check trialing subscriptions
+      const trialRes = !activeSub ? await fetch(
+        `${STRIPE_API}/subscriptions?customer=${customerId}&status=trialing&limit=1`,
+        { headers: { Authorization: `Bearer ${SECRET}` } }
+      ).then(r => r.json()) : null;
+
+      const existingSub = activeSub || trialRes?.data?.[0];
+
+      if (existingSub) {
+        // Swap the price on the existing subscription (proration handled by Stripe)
+        const subItemId = existingSub.items.data[0]?.id;
+        if (subItemId) {
+          const updated = await stripePost(`/subscriptions/${existingSub.id}`, {
+            "items[0][id]": subItemId,
+            "items[0][price]": priceId,
+            proration_behavior: "create_prorations",
+            "metadata[plan]": seatType,
+            "metadata[user_id]": user.id,
+          });
+          if (updated.error) {
+            return Response.json({ error: "Plan switch failed. Try again." }, { status: 500 });
+          }
+          // Update seat type in profiles
+          await admin.from("profiles").update({ seat_type: seatType }).eq("id", user.id);
+          return Response.json({ url: `${siteUrl}/settings?tab=billing&success=true` });
+        }
+      }
+    }
+
     const params = {
       customer: customerId,
       "line_items[0][price]": priceId,
