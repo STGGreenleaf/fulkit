@@ -2084,6 +2084,7 @@ export async function POST(request) {
     }
 
     const config = getModelConfig(profile?.role, profile?.seat_type, !!byokKey);
+    const admin = getSupabaseAdmin();
 
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
