@@ -74,37 +74,49 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
   const isMobile = useIsMobile();
   const [tab, setTab] = useState(initialTab && VALID_TAB_IDS.includes(initialTab) ? initialTab : "dashboard");
   const [maydayAlert, setMaydayAlert] = useState(false);
+  const [warningAlert, setWarningAlert] = useState(false);
 
   useEffect(() => {
     if (initialTab && VALID_TAB_IDS.includes(initialTab)) setTab(initialTab);
   }, [initialTab]);
 
-  // MAYDAY alert — lightweight check for unseen error signals
+  // MAYDAY + WARNING alerts — lightweight check for unseen signals
   useEffect(() => {
     if (!accessToken) return;
-    const checkMayday = async () => {
+    const checkAlerts = async () => {
       const lastSeen = localStorage.getItem("fulkit-radio-last-seen") || "1970-01-01T00:00:00Z";
       try {
-        const res = await fetch("/api/owner/signals?period=24&severity=error&limit=1", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const active = data.signals?.length > 0 && data.signals[0].created_at > lastSeen;
-        setMaydayAlert(active);
-        if (onMayday) onMayday(active);
+        const [errRes, warnRes] = await Promise.all([
+          fetch("/api/owner/signals?period=24&severity=error&limit=1", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }),
+          fetch("/api/owner/signals?period=24&severity=warning&limit=1", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }),
+        ]);
+        if (errRes.ok) {
+          const errData = await errRes.json();
+          const hasError = errData.signals?.length > 0 && errData.signals[0].created_at > lastSeen;
+          setMaydayAlert(hasError);
+          if (onMayday) onMayday(hasError);
+        }
+        if (warnRes.ok) {
+          const warnData = await warnRes.json();
+          setWarningAlert(warnData.signals?.length > 0 && warnData.signals[0].created_at > lastSeen);
+        }
       } catch {}
     };
-    checkMayday();
-    const interval = setInterval(checkMayday, 60000);
+    checkAlerts();
+    const interval = setInterval(checkAlerts, 60000);
     return () => clearInterval(interval);
   }, [accessToken, onMayday]);
 
-  // Clear alert when visiting Radio
+  // Clear alerts when visiting Radio
   useEffect(() => {
     if (tab === "radio") {
       localStorage.setItem("fulkit-radio-last-seen", new Date().toISOString());
       setMaydayAlert(false);
+      setWarningAlert(false);
       if (onMayday) onMayday(false);
     }
   }, [tab, onMayday]);
@@ -154,6 +166,16 @@ export function OwnerPanel({ initialTab, urlPrefix = "/owner", onMayday }) {
                   <span style={{
                     width: 6, height: 6, borderRadius: "50%",
                     background: "var(--color-error, #e53e3e)",
+                    flexShrink: 0,
+                    marginLeft: 2,
+                    alignSelf: "flex-start",
+                    pointerEvents: "none",
+                  }} />
+                )}
+                {t.id === "radio" && !maydayAlert && warningAlert && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: "var(--color-warning, #b7791f)",
                     flexShrink: 0,
                     marginLeft: 2,
                     alignSelf: "flex-start",
