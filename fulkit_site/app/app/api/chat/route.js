@@ -920,7 +920,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
       if (!currentRes.error) {
         const currentData = await currentRes.json();
         for (const count of (currentData.counts || [])) {
-          currentCounts[count.catalog_object_id] = parseInt(count.quantity || "0", 10);
+          currentCounts[count.catalog_object_id] = Number(count.quantity || 0);
         }
       }
 
