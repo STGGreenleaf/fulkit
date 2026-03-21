@@ -31,6 +31,13 @@ class MarkdownErrorBoundary extends Component {
 const ListContext = createContext("ul");
 const FormContext = createContext(null);
 
+// Shared form store — collects data across multiple tables in one message
+const FormStoreContext = createContext(null);
+
+function useFormStore() {
+  return useContext(FormStoreContext);
+}
+
 // Detect if a cell value is blank/dash (fillable)
 function isBlankCell(text) {
   if (!text || typeof text !== "string") return true;
@@ -38,13 +45,13 @@ function isBlankCell(text) {
   return !t || /^[—–\-_]+$/.test(t);
 }
 
-// Interactive table — detects fillable columns and renders input fields
+// Interactive table — detects fillable columns and renders input fields (no submit button)
 function InteractiveTable({ children, onFormSubmit }) {
+  const formStore = useFormStore();
   const [formData, setFormData] = useState({});
-  const [submitted, setSubmitted] = useState(false);
   const tableRef = useRef(null);
+  const tableId = useRef(Math.random().toString(36).slice(2, 8));
 
-  // After mount, scan the table for fillable columns
   const [fillableCol, setFillableCol] = useState(-1);
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
@@ -58,7 +65,6 @@ function InteractiveTable({ children, onFormSubmit }) {
 
     const hdrs = Array.from(ths).map(th => th.textContent.trim());
 
-    // Check each column (skip first — that's labels)
     for (let col = 1; col < hdrs.length; col++) {
       let allBlank = true;
       trs.forEach(tr => {
@@ -66,7 +72,6 @@ function InteractiveTable({ children, onFormSubmit }) {
         if (td && !isBlankCell(td.textContent)) allBlank = false;
       });
       if (allBlank) {
-        // Found a fillable column — extract row labels
         const rowLabels = [];
         trs.forEach(tr => {
           const firstTd = tr.querySelector("td:nth-child(2)") || tr.querySelector("td");
@@ -75,21 +80,22 @@ function InteractiveTable({ children, onFormSubmit }) {
         setFillableCol(col);
         setHeaders(hdrs);
         setRows(rowLabels);
+        if (formStore) formStore.register(tableId.current);
         return;
       }
     }
-  }, [onFormSubmit]);
+  }, [onFormSubmit, formStore]);
 
-  function handleSubmit() {
-    if (!onFormSubmit || submitted) return;
+  // Sync form data to shared store
+  useEffect(() => {
+    if (!formStore || fillableCol === -1) return;
     const entries = rows
       .map((label, i) => ({ label, value: formData[i] }))
       .filter(e => e.value !== undefined && e.value !== "");
-    if (entries.length === 0) return;
-    const text = entries.map(e => `${e.label}: ${e.value}`).join(", ");
-    onFormSubmit(text);
-    setSubmitted(true);
-  }
+    formStore.update(tableId.current, entries);
+  }, [formData, rows, fillableCol, formStore]);
+
+  const submitted = formStore?.submitted;
 
   if (fillableCol === -1 || !onFormSubmit || submitted) {
     return (
@@ -106,7 +112,6 @@ function InteractiveTable({ children, onFormSubmit }) {
     );
   }
 
-  // Render interactive form
   return (
     <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-sm)" }}>
@@ -153,21 +158,58 @@ function InteractiveTable({ children, onFormSubmit }) {
           ))}
         </tbody>
       </table>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
-        <button
-          onClick={handleSubmit}
-          style={{
-            padding: "var(--space-2) var(--space-4)",
-            background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-            borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-            fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
-            cursor: "pointer",
-          }}
-        >
-          Submit
-        </button>
-      </div>
     </div>
+  );
+}
+
+// Shared form store provider — wraps a message, collects data from all tables
+function FormStoreProvider({ children, onFormSubmit }) {
+  const [tables, setTables] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [registered, setRegistered] = useState(0);
+
+  const store = useRef({
+    register: (id) => setRegistered(prev => prev + 1),
+    update: (id, entries) => setTables(prev => ({ ...prev, [id]: entries })),
+    submitted: false,
+    submit: () => {},
+  });
+
+  store.current.submitted = submitted;
+  store.current.submit = () => {
+    if (submitted || !onFormSubmit) return;
+    const allEntries = Object.values(tables).flat().filter(e => e.value !== undefined && e.value !== "");
+    if (allEntries.length === 0) return;
+    const text = allEntries.map(e => `${e.label}: ${e.value}`).join(", ");
+    onFormSubmit(text);
+    setSubmitted(true);
+  };
+
+  return (
+    <FormStoreContext.Provider value={store.current}>
+      {children}
+      {registered > 0 && !submitted && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
+          <button
+            onClick={() => store.current.submit()}
+            style={{
+              padding: "var(--space-2) var(--space-4)",
+              background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+              borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+              cursor: "pointer",
+            }}
+          >
+            Submit
+          </button>
+        </div>
+      )}
+      {submitted && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-1)" }}>
+          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Submitted</span>
+        </div>
+      )}
+    </FormStoreContext.Provider>
   );
 }
 
@@ -529,7 +571,7 @@ function MessageRendererInner({ content, isStreaming = false, onFormSubmit = nul
 
   const sanitized = sanitizeEmoji(displayContent);
 
-  return (
+  const inner = (
     <FormContext.Provider value={onFormSubmit}>
       <div style={{ overflowWrap: "break-word" }}>
         <MarkdownErrorBoundary fallback={sanitized}>
@@ -540,6 +582,11 @@ function MessageRendererInner({ content, isStreaming = false, onFormSubmit = nul
       </div>
     </FormContext.Provider>
   );
+
+  if (onFormSubmit) {
+    return <FormStoreProvider onFormSubmit={onFormSubmit}>{inner}</FormStoreProvider>;
+  }
+  return inner;
 }
 
 export default memo(MessageRendererInner);
