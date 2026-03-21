@@ -258,13 +258,18 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     attachedFilesRef.current = [];
     setAttachedFiles([]);
 
-    // GitHub repos
-    for (const repo of ghContext) {
-      const treeStr = repo.tree
-        .filter((f) => f.type === "file")
-        .map((f) => f.path)
-        .join("\n");
-      context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
+    // GitHub repos — only include when conversation is about code/dev
+    const isCodeTopic = (apiMessages || []).some(m =>
+      m.role === "user" && /\b(code|github|repo|commit|deploy|bug|file|component|function|api)\b/i.test(m.content)
+    );
+    if (isCodeTopic) {
+      for (const repo of ghContext) {
+        const treeStr = repo.tree
+          .filter((f) => f.type === "file")
+          .map((f) => f.path)
+          .join("\n");
+        context.push({ title: `GitHub: ${repo.repo}`, content: `Full repository file tree:\n${treeStr}` });
+      }
     }
 
     // Numbrly + TrueGauge context removed — on-demand via tools only
