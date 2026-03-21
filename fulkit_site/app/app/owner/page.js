@@ -745,9 +745,22 @@ function SpendModeratorSection({ period }) {
   if (loading && !data) return null;
   if (!data) return null;
 
-  const { summary, flags } = data;
+  const { summary, previous, flags } = data;
   const hasFlags = flags.length > 0;
   const totalFlags = flags.reduce((sum, f) => sum + f.count, 0);
+
+  // Delta helper: returns { pct, direction, color } or null
+  const delta = (current, prev, lowerIsBetter = true) => {
+    if (prev == null || prev === 0 || current == null) return null;
+    const pct = Math.round(((current - prev) / prev) * 100);
+    if (pct === 0) return null;
+    const improved = lowerIsBetter ? pct < 0 : pct > 0;
+    return {
+      pct: Math.abs(pct),
+      arrow: pct < 0 ? "\u2193" : "\u2191",
+      color: improved ? "var(--color-success, #48bb78)" : "var(--color-error, #e53e3e)",
+    };
+  };
 
   return (
     <div style={{
@@ -800,6 +813,10 @@ function SpendModeratorSection({ period }) {
             color: "var(--color-text-dim)",
           }}>
             ${summary.totalCost.toFixed(4)} / {summary.messages} msg{summary.messages !== 1 ? "s" : ""}
+            {previous && previous.messages > 0 && (() => {
+              const d = delta(summary.avgCost, previous.avgCost);
+              return d ? <span style={{ color: d.color, marginLeft: 4 }}>{d.arrow}{d.pct}%</span> : null;
+            })()}
           </span>
           {/* Export — always visible */}
           <button
@@ -839,10 +856,10 @@ function SpendModeratorSection({ period }) {
             marginBottom: "var(--space-4)",
           }}>
             {[
-              { label: "Total Cost", value: `$${summary.totalCost.toFixed(4)}` },
-              { label: "Avg / Msg", value: `$${summary.avgCost.toFixed(4)}` },
-              { label: "Max Single", value: `$${summary.maxCost.toFixed(4)}` },
-              { label: "Avg Latency", value: `${(summary.avgElapsed / 1000).toFixed(1)}s` },
+              { label: "Total Cost", value: `$${summary.totalCost.toFixed(4)}`, d: previous && delta(summary.totalCost, previous.totalCost) },
+              { label: "Avg / Msg", value: `$${summary.avgCost.toFixed(4)}`, d: previous && delta(summary.avgCost, previous.avgCost) },
+              { label: "Max Single", value: `$${summary.maxCost.toFixed(4)}`, d: previous && delta(summary.maxCost, previous.maxCost) },
+              { label: "Avg Latency", value: `${(summary.avgElapsed / 1000).toFixed(1)}s`, d: previous && delta(summary.avgElapsed, previous.avgElapsed) },
             ].map((tile) => (
               <div key={tile.label} style={{
                 padding: "var(--space-2) var(--space-3)",
@@ -867,6 +884,16 @@ function SpendModeratorSection({ period }) {
                 }}>
                   {tile.value}
                 </div>
+                {tile.d && (
+                  <div style={{
+                    fontSize: 9,
+                    fontFamily: "var(--font-mono)",
+                    color: tile.d.color,
+                    marginTop: 1,
+                  }}>
+                    {tile.d.arrow}{tile.d.pct}%
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1076,11 +1103,13 @@ function SpendModeratorSection({ period }) {
             background: "var(--color-bg-alt)",
             borderRadius: "var(--radius-sm)",
           }}>
-            <span>Avg Rounds: <b style={{ color: "var(--color-text-muted)" }}>{summary.avgRounds || "—"}</b></span>
+            <span>Avg Rounds: <b style={{ color: "var(--color-text-muted)" }}>{summary.avgRounds || "—"}</b>{(() => { const d = previous && delta(summary.avgRounds, previous.avgRounds); return d ? <span style={{ color: d.color, marginLeft: 3 }}>{d.arrow}{d.pct}%</span> : null; })()}</span>
             <span style={{ color: "var(--color-border)" }}>|</span>
-            <span>Avg System: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgSystemTokens || 0).toLocaleString()}</b> tokens</span>
+            <span>Avg System: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgSystemTokens || 0).toLocaleString()}</b>{(() => { const d = previous && delta(summary.avgSystemTokens, previous.avgSystemTokens); return d ? <span style={{ color: d.color, marginLeft: 3 }}>{d.arrow}{d.pct}%</span> : null; })()}</span>
             <span style={{ color: "var(--color-border)" }}>|</span>
-            <span>Avg Schema: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgToolSchemaTokens || 0).toLocaleString()}</b> tokens</span>
+            <span>Avg Schema: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgToolSchemaTokens || 0).toLocaleString()}</b>{(() => { const d = previous && delta(summary.avgToolSchemaTokens, previous.avgToolSchemaTokens); return d ? <span style={{ color: d.color, marginLeft: 3 }}>{d.arrow}{d.pct}%</span> : null; })()}</span>
+            <span style={{ color: "var(--color-border)" }}>|</span>
+            <span>Tools/Msg: <b style={{ color: "var(--color-text-muted)" }}>{summary.avgToolsLoaded || "—"}</b>{(() => { const d = previous && delta(summary.avgToolsLoaded, previous.avgToolsLoaded); return d ? <span style={{ color: d.color, marginLeft: 3 }}>{d.arrow}{d.pct}%</span> : null; })()}</span>
           </div>
 
           {/* Flags section */}
