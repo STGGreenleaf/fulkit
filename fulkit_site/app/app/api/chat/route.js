@@ -185,6 +185,20 @@ function compressConversation(messages, maxTokens = 80000, chapterSummaries = nu
   ];
 }
 
+// Ecosystem keyword map — used for tool gating and Habit Engine cold-start seeding
+const ECOSYSTEM_KEYWORDS = {
+  square: ["inventory", "shop", "store", "orders", "catalog", "customers", "sales", "pos", "checkout", "square"],
+  trello: ["board", "cards", "tasks", "project", "kanban", "backlog", "sprint", "trello"],
+  numbrly: ["margin", "cost", "vendor", "build", "recipe", "food cost", "pricing", "numbrly"],
+  notes: ["notes", "vault", "journal", "ideas", "writing", "document"],
+  spotify: ["music", "playlist", "song", "album", "artist", "listening", "spotify"],
+  truegauge: ["profit", "pace", "cash", "expenses", "revenue", "financial", "truegauge"],
+  github: ["code", "repo", "commit", "github", "pull request", "branch", "merge", "deploy", "push"],
+  shopify: ["shopify", "storefront", "ecommerce", "shipping", "fulfillment"],
+  stripe: ["stripe", "subscription", "billing", "payment", "invoice", "charge"],
+  toast: ["toast", "restaurant", "menu", "table", "kitchen", "dining"],
+};
+
 // Numbrly tool schemas — Claude can call these mid-conversation
 const NUMBRLY_TOOLS = [
   {
@@ -2393,15 +2407,7 @@ export async function POST(request) {
 
           // Cold start: if no patterns exist, seed from first message keywords
           if ((!patterns || patterns.length === 0) && keywords.length > 0) {
-            const SEED_KEYWORDS = {
-              square: ["inventory", "shop", "store", "orders", "catalog", "customers", "sales", "pos", "checkout"],
-              trello: ["board", "cards", "tasks", "project", "kanban", "backlog", "sprint"],
-              numbrly: ["margin", "cost", "vendor", "build", "recipe", "food cost", "pricing"],
-              notes: ["notes", "vault", "journal", "ideas", "writing", "document"],
-              spotify: ["music", "playlist", "song", "album", "artist", "listening"],
-              truegauge: ["profit", "pace", "cash", "expenses", "revenue", "financial"],
-            };
-            for (const [eco, seedWords] of Object.entries(SEED_KEYWORDS)) {
+            for (const [eco, seedWords] of Object.entries(ECOSYSTEM_KEYWORDS)) {
               if (keywords.some(kw => seedWords.some(sw => kw.includes(sw) || sw.includes(kw)))) {
                 // Seed this ecosystem at frequency 3
                 admin.from("user_patterns").insert({
@@ -2441,7 +2447,7 @@ export async function POST(request) {
               const topScore = sorted[0][1];
               habitConfidence = totalScore > 0 ? topScore / totalScore : 0;
 
-              if (habitConfidence >= 0.9 && patterns.some(p => p.ecosystem === sorted[0][0] && p.frequency >= 10)) {
+              if (habitConfidence >= 0.6 && patterns.some(p => p.ecosystem === sorted[0][0] && p.frequency >= 3)) {
                 habitEcosystem = sorted[0][0];
               } else if (habitConfidence >= 0.5 && habitConfidence < 0.9) {
                 // Split confidence — inject clarifying hint
@@ -2694,7 +2700,7 @@ Never skip the preview step. The user must see and approve changes before they g
       if (str.length <= MAX_TOOL_RESULT_CHARS) return str;
       return str.slice(0, MAX_TOOL_RESULT_CHARS) + '... [truncated — result too large]';
     }
-    // Build tools — Habit Engine can narrow to a single ecosystem
+    // Build tools — keyword-gated: only load ecosystems the message signals
     const ECOSYSTEM_TOOLS = {
       numbrly: () => nblKey ? NUMBRLY_TOOLS : [],
       truegauge: () => tgKey ? TRUEGAUGE_TOOLS : [],
@@ -2706,22 +2712,24 @@ Never skip the preview step. The user must see and approve changes before they g
       github: () => ghToken ? GITHUB_TOOLS : [],
     };
 
-    let integrationTools;
+    // Detect which ecosystems the message actually needs
+    const recentText = messages.filter(m => m.role === "user").slice(-2)
+      .map(m => typeof m.content === "string" ? m.content : "").join(" ").toLowerCase();
+    const signalledEcosystems = new Set();
+    for (const [eco, kws] of Object.entries(ECOSYSTEM_KEYWORDS)) {
+      if (ECOSYSTEM_TOOLS[eco] && kws.some(kw => recentText.includes(kw))) {
+        signalledEcosystems.add(eco);
+      }
+    }
+    // Habit Engine prediction gets included too
     if (habitEcosystem && ECOSYSTEM_TOOLS[habitEcosystem]) {
-      // High confidence — only load the predicted ecosystem's tools
-      integrationTools = ECOSYSTEM_TOOLS[habitEcosystem]();
-    } else {
-      // No prediction or low confidence — load all connected
-      integrationTools = [
-        ...(nblKey ? NUMBRLY_TOOLS : []),
-        ...(tgKey ? TRUEGAUGE_TOOLS : []),
-        ...(sqToken ? SQUARE_TOOLS : []),
-        ...(shopifyToken ? SHOPIFY_TOOLS : []),
-        ...(stripeToken ? STRIPE_TOOLS : []),
-        ...(toastToken ? TOAST_TOOLS : []),
-        ...(trelloToken ? TRELLO_TOOLS : []),
-        ...(ghToken ? GITHUB_TOOLS : []),
-      ];
+      signalledEcosystems.add(habitEcosystem);
+    }
+
+    // Load only signalled ecosystems — default is zero integration tools
+    const integrationTools = [];
+    for (const eco of signalledEcosystems) {
+      integrationTools.push(...ECOSYSTEM_TOOLS[eco]());
     }
 
     const allTools = [
