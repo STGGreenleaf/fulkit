@@ -659,8 +659,8 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     }
     // Optimistic removal from list
     setConversations((prev) => prev.filter((c) => c.id !== convId));
-    // Delete messages then conversation from DB (fire-and-forget)
-    supabase.from("messages").delete().eq("conversation_id", convId)
+    // Delete non-pinned messages, preserve pinned ones, then delete conversation (fire-and-forget)
+    supabase.from("messages").delete().eq("conversation_id", convId).neq("is_pinned", true)
       .then(() => supabase.from("conversations").delete().eq("id", convId))
       .catch(() => {});
   }, [conversationId, conversations, startNewChat]);
