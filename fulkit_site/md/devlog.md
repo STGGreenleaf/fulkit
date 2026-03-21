@@ -3,6 +3,26 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session — 2026-03-21: Interactive Forms + Bug Fixes + Continued Polish
+
+### What shipped
+- **Interactive forms in chat** — tables with blank columns become input fields. Fill numbers, one Submit. Works for inventory, price updates, any batch data.
+- **FormStoreProvider** — multiple tables in one message share a single Submit button
+- **sendMessage overrideText** — 4th arg for programmatic message sends (form submit)
+- **Circuit breaker fix** — `admin is not defined` crash on every 2nd message. Root cause: `admin` never declared in main route handler scope. Fixed.
+- **Auth network reconnect** — `online` event listener refreshes auth after WiFi drops
+- **Chat LCP** — splash 2800ms (one wink), greeting preloads during splash, 800ms delay + 1.5s dots
+- **Stripe proration** — plan switches now swap price instead of stacking subscriptions
+- **History auto-select** — delete a conversation, next one auto-selects
+- **Pinned messages survive deletion** — pins persist when conversation is deleted
+- **Inventory prompt** — Chappie renders fillable tables for Juices + Shots only, excludes Harvest Moon, 10-Seasonal, Pressed Ginger 16oz
+
+### Known issues (carry forward)
+- Context assembly timeout on 3rd+ message in conversation — "yep" confirm hangs. Smart Context array-of-messages change may be causing vault provider to stall. Needs investigation.
+- Service worker caching old JS bundles — user hits stale deployments until SW unregistered
+
+---
+
 ## Session — 2026-03-20 (full day): Nav polish + Smart Features + Social Publishing
 
 **Scope:** Fixed nav system, built Smart Features suite, wired multi-platform social publishing.
