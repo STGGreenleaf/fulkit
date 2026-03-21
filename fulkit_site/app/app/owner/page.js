@@ -646,6 +646,287 @@ function DevSwitch({ label, description, on, onToggle }) {
 
 /* ─── Signal Radio — listening dashboard ─── */
 
+/* ─── Spend Moderator — cost auditor inside Radio ─── */
+
+const SPEND_RULE_LABELS = {
+  expensive_round: "Expensive Round",
+  tool_waste: "Tool Waste",
+  cache_miss: "Cache Miss",
+  slow_response: "Slow Response",
+  unused_context: "Unused Context",
+  github_waste: "GitHub Waste",
+};
+
+function SpendModeratorSection({ period }) {
+  const { accessToken } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  const fetchSpend = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`/api/owner/spend?period=${period}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return;
+      setData(await res.json());
+    } catch {}
+    setLoading(false);
+  }, [accessToken, period]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSpend();
+  }, [fetchSpend]);
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    const iv = setInterval(fetchSpend, 30000);
+    return () => clearInterval(iv);
+  }, [fetchSpend]);
+
+  const exportFlags = () => {
+    if (!data?.flags?.length) return;
+    const payload = {
+      exported: new Date().toISOString(),
+      period: `${period}h`,
+      summary: data.summary,
+      flags: data.flags,
+    };
+    const json = JSON.stringify(payload, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 1500);
+    }).catch(() => {});
+  };
+
+  if (loading && !data) return null;
+  if (!data) return null;
+
+  const { summary, flags } = data;
+  const hasFlags = flags.length > 0;
+  const totalFlags = flags.reduce((sum, f) => sum + f.count, 0);
+
+  return (
+    <div style={{
+      marginBottom: "var(--space-5)",
+      border: "1px solid var(--color-border-light)",
+      borderRadius: "var(--radius-md)",
+      overflow: "hidden",
+    }}>
+      {/* Spend Moderator header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          width: "100%", padding: "var(--space-3) var(--space-4)",
+          background: hasFlags ? "rgba(183, 121, 31, 0.06)" : "var(--color-bg-alt)",
+          border: "none", cursor: "pointer",
+          transition: "background var(--duration-fast) var(--ease-default)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <CreditCard size={14} strokeWidth={1.5} color="var(--color-text-muted)" />
+          <span style={{
+            fontSize: "var(--font-size-xs)",
+            fontFamily: "var(--font-mono)",
+            fontWeight: "var(--font-weight-semibold)",
+            color: "var(--color-text)",
+          }}>
+            Spend Moderator
+          </span>
+          {totalFlags > 0 && (
+            <span style={{
+              fontSize: 9,
+              fontWeight: "var(--font-weight-semibold)",
+              fontFamily: "var(--font-mono)",
+              padding: "2px 6px",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--color-warning, #b7791f)",
+              background: "rgba(183, 121, 31, 0.12)",
+            }}>
+              {totalFlags} flag{totalFlags !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          {/* Quick cost stat always visible */}
+          <span style={{
+            fontSize: "var(--font-size-2xs)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-text-dim)",
+          }}>
+            ${summary.totalCost.toFixed(4)} / {summary.messages} msg{summary.messages !== 1 ? "s" : ""}
+          </span>
+          {expanded ? <ChevronUp size={14} strokeWidth={1.5} color="var(--color-text-dim)" /> : <ChevronDown size={14} strokeWidth={1.5} color="var(--color-text-dim)" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "var(--space-4)", background: "var(--color-bg)" }}>
+          {/* Cost summary tiles */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "var(--space-2)",
+            marginBottom: "var(--space-4)",
+          }}>
+            {[
+              { label: "Total Cost", value: `$${summary.totalCost.toFixed(4)}` },
+              { label: "Avg / Msg", value: `$${summary.avgCost.toFixed(4)}` },
+              { label: "Max Single", value: `$${summary.maxCost.toFixed(4)}` },
+              { label: "Avg Latency", value: `${(summary.avgElapsed / 1000).toFixed(1)}s` },
+            ].map((tile) => (
+              <div key={tile.label} style={{
+                padding: "var(--space-2) var(--space-3)",
+                background: "var(--color-bg-alt)",
+                borderRadius: "var(--radius-sm)",
+                textAlign: "center",
+              }}>
+                <div style={{
+                  fontSize: 9,
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--letter-spacing-wider)",
+                  color: "var(--color-text-dim)",
+                  marginBottom: 2,
+                }}>
+                  {tile.label}
+                </div>
+                <div style={{
+                  fontSize: "var(--font-size-sm)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--color-text)",
+                }}>
+                  {tile.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Token breakdown */}
+          <div style={{
+            display: "flex", gap: "var(--space-4)",
+            fontSize: "var(--font-size-2xs)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-text-dim)",
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-bg-alt)",
+            borderRadius: "var(--radius-sm)",
+          }}>
+            <span>In: {summary.totalInput.toLocaleString()}</span>
+            <span>Out: {summary.totalOutput.toLocaleString()}</span>
+            <span>Cache Write: {summary.totalCacheCreation.toLocaleString()}</span>
+            <span>Cache Read: {summary.totalCacheRead.toLocaleString()}</span>
+          </div>
+
+          {/* Flags section */}
+          {hasFlags ? (
+            <>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                marginBottom: "var(--space-3)",
+              }}>
+                <span style={{
+                  fontSize: "var(--font-size-2xs)",
+                  fontFamily: "var(--font-mono)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  color: "var(--color-text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--letter-spacing-wider)",
+                }}>
+                  Flags ({totalFlags})
+                </span>
+                <button
+                  onClick={exportFlags}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    padding: "var(--space-1) var(--space-2-5)",
+                    fontSize: "var(--font-size-2xs)",
+                    fontFamily: "var(--font-mono)",
+                    color: copiedAll ? "var(--color-text)" : "var(--color-text-muted)",
+                    background: "var(--color-bg-alt)",
+                    border: "1px solid var(--color-border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {copiedAll ? <CheckIcon size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={1.5} />}
+                  {copiedAll ? "Copied" : "Export"}
+                </button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {flags.map((flag) => (
+                  <div key={flag.rule} style={{
+                    padding: "var(--space-3)",
+                    background: "var(--color-bg-alt)",
+                    borderRadius: "var(--radius-sm)",
+                    borderLeft: "3px solid var(--color-warning, #b7791f)",
+                  }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      marginBottom: "var(--space-1)",
+                    }}>
+                      <span style={{
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        color: "var(--color-text)",
+                      }}>
+                        {SPEND_RULE_LABELS[flag.rule] || flag.rule}
+                      </span>
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-mono)",
+                        padding: "2px 5px",
+                        borderRadius: "var(--radius-sm)",
+                        color: "var(--color-text-muted)",
+                        background: "var(--color-bg-elevated, var(--color-bg))",
+                      }}>
+                        &times;{flag.count}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: "var(--font-size-2xs)",
+                      color: "var(--color-text-muted)",
+                      marginBottom: "var(--space-1)",
+                    }}>
+                      {flag.msg}
+                    </div>
+                    <div style={{
+                      fontSize: "var(--font-size-2xs)",
+                      fontFamily: "var(--font-mono)",
+                      color: "var(--color-text-dim)",
+                      display: "flex", alignItems: "center", gap: "var(--space-1)",
+                    }}>
+                      <Zap size={10} strokeWidth={1.5} />
+                      {flag.fix}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{
+              textAlign: "center",
+              padding: "var(--space-4)",
+              fontSize: "var(--font-size-2xs)",
+              color: "var(--color-text-dim)",
+              fontFamily: "var(--font-mono)",
+            }}>
+              No waste patterns detected in this period.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const RADIO_PERIODS = [
   { label: "1h", value: 1 },
   { label: "24h", value: 24 },
@@ -978,6 +1259,9 @@ function RadioTab() {
         </div>
         </div>
       </div>
+
+      {/* Spend Moderator */}
+      <SpendModeratorSection period={period} />
 
       {/* KPI tiles */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>

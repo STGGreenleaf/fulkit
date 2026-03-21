@@ -3164,6 +3164,54 @@ Never skip the preview step. The user must see and approve changes before they g
             trackApiSpend(getSupabaseAdmin(), userId, totalApiCost).catch(() => {});
           }
 
+          // ─── Spend Moderator: log + detect waste (fire-and-forget) ───
+          try {
+            const spendMeta = {
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
+              cacheCreation: totalCacheCreation,
+              cacheRead: totalCacheRead,
+              cost: Math.round(totalApiCost * 10000) / 10000,
+              tools: toolsUsed,
+              toolsLoaded: allTools.length,
+              rounds: totalRounds,
+              elapsed: Date.now() - loopStart,
+              model: config.model,
+              systemTokens: debugPayload.systemPromptEstTokens,
+              contextItems: debugPayload.contextItems,
+              contextTitles: debugPayload.contextTitles,
+              conversationId,
+            };
+
+            // Log every message cost
+            emitServerSignal(userId, "spend_log", "info", spendMeta);
+
+            // Pattern detection flags
+            const flags = [];
+            const isSonnet = config.model.includes("sonnet");
+            const costThreshold = isSonnet ? 0.10 : 0.50;
+
+            if (totalApiCost > costThreshold) {
+              flags.push({ rule: "expensive_round", msg: `High-cost message: $${spendMeta.cost}`, fix: "Review tool calls — reduce rounds or context" });
+            }
+            if (allTools.length > toolsUsed.length * 3 && allTools.length > 10) {
+              flags.push({ rule: "tool_waste", msg: `${allTools.length} tools loaded, ${toolsUsed.length} used`, fix: "Habit Engine needs more pattern data to narrow tool loading" });
+            }
+            if (totalCacheCreation > 0 && totalCacheRead === 0 && compressed.length > 2) {
+              flags.push({ rule: "cache_miss", msg: "Cache miss on multi-turn conversation", fix: "System prompt may have changed between messages" });
+            }
+            if ((Date.now() - loopStart) > 20000) {
+              flags.push({ rule: "slow_response", msg: `Response took ${Math.round((Date.now() - loopStart) / 1000)}s`, fix: "Check tool call count and API latency" });
+            }
+            if (debugPayload.contextItems > 0 && toolsUsed.length === 0 && totalOutputTokens < 100) {
+              flags.push({ rule: "unused_context", msg: `${debugPayload.contextItems} context items loaded for a short response`, fix: "Context may be irrelevant to this message" });
+            }
+
+            for (const flag of flags) {
+              emitServerSignal(userId, "spend_flag", "warning", flag);
+            }
+          } catch {}
+
           // ─── Habit Engine: log patterns (fire-and-forget) ───────
           if (userId && toolsUsed.length > 0) {
             try {
