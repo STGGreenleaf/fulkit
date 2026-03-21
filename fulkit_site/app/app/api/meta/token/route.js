@@ -7,8 +7,9 @@
 
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
-const APP_ID = process.env.META_APP_ID;
-const APP_SECRET = process.env.META_APP_SECRET;
+// Threads uses its own app ID (different from Meta App ID)
+const APP_ID = process.env.THREADS_APP_ID || process.env.META_APP_ID;
+const APP_SECRET = process.env.THREADS_APP_SECRET || process.env.META_APP_SECRET;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_SITE_URL}/api/meta/callback`;
 
 export async function GET(request) {
