@@ -659,7 +659,7 @@ export default function ChatContent({ isPopout = false }) {
                         />
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
-                          ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} />
+                          ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} onFormSubmit={!chat.streaming ? (formText) => chat.sendMessage(ctx.assembleContext, formText) : null} />
                           : (typeof msg.content === "string" ? msg.content.trim() : Array.isArray(msg.content) ? msg.content.filter((b) => b.type === "text").map((b) => b.text).join("") : "")
                       )}
                     </div>

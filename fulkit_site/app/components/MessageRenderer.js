@@ -29,6 +29,145 @@ class MarkdownErrorBoundary extends Component {
 }
 
 const ListContext = createContext("ul");
+const FormContext = createContext(null);
+
+// Detect if a cell value is blank/dash (fillable)
+function isBlankCell(text) {
+  if (!text || typeof text !== "string") return true;
+  const t = text.trim();
+  return !t || /^[—–\-_]+$/.test(t);
+}
+
+// Interactive table — detects fillable columns and renders input fields
+function InteractiveTable({ children, onFormSubmit }) {
+  const [formData, setFormData] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const tableRef = useRef(null);
+
+  // After mount, scan the table for fillable columns
+  const [fillableCol, setFillableCol] = useState(-1);
+  const [headers, setHeaders] = useState([]);
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    if (!tableRef.current || !onFormSubmit) return;
+    const table = tableRef.current;
+    const ths = table.querySelectorAll("th");
+    const trs = table.querySelectorAll("tbody tr");
+    if (ths.length < 2 || trs.length === 0) return;
+
+    const hdrs = Array.from(ths).map(th => th.textContent.trim());
+
+    // Check each column (skip first — that's labels)
+    for (let col = 1; col < hdrs.length; col++) {
+      let allBlank = true;
+      trs.forEach(tr => {
+        const td = tr.querySelectorAll("td")[col];
+        if (td && !isBlankCell(td.textContent)) allBlank = false;
+      });
+      if (allBlank) {
+        // Found a fillable column — extract row labels
+        const rowLabels = [];
+        trs.forEach(tr => {
+          const firstTd = tr.querySelector("td:nth-child(2)") || tr.querySelector("td");
+          rowLabels.push(firstTd?.textContent?.trim() || "");
+        });
+        setFillableCol(col);
+        setHeaders(hdrs);
+        setRows(rowLabels);
+        return;
+      }
+    }
+  }, [onFormSubmit]);
+
+  function handleSubmit() {
+    if (!onFormSubmit || submitted) return;
+    const entries = rows
+      .map((label, i) => ({ label, value: formData[i] }))
+      .filter(e => e.value !== undefined && e.value !== "");
+    if (entries.length === 0) return;
+    const text = entries.map(e => `${e.label}: ${e.value}`).join(", ");
+    onFormSubmit(text);
+    setSubmitted(true);
+  }
+
+  if (fillableCol === -1 || !onFormSubmit || submitted) {
+    return (
+      <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+        <table ref={tableRef} style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-sm)" }}>
+          {children}
+        </table>
+        {submitted && (
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>
+            Submitted
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Render interactive form
+  return (
+    <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-sm)" }}>
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={i} style={{
+                fontWeight: "var(--font-weight-semibold)", background: "var(--color-bg-elevated)",
+                padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border)",
+                textAlign: i === fillableCol ? "right" : "left", fontSize: "var(--font-size-sm)",
+                whiteSpace: "nowrap", color: "var(--color-text)",
+              }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((label, i) => (
+            <tr key={i}>
+              {headers.map((_, col) => {
+                if (col === 0) {
+                  return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{i + 1}</td>;
+                }
+                if (col === fillableCol) {
+                  return (
+                    <td key={col} style={{ padding: "2px var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData[i] ?? ""}
+                        onChange={e => setFormData(prev => ({ ...prev, [i]: e.target.value }))}
+                        style={{
+                          width: 60, textAlign: "right", border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-1-5)",
+                          fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)",
+                          background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                        }}
+                      />
+                    </td>
+                  );
+                }
+                return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{label}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button
+        onClick={handleSubmit}
+        style={{
+          marginTop: "var(--space-2)", padding: "var(--space-2) var(--space-4)",
+          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+          cursor: "pointer",
+        }}
+      >
+        Submit
+      </button>
+    </div>
+  );
+}
 
 // Detect if a cell value should right-align (numbers, currency, placeholders)
 function looksNumeric(text) {
@@ -247,18 +386,15 @@ const components = {
     );
   },
 
-  // Tables
-  table: ({ children }) => (
-    <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-      <table style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        fontSize: "var(--font-size-sm)",
-      }}>
+  // Tables — interactive when FormContext has a callback
+  table: ({ children }) => {
+    const onFormSubmit = useContext(FormContext);
+    return (
+      <InteractiveTable onFormSubmit={onFormSubmit}>
         {children}
-      </table>
-    </div>
-  ),
+      </InteractiveTable>
+    );
+  },
   thead: ({ children }) => <thead>{children}</thead>,
   tbody: ({ children }) => <tbody>{children}</tbody>,
   tr: ({ children }) => <tr>{children}</tr>,
@@ -366,7 +502,7 @@ const components = {
   img: () => null,
 };
 
-function MessageRendererInner({ content, isStreaming = false }) {
+function MessageRendererInner({ content, isStreaming = false, onFormSubmit = null }) {
   const [displayContent, setDisplayContent] = useState(content);
   const contentRef = useRef(content);
   const rafRef = useRef(null);
@@ -392,13 +528,15 @@ function MessageRendererInner({ content, isStreaming = false }) {
   const sanitized = sanitizeEmoji(displayContent);
 
   return (
-    <div style={{ overflowWrap: "break-word" }}>
-      <MarkdownErrorBoundary fallback={sanitized}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-          {sanitized || ""}
-        </ReactMarkdown>
-      </MarkdownErrorBoundary>
-    </div>
+    <FormContext.Provider value={onFormSubmit}>
+      <div style={{ overflowWrap: "break-word" }}>
+        <MarkdownErrorBoundary fallback={sanitized}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+            {sanitized || ""}
+          </ReactMarkdown>
+        </MarkdownErrorBoundary>
+      </div>
+    </FormContext.Provider>
   );
 }
 
