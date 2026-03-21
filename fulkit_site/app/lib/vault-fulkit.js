@@ -7,7 +7,8 @@ export async function readFulkitNotes(supabase, userId) {
     .select("id, title, content, pinned, context_mode, source, folder, updated_at")
     .eq("encrypted", false)
     .order("pinned", { ascending: false })
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .abortSignal(AbortSignal.timeout(5000));
   if (userId) query.eq("user_id", userId);
   const { data, error } = await query;
 
@@ -24,7 +25,8 @@ export async function readEncryptedNotes(supabase, userId) {
     .select("id, title, content, iv, pinned, context_mode, source, folder, updated_at")
     .eq("encrypted", true)
     .order("pinned", { ascending: false })
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .abortSignal(AbortSignal.timeout(5000));
   if (userId) query.eq("user_id", userId);
   const { data, error } = await query;
 
