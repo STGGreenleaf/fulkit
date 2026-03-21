@@ -138,8 +138,9 @@ function InteractiveTable({ children, onFormSubmit }) {
                   return (
                     <td key={col} style={{ padding: "2px var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
                       <input
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={formData[i] ?? ""}
                         onChange={e => setFormData(prev => ({ ...prev, [i]: e.target.value }))}
                         style={{
