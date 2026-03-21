@@ -112,8 +112,17 @@ function InteractiveTable({ children, onFormSubmit }) {
     );
   }
 
+  // Auto-focus first input
+  const formRef = useRef(null);
+  useEffect(() => {
+    if (formRef.current) {
+      const first = formRef.current.querySelector("input");
+      if (first) setTimeout(() => first.focus(), 100);
+    }
+  }, [fillableCol]);
+
   return (
-    <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+    <div ref={formRef} style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-sm)" }}>
         <thead>
           <tr>
@@ -135,19 +144,33 @@ function InteractiveTable({ children, onFormSubmit }) {
                   return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{i + 1}</td>;
                 }
                 if (col === fillableCol) {
+                  const isPriceCol = headers[col]?.toLowerCase().match(/price|cost|amount|rate|total/);
                   return (
                     <td key={col} style={{ padding: "2px var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
                       <input
                         type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        inputMode={isPriceCol ? "decimal" : "numeric"}
+                        pattern={isPriceCol ? "[0-9.]*" : "[0-9]*"}
                         value={formData[i] ?? ""}
                         onChange={e => setFormData(prev => ({ ...prev, [i]: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            // Focus next input or submit
+                            const inputs = e.target.closest("table")?.querySelectorAll("input");
+                            const arr = inputs ? Array.from(inputs) : [];
+                            const idx = arr.indexOf(e.target);
+                            if (idx < arr.length - 1) arr[idx + 1].focus();
+                            else if (formStore?.submit) formStore.submit();
+                          }
+                        }}
+                        placeholder={isPriceCol ? "0.00" : "—"}
                         style={{
-                          width: 60, textAlign: "right", border: "1px solid var(--color-border)",
-                          borderRadius: "var(--radius-sm)", padding: "var(--space-1) var(--space-1-5)",
+                          width: 72, textAlign: "right", border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-sm)", padding: "var(--space-1-5) var(--space-2)",
                           fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)",
                           background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                          minHeight: 32,
                         }}
                       />
                     </td>
@@ -189,25 +212,36 @@ function FormStoreProvider({ children, onFormSubmit }) {
   return (
     <FormStoreContext.Provider value={store.current}>
       {children}
-      {registered > 0 && !submitted && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
-          <button
-            onClick={() => store.current.submit()}
-            style={{
-              padding: "var(--space-2) var(--space-4)",
-              background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-              borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
-              cursor: "pointer",
-            }}
-          >
-            Submit
-          </button>
-        </div>
-      )}
+      {registered > 0 && !submitted && (() => {
+        const filledCount = Object.values(tables).flat().filter(e => e.value !== undefined && e.value !== "").length;
+        return (
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+            {filledCount > 0 && (
+              <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                {filledCount} item{filledCount !== 1 ? "s" : ""}
+              </span>
+            )}
+            <button
+              onClick={() => store.current.submit()}
+              disabled={filledCount === 0}
+              style={{
+                padding: "var(--space-2-5) var(--space-5)",
+                background: filledCount > 0 ? "var(--color-text)" : "var(--color-border)",
+                color: "var(--color-bg)", border: "none",
+                borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                cursor: filledCount > 0 ? "pointer" : "default",
+                minHeight: 40,
+              }}
+            >
+              Submit
+            </button>
+          </div>
+        );
+      })()}
       {submitted && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-1)" }}>
-          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Submitted</span>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>Submitted</span>
         </div>
       )}
     </FormStoreContext.Provider>
