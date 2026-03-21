@@ -170,17 +170,22 @@ export function AuthProvider({ children }) {
       }
     );
 
-    // Refresh auth when tab wakes from sleep (token may have expired)
+    // Refresh auth when tab wakes from sleep or network reconnects
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         supabase.auth.refreshSession().catch(() => {});
       }
     };
+    const onOnline = () => {
+      supabase.auth.refreshSession().catch(() => {});
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
 
     return () => {
       subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
     };
   }, [fetchProfile]);
 
