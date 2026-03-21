@@ -48,10 +48,13 @@
 - Footer: Bluesky butterfly icon (stroke) + Instagram icon
 - Meta developer app: "Fülkit Social" created, Threads API + Manage Pages use cases
 
-### Still needed (Meta)
-- Complete API test calls in Graph Explorer for pages_manage_posts
-- Submit App Review for pages_read_engagement + pages_manage_posts
-- Once approved: Facebook + Instagram posting unlocks
+### Social publishing status (end of day)
+- **Bluesky**: live, permanent credentials
+- **Threads**: live, auto-refreshing token (perpetual)
+- **Facebook**: live, permanent page token via OAuth
+- **Instagram**: blocked — needs `instagram_basic` + `instagram_content_publish` which require Meta Business Verification → App Review. Code + Instagram Business Account ID (17841443522792602) stored and ready. Not a priority until launch.
+- Meta app "Fülkit Social" published (live mode)
+- Fülkit App Business Portfolio set up, Instagram + Facebook Page connected
 
 ### Other fixes
 - Square inventory update: added missing `state: "IN_STOCK"`
