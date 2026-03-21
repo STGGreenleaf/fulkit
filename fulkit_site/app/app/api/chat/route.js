@@ -2109,7 +2109,7 @@ export async function POST(request) {
     // Global circuit breaker — throttle if API spend exceeds MRR threshold
     if (!config.isByok) {
       try {
-        const { data: spendRows } = await admin
+        const { data: spendRows } = await getSupabaseAdmin()
           .from("profiles")
           .select("seat_type, api_spend_this_month")
           .abortSignal(AbortSignal.timeout(3000));
