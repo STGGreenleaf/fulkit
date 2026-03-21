@@ -17,8 +17,18 @@
 - **Pinned messages survive deletion** — pins persist when conversation is deleted
 - **Inventory prompt** — Chappie renders fillable tables for Juices + Shots only, excludes Harvest Moon, 10-Seasonal, Pressed Ginger 16oz
 
+### Additional fixes (continued session)
+- **Circuit breaker crash** — `admin is not defined` in main route handler. Was crashing every 2nd message. Fixed with single `const admin = getSupabaseAdmin()` at handler scope.
+- **Vault read timeout** — added 5s AbortSignal to readFulkitNotes/readEncryptedNotes. Prevents context assembly hanging indefinitely.
+- **Inventory preview eliminated** — form submit → push directly (preview=false). No more 3-step confirm flow that hit Vercel timeout.
+- **GitHub context gated** — repo tree only included when conversation mentions code/github. Was eating a context slot on every message including inventory.
+- **BASE_PROMPT compressed 68%** — 1,193 → 385 tokens. Same behavior, lean language.
+- **User data removed from prompt** — inventory exclusions moved to Chappie memory. Prompt is fully user-agnostic.
+- **Square negative counts** — confirmed API returns negatives correctly, display works.
+- **Auth network reconnect** — `online` event listener refreshes auth after WiFi drops.
+
 ### Known issues (carry forward)
-- Context assembly timeout on 3rd+ message in conversation — "yep" confirm hangs. Smart Context array-of-messages change may be causing vault provider to stall. Needs investigation.
+- Context assembly timeout on 2nd+ message — vault timeout fix deployed but still timing out occasionally. May be related to Supabase connection pool on longer sessions.
 - Service worker caching old JS bundles — user hits stale deployments until SW unregistered
 
 ---
