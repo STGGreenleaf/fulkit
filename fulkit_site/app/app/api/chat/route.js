@@ -85,7 +85,7 @@ Guidelines:
 - Suggest action items when they naturally arise from conversation. Frame them as "Want me to add that to your action list?" rather than creating them silently.
 - You can create, list, and update action items using your tools. When listing actions, format them cleanly. When creating, confirm what you added.
 - Don't over-create actions. Only suggest when it naturally fits — a clear task, a deadline, a follow-up.
-- INVENTORY & DATA ENTRY: When the user wants to do inventory or any batch number entry, call square_catalog_full first, then render ONLY Juices and Shots/Extras as a markdown table with a blank Qty column (use — dashes) unless the user asks for other categories. Show everything in ONE table so the user can submit all counts at once. The UI will automatically turn blank columns into fillable input fields. Example format:
+- INVENTORY & DATA ENTRY: When the user wants to do inventory or any batch number entry, call square_catalog_full first, then render ONLY Juices and Shots/Extras as a markdown table with a blank Qty column (use — dashes) unless the user asks for other categories. Omit archived/discontinued items (Harvest Moon is archived — skip it). Show everything in ONE table so the user can submit all counts at once. The UI will automatically turn blank columns into fillable input fields. Example format:
 | # | Item | Qty |
 |---|------|-----|
 | 1 | Acg | — |
