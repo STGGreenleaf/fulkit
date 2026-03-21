@@ -31,15 +31,35 @@ export async function POST(request) {
       return Response.json({ error: "Text exceeds 500 character limit" }, { status: 400 });
     }
 
-    // Get stored Threads token
+    // Get stored Threads token + auto-refresh if older than 50 days
     const admin = getSupabaseAdmin();
     const [tokenResult, userIdResult] = await Promise.all([
-      admin.from("preferences").select("value").eq("user_id", user.id).eq("key", "threads_access_token").maybeSingle(),
+      admin.from("preferences").select("value, updated_at").eq("user_id", user.id).eq("key", "threads_access_token").maybeSingle(),
       admin.from("preferences").select("value").eq("user_id", user.id).eq("key", "threads_user_id").maybeSingle(),
     ]);
 
-    const accessToken = tokenResult?.data?.value;
+    let accessToken = tokenResult?.data?.value;
     const threadsUserId = userIdResult?.data?.value;
+
+    // Auto-refresh: if token is older than 50 days, refresh it (expires at 60)
+    if (accessToken && tokenResult?.data?.updated_at) {
+      const age = Date.now() - new Date(tokenResult.data.updated_at).getTime();
+      if (age > 50 * 24 * 60 * 60 * 1000) {
+        try {
+          const refreshRes = await fetch(
+            `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${accessToken}`
+          );
+          const refreshData = await refreshRes.json();
+          if (refreshData.access_token) {
+            accessToken = refreshData.access_token;
+            await admin.from("preferences").upsert({
+              user_id: user.id, key: "threads_access_token",
+              value: accessToken, updated_at: new Date().toISOString(),
+            });
+          }
+        } catch {}
+      }
+    }
 
     if (!accessToken || !threadsUserId) {
       return Response.json({ error: "Threads not connected. Visit /api/meta/token to authorize." }, { status: 400 });
