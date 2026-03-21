@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import LoadingMark from "./LoadingMark";
 
-const MIN_SPLASH_MS = 3600; // one full wink cycle — cold start only
+const MIN_SPLASH_MS = 1200; // short splash — fast cold start
 
 export default function AuthGuard({ children }) {
   const { user, loading } = useAuth();

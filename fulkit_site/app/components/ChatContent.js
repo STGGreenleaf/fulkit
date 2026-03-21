@@ -171,16 +171,16 @@ export default function ChatContent({ isPopout = false }) {
       authFetch("/api/chat/greeting")
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          // Ensure dots animate for at least 3s even if fetch is fast
+          // Ensure dots animate for at least 1.5s even if fetch is fast
           const elapsed = Date.now() - dotsStart;
-          const remaining = Math.max(0, 3000 - elapsed);
+          const remaining = Math.max(0, 1500 - elapsed);
           setTimeout(() => {
             if (data?.greeting) setGreeting(data.greeting);
             setGreetingLoading(false);
           }, remaining);
         })
         .catch(() => { setGreetingLoading(false); });
-    }, 2000);
+    }, 800);
 
     return () => clearTimeout(delayTimer);
   }, [user, accessToken, chat.messages.length, chat.conversationId]);
