@@ -5038,7 +5038,7 @@ function PublishSection({ accessToken }) {
   const PLATFORMS = [
     { key: "bluesky", label: "Bluesky", available: true },
     { key: "threads", label: "Threads", available: true },
-    { key: "instagram", label: "Instagram", available: true },
+    { key: "instagram", label: "Instagram", available: false },
     { key: "facebook", label: "Facebook", available: true },
   ];
 
