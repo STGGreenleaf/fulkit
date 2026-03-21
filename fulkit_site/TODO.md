@@ -58,6 +58,27 @@
 
 ---
 
+## Meta App Review — Facebook + Instagram Publishing
+
+> Bluesky + Threads work. Facebook + Instagram need Meta App Review approval.
+
+### Steps
+- [ ] Complete test API calls in Graph Explorer (Testing page → pages_manage_posts needs 1 call)
+- [ ] Submit App Review requesting: `pages_manage_posts`, `pages_read_engagement`
+- [ ] Write use case description: "Fülkit publishes social content (text + images) to the owner's Facebook Page and linked Instagram Business account from a built-in publishing tool."
+- [ ] Provide screencast or screenshots showing the Publish feature
+- [ ] Wait for approval (days to weeks)
+- [ ] Once approved: Facebook + Instagram posting works automatically (code is already built)
+- [ ] Pre-launch: Publish the "Fülkit Social" app on Meta (Dashboard → Publish)
+
+### Credentials stored
+- Bluesky: .env.local + Vercel (BLUESKY_HANDLE, BLUESKY_APP_PASSWORD)
+- Threads: preferences table (threads_access_token, threads_user_id) — 60-day token, re-auth via /api/meta/token
+- Facebook/Instagram: preferences table (meta_page_token, meta_page_id) — permanent token, re-auth via /api/facebook/connect
+- Meta App: THREADS_APP_ID, THREADS_APP_SECRET, META_APP_ID, META_APP_SECRET in Vercel
+
+---
+
 ## Chappie 2.0 — Verification Queue (115/136 done, 21 remain)
 
 > All code shipped. These are production verification tasks. Run in order.

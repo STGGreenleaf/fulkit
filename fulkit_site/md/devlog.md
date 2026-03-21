@@ -3,6 +3,73 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session — 2026-03-20 (full day): Nav polish + Smart Features + Social Publishing
+
+**Scope:** Fixed nav system, built Smart Features suite, wired multi-platform social publishing.
+
+### Nav & UX (morning)
+- Fixed infinite render loop in ChatContent toolbar useEffect
+- Established uniform layout: AppShell overflow:hidden, AuthGuard flex column, pages manage own scroll
+- Fixed Tooltip width:100% spreading icons in compact mode
+- Chat toolbar restored: Sandbox, Pins, History, New (4 buttons, 18px, useLayoutEffect)
+- Standalone pages: /landing and /wtf bypass AppShell grid
+- Icon hierarchy: sidebar 18px, toolbar 18px, tab icons 16px (bumped from 14), logo 22px
+- Fülkit header text: 14px + 4px margin-top nudge for logo alignment
+- Sidebar nav gap: 1px → 8px
+- Actions: removed 640px maxWidth, full width like home
+- Threads: toolbar reordered (Plus left, Search + View toggle right)
+- Tooltips: always visible on all buttons, position="bottom" for pages (overflow:hidden fix)
+- Chat greeting: 2s delay → 3s dots animation → message. ThinkingIndicator stripped to dots only.
+- QuickCapture FAB bumped 50px up from bottom
+- Auth: visibilitychange listener refreshes Supabase session on tab wake
+
+### Smart Features (midday)
+- **Smart Threads** (toggle) — auto-extract action items from 3+ turn conversations with guardrails
+- **Auto-summarize** (baked in) — saves conversation summaries after 5+ messages
+- **Auto-archive** (toggle) — done threads archive after 7 days
+- **Conversation Continuity** — system prompt injects previous session summary when reopening old conversations
+- **Auto-label** — write-back notes tagged with detected ecosystem (square, trello, etc.)
+- **Smart Cleanup** — greeting mentions stale threads (30+ days unmoved)
+- **Smart Reminders** — action items with dates get due_date set (tomorrow, next week, by Friday)
+- **Smart Context** — vault note selection uses last 3 messages + minimum relevance threshold
+- **Pattern Insights** — home dashboard shows top ecosystems by frequency
+- **Weekly Digest** — cron route (Mondays 9am UTC), greeting references it Monday/Tuesday
+- Settings > Account: Smart Features drawer with two toggles
+- Deleted 424 garbage notes from threads (dev testing artifacts)
+
+### Social Publishing (afternoon/evening)
+- **Bluesky** — fully working. AT Protocol posting with image support.
+- **Threads** — fully working. OAuth flow → long-lived token → stored in preferences.
+- **Instagram** — code built, blocked by Meta App Review (needs pages_read_engagement approval)
+- **Facebook** — code built, blocked by same App Review
+- Owner > Socials tab reordered: Publish → Social Kit → Local App → Socials & Identity
+- Copy URL button on social templates (solid style with "Copied!" feedback)
+- Multi-platform Publish drawer: select platforms, single Publish button, per-platform results
+- Footer: Bluesky butterfly icon (stroke) + Instagram icon
+- Meta developer app: "Fülkit Social" created, Threads API + Manage Pages use cases
+
+### Still needed (Meta)
+- Complete API test calls in Graph Explorer for pages_manage_posts
+- Submit App Review for pages_read_engagement + pages_manage_posts
+- Once approved: Facebook + Instagram posting unlocks
+
+### Other fixes
+- Square inventory update: added missing `state: "IN_STOCK"`
+- Chappie 2.0 verification: 0.3 + 0.4 confirmed (prompt caching works, $2.27 → $0.03/msg)
+
+### Key files created
+- `app/api/bluesky/post/route.js` — Bluesky AT Protocol posting
+- `app/api/threads/post/route.js` — Threads API posting
+- `app/api/instagram/post/route.js` — Instagram Graph API posting (pending review)
+- `app/api/facebook/post/route.js` — Facebook Page posting (pending review)
+- `app/api/facebook/connect/route.js` — Facebook OAuth start
+- `app/api/facebook/callback/route.js` — Facebook OAuth callback
+- `app/api/meta/token/route.js` — Threads OAuth start
+- `app/api/meta/callback/route.js` — Threads OAuth callback
+- `app/api/cron/weekly-digest/route.js` — Weekly digest cron
+
+---
+
 ## Session — 2026-03-20 (late night): Nav & UX polish
 
 **Scope:** Fix broken nav, establish uniform layout, polish chat greeting, add tooltips everywhere.
