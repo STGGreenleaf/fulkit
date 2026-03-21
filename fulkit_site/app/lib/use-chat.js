@@ -193,9 +193,9 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
   // ─── Send message ─────────────────────────────────────────
 
-  const sendMessage = useCallback(async (assembleContext, retryText, greetingText) => {
+  const sendMessage = useCallback(async (assembleContext, retryText, greetingText, overrideText) => {
     const isRetry = typeof retryText === "string";
-    const text = isRetry ? retryText.trim() : input.trim();
+    const text = overrideText?.trim() || (isRetry ? retryText.trim() : input.trim());
     console.log("[sendMessage] entry", { text: text?.slice(0, 30), isRetry, streamingRef: streamingRef.current, hasAuthFetch: !!authFetch });
     if (!text || streamingRef.current) {
       console.warn("[sendMessage] blocked —", !text ? "empty text" : "already streaming");

@@ -306,6 +306,13 @@ export default function ChatContent({ isPopout = false }) {
     await chat.sendMessage(ctx.assembleContext, undefined, greetingToInject);
   }, [chat.input, chat.streaming, chat.sendMessage, ctx.assembleContext, ctx.handleRecall, greeting, chat.messages.length]);
 
+  // Form submit from interactive tables — injects text as a user message
+  const handleFormSubmit = useCallback(async (formText) => {
+    if (!formText || chat.streaming) return;
+    // Use sendMessage with formText as override (4th arg)
+    await chat.sendMessage(ctx.assembleContext, undefined, undefined, formText);
+  }, [chat.streaming, chat.sendMessage, ctx.assembleContext]);
+
   // Cmd+K to focus chat input
   useEffect(() => {
     const onGlobalKey = (e) => {
@@ -659,7 +666,7 @@ export default function ChatContent({ isPopout = false }) {
                         />
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
-                          ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} onFormSubmit={!chat.streaming ? (formText) => chat.sendMessage(ctx.assembleContext, formText) : null} />
+                          ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} onFormSubmit={!chat.streaming ? (formText) => { handleFormSubmit(formText); } : null} />
                           : (typeof msg.content === "string" ? msg.content.trim() : Array.isArray(msg.content) ? msg.content.filter((b) => b.type === "text").map((b) => b.text).join("") : "")
                       )}
                     </div>
