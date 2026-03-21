@@ -5,7 +5,7 @@
 
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 
-const PAGE_TOKEN = process.env.META_PAGE_TOKEN;
+// Page token stored in preferences (permanent, from OAuth flow)
 
 async function getOwner(request) {
   const authHeader = request.headers.get("authorization");
@@ -30,22 +30,19 @@ export async function POST(request) {
       return Response.json({ error: "Text or image required" }, { status: 400 });
     }
 
-    if (!PAGE_TOKEN) {
-      return Response.json({ error: "Facebook Page token not configured." }, { status: 400 });
+    // Get stored page token from preferences
+    const admin = getSupabaseAdmin();
+    const [tokenResult, pageIdResult] = await Promise.all([
+      admin.from("preferences").select("value").eq("user_id", user.id).eq("key", "meta_page_token").maybeSingle(),
+      admin.from("preferences").select("value").eq("user_id", user.id).eq("key", "meta_page_id").maybeSingle(),
+    ]);
+
+    const pageToken = tokenResult?.data?.value;
+    const pageId = pageIdResult?.data?.value;
+
+    if (!pageToken || !pageId) {
+      return Response.json({ error: "Facebook not connected. Visit /api/facebook/connect to authorize." }, { status: 400 });
     }
-
-    // Get Page ID
-    const pagesRes = await fetch(
-      `https://graph.facebook.com/v25.0/me/accounts?access_token=${PAGE_TOKEN}`
-    );
-    const pagesData = await pagesRes.json();
-    if (pagesData.error) throw new Error(pagesData.error.message);
-
-    const page = pagesData.data?.[0];
-    if (!page) throw new Error("No Facebook Page found");
-
-    const pageToken = page.access_token;
-    const pageId = page.id;
 
     let result;
 
