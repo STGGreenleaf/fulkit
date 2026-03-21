@@ -661,8 +661,19 @@ function SpendModeratorSection({ period }) {
   const { accessToken } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("fulkit-spend-moderator-open") === "true";
+  });
   const [copiedAll, setCopiedAll] = useState(false);
+
+  const toggleExpanded = () => {
+    setExpanded((prev) => {
+      const next = !prev;
+      localStorage.setItem("fulkit-spend-moderator-open", String(next));
+      return next;
+    });
+  };
 
   const fetchSpend = useCallback(async () => {
     if (!accessToken) return;
@@ -688,7 +699,7 @@ function SpendModeratorSection({ period }) {
   }, [fetchSpend]);
 
   const exportFlags = () => {
-    if (!data?.flags?.length) return;
+    if (!data) return;
     const payload = {
       exported: new Date().toISOString(),
       period: `${period}h`,
@@ -717,17 +728,18 @@ function SpendModeratorSection({ period }) {
       overflow: "hidden",
     }}>
       {/* Spend Moderator header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          width: "100%", padding: "var(--space-3) var(--space-4)",
-          background: hasFlags ? "rgba(183, 121, 31, 0.06)" : "var(--color-bg-alt)",
-          border: "none", cursor: "pointer",
-          transition: "background var(--duration-fast) var(--ease-default)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "var(--space-3) var(--space-4)",
+        background: hasFlags ? "rgba(183, 121, 31, 0.06)" : "var(--color-bg-alt)",
+      }}>
+        <button
+          onClick={toggleExpanded}
+          style={{
+            display: "flex", alignItems: "center", gap: "var(--space-2)",
+            background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1,
+          }}
+        >
           <CreditCard size={14} strokeWidth={1.5} color="var(--color-text-muted)" />
           <span style={{
             fontSize: "var(--font-size-xs)",
@@ -750,9 +762,9 @@ function SpendModeratorSection({ period }) {
               {totalFlags} flag{totalFlags !== 1 ? "s" : ""}
             </span>
           )}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          {/* Quick cost stat always visible */}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          {/* Quick cost stat */}
           <span style={{
             fontSize: "var(--font-size-2xs)",
             fontFamily: "var(--font-mono)",
@@ -760,9 +772,33 @@ function SpendModeratorSection({ period }) {
           }}>
             ${summary.totalCost.toFixed(4)} / {summary.messages} msg{summary.messages !== 1 ? "s" : ""}
           </span>
-          {expanded ? <ChevronUp size={14} strokeWidth={1.5} color="var(--color-text-dim)" /> : <ChevronDown size={14} strokeWidth={1.5} color="var(--color-text-dim)" />}
+          {/* Export — always visible */}
+          <button
+            onClick={(e) => { e.stopPropagation(); exportFlags(); }}
+            title="Copy spend data as JSON"
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--space-1)",
+              padding: "var(--space-1) var(--space-2-5)",
+              fontSize: "var(--font-size-2xs)",
+              fontFamily: "var(--font-mono)",
+              color: copiedAll ? "var(--color-text)" : "var(--color-text-muted)",
+              background: "var(--color-bg-elevated, var(--color-bg))",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+            }}
+          >
+            {copiedAll ? <CheckIcon size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={1.5} />}
+            {copiedAll ? "Copied" : "Export"}
+          </button>
+          <button
+            onClick={toggleExpanded}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+          >
+            {expanded ? <ChevronUp size={14} strokeWidth={1.5} color="var(--color-text-dim)" /> : <ChevronDown size={14} strokeWidth={1.5} color="var(--color-text-dim)" />}
+          </button>
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div style={{ padding: "var(--space-4)", background: "var(--color-bg)" }}>
@@ -827,7 +863,6 @@ function SpendModeratorSection({ period }) {
           {hasFlags ? (
             <>
               <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
                 marginBottom: "var(--space-3)",
               }}>
                 <span style={{
@@ -840,23 +875,6 @@ function SpendModeratorSection({ period }) {
                 }}>
                   Flags ({totalFlags})
                 </span>
-                <button
-                  onClick={exportFlags}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--space-1)",
-                    padding: "var(--space-1) var(--space-2-5)",
-                    fontSize: "var(--font-size-2xs)",
-                    fontFamily: "var(--font-mono)",
-                    color: copiedAll ? "var(--color-text)" : "var(--color-text-muted)",
-                    background: "var(--color-bg-alt)",
-                    border: "1px solid var(--color-border-light)",
-                    borderRadius: "var(--radius-sm)",
-                    cursor: "pointer",
-                  }}
-                >
-                  {copiedAll ? <CheckIcon size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={1.5} />}
-                  {copiedAll ? "Copied" : "Export"}
-                </button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                 {flags.map((flag) => (
@@ -964,7 +982,10 @@ function RadioTab() {
   const [cursor, setCursor] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [exported, setExported] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("fulkit-radio-expanded-groups") || "{}"); } catch { return {}; }
+  });
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purging, setPurging] = useState(false);
   const refreshRef = useRef(null);
@@ -1450,7 +1471,11 @@ function RadioTab() {
                   {/* Expand/collapse toggle for groups */}
                   {isGroup && (
                     <button
-                      onClick={() => setExpandedGroups((prev) => ({ ...prev, [group.event]: !prev[group.event] }))}
+                      onClick={() => setExpandedGroups((prev) => {
+                        const next = { ...prev, [group.event]: !prev[group.event] };
+                        try { localStorage.setItem("fulkit-radio-expanded-groups", JSON.stringify(next)); } catch {}
+                        return next;
+                      })}
                       style={{
                         display: "flex", alignItems: "center", gap: "var(--space-1)",
                         marginTop: "var(--space-2)", padding: 0,
