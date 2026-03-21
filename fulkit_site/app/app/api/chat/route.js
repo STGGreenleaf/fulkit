@@ -2198,6 +2198,15 @@ export async function POST(request) {
     // Compress conversation if it's getting long (pass chapter summaries for sandbox mode)
     const compressed = compressConversation(messages, config.compressAt, chapterSummaries);
 
+    // Track compression savings
+    const compressionStats = compressed.length < messages.length ? {
+      messagesIn: messages.length,
+      messagesOut: compressed.length,
+      messagesSaved: messages.length - compressed.length,
+      estTokensBefore: messages.reduce((sum, m) => sum + estimateTokens(m.content), 0),
+      estTokensAfter: compressed.reduce((sum, m) => sum + estimateTokens(m.content), 0),
+    } : null;
+
     // Parallel data fetch — all independent of each other, depend only on userId + profile
     const safeGet = userId
       ? (fn, provider) => fn(userId).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; })
@@ -2723,6 +2732,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId ? KB_TOOLS : []),
       ...integrationTools,
     ];
+    const toolSchemaTokens = allTools.length > 0 ? Math.ceil(JSON.stringify(allTools).length / 4) : 0;
 
     // ─── Debug payload ───────────────────────────────────────
     const debugPayload = {
@@ -3167,19 +3177,46 @@ Never skip the preview step. The user must see and approve changes before they g
           // ─── Spend Moderator: log + detect waste (fire-and-forget) ───
           try {
             const spendMeta = {
+              // Token counts
               inputTokens: totalInputTokens,
               outputTokens: totalOutputTokens,
               cacheCreation: totalCacheCreation,
               cacheRead: totalCacheRead,
               cost: Math.round(totalApiCost * 10000) / 10000,
+              // Tool usage
               tools: toolsUsed,
               toolsLoaded: allTools.length,
+              toolNames: allTools.map(t => t.name),
+              toolSchemaTokens,
+              // Timing + rounds
               rounds: totalRounds,
               elapsed: Date.now() - loopStart,
+              stopReason: needsFinalResponse ? "timeout" : "end_turn",
+              // Model + tier
               model: config.model,
+              maxTokens: config.maxTokens,
+              seat: profile?.seat_type || "unknown",
+              role: profile?.role || "unknown",
+              isByok: config.isByok || false,
+              // System prompt
               systemTokens: debugPayload.systemPromptEstTokens,
+              systemTokensUsed: debugPayload.systemTokensUsed,
+              systemTokenBudget: SYSTEM_TOKEN_BUDGET,
+              // Context + personalization
               contextItems: debugPayload.contextItems,
               contextTitles: debugPayload.contextTitles,
+              memoriesCount: memories.length,
+              prefsCount: prefs.length,
+              kbIncluded: kbIncluded || [],
+              // Conversation + compression
+              messagesIn: messages.length,
+              messagesCompressed: compressed.length,
+              wasCompressed: compressed.length < messages.length,
+              compressionStats: compressionStats || null,
+              // Integrations + habits
+              integrations: debugPayload.integrations,
+              habitEcosystem: habitEcosystem || null,
+              helperName: helperName || "(default)",
               conversationId,
             };
 
@@ -3191,20 +3228,50 @@ Never skip the preview step. The user must see and approve changes before they g
             const isSonnet = config.model.includes("sonnet");
             const costThreshold = isSonnet ? 0.10 : 0.50;
 
+            // Existing rules
             if (totalApiCost > costThreshold) {
-              flags.push({ rule: "expensive_round", msg: `High-cost message: $${spendMeta.cost}`, fix: "Review tool calls — reduce rounds or context" });
+              flags.push({ rule: "expensive_round", msg: `High-cost message: $${spendMeta.cost}`, fix: "Review tool calls — reduce rounds or context", impact: `$${spendMeta.cost}` });
             }
             if (allTools.length > toolsUsed.length * 3 && allTools.length > 10) {
-              flags.push({ rule: "tool_waste", msg: `${allTools.length} tools loaded, ${toolsUsed.length} used`, fix: "Habit Engine needs more pattern data to narrow tool loading" });
+              flags.push({ rule: "tool_waste", msg: `${allTools.length} tools loaded, ${toolsUsed.length} used`, fix: "Habit Engine needs more pattern data to narrow tool loading", impact: `~${toolSchemaTokens} schema tokens` });
             }
             if (totalCacheCreation > 0 && totalCacheRead === 0 && compressed.length > 2) {
               flags.push({ rule: "cache_miss", msg: "Cache miss on multi-turn conversation", fix: "System prompt may have changed between messages" });
             }
             if ((Date.now() - loopStart) > 20000) {
-              flags.push({ rule: "slow_response", msg: `Response took ${Math.round((Date.now() - loopStart) / 1000)}s`, fix: "Check tool call count and API latency" });
+              flags.push({ rule: "slow_response", msg: `Response took ${Math.round((Date.now() - loopStart) / 1000)}s`, fix: "Check tool call count and API latency", impact: `${Math.round((Date.now() - loopStart) / 1000)}s` });
             }
             if (debugPayload.contextItems > 0 && toolsUsed.length === 0 && totalOutputTokens < 100) {
               flags.push({ rule: "unused_context", msg: `${debugPayload.contextItems} context items loaded for a short response`, fix: "Context may be irrelevant to this message" });
+            }
+
+            // New rules
+            if (compressionStats && compressionStats.messagesSaved > 20) {
+              const saved = compressionStats.estTokensBefore - compressionStats.estTokensAfter;
+              flags.push({ rule: "compression_heavy", msg: `Compressed ${compressionStats.messagesSaved} messages (est. ${saved.toLocaleString()} tokens saved)`, fix: "Long conversation — consider starting a new thread to reset context", impact: `~${saved.toLocaleString()} tokens` });
+            }
+            if (debugPayload.systemTokensUsed > SYSTEM_TOKEN_BUDGET * 0.85) {
+              const pct = Math.round(debugPayload.systemTokensUsed / SYSTEM_TOKEN_BUDGET * 100);
+              flags.push({ rule: "system_prompt_bloat", msg: `System prompt at ${pct}% capacity (${debugPayload.systemTokensUsed.toLocaleString()} / ${SYSTEM_TOKEN_BUDGET.toLocaleString()})`, fix: "Review memories, prefs, and KB docs for redundancy", impact: `${pct}% of budget` });
+            }
+            if (config.model.includes("opus") && totalOutputTokens < 200 && toolsUsed.length === 0 && totalRounds <= 1) {
+              flags.push({ rule: "opus_on_simple", msg: `Opus used for a simple response (${totalOutputTokens} output tokens, no tools)`, fix: "Short answers don't need Opus — Sonnet costs 5x less" });
+            }
+            if (totalRounds > 2 && totalApiCost > costThreshold * 0.5) {
+              flags.push({ rule: "multi_round_cost", msg: `${totalRounds} API rounds, accumulating $${spendMeta.cost}`, fix: "Each round re-sends the full conversation — rounds compound cost", impact: `${totalRounds} rounds` });
+            }
+            {
+              const connectedCount = Object.values(debugPayload.integrations).filter(Boolean).length;
+              if (connectedCount > 3 && toolsUsed.length === 0) {
+                flags.push({ rule: "integration_ghost", msg: `${connectedCount} integrations connected but no tools used`, fix: "Connected integrations load tool schemas even when unused — disconnect what you don't need", impact: `~${toolSchemaTokens} wasted tokens` });
+              }
+            }
+            if (totalCacheRead > 0 && totalCacheCreation > 0 && (totalCacheRead / (totalCacheRead + totalCacheCreation)) < 0.3) {
+              const ratio = Math.round(totalCacheRead / (totalCacheRead + totalCacheCreation) * 100);
+              flags.push({ rule: "cache_efficiency_low", msg: `Cache efficiency: ${ratio}% read vs write`, fix: "System prompt may be changing between messages — check for dynamic content that invalidates cache", impact: `${ratio}% hit rate` });
+            }
+            if (debugPayload.contextItems > 0 && debugPayload.systemTokensUsed > systemBaseTokens * 2) {
+              flags.push({ rule: "context_token_heavy", msg: `Context injection doubled system prompt (${systemBaseTokens.toLocaleString()} base → ${debugPayload.systemTokensUsed.toLocaleString()} with context)`, fix: "Large vault notes inflate every message cost — trim or split large documents", impact: `+${(debugPayload.systemTokensUsed - systemBaseTokens).toLocaleString()} tokens` });
             }
 
             for (const flag of flags) {

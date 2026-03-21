@@ -677,6 +677,13 @@ const SPEND_RULE_LABELS = {
   slow_response: "Slow Response",
   unused_context: "Unused Context",
   github_waste: "GitHub Waste",
+  compression_heavy: "Heavy Compression",
+  system_prompt_bloat: "System Bloat",
+  opus_on_simple: "Opus Overkill",
+  multi_round_cost: "Multi-Round Cost",
+  integration_ghost: "Ghost Integrations",
+  cache_efficiency_low: "Poor Cache Efficiency",
+  context_token_heavy: "Context Inflation",
 };
 
 function SpendModeratorSection({ period }) {
@@ -864,9 +871,203 @@ function SpendModeratorSection({ period }) {
             ))}
           </div>
 
-          {/* Token breakdown */}
+          {/* Token breakdown table */}
           <div style={{
-            display: "flex", gap: "var(--space-4)",
+            marginBottom: "var(--space-4)",
+            background: "var(--color-bg-alt)",
+            borderRadius: "var(--radius-sm)",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: 9,
+              fontFamily: "var(--font-mono)",
+              fontWeight: "var(--font-weight-semibold)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--letter-spacing-wider)",
+              color: "var(--color-text-dim)",
+              borderBottom: "1px solid var(--color-border-light)",
+            }}>
+              Token Breakdown (avg/msg)
+            </div>
+            {(() => {
+              const avgIn = summary.messages > 0 ? Math.round(summary.totalInput / summary.messages) : 0;
+              const avgOut = summary.messages > 0 ? Math.round(summary.totalOutput / summary.messages) : 0;
+              const avgSys = summary.avgSystemTokens || 0;
+              const avgSchema = summary.avgToolSchemaTokens || 0;
+              const avgConvo = Math.max(0, avgIn - avgSys - avgSchema);
+              const total = avgIn + avgOut;
+              const pct = (v) => total > 0 ? `${Math.round(v / total * 100)}%` : "—";
+              const rows = [
+                { label: "System Prompt", tokens: avgSys, share: pct(avgSys) },
+                { label: "Conversation", tokens: avgConvo, share: pct(avgConvo) },
+                { label: "Tool Schemas", tokens: avgSchema, share: pct(avgSchema) },
+                { label: "Output", tokens: avgOut, share: pct(avgOut) },
+              ];
+              return rows.map((row, i) => (
+                <div key={row.label} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "var(--space-1-5) var(--space-3)",
+                  fontSize: "var(--font-size-2xs)",
+                  fontFamily: "var(--font-mono)",
+                  background: i % 2 === 0 ? "transparent" : "var(--color-bg)",
+                }}>
+                  <span style={{ color: "var(--color-text-muted)", flex: 1 }}>{row.label}</span>
+                  <span style={{ color: "var(--color-text)", fontWeight: "var(--font-weight-semibold)", width: 80, textAlign: "right" }}>{row.tokens.toLocaleString()}</span>
+                  <span style={{ color: "var(--color-text-dim)", width: 50, textAlign: "right" }}>{row.share}</span>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* Cache efficiency gauge */}
+          {summary.cacheEfficiency !== null && (
+            <div style={{
+              marginBottom: "var(--space-4)",
+              padding: "var(--space-2) var(--space-3)",
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-sm)",
+            }}>
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                marginBottom: "var(--space-1)",
+              }}>
+                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)" }}>
+                  Cache Efficiency
+                </span>
+                <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", color: summary.cacheEfficiency >= 60 ? "var(--color-success, #48bb78)" : summary.cacheEfficiency >= 30 ? "var(--color-warning, #b7791f)" : "var(--color-error, #e53e3e)" }}>
+                  {summary.cacheEfficiency}% hit rate
+                </span>
+              </div>
+              <div style={{ height: 6, background: "var(--color-bg)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width: `${Math.min(summary.cacheEfficiency, 100)}%`,
+                  background: summary.cacheEfficiency >= 60 ? "var(--color-success, #48bb78)" : summary.cacheEfficiency >= 30 ? "var(--color-warning, #b7791f)" : "var(--color-error, #e53e3e)",
+                  borderRadius: 3,
+                  transition: "width var(--duration-normal) var(--ease-default)",
+                }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                <span>Read: {summary.totalCacheRead.toLocaleString()}</span>
+                <span>Write: {summary.totalCacheCreation.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Compression stats (conditional) */}
+          {summary.compression && (
+            <div style={{
+              display: "flex", gap: "var(--space-3)", flexWrap: "wrap",
+              fontSize: "var(--font-size-2xs)",
+              fontFamily: "var(--font-mono)",
+              color: "var(--color-text-dim)",
+              marginBottom: "var(--space-4)",
+              padding: "var(--space-2) var(--space-3)",
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-sm)",
+            }}>
+              <span>Compression fired <b style={{ color: "var(--color-text-muted)" }}>{summary.compression.timesCompressed}x</b></span>
+              <span style={{ color: "var(--color-border)" }}>|</span>
+              <span>Saved <b style={{ color: "var(--color-text-muted)" }}>~{summary.compression.totalTokensSaved.toLocaleString()}</b> tokens</span>
+              <span style={{ color: "var(--color-border)" }}>|</span>
+              <span>Avg <b style={{ color: "var(--color-text-muted)" }}>{summary.compression.avgSavingsPerCompression.toLocaleString()}</b>/compression</span>
+            </div>
+          )}
+
+          {/* Cost attribution — model + type */}
+          {(summary.costByModel && Object.keys(summary.costByModel).length > 0) && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${Object.keys(summary.costByModel).length + (summary.byokMessages > 0 ? 2 : 1)}, 1fr)`,
+              gap: "var(--space-2)",
+              marginBottom: "var(--space-4)",
+            }}>
+              {Object.entries(summary.costByModel).map(([model, data]) => (
+                <div key={model} style={{
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "var(--color-bg-alt)",
+                  borderRadius: "var(--radius-sm)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: 2 }}>
+                    {model}
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>
+                    ${data.cost.toFixed(4)}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                    {data.messages} msg{data.messages !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              ))}
+              {summary.fulkitPaidMessages > 0 && (
+                <div style={{
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "var(--color-bg-alt)",
+                  borderRadius: "var(--radius-sm)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: 2 }}>
+                    Fulkit-Paid
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>
+                    {summary.fulkitPaidMessages}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                    messages
+                  </div>
+                </div>
+              )}
+              {summary.byokMessages > 0 && (
+                <div style={{
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "var(--color-bg-alt)",
+                  borderRadius: "var(--radius-sm)",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: 2 }}>
+                    BYOK
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-mono)", color: "var(--color-text)" }}>
+                    {summary.byokMessages}
+                  </div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                    messages
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Integration usage (conditional) */}
+          {summary.integrationUsage && Object.keys(summary.integrationUsage.loads).length > 0 && (
+            <div style={{
+              marginBottom: "var(--space-4)",
+              padding: "var(--space-2) var(--space-3)",
+              background: "var(--color-bg-alt)",
+              borderRadius: "var(--radius-sm)",
+            }}>
+              <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                Integration Usage
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)" }}>
+                {Object.entries(summary.integrationUsage.loads).map(([name, loadCount]) => {
+                  const useCount = summary.integrationUsage.uses[name] || 0;
+                  const ratio = loadCount > 0 ? Math.round(useCount / loadCount * 100) : 0;
+                  return (
+                    <span key={name} style={{ color: ratio === 0 ? "var(--color-warning, #b7791f)" : "var(--color-text-muted)" }}>
+                      {name}: {loadCount}x loaded, {useCount}x used ({ratio}%)
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Extra stats row */}
+          <div style={{
+            display: "flex", gap: "var(--space-4)", flexWrap: "wrap",
             fontSize: "var(--font-size-2xs)",
             fontFamily: "var(--font-mono)",
             color: "var(--color-text-dim)",
@@ -875,18 +1076,17 @@ function SpendModeratorSection({ period }) {
             background: "var(--color-bg-alt)",
             borderRadius: "var(--radius-sm)",
           }}>
-            <span>In: {summary.totalInput.toLocaleString()}</span>
-            <span>Out: {summary.totalOutput.toLocaleString()}</span>
-            <span>Cache Write: {summary.totalCacheCreation.toLocaleString()}</span>
-            <span>Cache Read: {summary.totalCacheRead.toLocaleString()}</span>
+            <span>Avg Rounds: <b style={{ color: "var(--color-text-muted)" }}>{summary.avgRounds || "—"}</b></span>
+            <span style={{ color: "var(--color-border)" }}>|</span>
+            <span>Avg System: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgSystemTokens || 0).toLocaleString()}</b> tokens</span>
+            <span style={{ color: "var(--color-border)" }}>|</span>
+            <span>Avg Schema: <b style={{ color: "var(--color-text-muted)" }}>{(summary.avgToolSchemaTokens || 0).toLocaleString()}</b> tokens</span>
           </div>
 
           {/* Flags section */}
           {hasFlags ? (
             <>
-              <div style={{
-                marginBottom: "var(--space-3)",
-              }}>
+              <div style={{ marginBottom: "var(--space-3)" }}>
                 <span style={{
                   fontSize: "var(--font-size-2xs)",
                   fontFamily: "var(--font-mono)",
@@ -910,14 +1110,28 @@ function SpendModeratorSection({ period }) {
                       display: "flex", alignItems: "center", justifyContent: "space-between",
                       marginBottom: "var(--space-1)",
                     }}>
-                      <span style={{
-                        fontSize: "var(--font-size-xs)",
-                        fontFamily: "var(--font-mono)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        color: "var(--color-text)",
-                      }}>
-                        {SPEND_RULE_LABELS[flag.rule] || flag.rule}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <span style={{
+                          fontSize: "var(--font-size-xs)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: "var(--font-weight-semibold)",
+                          color: "var(--color-text)",
+                        }}>
+                          {SPEND_RULE_LABELS[flag.rule] || flag.rule}
+                        </span>
+                        {flag.impact && (
+                          <span style={{
+                            fontSize: 9,
+                            fontFamily: "var(--font-mono)",
+                            padding: "1px 4px",
+                            borderRadius: "var(--radius-xs)",
+                            color: "var(--color-warning, #b7791f)",
+                            background: "rgba(183, 121, 31, 0.1)",
+                          }}>
+                            {flag.impact}
+                          </span>
+                        )}
+                      </div>
                       <span style={{
                         fontSize: 9,
                         fontWeight: "var(--font-weight-semibold)",
