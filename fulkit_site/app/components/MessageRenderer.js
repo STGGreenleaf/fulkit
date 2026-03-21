@@ -153,18 +153,20 @@ function InteractiveTable({ children, onFormSubmit }) {
           ))}
         </tbody>
       </table>
-      <button
-        onClick={handleSubmit}
-        style={{
-          marginTop: "var(--space-2)", padding: "var(--space-2) var(--space-4)",
-          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-          borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
-          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
-          cursor: "pointer",
-        }}
-      >
-        Submit
-      </button>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
+        <button
+          onClick={handleSubmit}
+          style={{
+            padding: "var(--space-2) var(--space-4)",
+            background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+            borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)",
+            fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+            cursor: "pointer",
+          }}
+        >
+          Submit
+        </button>
+      </div>
     </div>
   );
 }
