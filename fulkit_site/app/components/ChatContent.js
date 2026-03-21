@@ -161,25 +161,26 @@ export default function ChatContent({ isPopout = false }) {
   useEffect(() => {
     if (!user || !accessToken || chat.messages.length > 0 || chat.conversationId || greetingFetchedRef.current) return;
     greetingFetchedRef.current = true;
-    setGreetingDelay(true);
 
-    // Pause before showing dots — feels like the AI noticed you arrived
+    // Start fetch IMMEDIATELY (runs during splash — preloaded by the time user sees chat)
+    const fetchPromise = authFetch("/api/chat/greeting")
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null);
+
+    // Visual: short delay → dots → greeting appears
+    setGreetingDelay(true);
     const delayTimer = setTimeout(() => {
       setGreetingDelay(false);
       setGreetingLoading(true);
       const dotsStart = Date.now();
-      authFetch("/api/chat/greeting")
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          // Ensure dots animate for at least 1.5s even if fetch is fast
-          const elapsed = Date.now() - dotsStart;
-          const remaining = Math.max(0, 1500 - elapsed);
-          setTimeout(() => {
-            if (data?.greeting) setGreeting(data.greeting);
-            setGreetingLoading(false);
-          }, remaining);
-        })
-        .catch(() => { setGreetingLoading(false); });
+      fetchPromise.then(data => {
+        const elapsed = Date.now() - dotsStart;
+        const remaining = Math.max(0, 1500 - elapsed);
+        setTimeout(() => {
+          if (data?.greeting) setGreeting(data.greeting);
+          setGreetingLoading(false);
+        }, remaining);
+      });
     }, 800);
 
     return () => clearTimeout(delayTimer);
