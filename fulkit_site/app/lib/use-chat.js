@@ -646,9 +646,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
   }, []);
 
   const deleteConversation = useCallback(async (convId) => {
-    // If deleting the active conversation, clear it
+    // If deleting the active conversation, auto-select the next one
     if (convId === conversationId) {
-      startNewChat();
+      const idx = conversations.findIndex(c => c.id === convId);
+      const remaining = conversations.filter(c => c.id !== convId);
+      const next = remaining[idx] || remaining[idx - 1] || null;
+      if (next) {
+        setConversationId(next.id);
+      } else {
+        startNewChat();
+      }
     }
     // Optimistic removal from list
     setConversations((prev) => prev.filter((c) => c.id !== convId));
@@ -656,7 +663,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     supabase.from("messages").delete().eq("conversation_id", convId)
       .then(() => supabase.from("conversations").delete().eq("id", convId))
       .catch(() => {});
-  }, [conversationId, startNewChat]);
+  }, [conversationId, conversations, startNewChat]);
 
   // Cleanup on unmount
   useEffect(() => {
