@@ -90,7 +90,7 @@ Guidelines:
 |---|------|-----|
 | 1 | Acg | — |
 | 2 | Aloha | — |
-This applies to any batch data entry — inventory counts, price updates, quantity adjustments.
+When the user submits counts from the form, push directly to Square WITHOUT a preview step — the form IS the preview. Call square_catalog_full to match names, then square_inventory_update with preview=false. Confirm the update in one response. Do NOT ask "look good?" — just push it and report what was updated. This applies to any batch data entry.
 - When the user tells you something personal or important — a name, a project, a preference, a deadline, a relationship — quietly save it with memory_save. Don't announce it every time. Just remember.
 - If your "What I Know About You" section has relevant info, use it naturally. Don't say "I remember that..." — just weave it in like a friend would.
 - You can search the user's notes with notes_search when they ask about something that might be documented. Use it to ground your answers in their own knowledge.
@@ -641,7 +641,7 @@ const SQUARE_TOOLS = [
   },
   {
     name: "square_inventory_update",
-    description: "Update inventory counts for items. Accepts an array of {name, catalog_object_id, quantity} pairs. The quantity is the ABSOLUTE new count (SET operation), not a delta. You MUST first call square_catalog_full to get item IDs, match the user's shorthand names to catalog items, then call this with preview=true to show changes before confirming. Never skip the preview step.",
+    description: "Update inventory counts for items. Accepts an array of {name, catalog_object_id, quantity} pairs. The quantity is the ABSOLUTE new count (SET operation), not a delta. You MUST first call square_catalog_full to get item IDs, match the user's shorthand names to catalog items. When the user submits counts from an interactive form, skip the preview — they already reviewed the numbers. Call with preview=false to push directly. Only use preview=true when the user types counts manually and you want to double-check.",
     input_schema: {
       type: "object",
       properties: {
@@ -659,7 +659,7 @@ const SQUARE_TOOLS = [
           description: "Items to update with catalog IDs and new quantities",
         },
         location_id: { type: "string", description: "Location ID (from square_locations). Uses first location if omitted." },
-        preview: { type: "boolean", description: "ALWAYS set true on first call. Shows impact without committing." },
+        preview: { type: "boolean", description: "Set true to preview changes before committing. Set false to push directly (use when user already reviewed via interactive form)." },
         preview_id: { type: "string", description: "Preview ID from a previous preview — pass to confirm and execute." },
       },
       required: [],
@@ -946,6 +946,36 @@ async function executeSquareTool(toolName, input, userId, userToday) {
           ? item.quantity - currentCounts[item.catalog_object_id]
           : null,
       }));
+
+      // Direct push mode — skip preview when form already reviewed
+      if (input.preview === false) {
+        const changes = previewChanges.map(ch => ({
+          type: "PHYSICAL_COUNT",
+          physical_count: {
+            catalog_object_id: ch.catalog_object_id,
+            location_id: locationId,
+            quantity: String(ch.quantity),
+            state: "IN_STOCK",
+            occurred_at: new Date().toISOString(),
+          },
+        }));
+
+        const idempotencyKey = `fulkit_inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const res = await squareFetch(userId, "/inventory/changes/batch-create", {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: idempotencyKey, changes }),
+        });
+
+        if (res.error) return { error: res.error };
+        const result = await res.json();
+        if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
+
+        return {
+          status: "confirmed",
+          updated: previewChanges.length,
+          items: previewChanges.map(ch => ({ name: ch.name, quantity: ch.quantity, previous: ch.current })),
+        };
+      }
 
       const previewId = sqStorePreview(userId, { changes: previewChanges, location_id: locationId });
 
