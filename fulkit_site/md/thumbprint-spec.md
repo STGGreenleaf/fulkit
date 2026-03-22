@@ -4,6 +4,9 @@
 
 ---
 
+## Scope: Fabric + B-Side Only
+This work lives entirely inside Fabric and B-Side. Nothing else in Fulkit is touched. Fabric is its own island. Thumbprint is Fabric infrastructure.
+
 ## What Thumbprint Is
 
 Thumbprint is a per-song map of how music **feels** over time. Not a recording. Not audio. A mathematical shape — the pulse, the drops, the builds, the energy, the rhythm. Timed to the actual song structure so Signal Terrain can move WITH the music, not randomly.

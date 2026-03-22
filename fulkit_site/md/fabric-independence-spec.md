@@ -3,6 +3,9 @@
 ## Context
 Spotify locked down API access (5 user cap). The Fabric player, B-Side persona, Signal Terrain, crates, and sets are done and locked. NO visual changes. The provider abstraction already exists. We just need to plug in more sources so every user has music regardless of what subscriptions they have.
 
+## Scope: Fabric + B-Side Only
+This work lives entirely inside Fabric and B-Side. Nothing else in Fulkit is touched — no chat changes, no settings changes, no dashboard changes, no actions changes. Fabric is its own island. B-Side is its DJ. Everything here stays on the island.
+
 ## The Rule
 The player does not change. B-Side does not change. The UI does not change. We are adding ingredients to the kitchen, not remodeling it. The existing provider interface (`lib/providers/spotify.js`) is the template. New sources implement the same interface. The PlaybackEngine renders the right engine per track. Everything else is identical.
 
