@@ -200,11 +200,21 @@ export function FabricProvider({ children }) {
     if (!accessToken) return;
     apiFetch("/api/fabric/status").then((data) => {
       if (data) {
-        setConnected(data.connected);
-        if (data.providers) setConnectedProviders(data.providers);
+        // YouTube is always available — no OAuth needed
+        const providers = { youtube: true, ...(data.providers || {}) };
+        setConnected(data.connected || true); // At least YouTube is always connected
+        setConnectedProviders(providers);
+      } else {
+        // Even without API response, YouTube works
+        setConnected(true);
+        setConnectedProviders({ youtube: true });
       }
       setStatusChecked(true);
-    }).catch(() => setStatusChecked(true));
+    }).catch(() => {
+      setConnected(true);
+      setConnectedProviders({ youtube: true });
+      setStatusChecked(true);
+    });
   }, [accessToken, apiFetch]);
 
   // Fetch playlists when connected (only on fabric page)
