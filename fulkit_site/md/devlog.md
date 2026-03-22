@@ -3,6 +3,41 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 22 — 2026-03-21: Spend Moderator + Lean Tool Loading + v3 Cognizant Layer
+
+### What shipped
+- **Spend Moderator v1 → v2** — per-message cost logging (30+ fields), 12 detection rules (expensive_round, tool_waste, cache_miss, slow_response, unused_context, compression_heavy, system_prompt_bloat, opus_on_simple, multi_round_cost, integration_ghost, cache_efficiency_low, context_token_heavy), token breakdown table, cache efficiency gauge, cost attribution tiles, integration usage row, period-over-period comparison with green/red delta arrows
+- **Lean tool loading** — keyword-gated via ECOSYSTEM_KEYWORDS (module scope). Default = zero integration tools. 68 → ~10 tools per message. ~96% schema token reduction. Habit Engine threshold lowered (0.9/freq10 → 0.6/freq3).
+- **Radio improvements** — amber/red two-tier alert dots, clipboard-only export (no download prompt), drawer state persistence in localStorage
+- **KB security fix** — executeKbSearch() now gates owner-context articles by profile.role === "owner"
+- **v3 Library (Phase 1)** — 5 KB shelf articles stocked as owner-context: Architecture Map, Integration Registry, File-to-Problem Map, Spec Index, Recent Changes. Owner coverage hint updated.
+- **Session bridge (Phase 2)** — last-session.md written every checkpoint. CLAUDE.md rule updated. Chat Fulkit reads via github_fetch_files.
+- **Cache optimization (Phase 3)** — system prompt split into static BASE_PROMPT (cached, ephemeral) + dynamic content (uncached). Target 60-70% cache hit rate.
+- **Heartbeat endpoint (Phase 4)** — /api/owner/heartbeat returns composite health pulse: cost trend, error count, cache efficiency, ghost integrations, stale docs, overall status.
+- **Audit Loop (Phase 5)** — doc_stale flags fire when owner-context KB articles are 30+ days old. Surface in Spend Moderator alongside spend_flags.
+- **Doc audit** — signal-radio.md, TODO.md, CLAUDE.md, buildnotes.md all verified and updated against current code.
+- **v3 spec** — md/v3-spec.md: 8 cost laws, librarian principle, 6 pillars, 7 implementation phases, known issues, "does NOT" guardrails.
+
+### Key decisions
+- "Default is zero" — nothing loads unless the message signals it. Applies to tools AND knowledge.
+- "A librarian, not a library" — don't carry every book, know where every book is.
+- Never suggest disconnecting integrations — connect everything, lean loading handles cost.
+- Compress before you ask, convert before you choke — push toward action (tasks, notes, plans), never nag about new threads.
+- Rounds multiply cost, not conversation — make plumbing cheaper, don't reduce back-and-forth.
+
+### Key files modified
+- `app/api/chat/route.js` — spend_log enrichment (30+ fields), 12 detection rules, ECOSYSTEM_KEYWORDS (module scope), keyword-gated tool loading, cache split (static/dynamic), audit loop, KB role gate
+- `app/api/owner/spend/route.js` — aggregation with cache efficiency, cost by model/seat, compression summary, integration usage, period comparison
+- `app/api/owner/heartbeat/route.js` — new composite health endpoint
+- `app/owner/page.js` — SpendModeratorSection (token breakdown, cache gauge, cost attribution, integration usage, deltas), amber dot, drawer persistence, SPEND_RULE_LABELS
+- `scripts/seed-library-kb.mjs` — new, stocks 5 owner-context KB articles
+
+### Open
+- v3 Phase 6 (Meta-Tool for 100+ integrations) — build when keyword collisions become a problem
+- Cache efficiency needs real-world measurement post-deploy
+
+---
+
 ## Session — 2026-03-21: Interactive Forms + Bug Fixes + Continued Polish
 
 ### What shipped

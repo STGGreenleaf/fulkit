@@ -831,7 +831,7 @@ Rules enforced by the system, not by discipline:
 |:---|:---|
 | Web | React (Next.js App Router) |
 | Mobile | PWA first → React Native (Expo) later |
-| AI | Claude API (claude-sonnet-4-6) |
+| AI | Claude API (Opus for BYOK/Owner, Sonnet for Standard/Pro) |
 | Backend/DB | Supabase (Postgres + Auth + Storage) |
 | Vector search (RAG) | pgvector on Supabase |
 | Auth | Supabase Auth |
@@ -1110,7 +1110,7 @@ The founder's personal Obsidian vault (ChappieBrain) is the first import target.
 - Graph view — visual but not magic
 - Publish to web
 - Collaboration
-- BYOK portal — heavy burners connect own API key, Fülkit nudges them when they're burning rubber
+- ~~BYOK portal~~ ✅ Built (Session 4) — Settings > AI tab, key management via /api/byok
 
 ---
 
@@ -1172,10 +1172,10 @@ Fülkit should perpetually want to make itself better. Not just help the user �
 
 ### Managing expectations
 This doesn't all happen day one. The progression:
-1. **Now:** buildnotes/design/TODO .md files in the repo. Claude Code reads them. You drive.
-2. **Soon:** Fülkit ingests its own repo. You can ask it questions about the codebase.
-3. **V1.5:** Fülkit flags issues and suggests priorities. You approve and execute.
-4. **V2:** Agents that execute changes with your approval. Fülkit iterates on itself.
+1. ~~**Now:** buildnotes/design/TODO .md files in the repo. Claude Code reads them. You drive.~~ ✅ Done
+2. ~~**Soon:** Fülkit ingests its own repo. You can ask it questions about the codebase.~~ ✅ Done (Session 22: v3 Library — 5 KB shelf articles, owner can ask about architecture, files, integrations, specs)
+3. ~~**V1.5:** Fülkit flags issues and suggests priorities. You approve and execute.~~ ✅ Done (Session 22: Spend Moderator flags waste patterns, Audit Loop flags stale docs, Heartbeat reports system health)
+4. **V2:** Agents that execute changes with your approval. Fülkit iterates on itself. ← Next frontier
 
 ---
 

@@ -21,20 +21,22 @@ const docs = [
     tag: "architecture",
     content: `FULKIT ARCHITECTURE (owner reference)
 
-Nervous system: app/api/chat/route.js (~4000 lines)
+Nervous system: app/api/chat/route.js (~3500 lines)
   Auth → tier resolution → system prompt assembly → tool registration → streaming loop → post-response signals
 
-System prompt budget: 40,000 tokens. Base ~385 tokens (compressed Session 21). Context reactive: 8K Sonnet, 15K Opus.
+System prompt: 40K token budget. Static BASE_PROMPT (~385 tokens) in cached block. Dynamic content (date, context, memories, hints) in uncached block. Cache target: 60-70% hit rate.
 
 Tier cascade: BYOK/Owner → Opus 128K. Pro → Sonnet 4K. Standard → Sonnet 2K.
 
-Tool loading: keyword-gated via ECOSYSTEM_KEYWORDS. Default = zero integration tools. Core tools (actions, memory, notes, threads, KB) always load.
+Tool loading: keyword-gated via ECOSYSTEM_KEYWORDS (module-scope). Default = zero integration tools. Only ecosystems matching user message keywords load. Core tools (actions, memory, notes, threads, KB) always load. Habit Engine boosts at 0.6 confidence.
 
 Integration pattern: connect → callback → status → disconnect. Tokens in integrations table. Server-side refresh on expiry. safeGet() wraps token fetches.
 
-Post-response: fire-and-forget DB saves, Spend Moderator signals (spend_log + spend_flag), Habit Engine pattern logging, prefetch.
+Post-response (fire-and-forget): DB saves, Spend Moderator (spend_log + 12 spend_flags), Audit Loop (doc_stale flags for owner), Habit Engine pattern logging, ecosystem prefetch.
 
 Key libs: auth.js (AuthProvider, PKCE), vault.js (3 storage modes), use-chat.js (streaming hook), cost-guard.js (pricing, budget, circuit breaker), signal-server.js (fire-and-forget signals), fabric-server.js (Spotify tokens).
+
+Key APIs: /api/owner/spend (cost aggregation + period comparison), /api/owner/heartbeat (composite health pulse), /api/owner/signals (Radio feed).
 
 Known failure modes: follow-up hangs (must fire-and-forget), stream disconnects (try/catch finalMessage), context timeout (10s cap), double-send (use ref not state), tool execution (15s/tool, 50s total).`,
   },
@@ -116,19 +118,17 @@ TODO.md — master action list`,
     subtype: "doc",
     tag: "session",
     content: `LAST SESSION: Session 22 (2026-03-21)
-Scope: Spend Moderator + Lean Tool Loading + v3 Spec
+Scope: Spend Moderator + Lean Tool Loading + v3 Cognizant Layer (Phases 0-5)
 
 Shipped:
-- Spend Moderator v2: 12 detection rules, token breakdown, cache gauge, cost attribution, integration usage, period-over-period comparison with delta arrows
-- Lean tool loading: keyword-gated via ECOSYSTEM_KEYWORDS. Default = zero integration tools. 68 → ~10 tools per message. ~96% schema token reduction.
-- KB security fix: owner-context articles gated by role
-- Amber/red two-tier alert on Radio tab
+- Spend Moderator v2: 12 detection rules, 30+ fields, token breakdown, cache gauge, cost attribution, integration usage, period-over-period deltas
+- Lean tool loading: keyword-gated via ECOSYSTEM_KEYWORDS. 68 → ~10 tools. ~96% schema token reduction.
+- KB security fix + v3 Library (5 KB shelves) + session bridge + cache optimization (static/dynamic split)
+- Heartbeat endpoint + Audit Loop (doc_stale flags)
+- Doc audit: signal-radio.md, TODO.md, CLAUDE.md, buildnotes.md verified against code
 
-Spec'd:
-- v3 "The Cognizant Layer" — Library shelves, Heartbeat, Audit Loop, Bridge, cache optimization. Spec at md/v3-spec.md.
-
-Open issues: Cache efficiency (~10-20% hit rate, needs prompt restructuring in Phase 3)
-Next: Stock Library shelves, write session bridge, cache optimization`,
+Open: v3 Phase 6 (Meta-Tool for 100+ integrations — build when needed)
+Next: Test cache efficiency, growth features, mobile responsive`,
   },
 ];
 
