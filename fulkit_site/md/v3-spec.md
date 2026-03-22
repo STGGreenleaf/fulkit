@@ -108,13 +108,13 @@ This is prompt engineering in the coverage hint, not new code.
 
 **Today**: Chappie (Claude Code) writes devlog.md after each session. Chat Fulkit doesn't read it unless specifically asked.
 
-**v3**: After every Chappie session, a 5-line `last-session.md` gets uploaded to KB. Chat Fulkit searches it naturally when the owner talks about recent work.
+**v3**: After every Chappie session, a 5-line `last-session.md` is written to the repo. Chat Fulkit reads it via `github_fetch_files` when the owner asks about recent work.
 
 **The bridge flow:**
 1. Chappie finishes a session → writes devlog entry (already happens)
 2. Chappie also writes `last-session.md`: date, scope, what shipped, open issues, next up (5 lines)
-3. `last-session.md` gets uploaded to KB as `owner-context` (script or manual)
-4. Next time owner opens chat and says "what did we do yesterday?" → kb_search finds it → accurate answer
+3. No API needed — file lives in the repo, chat reads it on demand
+4. Next time owner opens chat and says "what did we do yesterday?" → fetches file → accurate answer
 
 **Future**: Chappie could also update the file map and architecture map when it modifies key files. This is just adding a checkpoint step to the existing routine.
 
@@ -193,10 +193,10 @@ At 100 integrations, `ECOSYSTEM_KEYWORDS` is ~100 lines (~2K tokens at module sc
 Message 1 sends: system prompt + user message. Cheap.
 Message 10 sends: system prompt + messages 1-9 + user message. Expensive.
 
-**The compression system** already summarizes old messages when token count exceeds `config.compressAt` (set to ~25 messages as "enough to solve a problem"). This is the first defense.
+**The compression system** already summarizes old messages when token count exceeds `config.compressAt` (80K tokens standard / 180K owner). At typical message sizes, conversations can go 200+ messages before compression fires. This is fine.
 
 **v3 flow — compress, then convert, never choke:**
-1. **Auto-compress** kicks in at the threshold. User never notices. Conversation continues.
+1. **Auto-compress** kicks in at the token threshold. User never notices. Conversation continues.
 2. **After compression**, if the topic has shifted, Fulkit should push toward action: "Sounds like we figured out X — want me to save this as a task? Move it to a plan? Drop it in notes?" Each feature feeding the next.
 3. **Never nag about new threads.** Never say "this conversation is getting long." Compress silently, then convert insights to artifacts (tasks, notes, plans). Chat is the thinking space. Actions, Kanban, notes are where work lands.
 4. **Fulkit helps users use its own system.** "Hey, this is getting meaty — want me to create a plan for this?" or "I can break this into tasks in your Actions." The tools already exist. Fulkit just needs to connect the dots.
@@ -227,19 +227,32 @@ Message 10 sends: system prompt + messages 1-9 + user message. Expensive.
 
 ---
 
+## Known Issues (must fix before or during v3)
+
+### KB Security: owner-context leaks to all users
+`executeKbSearch()` in route.js queries both `context` and `owner-context` channels with no role check. Any user's `kb_search` call returns owner-context articles. **Must gate by role before stocking any shelves.** One-line fix: filter channels array based on `profile?.role === "owner"`.
+
+### Cache efficiency: discount we're not getting
+The system prompt is one cache block but ~90% changes between messages (date, context, memories, hints). Cache hit rate is ~10-20%. Not "broken" — just not optimized. Fix: split static BASE_PROMPT into its own cache block, put dynamic content after it. Recovers the 90% discount on the stable portion.
+
+### Compression threshold: token-based, not message-based
+`compressAt` is 80K tokens (standard) / 180K tokens (owner/BYOK). At typical message sizes, conversations can go 200+ messages before compression fires. This is fine — the real issue with long chats (momentum loss, freezing) is conversation quality, not token length. The "compress then convert to action" flow addresses this.
+
+---
+
 ## Implementation Phases
 
-### Phase 0: Doc Audit (do first)
-Read each core doc against current code. Tighten what's drifted. Remove what's shipped. Update what's changed. This is the foundation — if the shelves hold stale content, the librarian gives wrong answers.
+### Phase 0: KB Security Fix + Doc Audit (do first)
+Fix `executeKbSearch()` to filter `owner-context` by role. Then audit each core doc against current code. Tighten what's drifted. This is the foundation — if the shelves leak or hold stale content, nothing works.
 
 ### Phase 1: Stock the Shelves (content, minimal code)
-Upload 5 KB articles to `vault_broadcasts` as `owner-context`. One script to seed them. Add 1-2 lines to the owner coverage hint: "You have architecture reference in KB. Search it for code questions. Save file-to-problem patterns as memories."
+Upload 5 KB articles to `vault_broadcasts` as `owner-context`. One script to seed them. Add owner-only coverage hint: "You have architecture reference in KB. Search it for code questions. Save file-to-problem patterns as memories."
 
-### Phase 2: The Bridge
-Add `last-session.md` to Chappie's checkpoint routine. Upload to KB after each session. Chat Fulkit now knows what happened last.
+### Phase 2: The Bridge (lightweight version)
+Chappie writes `last-session.md` as a markdown file in the repo during checkpoint. No API needed — chat Fulkit reads it via `github_fetch_files` when the owner asks about recent work. Simple, zero infrastructure.
 
-### Phase 3: Round Reduction + Cache Optimization
-Prompt tuning to reduce per-round cost. Compress tool descriptions. Stabilize system prompt ordering for cache hits. This is the biggest cost lever after lean loading.
+### Phase 3: Cache Optimization
+Split system prompt: static BASE_PROMPT in its own cache block, dynamic content (date, context, memories, hints) assembled after. Target: 60-70% cache hit rate. This is the biggest cost lever after lean loading.
 
 ### Phase 4: The Heartbeat
 One new endpoint: `/api/owner/heartbeat`. Composite query across Spend Moderator + Signal Radio + KB freshness. Returns a single health pulse.
@@ -248,7 +261,7 @@ One new endpoint: `/api/owner/heartbeat`. Composite query across Spend Moderator
 Add doc-freshness checks to the existing signal block. Flag stale docs, missing file map entries, spec-code drift. New flag types in existing Spend Moderator UI.
 
 ### Phase 6: The Meta-Tool (100+ integrations)
-`load_integration` tool — Claude requests specific integration tools mid-conversation instead of keyword pre-loading. The ultimate lazy-load.
+`load_integration` tool — Claude requests specific integration tools mid-conversation. The librarian asks "shop orders or restaurant orders?" then loads only what's needed. The ultimate scale play.
 
 ---
 
