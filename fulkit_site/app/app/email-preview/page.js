@@ -250,7 +250,7 @@ export default function EmailPreview() {
 
   return (
     <AuthGuard>
-      <div style={{ padding: "var(--space-6)", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ padding: "var(--space-6)", paddingBottom: "var(--space-16)", maxWidth: 900, margin: "0 auto" }}>
         {/* Controls */}
         <div style={{
           display: "flex",
@@ -351,7 +351,7 @@ export default function EmailPreview() {
           margin: "0 auto",
           border: "1px solid var(--color-border-light)",
           borderRadius: "var(--radius-md)",
-          overflow: "hidden",
+          overflow: "visible",
           transition: "width 300ms ease",
           boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         }}>
