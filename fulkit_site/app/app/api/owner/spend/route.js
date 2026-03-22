@@ -106,8 +106,8 @@ export async function GET(request) {
     const since = new Date(Date.now() - hours * 3600000).toISOString();
     const prevSince = new Date(Date.now() - hours * 2 * 3600000).toISOString();
 
-    // Fetch current + previous period logs, and current flags — all in parallel
-    const [logsRes, prevLogsRes, flagsRes] = await Promise.all([
+    // Fetch current + previous period logs, spend flags, and audit flags — all in parallel
+    const [logsRes, prevLogsRes, flagsRes, auditRes] = await Promise.all([
       admin.from("user_events").select("meta, created_at")
         .eq("event", "signal:spend_log").gte("created_at", since)
         .order("created_at", { ascending: false }).limit(500),
@@ -117,15 +117,19 @@ export async function GET(request) {
       admin.from("user_events").select("meta, created_at")
         .eq("event", "signal:spend_flag").gte("created_at", since)
         .order("created_at", { ascending: false }).limit(500),
+      admin.from("user_events").select("meta, created_at")
+        .eq("event", "signal:audit_flag").gte("created_at", since)
+        .order("created_at", { ascending: false }).limit(100),
     ]);
 
     const summary = aggregateLogs(logsRes.data || []);
     const prevLogs = prevLogsRes.data || [];
     const previous = prevLogs.length > 0 ? aggregateLogs(prevLogs) : null;
 
-    // Aggregate spend_flags by rule
+    // Aggregate spend_flags + audit_flags by rule
     const flagMap = new Map();
-    for (const f of flagsRes.data || []) {
+    const allFlags = [...(flagsRes.data || []), ...(auditRes.data || [])];
+    for (const f of allFlags) {
       const m = f.meta || {};
       const rule = m.rule || "unknown";
       if (!flagMap.has(rule)) {

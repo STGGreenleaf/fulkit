@@ -3303,6 +3303,32 @@ Never skip the preview step. The user must see and approve changes before they g
             }
           } catch {}
 
+          // ─── Audit Loop: doc freshness check (owner only, fire-and-forget) ───
+          if (profile?.role === "owner") {
+            try {
+              const auditAdmin = getSupabaseAdmin();
+              const { data: kbDocs } = await auditAdmin
+                .from("vault_broadcasts")
+                .select("title, updated_at")
+                .eq("channel", "owner-context")
+                .eq("active", true)
+                .abortSignal(AbortSignal.timeout(3000));
+
+              if (kbDocs) {
+                const staleThreshold = Date.now() - 30 * 24 * 3600000;
+                for (const doc of kbDocs) {
+                  if (new Date(doc.updated_at).getTime() < staleThreshold) {
+                    emitServerSignal(userId, "audit_flag", "info", {
+                      rule: "doc_stale",
+                      msg: `KB article "${doc.title}" hasn't been updated in 30+ days`,
+                      fix: "Run doc audit — verify this article still matches the codebase",
+                    });
+                  }
+                }
+              }
+            } catch {}
+          }
+
           // ─── Habit Engine: log patterns (fire-and-forget) ───────
           if (userId && toolsUsed.length > 0) {
             try {

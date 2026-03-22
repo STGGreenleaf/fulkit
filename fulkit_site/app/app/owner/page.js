@@ -684,6 +684,7 @@ const SPEND_RULE_LABELS = {
   integration_ghost: "Ghost Integrations",
   cache_efficiency_low: "Poor Cache Efficiency",
   context_token_heavy: "Context Inflation",
+  doc_stale: "Stale Doc",
 };
 
 function SpendModeratorSection({ period }) {
