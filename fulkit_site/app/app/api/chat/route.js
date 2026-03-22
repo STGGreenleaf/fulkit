@@ -2017,16 +2017,19 @@ const KB_TOOLS = [
   },
 ];
 
-async function executeKbSearch(input, userId) {
+async function executeKbSearch(input, userId, userRole) {
   const admin = getSupabaseAdmin();
   const query = (input.query || "").toLowerCase();
   if (!query) return { results: [] };
+
+  const channels = ["context"];
+  if (userRole === "owner") channels.push("owner-context");
 
   const { data: docs } = await admin
     .from("vault_broadcasts")
     .select("title, content")
     .eq("active", true)
-    .in("channel", ["context", "owner-context"])
+    .in("channel", channels)
     .abortSignal(AbortSignal.timeout(5000));
 
   if (!docs || docs.length === 0) return { results: [], message: "No knowledge base docs found." };
@@ -2980,7 +2983,7 @@ Never skip the preview step. The user must see and approve changes before they g
 
               if (block.name === "kb_search" && userId) {
                 try {
-                  const result = await withTimeout(() => executeKbSearch(block.input || {}, userId));
+                  const result = await withTimeout(() => executeKbSearch(block.input || {}, userId, profile?.role));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
