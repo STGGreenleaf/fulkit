@@ -117,18 +117,25 @@ TODO.md — master action list`,
     channel: "owner-context",
     subtype: "doc",
     tag: "session",
-    content: `LAST SESSION: Session 22 (2026-03-21)
-Scope: Spend Moderator + Lean Tool Loading + v3 Cognizant Layer (Phases 0-5)
+    content: `LAST SESSION: Session 22 (2026-03-21 to 2026-03-22)
+Scope: Spend Moderator + Lean Tool Loading + v3 Cognizant Layer + Features + Perf + Housecleaning
 
 Shipped:
-- Spend Moderator v2: 12 detection rules, 30+ fields, token breakdown, cache gauge, cost attribution, integration usage, period-over-period deltas
-- Lean tool loading: keyword-gated via ECOSYSTEM_KEYWORDS. 68 → ~10 tools. ~96% schema token reduction.
-- KB security fix + v3 Library (5 KB shelves) + session bridge + cache optimization (static/dynamic split)
-- Heartbeat endpoint + Audit Loop (doc_stale flags)
-- Doc audit: signal-radio.md, TODO.md, CLAUDE.md, buildnotes.md verified against code
+- Spend Moderator v2 (12 rules, 30+ fields, period deltas, token breakdown, cache gauge)
+- Lean tool loading (keyword-gated, 68→~10 tools, ~96% reduction) + tool description compression
+- v3 Phases 0-5: KB security, Library shelves, session bridge, cache split, heartbeat, audit loop
+- Shareable conversation links (per-message share + /share/[token] public page)
+- Welcome email (Resend, domain verified, auto-send on signup)
+- Loading skeletons (Dashboard, Actions, Settings)
+- Chat preload during splash (children mount under overlay, fetch during 2800ms wink)
+- Fabric DB migration (multi-provider architecture complete)
+- Convert-to-action prompt tuning (Fulkit offers tasks/notes/plans when conversations get meaty)
+- Full doc audit + housecleaning (all docs verified against code)
+- Chappie 2.0: 123/136 verified. 13 remain (production scenarios).
+- TODO Part 1: 9/10 complete
 
-Open: v3 Phase 6 (Meta-Tool for 100+ integrations — build when needed)
-Next: Test cache efficiency, growth features, mobile responsive`,
+Open: Spotify Extended Quota, Meta App Review, compression quality testing
+Next: Growth features, nav redesign (branch), compression testing`,
   },
 ];
 

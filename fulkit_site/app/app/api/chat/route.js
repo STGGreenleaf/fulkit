@@ -204,7 +204,7 @@ const ECOSYSTEM_KEYWORDS = {
 const NUMBRLY_TOOLS = [
   {
     name: "numbrly_summary",
-    description: "High-level business overview: build count, vendor count, margin stats, top vendors by spend, recent activity, alerts.",
+    description: "Business overview: builds, vendors, margins, top spend, activity, alerts.",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -319,7 +319,7 @@ const TOOL_ACTION_MAP = {
 const TRUEGAUGE_TOOLS = [
   {
     name: "truegauge_context",
-    description: "Full business snapshot: health score, MTD sales, pace, alerts, recent activity, highlights. Call this first for a general 'how am I doing?' question.",
+    description: "Full snapshot: health score, MTD sales, pace, alerts, highlights. Call first for general questions.",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -390,7 +390,7 @@ const TRUEGAUGE_TOOLS = [
   },
   {
     name: "truegauge_simulate_pace",
-    description: "What-if: simulate hitting a different target percentage of the survival goal. Returns projection with remaining amount and daily needed.",
+    description: "What-if: simulate a different survival goal target %. Returns projection.",
     input_schema: {
       type: "object",
       properties: {
@@ -401,7 +401,7 @@ const TRUEGAUGE_TOOLS = [
   },
   {
     name: "truegauge_add_expense",
-    description: "Log a new expense. Uses preview/confirm: first call with preview=true to see impact, then confirm with the preview_id. Always preview first and show the user what will happen before confirming.",
+    description: "Log expense. Preview first (preview=true), then confirm with preview_id.",
     input_schema: {
       type: "object",
       properties: {
@@ -418,7 +418,7 @@ const TRUEGAUGE_TOOLS = [
   },
   {
     name: "truegauge_update_day_entry",
-    description: "Update a day's sales entry. Uses preview/confirm: first call with preview=true, then confirm. Always preview first.",
+    description: "Update daily sales. Preview first (preview=true), then confirm with preview_id.",
     input_schema: {
       type: "object",
       properties: {
@@ -500,7 +500,7 @@ function sqConsumePreview(previewId) {
 const SQUARE_TOOLS = [
   {
     name: "square_daily_summary",
-    description: "Get today's sales summary — total revenue, order count, payment breakdown, top items. Use when asked about today's business, close-out, daily recap, or 'how did we do today?'.",
+    description: "Today's sales: revenue, orders, payment breakdown, top items.",
     input_schema: {
       type: "object",
       properties: {
@@ -638,12 +638,12 @@ const SQUARE_TOOLS = [
   // ── Write tools ──────────────────────────────────────────
   {
     name: "square_catalog_full",
-    description: "Get the FULL catalog with all item names, variation IDs, and current prices. Use this BEFORE square_inventory_update to resolve shorthand names (like 'Acg') to catalog_object_ids. Returns a simplified list.",
+    description: "Full catalog: item names, variation IDs, prices. Call before inventory_update to resolve names to IDs.",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
     name: "square_inventory_update",
-    description: "Update inventory counts for items. Accepts an array of {name, catalog_object_id, quantity} pairs. The quantity is the ABSOLUTE new count (SET operation), not a delta. You MUST first call square_catalog_full to get item IDs, match the user's shorthand names to catalog items. When the user submits counts from an interactive form, skip the preview — they already reviewed the numbers. Call with preview=false to push directly. Only use preview=true when the user types counts manually and you want to double-check.",
+    description: "Set inventory counts. Quantity is absolute (not delta). Call catalog_full first to get IDs. Form submissions: preview=false (already reviewed). Manual input: preview=true.",
     input_schema: {
       type: "object",
       properties: {
@@ -996,7 +996,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
 const SHOPIFY_TOOLS = [
   {
     name: "shopify_daily_summary",
-    description: "Get today's e-commerce sales summary — order count, total revenue, top products sold. Use for daily recap or 'how's the store doing?'.",
+    description: "Today's e-commerce: orders, revenue, top products.",
     input_schema: {
       type: "object",
       properties: {
@@ -1113,7 +1113,7 @@ async function executeShopifyTool(toolName, input, userId, userToday) {
 const STRIPE_TOOLS = [
   {
     name: "stripe_daily_summary",
-    description: "Get today's payment summary — total charges, revenue, refunds, net. Use for daily recap or 'how are payments today?'.",
+    description: "Today's payments: charges, revenue, refunds, net.",
     input_schema: {
       type: "object",
       properties: {
@@ -1264,7 +1264,7 @@ async function executeStripeTool(toolName, input, userId, userToday) {
 const TOAST_TOOLS = [
   {
     name: "toast_daily_summary",
-    description: "Get today's restaurant summary — orders, revenue, checks. Use for daily recap or 'how was service today?'.",
+    description: "Today's restaurant: orders, revenue, checks.",
     input_schema: {
       type: "object",
       properties: {
@@ -1542,7 +1542,7 @@ async function executeTrelloTool(toolName, input, userId) {
 const GITHUB_TOOLS = [
   {
     name: "github_fetch_files",
-    description: "Fetch source code from a connected GitHub repository. Use when the user asks about code, wants to see a file, debug an issue, or discuss implementation details. Scores file paths against the query and returns the most relevant files.",
+    description: "Fetch source files from a GitHub repo. Scores paths against query, returns most relevant.",
     input_schema: {
       type: "object",
       properties: {
@@ -1558,7 +1558,7 @@ const GITHUB_TOOLS = [
 const ACTIONS_TOOLS = [
   {
     name: "actions_create",
-    description: "Create a new action item on the user's action list. Use this when the user agrees to add a task, or when they explicitly ask you to track something. Always confirm before creating.",
+    description: "Create an action item. Confirm with user before creating.",
     input_schema: {
       type: "object",
       properties: {
@@ -1573,7 +1573,7 @@ const ACTIONS_TOOLS = [
   },
   {
     name: "actions_list",
-    description: "List the user's action items. Use this to check what's on their plate, find specific tasks, or report status.",
+    description: "List action items. Check status, find tasks.",
     input_schema: {
       type: "object",
       properties: {
@@ -1654,7 +1654,7 @@ async function executeActionTool(name, input, userId, conversationId) {
 const MEMORY_TOOLS = [
   {
     name: "memory_save",
-    description: "Save a fact or preference you've learned about the user. This persists across conversations. Use for things like: their partner's name, their work schedule, preferences, recurring projects, important dates. Don't save trivial or obvious things.",
+    description: "Save a personal fact or preference. Persists across conversations. Don't save trivial things.",
     input_schema: {
       type: "object",
       properties: {
