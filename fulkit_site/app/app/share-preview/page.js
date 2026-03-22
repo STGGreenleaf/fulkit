@@ -51,7 +51,7 @@ function SharePagePreview() {
       <div style={{
         maxWidth: 680,
         margin: "0 auto",
-        padding: "32px 20px 100px",
+        padding: "32px 20px 160px",
       }}>
         {/* Title */}
         <div style={{
