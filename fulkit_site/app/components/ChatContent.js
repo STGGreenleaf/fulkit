@@ -120,6 +120,7 @@ export default function ChatContent({ isPopout = false }) {
   const [chatDragOver, setChatDragOver] = useState(false);
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
+  const [sharedMsg, setSharedMsg] = useState(null);
   const [showPins, setShowPins] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/pinned");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
@@ -755,6 +756,35 @@ export default function ChatContent({ isPopout = false }) {
                               }}
                             >
                               <Download size={13} strokeWidth={2} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!chat.conversationId || !accessToken) return;
+                                try {
+                                  const res = await fetch("/api/share", {
+                                    method: "POST",
+                                    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                                    body: JSON.stringify({ conversationId: chat.conversationId }),
+                                  });
+                                  if (!res.ok) return;
+                                  const { url } = await res.json();
+                                  const fullUrl = `${window.location.origin}${url}`;
+                                  navigator.clipboard.writeText(fullUrl);
+                                  setSharedMsg(i);
+                                  setTimeout(() => setSharedMsg(null), 2000);
+                                } catch {}
+                              }}
+                              title={sharedMsg === i ? "Link copied!" : "Share conversation"}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 4,
+                                color: sharedMsg === i ? "var(--color-text)" : "var(--color-text-dim)",
+                                display: "flex",
+                              }}
+                            >
+                              {sharedMsg === i ? <Check size={13} strokeWidth={2} /> : <ExternalLink size={13} strokeWidth={2} />}
                             </button>
                           </>
                         )}
