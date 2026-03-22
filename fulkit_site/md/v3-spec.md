@@ -4,11 +4,32 @@
 
 ---
 
+## Constraint: NO VISUAL CHANGES
+
+This spec is an EQ upgrade — organizing the library, not remodeling the building. Zero new pages, zero layout changes, zero UI overhauls. The only visible change: new flag types appearing in the existing Spend Moderator section (same cards, same format, new rule names).
+
+---
+
 ## What v3 Means
 
 Fulkit today is smart but amnesiac. It solves problems well but starts from zero every time. v3 is the version that **knows itself** — its own code, its own health, its own docs, its own history. It recognizes waste, suggests fixes, never regresses, and stays light as a feather doing it.
 
 The principle: **a librarian, not a library.** Don't carry every book. Know where every book is. Ask 2-3 questions. Hand over the one right answer.
+
+---
+
+## Cost Principles (Hard Laws)
+
+These came from Session 22. $4.69 for 6 messages taught us everything.
+
+1. **Default is zero.** Tools, context, knowledge — nothing loads unless the message signals it needs it.
+2. **Load on signal, never on assumption.** Keywords gate tools. Questions gate knowledge. Silence means zero cost.
+3. **Every token must justify its presence.** If it's in the system prompt, it must earn its keep on every message. If it's situational, it lives on a shelf.
+4. **Input tokens are 98.5% of spend.** Output is not the problem. Every optimization targets input.
+5. **Rounds multiply cost, not conversation.** 3.2 avg rounds = 3.2x the system prompt, 3.2x the tool schemas. Follow-up from a bestie is fine — the optimization is making the plumbing cheaper per round, not reducing back-and-forth.
+6. **Cache everything stable.** Cache read is 90% cheaper than normal input. The system prompt uses ephemeral caching. Every time it changes between messages, you pay full price. Keep it stable.
+7. **Compress before you ask, convert before you choke.** Message 1 is cheap. Message 10 re-sends 1-9. Auto-compress first. Keep going. Then push toward action — move things into threads, notes, Kanban, plans. Chat isn't storage. Fulkit pushes users to get shit done using the tools it already has. Each feature feeding the next.
+8. **Never undo progress.** Every optimization compounds. If we cut tool schemas by 96%, that saving applies to every future feature. Protect those gains.
 
 ---
 
@@ -99,6 +120,52 @@ This is prompt engineering in the coverage hint, not new code.
 
 ---
 
+## The Round Problem (Pillar 5: cheaper plumbing per round)
+
+3.2 avg rounds means every token in the request gets sent 3.2 times. With system prompt + tools, that's massive repetition. The fix isn't fewer rounds — follow-up and tool use are part of the bestie experience. The fix is making each round cheaper.
+
+**What we can do:**
+- **Tool schema compression**: Each tool definition is ~100-300 tokens. Compress descriptions, strip unnecessary fields. Every token saved is multiplied by every round.
+- **Tool result caching**: If the same tool was called with the same args recently, return the cached result without an API round trip.
+- **Batch tool calls**: Prompt tuning so Claude calls multiple tools in one round when possible instead of chaining them sequentially.
+- **Lean loading already helps**: With keyword gating, most messages load 10 tools instead of 68. That's ~5K fewer tokens per round.
+
+**The Spend Moderator tracks this**: `multi_round_cost` flag fires when rounds compound cost. The period comparison shows whether the per-round cost is trending down.
+
+---
+
+## Caching Strategy (Pillar 6: pay once, read cheap)
+
+Cache read = 10% of input cost. Cache write = 125% of input cost. The ROI is massive IF the cache hits.
+
+**What breaks the cache:**
+- System prompt changes between messages (dynamic content like "today is..." or conversation summaries)
+- Different tool sets loaded (tools are part of the request hash)
+
+**What we should do:**
+- Keep the static portion of the system prompt identical across messages (BASE_PROMPT + preferences + memories = stable)
+- Put dynamic content (vault context, conversation summary) AFTER the cached block
+- With lean tool loading, tool sets are now smaller and more likely to repeat across messages in the same conversation → better cache hits
+- The Spend Moderator already tracks cache efficiency. Target: >70% hit rate.
+
+---
+
+## Owner-First Is Already in the DNA
+
+This isn't a new concept — Fulkit was always built for Collin first. This spec just makes that explicit so we don't accidentally build owner features on different plumbing than user features.
+
+**Same infrastructure, different shelves:**
+- Owner gets architecture KB articles (owner-context channel). Users get their own KB via notes + integrations.
+- Owner gets Spend Moderator. Users get their billing/usage via settings/billing (groundwork at 65-75% commission structure already exists).
+- Owner gets the session bridge. Users get conversation memory.
+- Lean tool loading, pattern memory, compression — already applies to everyone.
+
+**What stays owner-only:** Code drift detection, session bridge (Chappie), Spend Moderator, Signal Radio.
+
+**The billing angle:** Settings/referrals and settings/billing already have groundwork for the commission structure. Token expenditure tracking (the Spend Moderator) could eventually reverse-engineer into billing — we know exactly what each user costs. That's a future lever, not a v3 deliverable, but the data is being collected now.
+
+---
+
 ## The 100-Integration Future
 
 Current keyword gating scales linearly:
@@ -116,8 +183,25 @@ At 100 integrations, `ECOSYSTEM_KEYWORDS` is ~100 lines (~2K tokens at module sc
 
 **Integration health at scale:**
 - The integration registry KB article lists all 100 with status
-- The heartbeat checks: which integrations have failing OAuth tokens? Which haven't been used in 30 days?
-- Auto-suggest: "You have 12 integrations connected but only use 4 regularly. Consider disconnecting the rest to keep things lean."
+- The heartbeat checks: which integrations have failing OAuth tokens?
+- **Never suggest disconnecting.** The whole point of Fulkit is replacing 20 apps with one. Promote connecting everything. Lean loading already handles the cost — 100 integrations connected, zero tools loaded unless the message needs them. The cost of a connected integration with lean loading is effectively zero.
+
+---
+
+## Conversation Cost Growth
+
+Message 1 sends: system prompt + user message. Cheap.
+Message 10 sends: system prompt + messages 1-9 + user message. Expensive.
+
+**The compression system** already summarizes old messages when token count exceeds `config.compressAt` (set to ~25 messages as "enough to solve a problem"). This is the first defense.
+
+**v3 flow — compress, then convert, never choke:**
+1. **Auto-compress** kicks in at the threshold. User never notices. Conversation continues.
+2. **After compression**, if the topic has shifted, Fulkit should push toward action: "Sounds like we figured out X — want me to save this as a task? Move it to a plan? Drop it in notes?" Each feature feeding the next.
+3. **Never nag about new threads.** Never say "this conversation is getting long." Compress silently, then convert insights to artifacts (tasks, notes, plans). Chat is the thinking space. Actions, Kanban, notes are where work lands.
+4. **Fulkit helps users use its own system.** "Hey, this is getting meaty — want me to create a plan for this?" or "I can break this into tasks in your Actions." The tools already exist. Fulkit just needs to connect the dots.
+
+**What v3 does NOT add:** No forced resets. No thread limits. No "start fresh" nags. Just smart compression and proactive conversion to action.
 
 ---
 
@@ -154,25 +238,31 @@ Upload 5 KB articles to `vault_broadcasts` as `owner-context`. One script to see
 ### Phase 2: The Bridge
 Add `last-session.md` to Chappie's checkpoint routine. Upload to KB after each session. Chat Fulkit now knows what happened last.
 
-### Phase 3: The Heartbeat
-One new endpoint: `/api/owner/heartbeat`. Composite query across Spend Moderator + Signal Radio + KB freshness. Returns a single health pulse. Owner asks "how's Fulkit?" → gets a real answer.
+### Phase 3: Round Reduction + Cache Optimization
+Prompt tuning to reduce per-round cost. Compress tool descriptions. Stabilize system prompt ordering for cache hits. This is the biggest cost lever after lean loading.
 
-### Phase 4: The Audit Loop
-Add doc-freshness checks to the post-response signal block. Flag stale docs, missing file map entries, spec-code drift. The auditor voice expands from spend to architecture.
+### Phase 4: The Heartbeat
+One new endpoint: `/api/owner/heartbeat`. Composite query across Spend Moderator + Signal Radio + KB freshness. Returns a single health pulse.
 
-### Phase 5: The Meta-Tool (100+ integrations)
-`load_integration` tool — Claude requests specific integration tools mid-conversation instead of keyword pre-loading. The ultimate lazy-load: Claude decides what it needs, not the server.
+### Phase 5: The Audit Loop
+Add doc-freshness checks to the existing signal block. Flag stale docs, missing file map entries, spec-code drift. New flag types in existing Spend Moderator UI.
+
+### Phase 6: The Meta-Tool (100+ integrations)
+`load_integration` tool — Claude requests specific integration tools mid-conversation instead of keyword pre-loading. The ultimate lazy-load.
 
 ---
 
 ## What This Does NOT Do
 
+- Does NOT change any UI (no new pages, no layout changes, no visual overhauls)
 - Does NOT inject anything new into every message (library = on-demand search)
 - Does NOT build new embedding tables (existing KB + GitHub tools are sufficient)
 - Does NOT require MCP (existing tool infrastructure handles it)
 - Does NOT create user-facing features (owner/dev only, via owner-context KB channel)
 - Does NOT undo the lean tool loading work (same keyword-gating principle, extended to knowledge)
 - Does NOT increase token spend on non-code conversations (zero-cost default)
+- Does NOT build parallel systems for owner vs user (same infrastructure, different shelves)
+- Does NOT suggest disconnecting integrations (connect everything, lean loading handles cost)
 
 ---
 
