@@ -13,6 +13,7 @@ import OnboardingStatusLine from "../../components/OnboardingStatusLine";
 import { supabase } from "../../lib/supabase";
 import { SEAT_LIMITS, TIERS } from "../../lib/ful-config";
 import { useIsMobile } from "../../lib/use-mobile";
+import { DashboardSkeleton } from "../../components/Skeleton";
 
 
 function getGreeting() {
@@ -139,6 +140,10 @@ export default function Dashboard() {
   const displayActions = actions;
   const displayNotes = notes;
   const displayWhispers = whispers;
+
+  if (!profile) {
+    return <AuthGuard><DashboardSkeleton /></AuthGuard>;
+  }
 
   return (
     <AuthGuard>

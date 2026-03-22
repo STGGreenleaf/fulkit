@@ -28,6 +28,11 @@ a {
   to { transform: rotate(360deg); }
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
 /* Hide Next.js dev overlay — we relocate it via DevInspector */
 nextjs-portal {
   display: none !important;

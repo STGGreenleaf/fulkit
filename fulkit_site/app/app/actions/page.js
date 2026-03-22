@@ -13,6 +13,7 @@ import { useTrack } from "../../lib/track";
 import { useOnboardingTrigger } from "../../lib/onboarding-triggers";
 import { supabase } from "../../lib/supabase";
 import { useIsMobile } from "../../lib/use-mobile";
+import { ActionsSkeleton } from "../../components/Skeleton";
 
 const FILTERS = [
   { key: "active", Icon: Activity },
@@ -101,6 +102,7 @@ export default function Actions() {
   useOnboardingTrigger("actions");
 
   const [actions, setActions] = useState([]);
+  const [actionsLoaded, setActionsLoaded] = useState(false);
   const [filter, setFilter] = useState("active");
   const [lens, setLens] = useState("all");
   const [adding, setAdding] = useState(false);
@@ -126,6 +128,7 @@ export default function Actions() {
     if (error) console.error("[actions] query failed:", error.message);
     if (data) {
       setActions(data);
+      setActionsLoaded(true);
       // Auto-resolve onboarding fallback actions when user has completed the feature
       const onboarding = data.filter((a) => a.source === "onboarding" && a.status === "active");
       if (onboarding.length > 0) autoResolveFallbacks(onboarding);
@@ -261,6 +264,10 @@ export default function Actions() {
       </button>
     );
   }, [compactMode, setToolbar]);
+
+  if (!actionsLoaded) {
+    return <AuthGuard><ActionsSkeleton /></AuthGuard>;
+  }
 
   return (
     <AuthGuard>

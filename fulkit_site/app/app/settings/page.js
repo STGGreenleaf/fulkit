@@ -43,6 +43,7 @@ import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 import { TIERS, SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
 import { useIsMobile } from "../../lib/use-mobile";
+import { SettingsSkeleton } from "../../components/Skeleton";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -265,7 +266,7 @@ const ALL_SOURCES = [
 
 
 export default function Settings({ initialTab = "account", initialOwnerTab }) {
-  const { compactMode, isOwner } = useAuth();
+  const { compactMode, isOwner, profile } = useAuth();
   const isMobile = useIsMobile();
   const { setToolbar } = useToolbar();
   const track = useTrack();
@@ -315,6 +316,10 @@ export default function Settings({ initialTab = "account", initialOwnerTab }) {
       setToolbar(null);
     }
   }, [isMobile, isOwner, tab, ownerMayday, setToolbar]);
+
+  if (!profile) {
+    return <AuthGuard><SettingsSkeleton /></AuthGuard>;
+  }
 
   return (
     <AuthGuard>
