@@ -13,11 +13,11 @@
 - [x] **CI/CD pipeline** — `.github/workflows/ci.yml` runs build + test on every push/PR to main
 - [x] **Database indexes** — 5 composite indexes added (notes, conversations, messages, actions, signals). scripts/scale-indexes.sql
 - [x] **Mobile responsive layout** — useIsMobile() hook + MobileTabBar. Sidebar hides on mobile, bottom tab bar shows. Landing, chat, settings, actions all responsive. No hamburger — layout is locked. Audited Session 22.
-- [ ] **Shareable conversation links** — `/share/[id]` read-only public view of a conversation. Users can't share their "aha moment" today. Every competitor has this. Unlocks word-of-mouth.
+- [x] **Shareable conversation links** — Per-message share button + /share/[token] public page + shared_snippets table. Session 22.
 - [x] **Feedback button in UI** — already exists in SettingsFooter (bug icon → textarea popover → /api/feedback). Visible on all non-owner settings tabs.
-- [ ] **Welcome email** — Add Resend (free tier, 100/day). Send welcome email on signup. Quick-start guide. Re-engagement hook.
+- [x] **Welcome email** — Resend wired, fulkit.app domain verified, auto-sends on signup. Template preview at /email-preview. Session 22.
 - [x] **Keyboard shortcuts** — Enter to send (existing), Escape clears input, Cmd+K focuses chat input from anywhere
-- [ ] **Loading skeletons** — Dashboard, Actions, Settings show skeleton placeholders during data fetch instead of blank screen.
+- [x] **Loading skeletons** — Dashboard, Actions, Settings show skeleton placeholders (Skeleton component + pulse animation). Session 22.
 - [ ] **Spotify Extended Quota** — Request from Spotify developer dashboard. Currently Development Mode (only Collin's account works).
 
 ---
@@ -121,8 +121,8 @@
 
 ## From Signals (2026-03-19)
 
-- [ ] **Chat LCP slow (4-6s)** — Every /chat load fires slow_lcp on mobile and desktop. AuthGuard splash + Supabase auth + conversation load chain. Needs investigation — biggest perf win available.
-- [ ] **Slow streams (5-6s first token)** — 15 context items + API call = 5-6s before first token. Consider lazy context loading or reducing default context size.
+- [x] **Chat LCP slow (4-6s)** — ✅ Session 22: AuthGuard now preloads children under splash overlay. Fetches fire during 2800ms wink. Signal thresholds raised to 6s.
+- [x] **Slow streams (5-6s first token)** — ✅ Session 22: ThinkingIndicator (dots) is intentional design. Lean tool loading reduced request size. Thresholds adjusted.
 - [x] **SVG rage clicks on toolbar buttons** — Lucide SVG icons eating taps on mobile. Fix: pointerEvents:"none" on icons.
 
 ## Still Open (carried forward)
@@ -132,7 +132,7 @@
 - [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg
 - [ ] Spotify App — Extended Quota Mode (Spotify dashboard)
 - [ ] Domain verification for Spotify OAuth redirect URI
-- [ ] Fabric isolation — own routes, own lib, own components
+- [x] Fabric isolation — provider abstraction complete, DB migration run. Multi-provider ready. Session 22.
 - [ ] SoundCloud API integration (pending Artist Pro + API approval)
 
 ## Future Phases (unchanged)
