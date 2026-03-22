@@ -12,7 +12,7 @@
 - [x] **Error monitoring (Signal Radio enhanced)** — React ErrorBoundary (SignalBoundary), fetch interceptor (all 5xx), Core Web Vitals (LCP, CLS), conversation_save_failed, withSignal() API wrapper, Radio health summary strip. No external service — all in Radio.
 - [x] **CI/CD pipeline** — `.github/workflows/ci.yml` runs build + test on every push/PR to main
 - [x] **Database indexes** — 5 composite indexes added (notes, conversations, messages, actions, signals). scripts/scale-indexes.sql
-- [ ] **Mobile responsive layout** — Sidebar → hamburger on mobile. Landing page responsive. Chat input usable on phone. 0 @media queries exist today — 50%+ of traffic will be mobile.
+- [x] **Mobile responsive layout** — useIsMobile() hook + MobileTabBar. Sidebar hides on mobile, bottom tab bar shows. Landing, chat, settings, actions all responsive. No hamburger — layout is locked. Audited Session 22.
 - [ ] **Shareable conversation links** — `/share/[id]` read-only public view of a conversation. Users can't share their "aha moment" today. Every competitor has this. Unlocks word-of-mouth.
 - [x] **Feedback button in UI** — already exists in SettingsFooter (bug icon → textarea popover → /api/feedback). Visible on all non-owner settings tabs.
 - [ ] **Welcome email** — Add Resend (free tier, 100/day). Send welcome email on signup. Quick-start guide. Re-engagement hook.
@@ -34,7 +34,7 @@
 | **Redis rate limit capacity** | Upstash free tier exhausted | Upstash console → Usage. Upgrade to paid ($10/mo) when needed. |
 | **Voyage embedding costs** | 10K+ users × 50 notes each | Voyage dashboard → Usage. ~$0.02/M tokens. |
 | **OAuth token refresh storms** | Many integrations refreshing simultaneously | Radio tab → `token_refresh_failed` signals. `safeGet()` handles gracefully. |
-| **Bundle size** | Slow first load on mobile 3G | DevTools → Lighthouse → Performance. Chat route is 2768 lines, owner page 6166. |
+| **Bundle size** | Slow first load on mobile 3G | DevTools → Lighthouse → Performance. Chat route is ~3500 lines, owner page ~6200. |
 | **Supabase RLS performance** | 1M+ rows, complex policies | Supabase dashboard → Query performance. RLS adds 50-100ms per query at scale. |
 | **pgvector index rebuild** | 100K+ notes, search quality drops | Run `REINDEX INDEX idx_notes_embedding;` quarterly. IVFFlat degrades without it. |
 | **Stripe webhook reliability** | Missed `payment_failed` event | Stripe dashboard → Webhooks → Failed deliveries. No retry monitoring built yet. |
@@ -79,7 +79,7 @@
 
 ---
 
-## Chappie 2.0 — Verification Queue (115/136 done, 21 remain)
+## Chappie 2.0 — Verification Queue (117/136 done, 19 remain)
 
 > All code shipped. These are production verification tasks. Run in order.
 > Pattern: do the thing → check debug output → confirm it works.
@@ -151,7 +151,7 @@
 - [x] Heartbeat endpoint (/api/owner/heartbeat)
 - [x] Audit loop (doc_stale flags in Spend Moderator)
 - [ ] v3 Phase 6: Meta-Tool (`load_integration` for 100+ integrations) — build when needed
-- [ ] Doc audit: verify CLAUDE.md, buildnotes against current code (ongoing)
+- [x] Doc audit: signal-radio.md, TODO.md, CLAUDE.md, buildnotes.md verified + updated (Session 22)
 - Spec: `md/v3-spec.md`
 
 ### Phase 7: Fulkit Builds Fulkit
