@@ -2649,6 +2649,11 @@ Never skip the preview step. The user must see and approve changes before they g
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
 
+    // Owner: architecture reference available via KB
+    if (profile?.role === "owner") {
+      system += `\nYou have architecture docs in KB (Architecture Map, File Map, Integration Registry, Spec Index, Recent Changes). Search KB for code questions. When you discover which file solves a problem, save it as a memory.`;
+    }
+
     // Increment message count (Fül cap) — atomic, skip for BYOK users (they pay their own tokens)
     if (userId && !config.isByok) {
       getSupabaseAdmin()
