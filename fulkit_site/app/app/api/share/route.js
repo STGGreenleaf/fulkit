@@ -1,7 +1,8 @@
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import crypto from "crypto";
 
-// POST /api/share — generate or return share link for a conversation
+// POST /api/share — share a message pair (user question + assistant response)
+// Stores the content in shared_snippets table with a unique token
 export async function POST(request) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -12,33 +13,23 @@ export async function POST(request) {
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
     if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { conversationId } = await request.json();
-    if (!conversationId) return Response.json({ error: "conversationId required" }, { status: 400 });
+    const { userMessage, assistantMessage, conversationTitle } = await request.json();
+    if (!assistantMessage) return Response.json({ error: "assistantMessage required" }, { status: 400 });
 
-    // Verify user owns this conversation
-    const { data: conv } = await admin
-      .from("conversations")
-      .select("id, share_token, user_id")
-      .eq("id", conversationId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!conv) return Response.json({ error: "Conversation not found" }, { status: 404 });
-
-    // If already shared, return existing token
-    if (conv.share_token) {
-      return Response.json({ shareToken: conv.share_token, url: `/share/${conv.share_token}` });
-    }
-
-    // Generate new share token
+    // Generate share token
     const shareToken = crypto.randomBytes(16).toString("hex");
-    const { error: updateError } = await admin
-      .from("conversations")
-      .update({ share_token: shareToken, shared_at: new Date().toISOString() })
-      .eq("id", conversationId)
-      .eq("user_id", user.id);
 
-    if (updateError) return Response.json({ error: updateError.message }, { status: 500 });
+    const { error: insertError } = await admin
+      .from("shared_snippets")
+      .insert({
+        token: shareToken,
+        user_id: user.id,
+        user_message: userMessage || null,
+        assistant_message: assistantMessage,
+        conversation_title: conversationTitle || null,
+      });
+
+    if (insertError) return Response.json({ error: insertError.message }, { status: 500 });
 
     return Response.json({ shareToken, url: `/share/${shareToken}` });
   } catch (err) {
@@ -46,7 +37,7 @@ export async function POST(request) {
   }
 }
 
-// DELETE /api/share — revoke share link
+// DELETE /api/share — revoke a shared snippet
 export async function DELETE(request) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -57,16 +48,16 @@ export async function DELETE(request) {
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
     if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { conversationId } = await request.json();
-    if (!conversationId) return Response.json({ error: "conversationId required" }, { status: 400 });
+    const { shareToken } = await request.json();
+    if (!shareToken) return Response.json({ error: "shareToken required" }, { status: 400 });
 
-    const { error: updateError } = await admin
-      .from("conversations")
-      .update({ share_token: null, shared_at: null })
-      .eq("id", conversationId)
+    const { error: deleteError } = await admin
+      .from("shared_snippets")
+      .delete()
+      .eq("token", shareToken)
       .eq("user_id", user.id);
 
-    if (updateError) return Response.json({ error: updateError.message }, { status: 500 });
+    if (deleteError) return Response.json({ error: deleteError.message }, { status: 500 });
 
     return Response.json({ ok: true });
   } catch (err) {

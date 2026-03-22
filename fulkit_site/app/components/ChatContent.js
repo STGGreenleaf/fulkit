@@ -759,12 +759,19 @@ export default function ChatContent({ isPopout = false }) {
                             </button>
                             <button
                               onClick={async () => {
-                                if (!chat.conversationId || !accessToken) return;
+                                if (!accessToken) return;
                                 try {
+                                  // Find the preceding user message to share as a pair
+                                  const prevUserMsg = chat.messages.slice(0, i).reverse().find(m => m.role === "user");
+                                  const convTitle = chat.conversations.find(c => c.id === chat.conversationId)?.title || null;
                                   const res = await fetch("/api/share", {
                                     method: "POST",
                                     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-                                    body: JSON.stringify({ conversationId: chat.conversationId }),
+                                    body: JSON.stringify({
+                                      userMessage: typeof prevUserMsg?.content === "string" ? prevUserMsg.content : null,
+                                      assistantMessage: msg.content,
+                                      conversationTitle: convTitle,
+                                    }),
                                   });
                                   if (!res.ok) return;
                                   const { url } = await res.json();
@@ -774,7 +781,7 @@ export default function ChatContent({ isPopout = false }) {
                                   setTimeout(() => setSharedMsg(null), 2000);
                                 } catch {}
                               }}
-                              title={sharedMsg === i ? "Link copied!" : "Share conversation"}
+                              title={sharedMsg === i ? "Link copied!" : "Share this message"}
                               style={{
                                 background: "none",
                                 border: "none",

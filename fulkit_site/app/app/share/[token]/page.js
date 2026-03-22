@@ -1,36 +1,36 @@
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
 import Link from "next/link";
 
-// Public shared conversation page — no auth required
+// Public shared message page — no auth required
 // Server component for SEO + fast load
 
 export async function generateMetadata({ params }) {
   const { token } = await params;
   const admin = getSupabaseAdmin();
-  const { data: conv } = await admin
-    .from("conversations")
-    .select("title")
-    .eq("share_token", token)
+  const { data: snippet } = await admin
+    .from("shared_snippets")
+    .select("assistant_message, conversation_title")
+    .eq("token", token)
     .single();
 
+  const preview = snippet?.assistant_message?.slice(0, 120) || "";
   return {
-    title: conv?.title ? `${conv.title} — Fülkit` : "Shared Conversation — Fülkit",
-    description: "A conversation shared from Fülkit — your second brain that talks back.",
+    title: snippet?.conversation_title ? `${snippet.conversation_title} — Fülkit` : "Shared from Fülkit",
+    description: preview || "A moment shared from Fülkit — your second brain that talks back.",
   };
 }
 
-export default async function SharedConversation({ params }) {
+export default async function SharedMessage({ params }) {
   const { token } = await params;
   const admin = getSupabaseAdmin();
 
-  // Fetch conversation by share token
-  const { data: conv } = await admin
-    .from("conversations")
-    .select("id, title, created_at, share_token")
-    .eq("share_token", token)
+  const { data: snippet } = await admin
+    .from("shared_snippets")
+    .select("user_message, assistant_message, conversation_title, created_at")
+    .eq("token", token)
     .single();
 
-  if (!conv) {
+  if (!snippet) {
     return (
       <div style={{
         minHeight: "100vh",
@@ -43,7 +43,7 @@ export default async function SharedConversation({ params }) {
         <div style={{ textAlign: "center", maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16, color: "#9B9590" }}>?</div>
           <div style={{ fontSize: 18, fontWeight: 600, color: "#2A2826", marginBottom: 8 }}>
-            Conversation not found
+            Not found
           </div>
           <div style={{ fontSize: 14, color: "#6B6560", marginBottom: 24 }}>
             This link may have been revoked or doesn&apos;t exist.
@@ -68,16 +68,7 @@ export default async function SharedConversation({ params }) {
     );
   }
 
-  // Fetch messages
-  const { data: messages } = await admin
-    .from("messages")
-    .select("role, content, created_at")
-    .eq("conversation_id", conv.id)
-    .order("created_at", { ascending: true })
-    .limit(200);
-
-  const msgs = messages || [];
-  const date = new Date(conv.created_at).toLocaleDateString("en-US", {
+  const date = new Date(snippet.created_at).toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
   });
 
@@ -112,46 +103,44 @@ export default async function SharedConversation({ params }) {
           Fülkit
         </Link>
         <div style={{ fontSize: 12, color: "#9B9590", fontFamily: "monospace" }}>
-          Shared conversation
+          Shared moment
         </div>
       </div>
 
-      {/* Conversation */}
+      {/* Message pair */}
       <div style={{
         maxWidth: 680,
         margin: "0 auto",
         padding: "32px 20px 160px",
       }}>
-        {/* Title */}
-        {conv.title && (
+        {/* Title + date */}
+        {snippet.conversation_title && (
           <div style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: "#2A2826",
+            fontSize: 13,
+            color: "#9B9590",
             marginBottom: 4,
-            lineHeight: 1.3,
+            fontFamily: "monospace",
           }}>
-            {conv.title}
+            {snippet.conversation_title}
           </div>
         )}
         <div style={{
-          fontSize: 13,
-          color: "#9B9590",
+          fontSize: 12,
+          color: "#B8B3AE",
           marginBottom: 32,
           fontFamily: "monospace",
         }}>
           {date}
         </div>
 
-        {/* Messages */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {msgs.map((msg, i) => (
-            <div key={i} style={{
+          {/* User message (if present) */}
+          {snippet.user_message && (
+            <div style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+              alignItems: "flex-end",
             }}>
-              {/* Role label */}
               <div style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -160,25 +149,55 @@ export default async function SharedConversation({ params }) {
                 color: "#9B9590",
                 marginBottom: 4,
               }}>
-                {msg.role === "user" ? "You" : "Fülkit"}
+                You
               </div>
-              {/* Bubble */}
               <div style={{
                 maxWidth: "85%",
                 padding: "12px 16px",
-                borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                backgroundColor: msg.role === "user" ? "#2A2826" : "#FAF9F6",
-                color: msg.role === "user" ? "#EFEDE8" : "#2A2826",
+                borderRadius: "16px 16px 4px 16px",
+                backgroundColor: "#2A2826",
+                color: "#EFEDE8",
                 fontSize: 15,
                 lineHeight: 1.6,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                border: msg.role === "user" ? "none" : "1px solid #E0DDD8",
               }}>
-                {msg.content}
+                {snippet.user_message}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Assistant message */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              color: "#9B9590",
+              marginBottom: 4,
+            }}>
+              Fülkit
+            </div>
+            <div style={{
+              maxWidth: "85%",
+              padding: "12px 16px",
+              borderRadius: "16px 16px 16px 4px",
+              backgroundColor: "#FAF9F6",
+              color: "#2A2826",
+              fontSize: 15,
+              lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              border: "1px solid #E0DDD8",
+            }}>
+              {snippet.assistant_message}
+            </div>
+          </div>
         </div>
       </div>
 
