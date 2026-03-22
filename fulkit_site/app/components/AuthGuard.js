@@ -31,52 +31,42 @@ export default function AuthGuard({ children }) {
     }
   }, [user, loading, splashDone, router]);
 
-  // Cold start — show full splash animation
-  if (loading && !warm) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <LoadingMark size={50} />
-      </div>
-    );
-  }
+  const ready = splashDone && !loading && user;
 
-  // Waiting for splash to finish (cold start, auth resolved but animation still playing)
-  if (!splashDone) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <LoadingMark size={50} />
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  // Page content — fade in
   return (
-    <div
-      style={{
-        flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
-        animation: "authFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
-      }}
-    >
-      <style>{`@keyframes authFadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
-      {children}
-    </div>
+    <>
+      {/* Splash overlay — plays on cold start while children preload underneath */}
+      {!ready && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--color-bg, #EFEDE8)",
+          }}
+        >
+          <LoadingMark size={50} />
+        </div>
+      )}
+
+      {/* Children always mount — start fetching during splash.
+          Hidden until splash completes, then fade in. */}
+      {user && (
+        <div
+          style={{
+            flex: 1, display: "flex", flexDirection: "column", minHeight: 0,
+            opacity: ready ? 1 : 0,
+            animation: ready ? "authFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) both" : "none",
+            pointerEvents: ready ? "auto" : "none",
+          }}
+        >
+          <style>{`@keyframes authFadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
+          {children}
+        </div>
+      )}
+    </>
   );
 }

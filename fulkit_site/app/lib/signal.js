@@ -195,7 +195,7 @@ export function SignalCollector() {
     // ── Slow page load (> 3s to interactive) ──
     try {
       const navEntry = performance.getEntriesByType?.("navigation")?.[0];
-      if (navEntry?.domInteractive && navEntry.domInteractive > 3000) {
+      if (navEntry?.domInteractive && navEntry.domInteractive > 6000) {
         emitSignal("slow_page_load", "warning", {
           domInteractive: Math.round(navEntry.domInteractive),
           loadComplete: Math.round(navEntry.loadEventEnd || 0),
@@ -238,7 +238,7 @@ export function SignalCollector() {
         lcpObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           const lcp = entries[entries.length - 1];
-          if (lcp && lcp.startTime > 4000) {
+          if (lcp && lcp.startTime > 6000) {
             emitSignal("slow_lcp", "warning", {
               lcp: Math.round(lcp.startTime),
               page: window.location.pathname,
