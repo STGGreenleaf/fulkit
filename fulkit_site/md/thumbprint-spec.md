@@ -158,6 +158,7 @@ This is:
 - Does NOT change Signal Terrain's visual design
 - Does NOT require any music service's permission (we're analyzing what the user is already playing in their browser)
 - Does NOT depend on any single music API
+- Does NOT show ads. Ever. Fabric is a music space, not an ad platform. This is non-negotiable. If a source injects ads (YouTube free tier), we must address it — either use ad-free tiers only, or find sources that don't pollute the experience. The moment an ad plays during a visualization, the magic is dead.
 
 ---
 

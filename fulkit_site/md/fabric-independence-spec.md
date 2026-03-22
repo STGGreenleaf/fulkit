@@ -90,6 +90,7 @@ PlaybackEngine switches engine per track. Seamless. User sees one player.
 - Does NOT change MiniPlayer
 - Does NOT require any visual changes whatsoever
 - Does NOT remove Spotify — it stays as a premium source
+- Does NOT show ads. Fabric is a music space, not an ad platform. Non-negotiable. If a source injects ads, we address it or don't use that source. Zero ads in the experience.
 
 ## Build Order
 1. **YouTube provider** — the free fallback, ensures no blank screen for anyone
