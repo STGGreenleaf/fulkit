@@ -60,12 +60,13 @@ fulkit/                        # Monorepo root (git root)
 ## Architecture
 
 ### Chat Route (`app/api/chat/route.js` — the nervous system)
-This is the most complex file (~2000 lines). The flow:
+This is the most complex file (~3500 lines). The flow:
 1. **Auth + tier resolution**: `getUser()` → role/seatType → `getModelConfig()` picks model + limits
 2. **System prompt assembly**: BASE_PROMPT + user prefs + memories + vault context + conversation history + GitHub enrichment + integration tools
-3. **Tool registration**: `allTools` array built dynamically from connected integration tokens (Numbrly, TrueGauge, Square, Shopify, Stripe, Toast, GitHub, Spotify)
+3. **Tool registration**: keyword-gated via `ECOSYSTEM_KEYWORDS`. Default = zero integration tools. Only ecosystems matching user message keywords get loaded. Core tools (actions, memory, notes, threads, KB) always load.
 4. **Streaming loop**: Claude API streaming → tool calls → tool execution → continue (max 5 rounds, 15s/tool, 50s total)
-5. **Post-response**: fire-and-forget DB saves (conversation, message count), keep-alive pings during tool execution
+5. **Post-response**: fire-and-forget DB saves (conversation, message count), Spend Moderator signals (spend_log + spend_flag), Habit Engine patterns, keep-alive pings during tool execution
+6. **System prompt caching**: Static BASE_PROMPT in its own ephemeral cache block; dynamic content (date, context, memories, hints) in a separate uncached block. Maximizes cache hit rate.
 
 **Tier cascade (BYOK + role → model):**
 - BYOK+Owner or BYOK → Opus 128K
@@ -117,6 +118,8 @@ This is the most complex file (~2000 lines). The flow:
 | `api/stripe/*` | Stripe OAuth + proxy |
 | `api/toast/*` | Toast POS integration |
 | `api/fabric/*` | Spotify OAuth for Signal Terrain |
+| `api/owner/spend` | Spend Moderator aggregation (summary + flags + period comparison) |
+| `api/owner/heartbeat` | System health pulse (cost, errors, cache, integrations, doc freshness) |
 | `api/rsg` | Random string generator |
 
 ### Integration Pattern
@@ -173,7 +176,9 @@ These have caused production bugs. Always follow these patterns:
 | `md/Audio_Crate/crate-spec.md` | Crate & Mix system (DJ metaphor, drag-to-crate, sets) |
 | `md/Audio_Crate/audio-todo.md` | Audio system roadmap |
 | `TODO.md` | Master action list with checkboxes |
-| `md/signal-radio.md` | Signal Radio spec — signal inventory, knobs, tuning guide, architecture |
+| `md/signal-radio.md` | Signal Radio spec — signal inventory, knobs, Spend Moderator, heartbeat, audit loop |
+| `md/v3-spec.md` | v3 Cognizant Layer — Library, Heartbeat, Audit Loop, Bridge, cost laws, 100-integration scaling |
+| `last-session.md` | Session bridge — 5-line TL;DR for chat Fulkit (updated every checkpoint) |
 
 ## Sensitive
 - Never log API keys, secrets, or credentials in any file

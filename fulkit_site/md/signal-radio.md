@@ -111,8 +111,8 @@ All three emitters check for `?auth` query param. If present (dev mode), signals
 - **Grouping**: Signals with same event name collapse into one card. Count badge (×N), time range, unique user count. Expandable sub-cards.
 - **Single copy**: Copy icon per card — copies full forensic text (event, time, user, page, all meta keys).
 - **Group copy**: On grouped cards, copies all instances with numbered headers.
-- **Batch export**: Download button exports filtered signals as JSON file + copies to clipboard. Paste into any chat for batch analysis.
-- **MAYDAY badge**: Red dot on Radio tab when unseen error signals exist. Checks every 60s. Clears on visit. Uses `localStorage:fulkit-radio-last-seen`.
+- **Batch export**: Export button copies filtered signals as JSON to clipboard (no download prompt). Paste into any chat for batch analysis.
+- **Two-tier alert**: Red dot (unseen errors/mayday), amber dot (unseen warnings/spend flags). Red takes priority. Both check every 60s. Both clear on visit. Uses `localStorage:fulkit-radio-last-seen`.
 - **Auto-refresh**: Signal feed refreshes every 30s. MAYDAY check every 60s.
 - **Cursor pagination**: "Load more" button for large signal sets.
 
@@ -159,8 +159,11 @@ When real traffic stabilizes and you know what's noise vs. signal:
 |------|------|
 | `lib/signal.js` | Client emission: `useSignal()`, `emitSignal()`, `SignalCollector`, `getClientContext()` |
 | `lib/signal-server.js` | Server emission: `emitServerSignal()` |
+| `lib/cost-guard.js` | Token pricing, budget checks, circuit breaker |
 | `app/api/owner/signals/route.js` | Owner-only API: severity filtering, cursor pagination, user label enrichment |
-| `app/owner/page.js` | RadioTab UI: KPI tiles, grouping, copy, export, MAYDAY badge |
+| `app/api/owner/spend/route.js` | Spend Moderator aggregation: summary, previous period, flags |
+| `app/api/owner/heartbeat/route.js` | Composite health pulse: cost, errors, cache, integrations, docs |
+| `app/owner/page.js` | RadioTab + SpendModeratorSection UI |
 | `app/layout.js` | Mounts `<SignalCollector />` inside providers |
 
 ---
@@ -177,9 +180,71 @@ For batch analysis: click Export, paste the JSON, ask "what patterns do you see?
 
 ---
 
+## Spend Moderator — cost auditor inside Radio
+
+> Added Session 22. Lives inside RadioTab as a collapsible section. Tracks every message's token cost and detects waste patterns.
+
+### Spend signals — `app/api/chat/route.js` (post-response, fire-and-forget)
+
+| Signal | Severity | Purpose | Meta |
+|--------|----------|---------|------|
+| `spend_log` | info | Per-message cost journal | 30+ fields: tokens, cost, tools, rounds, elapsed, model, seat, role, isByok, systemTokens, contextItems, memoriesCount, prefsCount, integrations, compressionStats, toolSchemaTokens, etc. |
+| `spend_flag` | warning | Waste pattern detected | rule, msg, fix, impact |
+| `audit_flag` | info | Doc freshness / code drift | rule, msg, fix |
+
+### Detection rules (12 spend + 1 audit)
+
+| Rule | Trigger | Fix suggestion |
+|------|---------|----------------|
+| `expensive_round` | Cost > $0.10 (Sonnet) or $0.50 (Opus) | Review tool calls |
+| `tool_waste` | Tools loaded > 3x tools used | Habit Engine needs data |
+| `cache_miss` | Cache write but no read on 2nd+ message | System prompt changed |
+| `slow_response` | >20s elapsed | Check tool count |
+| `unused_context` | Context loaded, short response, no tools | Context may be irrelevant |
+| `compression_heavy` | >20 messages compressed | Consider new thread |
+| `system_prompt_bloat` | System tokens > 85% of 40K budget | Review memories/prefs/KB |
+| `opus_on_simple` | Opus + <200 output tokens + no tools | Sonnet costs 5x less |
+| `multi_round_cost` | >2 rounds + cost above half threshold | Rounds compound cost |
+| `integration_ghost` | 3+ integrations connected, 0 tools used | Unused integrations load schemas |
+| `cache_efficiency_low` | Cache read/(read+write) < 30% | Dynamic content invalidating cache |
+| `context_token_heavy` | Context doubled system prompt size | Trim large vault notes |
+| `doc_stale` (audit) | KB article not updated in 30+ days | Run doc audit |
+
+### Spend Moderator UI
+
+- Collapsible panel at top of RadioTab
+- Header always shows: cost / messages + export button + delta arrow vs previous period
+- Expanded: KPI tiles (total cost, avg/msg, max single, avg latency) with green/red period deltas
+- Token breakdown table: system prompt, conversation, tool schemas, output — avg/msg + % share
+- Cache efficiency gauge (green/amber/red bar)
+- Compression stats (conditional)
+- Cost attribution tiles (Opus vs Sonnet, Fulkit-paid vs BYOK)
+- Integration usage (loaded vs used per integration, 0% in warning color)
+- Stats row: avg rounds, avg system tokens, avg schema tokens, tools/msg — all with deltas
+- Flags grouped by rule with count, latest message, suggested fix, impact badge
+
+### Aggregation API
+
+- `/api/owner/spend` — returns `{ summary, previous, flags }` for the selected period + previous period
+- `/api/owner/heartbeat` — composite health pulse: cost trend, error count, cache efficiency, ghost integrations, stale docs, overall status
+
+### Alert system
+
+- **Red dot**: unseen error signals (mayday)
+- **Amber dot**: unseen warning signals (spend flags, etc.)
+- Red takes priority. Both clear on Radio tab visit.
+
+### Drawer persistence
+
+- Spend Moderator open/closed: `localStorage:fulkit-spend-moderator-open`
+- Signal group expanded states: `localStorage:fulkit-radio-expanded-groups`
+
+---
+
 ## Status
 
 - **Phase 1** (complete): 17 signal types, Radio UI, single copy, auto-refresh
 - **Phase 2** (complete): Forensic enrichment (browser fingerprint, conversation context, stack traces, silent failure signals)
 - **Phase 3** (complete): Batch export, signal grouping, MAYDAY badge, beta knobs (rage click expansion, long tasks, tab bounce, slow page load)
+- **Phase 4** (complete): Spend Moderator v2 — 12 detection rules, token breakdown, cache gauge, cost attribution, integration usage, period-over-period deltas, amber warning dot, audit loop
 - **Current mode**: Beta — all knobs turned up. Dial down after real traffic patterns emerge.

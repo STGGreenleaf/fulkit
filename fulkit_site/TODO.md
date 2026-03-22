@@ -30,7 +30,7 @@
 |------|---------|---------------|
 | **Supabase connection limits** | 100+ concurrent users | Supabase dashboard → Database → Connections |
 | **Vercel function timeout** | Chat route with tool calls > 10s | Vercel dashboard → Functions → Duration. May need Pro ($20/mo) for 60s. |
-| **Anthropic API costs** | Non-BYOK users cost ~$0.015/msg | Owner dashboard → MRR vs API spend. Cost ceiling exists but watch actuals. |
+| **Anthropic API costs** | Non-BYOK users cost ~$0.015/msg | Spend Moderator in Radio + `/api/owner/heartbeat` + Owner dashboard. Lean tool loading (Session 22) cut schema tokens ~96%. |
 | **Redis rate limit capacity** | Upstash free tier exhausted | Upstash console → Usage. Upgrade to paid ($10/mo) when needed. |
 | **Voyage embedding costs** | 10K+ users × 50 notes each | Voyage dashboard → Usage. ~$0.02/M tokens. |
 | **OAuth token refresh storms** | Many integrations refreshing simultaneously | Radio tab → `token_refresh_failed` signals. `safeGet()` handles gracefully. |
@@ -86,8 +86,8 @@
 
 ### Quick wins (minutes each)
 - [ ] **0.6** Circuit breaker — set threshold low in cost-guard, send a message, confirm it blocks with clear error
-- [ ] **0.17** Send a non-business message ("what's the weather like"), confirm zero integration tools fire in `[chat:debug]`
-- [ ] **0.18** Same test — verify `[chat:debug]` shows no integration tokens loaded
+- [x] **0.17** Send a non-business message ("what's the weather like"), confirm zero integration tools fire in `[chat:debug]` — ✅ Session 22: lean tool loading ships zero integration tools by default
+- [x] **0.18** Same test — verify `[chat:debug]` shows no integration tokens loaded — ✅ Keyword-gated, default is zero
 - [ ] **5.5** Ask "what's Fülkit pricing" — confirm Claude calls `kb_search` tool and gives a complete answer
 - [ ] **5.6** Confirm `systemPromptEstTokens` ≤ 12K in `[chat:debug]` (already seen: 9,167)
 
@@ -141,10 +141,23 @@
 - [ ] Git, Spotify, Google Calendar, Gmail, Obsidian, Stripe, Vercel
 - [ ] Custom MCP server scaffold
 
+### Phase 6.5: v3 — The Cognizant Layer (Phases 0-5 complete, Session 22)
+- [x] Spend Moderator v2 (12 detection rules, 30+ fields, token breakdown, cache gauge, period deltas)
+- [x] Lean tool loading (keyword-gated, 68 → ~10 tools, ~96% token reduction)
+- [x] KB security fix (owner-context gated by role)
+- [x] Library shelves (5 owner-context KB articles)
+- [x] Session bridge (last-session.md + CLAUDE.md checkpoint)
+- [x] Cache optimization (static/dynamic system prompt split)
+- [x] Heartbeat endpoint (/api/owner/heartbeat)
+- [x] Audit loop (doc_stale flags in Spend Moderator)
+- [ ] v3 Phase 6: Meta-Tool (`load_integration` for 100+ integrations) — build when needed
+- [ ] Doc audit: verify CLAUDE.md, buildnotes against current code (ongoing)
+- Spec: `md/v3-spec.md`
+
 ### Phase 7: Fulkit Builds Fulkit
 - [ ] Claude reads/writes project files, runs commands, creates PRs
 - [ ] Full dev loop inside Fulkit — one surface for everything
 
 ---
 
-**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core~~ → ~~Onboarding~~ → ~~Actions~~ → ~~Dogfood~~ → ~~Context~~ → ~~Pricing~~ → ~~Security~~ → ~~Polish~~ → **Launch Hardening** → Growth → MCP → Self-building
+**Critical path:** ~~Deploy~~ → ~~Auth~~ → ~~Core~~ → ~~Onboarding~~ → ~~Actions~~ → ~~Dogfood~~ → ~~Context~~ → ~~Pricing~~ → ~~Security~~ → ~~Polish~~ → **Launch Hardening** → ~~v3 Cognizant~~ → Growth → MCP → Self-building
