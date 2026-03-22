@@ -2368,10 +2368,11 @@ export async function POST(request) {
       }
     }
 
-    // Build system prompt
-    let system = helperName
+    // Build system prompt — split static (cacheable) from dynamic
+    const systemStatic = helperName
       ? BASE_PROMPT.replace("You are Fülkit", `You are ${helperName}`)
       : BASE_PROMPT;
+    let system = systemStatic;
     system += `\n\nToday is ${userToday}. The user's timezone is ${timezone || "UTC"}.`;
 
     // Low fuel notice removed — billing state machine handles this client-side now (0 tokens saved)
@@ -2783,10 +2784,17 @@ Never skip the preview step. The user must see and approve changes before they g
       conversationId: conversationId || null,
     };
 
+    // Split system prompt: static block (cached) + dynamic block (changes per message)
+    const systemDynamic = system.slice(systemStatic.length);
+    const systemBlocks = [
+      { type: "text", text: systemStatic, cache_control: { type: "ephemeral" } },
+      ...(systemDynamic ? [{ type: "text", text: systemDynamic }] : []),
+    ];
+
     const baseOpts = {
       model: config.model,
       max_tokens: config.maxTokens,
-      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      system: systemBlocks,
       ...(allTools.length > 0 ? { tools: allTools } : {}),
     };
 
@@ -3163,7 +3171,7 @@ Never skip the preview step. The user must see and approve changes before they g
               const finalStream = anthropic.messages.stream({
                 model: config.model,
                 max_tokens: config.maxTokens,
-                system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+                system: systemBlocks,
                 messages: loopMessages,
               });
               for await (const event of finalStream) {
