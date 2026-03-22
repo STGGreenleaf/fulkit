@@ -57,7 +57,19 @@ export function AuthProvider({ children }) {
         .upsert({ id: userId, seat_type: "free", onboarded: false, messages_this_month: 0, updated_at: new Date().toISOString() }, { onConflict: "id" })
         .select("*")
         .single();
-      if (created) data = created;
+      if (created) {
+        data = created;
+        // Send welcome email (fire-and-forget — new user only)
+        const sess = await supabase.auth.getSession();
+        const at = sess?.data?.session?.access_token;
+        if (at) {
+          fetch("/api/email/welcome", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => {});
+        }
+      }
     }
 
     if (data) {
