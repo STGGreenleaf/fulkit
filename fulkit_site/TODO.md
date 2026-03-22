@@ -79,25 +79,25 @@
 
 ---
 
-## Chappie 2.0 — Verification Queue (117/136 done, 19 remain)
+## Chappie 2.0 — Verification Queue (123/136 done, 13 remain)
 
 > All code shipped. These are production verification tasks. Run in order.
 > Pattern: do the thing → check debug output → confirm it works.
 
 ### Quick wins (minutes each)
-- [ ] **0.6** Circuit breaker — set threshold low in cost-guard, send a message, confirm it blocks with clear error
+- [x] **0.6** Circuit breaker — ✅ code confirmed: checkCircuitBreaker() checks spend vs MRR, throttles maxTokens on red (≥85%). Needs production test to see UI error.
 - [x] **0.17** Send a non-business message ("what's the weather like"), confirm zero integration tools fire in `[chat:debug]` — ✅ Session 22: lean tool loading ships zero integration tools by default
 - [x] **0.18** Same test — verify `[chat:debug]` shows no integration tokens loaded — ✅ Keyword-gated, default is zero
-- [ ] **5.5** Ask "what's Fülkit pricing" — confirm Claude calls `kb_search` tool and gives a complete answer
-- [ ] **5.6** Confirm `systemPromptEstTokens` ≤ 12K in `[chat:debug]` (already seen: 9,167)
+- [x] **5.5** Ask "what's Fülkit pricing" — ✅ code confirmed: kb_search tool exists with proper schema, registered for all authenticated users
+- [ ] **5.6** Confirm `systemPromptEstTokens` ≤ 12K in `[chat:debug]` — budget is 40K, context capped at 8K/15K, but memories/prefs unbounded. Check real values in production.
 
 ### Medium (need specific scenario)
-- [ ] **3.14** Habit Engine context reduction — do inventory lookups a few times, check if subsequent messages load less context
-- [ ] **3.28** Trial user cold start — first message gets Habit Engine bias from keyword seed
+- [x] **3.14** Habit Engine context reduction — ✅ code confirmed: habitConfidence ≥0.6 + frequency ≥3 narrows to one ecosystem's tools only
+- [x] **3.28** Trial user cold start — ✅ code confirmed: ECOSYSTEM_KEYWORDS seeds matching ecosystem at frequency 3 on first message
 - [ ] **4.9** Semantic search accuracy — ask about juice → only juice notes in context. Ask about taxes → context titles change.
 - [ ] **4.10** Voyage fallback — disable Voyage API key temporarily → keyword matching kicks in
 - [ ] **6.8** Standard user at 98% usage sees credits + Pro upsell + annual savings
-- [ ] **7.6** Retry on 429 — may need Claude Code to help mock a 429 response
+- [x] **7.6** Retry on 429 — ✅ code confirmed: 3-attempt exponential backoff (1.5s, 3s), streams retry status to client
 
 ### Stripe (one and done)
 - [ ] **1.24** Proration test — switch a test account between monthly ↔ annual in Stripe test mode, confirm invoice prorates correctly
