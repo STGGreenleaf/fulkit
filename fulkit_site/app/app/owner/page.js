@@ -38,6 +38,7 @@ import {
   Zap,
   BookOpen,
   Settings2,
+  Mail,
 } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -5987,6 +5988,9 @@ function PlaygroundTab() {
             </a>
             <a href="/loading-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
               Loading
+            </a>
+            <a href="/email-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
+              <Mail size={12} /> Welcome Email
             </a>
           </div>
         </div>
