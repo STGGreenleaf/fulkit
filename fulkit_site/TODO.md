@@ -58,18 +58,11 @@
 
 ---
 
-## Meta App Review — Facebook + Instagram Publishing
+## Meta App Review — Facebook + Instagram Publishing ✅
 
-> Bluesky + Threads work. Facebook + Instagram need Meta App Review approval.
+> All social platforms live: Bluesky, Threads, Facebook, Instagram.
 
-### Steps
-- [ ] Complete test API calls in Graph Explorer (Testing page → pages_manage_posts needs 1 call)
-- [ ] Submit App Review requesting: `pages_manage_posts`, `pages_read_engagement`
-- [ ] Write use case description: "Fülkit publishes social content (text + images) to the owner's Facebook Page and linked Instagram Business account from a built-in publishing tool."
-- [ ] Provide screencast or screenshots showing the Publish feature
-- [ ] Wait for approval (days to weeks)
-- [ ] Once approved: Facebook + Instagram posting works automatically (code is already built)
-- [ ] Pre-launch: Publish the "Fülkit Social" app on Meta (Dashboard → Publish)
+- [x] Meta App approved and live. All publishing works.
 
 ### Credentials stored
 - Bluesky: .env.local + Vercel (BLUESKY_HANDLE, BLUESKY_APP_PASSWORD)
@@ -79,7 +72,7 @@
 
 ---
 
-## Chappie 2.0 — Verification Queue (123/136 done, 13 remain)
+## Chappie 2.0 — Verification Queue (126/136 done, 10 remain)
 
 > All code shipped. These are production verification tasks. Run in order.
 > Pattern: do the thing → check debug output → confirm it works.
@@ -89,18 +82,18 @@
 - [x] **0.17** Send a non-business message ("what's the weather like"), confirm zero integration tools fire in `[chat:debug]` — ✅ Session 22: lean tool loading ships zero integration tools by default
 - [x] **0.18** Same test — verify `[chat:debug]` shows no integration tokens loaded — ✅ Keyword-gated, default is zero
 - [x] **5.5** Ask "what's Fülkit pricing" — ✅ code confirmed: kb_search tool exists with proper schema, registered for all authenticated users
-- [ ] **5.6** Confirm `systemPromptEstTokens` ≤ 12K in `[chat:debug]` — budget is 40K, context capped at 8K/15K, but memories/prefs unbounded. Check real values in production.
+- [x] **5.6** Confirm `systemPromptEstTokens` ≤ 12K — ✅ Previously seen at 9,167. BASE_PROMPT compressed to ~385 tokens, tool descriptions compressed Session 22. Under budget.
 
 ### Medium (need specific scenario)
 - [x] **3.14** Habit Engine context reduction — ✅ code confirmed: habitConfidence ≥0.6 + frequency ≥3 narrows to one ecosystem's tools only
 - [x] **3.28** Trial user cold start — ✅ code confirmed: ECOSYSTEM_KEYWORDS seeds matching ecosystem at frequency 3 on first message
 - [ ] **4.9** Semantic search accuracy — ask about juice → only juice notes in context. Ask about taxes → context titles change.
-- [ ] **4.10** Voyage fallback — disable Voyage API key temporarily → keyword matching kicks in
+- [x] **4.10** Voyage fallback — ✅ tested, keyword matching works without Voyage key
 - [ ] **6.8** Standard user at 98% usage sees credits + Pro upsell + annual savings
 - [x] **7.6** Retry on 429 — ✅ code confirmed: 3-attempt exponential backoff (1.5s, 3s), streams retry status to client
 
 ### Stripe (one and done)
-- [ ] **1.24** Proration test — switch a test account between monthly ↔ annual in Stripe test mode, confirm invoice prorates correctly
+- [x] **1.24** Proration test — ✅ tested in Stripe, invoices prorate correctly
 
 ### Compression (schedule a focused session)
 - [ ] **8.1** Run 10 real conversations × 20+ messages across different topics
