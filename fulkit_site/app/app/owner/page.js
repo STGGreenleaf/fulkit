@@ -1874,6 +1874,11 @@ function DeveloperTab() {
   // ── Waitlist ──
   const [waitlist, setWaitlist] = useState([]);
   const [waitlistLoading, setWaitlistLoading] = useState(true);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [notifyCategory, setNotifyCategory] = useState("all");
+  const [notifyMsg, setNotifyMsg] = useState("");
+  const [notifySending, setNotifySending] = useState(false);
+  const [notifyResult, setNotifyResult] = useState(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -2692,12 +2697,11 @@ function DeveloperTab() {
         )}
       </div>
 
-      {/* ── Waitlist ── */}
-      <div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-            Waitlist
-          </span>
+      {/* ── Waitlist (collapsible fold) ── */}
+      <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <button onClick={() => setWaitlistOpen(!waitlistOpen)} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" }}>
+          <Mail size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" }}>Waitlist</span>
           {waitlist.length > 0 && (
             <span style={{
               fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)",
@@ -2707,27 +2711,114 @@ function DeveloperTab() {
               {waitlist.length}
             </span>
           )}
-        </div>
-        {waitlistLoading ? (
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-        ) : waitlist.length === 0 ? (
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No waitlist entries.</div>
-        ) : (
-          <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-            {waitlist.map((w, i) => (
-              <div key={w.id} style={{
-                display: "flex", alignItems: "center", gap: "var(--space-3)",
-                padding: "var(--space-2-5) var(--space-3)",
-                borderBottom: i < waitlist.length - 1 ? "1px solid var(--color-border-light)" : "none",
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{w.email}</div>
-                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
-                    {w.category} {"\u00b7"} {new Date(w.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </div>
-                </div>
+          {waitlistOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {waitlistOpen && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+            {/* ── Notify section ── */}
+            <div style={{ padding: "var(--space-3)", borderBottom: "1px solid var(--color-border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontWeight: "var(--font-weight-medium)" }}>Notify</span>
+                {(() => {
+                  const categories = [...new Set(waitlist.map(w => w.category))];
+                  return (
+                    <div style={{ display: "flex", gap: "var(--space-1)" }}>
+                      <button
+                        onClick={() => setNotifyCategory("all")}
+                        style={{
+                          padding: "1px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
+                          background: notifyCategory === "all" ? "var(--color-text)" : "transparent",
+                          color: notifyCategory === "all" ? "var(--color-bg)" : "var(--color-text-dim)",
+                          fontSize: 9, fontFamily: "var(--font-mono)", cursor: "pointer", textTransform: "uppercase",
+                        }}
+                      >
+                        all ({waitlist.length})
+                      </button>
+                      {categories.map(cat => {
+                        const count = waitlist.filter(w => w.category === cat).length;
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => setNotifyCategory(cat)}
+                            style={{
+                              padding: "1px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
+                              background: notifyCategory === cat ? "var(--color-text)" : "transparent",
+                              color: notifyCategory === cat ? "var(--color-bg)" : "var(--color-text-dim)",
+                              fontSize: 9, fontFamily: "var(--font-mono)", cursor: "pointer", textTransform: "uppercase",
+                            }}
+                          >
+                            {cat} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
-            ))}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <input
+                  type="text"
+                  placeholder="Message to send..."
+                  value={notifyMsg}
+                  onChange={(e) => setNotifyMsg(e.target.value)}
+                  style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!notifyMsg.trim() || notifySending) return;
+                    setNotifySending(true);
+                    const targets = notifyCategory === "all" ? waitlist : waitlist.filter(w => w.category === notifyCategory);
+                    try {
+                      const res = await fetch("/api/email/waitlist", {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ emails: targets.map(w => w.email), message: notifyMsg.trim(), category: notifyCategory }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setNotifyResult(`Sent to ${data.sent || targets.length}`);
+                      } else {
+                        setNotifyResult("Failed");
+                      }
+                    } catch { setNotifyResult("Failed"); }
+                    setNotifySending(false);
+                    setTimeout(() => setNotifyResult(null), 3000);
+                  }}
+                  disabled={notifySending || !notifyMsg.trim()}
+                  style={{ background: "none", border: "none", cursor: notifySending || !notifyMsg.trim() ? "default" : "pointer", padding: 4, color: "var(--color-text-muted)", opacity: notifySending || !notifyMsg.trim() ? 0.3 : 0.7, fontSize: 14, lineHeight: 1 }}
+                >
+                  {notifySending ? "…" : "→"}
+                </button>
+              </div>
+              {notifyResult && (
+                <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: "var(--space-1)" }}>{notifyResult}</div>
+              )}
+            </div>
+
+            {/* ── Entries ── */}
+            {waitlistLoading ? (
+              <div style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+            ) : waitlist.length === 0 ? (
+              <div style={{ padding: "var(--space-3)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No waitlist entries.</div>
+            ) : (
+              <div>
+                {(notifyCategory === "all" ? waitlist : waitlist.filter(w => w.category === notifyCategory)).map((w, i, arr) => (
+                  <div key={w.id} style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-3)",
+                    padding: "var(--space-2-5) var(--space-3)",
+                    borderBottom: i < arr.length - 1 ? "1px solid var(--color-border-light)" : "none",
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{w.email}</div>
+                      <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                        {w.category} {"\u00b7"} {new Date(w.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {w.notified_at ? ` \u00b7 notified ${new Date(w.notified_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
