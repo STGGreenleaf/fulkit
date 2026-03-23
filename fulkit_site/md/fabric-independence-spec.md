@@ -96,10 +96,10 @@ PlaybackEngine switches engine per track. Seamless. User sees one player.
 - Does NOT show ads. Fabric is a music space, not an ad platform. Non-negotiable. If a source injects ads, we address it or don't use that source. Zero ads in the experience.
 
 ## Build Order
-1. **YouTube provider** — the free fallback, ensures no blank screen for anyone
-2. **Apple Music provider** — the premium alternative to Spotify
-3. **SoundCloud provider** — when API access is granted
-4. **Multi-source search** — search across all connected at once
+1. ~~**YouTube provider**~~ ✅ Session 22 — provider, engine, always-connected, curated Work Tech set
+2. ~~**Multi-source search**~~ ✅ Session 22 — /api/fabric/search, deduplicates across sources
+3. **Apple Music provider** — next, needs Apple Developer account
+4. **SoundCloud provider** — when API access is granted
 5. Spotify Extended Quota — whenever Spotify reopens the process
 
 ## Files

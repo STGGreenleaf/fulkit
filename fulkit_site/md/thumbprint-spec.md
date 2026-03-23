@@ -129,27 +129,25 @@ This is:
 
 ## Implementation Path
 
-### Phase 1: Client-side Spotify analysis (replace yt-dlp for Spotify users)
-- Attach AnalyserNode to Spotify Web Playback SDK audio
-- Extract 7 bands + loudness + flux + beat/onset per 500ms
-- Build thumbprint in real-time as user listens
-- Upload complete thumbprint to fabric_timelines when song ends
-- No server-side download needed for Spotify tracks
+### Phase 1: Client-side Spotify analysis ✅ Session 22
+- ThumbprintBuilder module (lib/thumbprint.js)
+- AnalyserNode wired into SpotifyEngine
+- Captures 7 bands + loudness + flux + beat/onset per 500ms
+- Auto-uploads on track change/unmount
+- POST /api/fabric/timeline for client uploads
 
-### Phase 2: Pre-analyze curated sets
-- Use existing pipeline (analyze-track.mjs) to thumbprint your default sets
-- "Work Tech", "Late Night", etc. — all pre-thumbprinted
-- Every new user gets choreographed visualizations from minute one
+### Phase 2: Pre-analyze curated sets — ready
+- Existing pipeline (analyze-track.mjs) works for curated sets
+- Work Tech, Late Night, Drive sets ready for analysis run
 
-### Phase 3: Cross-reference library
-- When YouTube track plays, look up thumbprint by ISRC or title+artist
-- If another user already thumbprinted the same song via Spotify → reuse it
-- Thumbprint library grows organically across all users
+### Phase 3: Cross-reference library ✅ Session 22
+- Timeline API accepts title+artist params
+- YouTube tracks find thumbprints from Spotify users automatically
+- Library grows organically
 
-### Phase 4: Analyzed indicator
-- Small dot or pulse icon on tracks that have a thumbprint
-- Users know which songs have full choreographed visualization
-- Incentive to listen to un-analyzed tracks ("help build the library")
+### Phase 4: Analyzed indicator ✅ already built
+- Dot indicator exists on tracks (fabric_status === "complete")
+- Shows "Fabric analyzed" or "Pending"
 
 ---
 
