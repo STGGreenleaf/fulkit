@@ -69,11 +69,11 @@ export function FabricProvider({ children }) {
         name: "Work Tech",
         source: "fulkit",
         tracks: [
-          { id: "dQw4w9WgXcQ", title: "Midnight City", artist: "M83", duration: 243, provider: "youtube", uri: "youtube:video:dQw4w9WgXcQ" },
-          { id: "lTRiuFIWV54", title: "Intro", artist: "The xx", duration: 128, provider: "youtube", uri: "youtube:video:lTRiuFIWV54" },
-          { id: "hHW1oY26kxQ", title: "Tadow", artist: "Masego, FKJ", duration: 295, provider: "youtube", uri: "youtube:video:hHW1oY26kxQ" },
-          { id: "8UVNT4wvIGY", title: "Somebody Else", artist: "The 1975", duration: 318, provider: "youtube", uri: "youtube:video:8UVNT4wvIGY" },
-          { id: "IKniXABsUeE", title: "Strobe", artist: "Deadmau5", duration: 637, provider: "youtube", uri: "youtube:video:IKniXABsUeE" },
+          { id: "dQw4w9WgXcQ", title: "Midnight City", artist: "M83", duration: 243, provider: "youtube", uri: "youtube:video:dQw4w9WgXcQ", art: "https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" },
+          { id: "lTRiuFIWV54", title: "Intro", artist: "The xx", duration: 128, provider: "youtube", uri: "youtube:video:lTRiuFIWV54", art: "https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg" },
+          { id: "hHW1oY26kxQ", title: "Tadow", artist: "Masego, FKJ", duration: 295, provider: "youtube", uri: "youtube:video:hHW1oY26kxQ", art: "https://img.youtube.com/vi/hHW1oY26kxQ/mqdefault.jpg" },
+          { id: "8UVNT4wvIGY", title: "Somebody Else", artist: "The 1975", duration: 318, provider: "youtube", uri: "youtube:video:8UVNT4wvIGY", art: "https://img.youtube.com/vi/8UVNT4wvIGY/mqdefault.jpg" },
+          { id: "IKniXABsUeE", title: "Strobe", artist: "Deadmau5", duration: 637, provider: "youtube", uri: "youtube:video:IKniXABsUeE", art: "https://img.youtube.com/vi/IKniXABsUeE/mqdefault.jpg" },
         ],
       },
       {
