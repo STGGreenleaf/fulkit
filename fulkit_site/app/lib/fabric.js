@@ -219,13 +219,13 @@ export function FabricProvider({ children }) {
     });
   }, [accessToken, apiFetch]);
 
-  // Fetch playlists when connected (only on fabric page)
+  // Fetch playlists from Supabase (works regardless of source connection)
   useEffect(() => {
-    if (!connected || !accessToken || !onFabricPage) return;
+    if (!accessToken || !onFabricPage) return;
     apiFetch("/api/fabric/playlists").then((data) => {
       if (data?.playlists) setPlaylists(data.playlists);
     });
-  }, [connected, accessToken, apiFetch, onFabricPage]);
+  }, [accessToken, apiFetch, onFabricPage]);
 
   // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
   // YouTube tracks don't need polling — state is managed client-side
