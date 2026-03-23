@@ -6073,15 +6073,24 @@ function PlaceholderTab({ title, description }) {
 }
 
 function PlaygroundTab() {
+  // ── Section state ──
+  const [openSections, setOpenSections] = useState({ onboarding: true });
+  const toggle = (id) => setOpenSections(p => ({ ...p, [id]: !p[id] }));
+
+  // ── Onboarding state ──
   const [tiers, setTiers] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tierIdx, setTierIdx] = useState(0);
   const [qIdx, setQIdx] = useState(0);
   const [showAssignment, setShowAssignment] = useState(false);
-  const [showCopy, setShowCopy] = useState(null); // copy_after_answer text
+  const [showCopy, setShowCopy] = useState(null);
   const [textVal, setTextVal] = useState("");
   const [multiSel, setMultiSel] = useState([]);
+
+  // ── Email preview state ──
+  const [emailTemplate, setEmailTemplate] = useState("added");
+  const emailIframeRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -6096,287 +6105,43 @@ function PlaygroundTab() {
     load();
   }, []);
 
-  if (loading) return <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>Loading preview...</div>;
-  if (tiers.length === 0) return <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>No tiers configured. Add tiers in the Questions tab first.</div>;
-
+  // ── Onboarding logic ──
   const tier = tiers[tierIdx];
   const tierQs = questions.filter((q) => q.tier_id === tier?.id).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const question = tierQs[qIdx];
   const totalQ = tierQs.length;
-  const progressPct = ((tierIdx + (showAssignment ? 1 : (qIdx / Math.max(totalQ, 1)))) / tiers.length) * 100;
+  const progressPct = tiers.length ? ((tierIdx + (showAssignment ? 1 : (qIdx / Math.max(totalQ, 1)))) / tiers.length) * 100 : 0;
 
   const advance = () => {
     if (showCopy) { setShowCopy(null); return; }
-    if (question?.copy_after_answer) {
-      setShowCopy(question.copy_after_answer);
-      return;
-    }
+    if (question?.copy_after_answer) { setShowCopy(question.copy_after_answer); return; }
     goNext();
   };
-
-  const goNext = () => {
-    setTextVal("");
-    setMultiSel([]);
-    setShowCopy(null);
-    if (qIdx + 1 < totalQ) {
-      setQIdx(qIdx + 1);
-    } else {
-      setShowAssignment(true);
-    }
-  };
-
-  const nextTier = () => {
-    setShowAssignment(false);
-    setQIdx(0);
-    if (tierIdx + 1 < tiers.length) setTierIdx(tierIdx + 1);
-    else setTierIdx(0); // loop back
-  };
-
-  const jumpToTier = (i) => {
-    setTierIdx(i);
-    setQIdx(0);
-    setShowAssignment(false);
-    setShowCopy(null);
-    setTextVal("");
-    setMultiSel([]);
-  };
+  const goNext = () => { setTextVal(""); setMultiSel([]); setShowCopy(null); if (qIdx + 1 < totalQ) setQIdx(qIdx + 1); else setShowAssignment(true); };
+  const nextTier = () => { setShowAssignment(false); setQIdx(0); if (tierIdx + 1 < tiers.length) setTierIdx(tierIdx + 1); else setTierIdx(0); };
+  const jumpToTier = (i) => { setTierIdx(i); setQIdx(0); setShowAssignment(false); setShowCopy(null); setTextVal(""); setMultiSel([]); };
 
   const previewCard = {
-    background: "var(--color-bg)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-lg)",
-    padding: "var(--space-6)",
-    maxWidth: 520,
-    margin: "0 auto",
-    minHeight: 300,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
+    background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)",
+    padding: "var(--space-6)", maxWidth: 520, margin: "0 auto", minHeight: 300,
+    display: "flex", flexDirection: "column", justifyContent: "center",
   };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-      <div>
-        <div style={TAB_TITLE}>Onboarding Preview</div>
-        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
-          Live preview of the onboarding flow. No data is saved.
-        </p>
-
-        {/* Other previews */}
-        <div style={{ marginBottom: "var(--space-4)" }}>
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <a href="/payment-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-              <CreditCard size={12} /> Payment
-            </a>
-            <a href="/loading-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-              Loading
-            </a>
-            <a href="/email-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-              <Mail size={12} /> Welcome Email
-            </a>
-            <a href="/share-preview" target="_blank" rel="noopener noreferrer" style={{ ...btnSmall, textDecoration: "none" }}>
-              <ExternalLink size={12} /> Share Page
-            </a>
-          </div>
-        </div>
-
-        {/* Tier selector */}
-        <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
-          {tiers.map((t, i) => (
-            <button
-              key={t.id}
-              onClick={() => jumpToTier(i)}
-              style={{
-                ...btnSmall,
-                background: i === tierIdx ? "var(--color-text)" : "var(--color-bg-elevated)",
-                color: i === tierIdx ? "var(--color-bg)" : "var(--color-text-secondary)",
-                fontSize: "var(--font-size-2xs)",
-                padding: "var(--space-1) var(--space-2)",
-              }}
-            >
-              Tier {t.tier_num}: {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ height: 3, background: "var(--color-border-light)", borderRadius: 2, marginBottom: "var(--space-4)" }}>
-          <div style={{ height: "100%", background: "var(--color-text-dim)", borderRadius: 2, width: `${progressPct}%`, transition: "width 400ms ease" }} />
-        </div>
-      </div>
-
-      {/* Preview card */}
-      <div style={previewCard}>
-        {showCopy ? (
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: "var(--font-size-md)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-6)" }}>
-              "{showCopy}"
-            </p>
-            <button onClick={goNext} style={btnPrimary}>Continue</button>
-          </div>
-        ) : showAssignment ? (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "var(--radius-full)", background: "var(--color-success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-4)" }}>
-              <CheckIcon size={18} strokeWidth={2.5} color="var(--color-success)" />
-            </div>
-            <p style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
-              Tier {tier.tier_num} Complete
-            </p>
-            {tier.assignment_copy && (
-              <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-4)" }}>
-                "{tier.assignment_copy}"
-              </p>
-            )}
-            {tier.primary_destination && (
-              <div style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) var(--space-4)", background: "var(--color-text)", color: "var(--color-bg)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", marginBottom: "var(--space-2)" }}>
-                Go to {tier.primary_destination}
-              </div>
-            )}
-            <button onClick={nextTier} style={{ ...btnSmall, marginTop: "var(--space-2)" }}>
-              {tierIdx < tiers.length - 1 ? "Next Tier" : "Back to Tier 1"}
-            </button>
-          </div>
-        ) : question ? (
-          <div>
-            {/* Phase label */}
-            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
-              Tier {tier.tier_num} &middot; Q{qIdx + 1} of {totalQ}
-            </div>
-
-            {/* Trust line */}
-            {(qIdx === 0 && tier.trust_line) && (
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                {tier.trust_line}
-              </p>
-            )}
-            {question.trust_line && (
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                {question.trust_line}
-              </p>
-            )}
-
-            {/* Question */}
-            <h3 style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", marginBottom: "var(--space-2)" }}>
-              {question.text}
-            </h3>
-            {question.why && (
-              <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>
-                {question.why}
-              </p>
-            )}
-
-            {/* Renderer by type */}
-            {(question.type === "text_input" || question.type === "text") && (
-              <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <input
-                  value={textVal}
-                  onChange={(e) => setTextVal(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && textVal.trim()) advance(); }}
-                  placeholder={question.placeholder || "Type here..."}
-                  style={{ flex: 1, padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
-                />
-                <button onClick={advance} disabled={!textVal.trim()} style={{ ...btnPrimary, opacity: textVal.trim() ? 1 : 0.4 }}>Go</button>
-              </div>
-            )}
-
-            {(question.type === "single_select" || (question.type === "choice" && !question.multi)) && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {(question.options || []).map((opt) => {
-                  const label = typeof opt === "string" ? opt : opt.label;
-                  return (
-                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {(question.type === "multi_select" || (question.type === "choice" && question.multi)) && (
-              <>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                  {(question.options || []).map((opt) => {
-                    const label = typeof opt === "string" ? opt : opt.label;
-                    const sel = multiSel.includes(label);
-                    return (
-                      <button key={label} onClick={() => setMultiSel((p) => sel ? p.filter((x) => x !== label) : [...p, label])} style={{ padding: "var(--space-2-5) var(--space-4)", background: sel ? "var(--color-text)" : "var(--color-bg-elevated)", color: sel ? "var(--color-bg)" : "var(--color-text)", border: sel ? "1px solid var(--color-text)" : "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {multiSel.length > 0 && (
-                  <button onClick={advance} style={{ ...btnPrimary, marginTop: "var(--space-3)" }}>Continue</button>
-                )}
-              </>
-            )}
-
-            {question.type === "integration_picker" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {(question.options || [{ label: "Spotify" }, { label: "Google Calendar" }, { label: "Apple Calendar" }, { label: "Add another" }, { label: "I'll do this later" }]).map((opt) => {
-                  const label = typeof opt === "string" ? opt : opt.label;
-                  return (
-                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {question.type === "vault_setup" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {(question.options || []).map((opt) => {
-                  const label = typeof opt === "string" ? opt : opt.label;
-                  return (
-                    <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {question.type === "feature_walkthrough" && (
-              <button onClick={advance} style={btnPrimary}>Got it</button>
-            )}
-
-            {/* Skip */}
-            {(question.skippable || question.type === "text_input" || question.type === "text") && (
-              <button onClick={goNext} style={{ marginTop: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)" }}>
-                Skip
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>
-            No questions in this tier.
-          </div>
-        )}
-      </div>
-
-      <EmailPreviewSection />
-
-    </div>
-  );
-}
-
-// ═══ Email Preview (used inside PlaygroundTab wrapper) ═══
-function EmailPreviewSection() {
-  const [template, setTemplate] = useState("added");
-  const iframeRef = useRef(null);
-
-  const templates = [
-    { id: "added", label: "Waitlist: Added" },
-    { id: "seat-open", label: "Waitlist: Seat opened" },
-    { id: "custom", label: "Custom" },
-  ];
-
-  // Build the email HTML client-side (mirrors server templates)
-  const cta = (href, label) =>
+  // ── Email HTML builder ──
+  const emailCta = (href, label) =>
     `<a href="${href}" style="display:block;width:100%;padding:14px 0;background-color:#2A2826;color:#EFEDE8;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;margin-bottom:28px;">${label}</a>`;
 
-  const contents = {
+  const emailContents = {
+    welcome: `
+      <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Hey there.</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Welcome to Fülkit. You just got yourself a bestie that remembers everything and never makes you start from zero.</div>
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">Get started in 60 seconds</div>
+      <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+        <div style="margin-bottom:6px;"><strong style="color:#2A2826;">1. Say hey</strong> — Open chat and talk like you would to a friend.</div>
+        <div style="margin-bottom:6px;"><strong style="color:#2A2826;">2. Drop a note</strong> — Save an idea, a doc, a thought.</div>
+        <div><strong style="color:#2A2826;">3. Watch it click</strong> — Ask about something you saved. Fülkit connects the dots.</div>
+      </div>
+      ${emailCta("https://fulkit.app/chat", "Open Fülkit")}`,
     added: `
       <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Spotify limits how many people can connect at once — it's their developer platform restriction, not ours. We saved your spot.</div>
@@ -6390,18 +6155,25 @@ function EmailPreviewSection() {
       </div>
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Spotify is a nice-to-have — it syncs your existing playlists. But your Fabric library is yours, built here, independent of any source.</div>
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">When a seat opens or Spotify updates their access, we'll let you know.</div>
-      ${cta("https://fulkit.app/fabric", "Open Fabric")}`,
+      ${emailCta("https://fulkit.app/fabric", "Open Fabric")}`,
     "seat-open": `
       <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your Spotify seat is ready.</div>
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">A seat opened up. Head to <strong style="color:#2A2826;">Settings → Sources</strong> and connect your Spotify account.</div>
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your existing playlists will sync automatically. Everything you've already built in Fabric — sets, crates, history — stays exactly where it is. Spotify just adds another playback source.</div>
-      ${cta("https://fulkit.app/settings/sources", "Connect Spotify")}`,
+      ${emailCta("https://fulkit.app/settings/sources", "Connect Spotify")}`,
     custom: `
       <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your custom message goes here. Use the Custom template from the Waitlist fold in the Developer tab to send freeform messages.</div>
-      ${cta("https://fulkit.app", "Open Fülkit")}`,
+      ${emailCta("https://fulkit.app", "Open Fülkit")}`,
   };
 
-  const html = `<!DOCTYPE html>
+  const emailFooters = {
+    welcome: `You're getting this because you signed up at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+    added: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+    "seat-open": `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+    custom: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+  };
+
+  const emailHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;font-family:'D-DIN',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background-color:#EFEDE8;">
 <div style="padding:40px 20px;">
@@ -6410,55 +6182,200 @@ function EmailPreviewSection() {
   <div style="font-size:28px;font-weight:700;color:#EFEDE8;letter-spacing:-0.02em;">Fülkit</div>
 </div>
 <div style="padding:40px 40px 32px;">
-  ${contents[template] || contents.custom}
+  ${emailContents[emailTemplate] || emailContents.custom}
   <div style="height:1px;background-color:#E8E5E0;margin-bottom:24px;"></div>
   <div style="font-size:14px;color:#6B6560;line-height:1.6;">Questions? Just reply to this email.</div>
 </div>
 <div style="padding:20px 40px 28px;text-align:center;border-top:1px solid #E8E5E0;">
-  <div style="font-size:12px;color:#9B9590;line-height:1.6;">You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.</div>
+  <div style="font-size:12px;color:#9B9590;line-height:1.6;">${emailFooters[emailTemplate] || emailFooters.custom}</div>
   <div style="font-size:12px;color:#B8B3AE;margin-top:6px;">Fülkit — your second brain that talks back.</div>
 </div>
 </div></div>
 </body></html>`;
 
   useEffect(() => {
-    if (iframeRef.current) {
-      const doc = iframeRef.current.contentDocument;
-      doc.open();
-      doc.write(html);
-      doc.close();
+    if (emailIframeRef.current && openSections.emails) {
+      const doc = emailIframeRef.current.contentDocument;
+      doc.open(); doc.write(emailHtml); doc.close();
     }
-  }, [template, html]);
+  }, [emailTemplate, emailHtml, openSections.emails]);
+
+  // ── Fold helper ──
+  const FOLD = { background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" };
+  const FOLD_BTN = { display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" };
+  const FOLD_LABEL = { fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", flex: 1, textAlign: "left" };
 
   return (
-    <div style={{ marginTop: "var(--space-6)" }}>
-      <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
-        Email Preview
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <div>
+        <div style={TAB_TITLE}>Playground</div>
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+          Preview everything users see.
+        </p>
       </div>
-      <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)" }}>
-        {templates.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTemplate(t.id)}
-            style={{
-              padding: "3px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-              background: template === t.id ? "var(--color-text)" : "transparent",
-              color: template === t.id ? "var(--color-bg)" : "var(--color-text-dim)",
-              fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+
+      {/* ═══ ONBOARDING ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("onboarding")} style={FOLD_BTN}>
+          <Users size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={FOLD_LABEL}>Onboarding</span>
+          {openSections.onboarding ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.onboarding && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)" }}>
+            {loading ? (
+              <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>Loading preview...</div>
+            ) : tiers.length === 0 ? (
+              <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>No tiers configured. Add tiers in the Questions tab first.</div>
+            ) : (<>
+              {/* Tier selector */}
+              <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
+                {tiers.map((t, i) => (
+                  <button key={t.id} onClick={() => jumpToTier(i)} style={{ ...btnSmall, background: i === tierIdx ? "var(--color-text)" : "var(--color-bg)", color: i === tierIdx ? "var(--color-bg)" : "var(--color-text-secondary)", fontSize: "var(--font-size-2xs)", padding: "var(--space-1) var(--space-2)" }}>
+                    Tier {t.tier_num}: {t.label}
+                  </button>
+                ))}
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: 3, background: "var(--color-border-light)", borderRadius: 2, marginBottom: "var(--space-4)" }}>
+                <div style={{ height: "100%", background: "var(--color-text-dim)", borderRadius: 2, width: `${progressPct}%`, transition: "width 400ms ease" }} />
+              </div>
+              {/* Preview card */}
+              <div style={previewCard}>
+                {showCopy ? (
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: "var(--font-size-md)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-6)" }}>"{showCopy}"</p>
+                    <button onClick={goNext} style={btnPrimary}>Continue</button>
+                  </div>
+                ) : showAssignment ? (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "var(--radius-full)", background: "var(--color-success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-4)" }}>
+                      <CheckIcon size={18} strokeWidth={2.5} color="var(--color-success)" />
+                    </div>
+                    <p style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>Tier {tier.tier_num} Complete</p>
+                    {tier.assignment_copy && <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-4)" }}>"{tier.assignment_copy}"</p>}
+                    {tier.primary_destination && <div style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) var(--space-4)", background: "var(--color-text)", color: "var(--color-bg)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", marginBottom: "var(--space-2)" }}>Go to {tier.primary_destination}</div>}
+                    <button onClick={nextTier} style={{ ...btnSmall, marginTop: "var(--space-2)" }}>{tierIdx < tiers.length - 1 ? "Next Tier" : "Back to Tier 1"}</button>
+                  </div>
+                ) : question ? (
+                  <div>
+                    <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-bold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>Tier {tier.tier_num} &middot; Q{qIdx + 1} of {totalQ}</div>
+                    {(qIdx === 0 && tier.trust_line) && <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>{tier.trust_line}</p>}
+                    {question.trust_line && <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-4)" }}>{question.trust_line}</p>}
+                    <h3 style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", marginBottom: "var(--space-2)" }}>{question.text}</h3>
+                    {question.why && <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-4)" }}>{question.why}</p>}
+                    {(question.type === "text_input" || question.type === "text") && (
+                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                        <input value={textVal} onChange={(e) => setTextVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && textVal.trim()) advance(); }} placeholder={question.placeholder || "Type here..."} style={{ flex: 1, padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }} />
+                        <button onClick={advance} disabled={!textVal.trim()} style={{ ...btnPrimary, opacity: textVal.trim() ? 1 : 0.4 }}>Go</button>
+                      </div>
+                    )}
+                    {(question.type === "single_select" || (question.type === "choice" && !question.multi)) && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        {(question.options || []).map((opt) => { const label = typeof opt === "string" ? opt : opt.label; return <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>{label}</button>; })}
+                      </div>
+                    )}
+                    {(question.type === "multi_select" || (question.type === "choice" && question.multi)) && (<>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        {(question.options || []).map((opt) => { const label = typeof opt === "string" ? opt : opt.label; const sel = multiSel.includes(label); return <button key={label} onClick={() => setMultiSel((p) => sel ? p.filter((x) => x !== label) : [...p, label])} style={{ padding: "var(--space-2-5) var(--space-4)", background: sel ? "var(--color-text)" : "var(--color-bg-elevated)", color: sel ? "var(--color-bg)" : "var(--color-text)", border: sel ? "1px solid var(--color-text)" : "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>{label}</button>; })}
+                      </div>
+                      {multiSel.length > 0 && <button onClick={advance} style={{ ...btnPrimary, marginTop: "var(--space-3)" }}>Continue</button>}
+                    </>)}
+                    {question.type === "integration_picker" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        {(question.options || [{ label: "Spotify" }, { label: "Google Calendar" }, { label: "Apple Calendar" }, { label: "Add another" }, { label: "I'll do this later" }]).map((opt) => { const label = typeof opt === "string" ? opt : opt.label; return <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>{label}</button>; })}
+                      </div>
+                    )}
+                    {question.type === "vault_setup" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        {(question.options || []).map((opt) => { const label = typeof opt === "string" ? opt : opt.label; return <button key={label} onClick={advance} style={{ padding: "var(--space-2-5) var(--space-4)", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", fontSize: "var(--font-size-base)", fontFamily: "var(--font-primary)", textAlign: "left", cursor: "pointer" }}>{label}</button>; })}
+                      </div>
+                    )}
+                    {question.type === "feature_walkthrough" && <button onClick={advance} style={btnPrimary}>Got it</button>}
+                    {(question.skippable || question.type === "text_input" || question.type === "text") && <button onClick={goNext} style={{ marginTop: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)" }}>Skip</button>}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" }}>No questions in this tier.</div>
+                )}
+              </div>
+            </>)}
+          </div>
+        )}
       </div>
-      <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden", background: "#EFEDE8" }}>
-        <iframe
-          ref={iframeRef}
-          title="Email preview"
-          style={{ width: "100%", height: 700, border: "none" }}
-          sandbox="allow-same-origin"
-        />
+
+      {/* ═══ EMAILS ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("emails")} style={FOLD_BTN}>
+          <Mail size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={FOLD_LABEL}>Emails</span>
+          {openSections.emails ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.emails && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)" }}>
+            <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
+              {[
+                { id: "welcome", label: "Welcome" },
+                { id: "added", label: "Waitlist: Added" },
+                { id: "seat-open", label: "Waitlist: Seat opened" },
+                { id: "custom", label: "Custom" },
+              ].map(t => (
+                <button key={t.id} onClick={() => setEmailTemplate(t.id)} style={{
+                  padding: "3px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
+                  background: emailTemplate === t.id ? "var(--color-text)" : "transparent",
+                  color: emailTemplate === t.id ? "var(--color-bg)" : "var(--color-text-dim)",
+                  fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer",
+                }}>{t.label}</button>
+              ))}
+            </div>
+            <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden", background: "#EFEDE8" }}>
+              <iframe ref={emailIframeRef} title="Email preview" style={{ width: "100%", height: 700, border: "none" }} sandbox="allow-same-origin" />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ═══ PAYMENT ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("payment")} style={FOLD_BTN}>
+          <CreditCard size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={FOLD_LABEL}>Payment</span>
+          {openSections.payment ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.payment && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+            <iframe src="/payment-preview" title="Payment preview" style={{ width: "100%", height: 600, border: "none" }} />
+          </div>
+        )}
+      </div>
+
+      {/* ═══ LOADING ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("loading")} style={FOLD_BTN}>
+          <Zap size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={FOLD_LABEL}>Loading</span>
+          {openSections.loading ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.loading && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+            <iframe src="/loading-preview" title="Loading preview" style={{ width: "100%", height: 600, border: "none" }} />
+          </div>
+        )}
+      </div>
+
+      {/* ═══ SHARE ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("share")} style={FOLD_BTN}>
+          <ExternalLink size={13} strokeWidth={2} color="var(--color-text-muted)" />
+          <span style={FOLD_LABEL}>Share Page</span>
+          {openSections.share ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.share && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+            <iframe src="/share-preview" title="Share preview" style={{ width: "100%", height: 600, border: "none" }} />
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
