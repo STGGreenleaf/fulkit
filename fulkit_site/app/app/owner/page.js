@@ -6355,6 +6355,110 @@ function PlaygroundTab() {
         )}
       </div>
 
+      <EmailPreviewSection />
+
+    </div>
+  );
+}
+
+// ═══ Email Preview (used inside PlaygroundTab wrapper) ═══
+function EmailPreviewSection() {
+  const [template, setTemplate] = useState("added");
+  const iframeRef = useRef(null);
+
+  const templates = [
+    { id: "added", label: "Waitlist: Added" },
+    { id: "seat-open", label: "Waitlist: Seat opened" },
+    { id: "custom", label: "Custom" },
+  ];
+
+  // Build the email HTML client-side (mirrors server templates)
+  const cta = (href, label) =>
+    `<a href="${href}" style="display:block;width:100%;padding:14px 0;background-color:#2A2826;color:#EFEDE8;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;margin-bottom:28px;">${label}</a>`;
+
+  const contents = {
+    added: `
+      <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Spotify limits how many people can connect at once — it's their developer platform restriction, not ours. We saved your spot.</div>
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">Fabric doesn't need Spotify</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:12px;">Everything works without it. Fabric is its own music system:</div>
+      <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+        <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Sets</strong> — build your own playlists, drag to reorder, flag tracks from anywhere</div>
+        <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Crates</strong> — curated recommendations that learn what you like</div>
+        <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Playback</strong> — every track plays instantly via YouTube, no login required</div>
+        <div><strong style="color:#2A2826;">Signal Terrain</strong> — real-time audio visualization that responds to what's playing</div>
+      </div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Spotify is a nice-to-have — it syncs your existing playlists. But your Fabric library is yours, built here, independent of any source.</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">When a seat opens or Spotify updates their access, we'll let you know.</div>
+      ${cta("https://fulkit.app/fabric", "Open Fabric")}`,
+    "seat-open": `
+      <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your Spotify seat is ready.</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">A seat opened up. Head to <strong style="color:#2A2826;">Settings → Sources</strong> and connect your Spotify account.</div>
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your existing playlists will sync automatically. Everything you've already built in Fabric — sets, crates, history — stays exactly where it is. Spotify just adds another playback source.</div>
+      ${cta("https://fulkit.app/settings/sources", "Connect Spotify")}`,
+    custom: `
+      <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your custom message goes here. Use the Custom template from the Waitlist fold in the Developer tab to send freeform messages.</div>
+      ${cta("https://fulkit.app", "Open Fülkit")}`,
+  };
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'D-DIN',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background-color:#EFEDE8;">
+<div style="padding:40px 20px;">
+<div style="max-width:520px;margin:0 auto;background-color:#FAF9F6;border-radius:12px;overflow:hidden;">
+<div style="background-color:#2A2826;padding:32px 40px;text-align:center;">
+  <div style="font-size:28px;font-weight:700;color:#EFEDE8;letter-spacing:-0.02em;">Fülkit</div>
+</div>
+<div style="padding:40px 40px 32px;">
+  ${contents[template] || contents.custom}
+  <div style="height:1px;background-color:#E8E5E0;margin-bottom:24px;"></div>
+  <div style="font-size:14px;color:#6B6560;line-height:1.6;">Questions? Just reply to this email.</div>
+</div>
+<div style="padding:20px 40px 28px;text-align:center;border-top:1px solid #E8E5E0;">
+  <div style="font-size:12px;color:#9B9590;line-height:1.6;">You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.</div>
+  <div style="font-size:12px;color:#B8B3AE;margin-top:6px;">Fülkit — your second brain that talks back.</div>
+</div>
+</div></div>
+</body></html>`;
+
+  useEffect(() => {
+    if (iframeRef.current) {
+      const doc = iframeRef.current.contentDocument;
+      doc.open();
+      doc.write(html);
+      doc.close();
+    }
+  }, [template, html]);
+
+  return (
+    <div style={{ marginTop: "var(--space-6)" }}>
+      <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+        Email Preview
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)" }}>
+        {templates.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTemplate(t.id)}
+            style={{
+              padding: "3px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
+              background: template === t.id ? "var(--color-text)" : "transparent",
+              color: template === t.id ? "var(--color-bg)" : "var(--color-text-dim)",
+              fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden", background: "#EFEDE8" }}>
+        <iframe
+          ref={iframeRef}
+          title="Email preview"
+          style={{ width: "100%", height: 700, border: "none" }}
+          sandbox="allow-same-origin"
+        />
+      </div>
     </div>
   );
 }

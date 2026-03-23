@@ -71,24 +71,37 @@ const TEMPLATES = {
   added: () => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      Spotify limits how many people can connect at once — it's a developer platform restriction, not ours. We saved your spot.
+      Spotify limits how many people can connect at once — it's their developer platform restriction, not ours. We saved your spot.
+    </div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">
+      Fabric doesn't need Spotify
+    </div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:12px;">
+      Everything works without it. Fabric is its own music system:
+    </div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Sets</strong> — build your own playlists, drag to reorder, flag tracks from anywhere</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Crates</strong> — curated recommendations that learn what you like</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Playback</strong> — every track plays instantly via YouTube, no login required</div>
+      <div><strong style="color:#2A2826;">Signal Terrain</strong> — real-time audio visualization that responds to what's playing</div>
     </div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      In the meantime, <strong style="color:#2A2826;">all music on Fülkit plays through YouTube</strong> — no account needed. Your sets, your crates, your music. It all works.
+      Spotify is a nice-to-have — it syncs your existing playlists. But your Fabric library is yours, built here, independent of any source.
     </div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      When a Spotify seat opens up or Spotify changes their access policy, we'll email you immediately.
+      When a seat opens or Spotify updates their access, we'll let you know.
     </div>
     ${cta("https://fulkit.app/fabric", "Open Fabric")}
   `,
 
   "seat-open": () => `
-    <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your seat just opened up.</div>
+    <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your Spotify seat is ready.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      A Spotify seat is available on Fülkit. Head to <strong style="color:#2A2826;">Settings → Sources</strong> and connect your Spotify account.
+      A seat opened up. Head to <strong style="color:#2A2826;">Settings → Sources</strong> and connect your Spotify account.
     </div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      Once connected, your playlists sync automatically and playback routes through Spotify instead of YouTube. Everything you've built — sets, crates, history — stays exactly where it is.
+      Your existing playlists will sync automatically. Everything you've already built in Fabric — sets, crates, history — stays exactly where it is. Spotify just adds another playback source.
     </div>
     ${cta("https://fulkit.app/settings/sources", "Connect Spotify")}
   `,
