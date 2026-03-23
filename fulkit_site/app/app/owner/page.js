@@ -6073,9 +6073,16 @@ function PlaceholderTab({ title, description }) {
 }
 
 function PlaygroundTab() {
-  // ── Section state ──
-  const [openSections, setOpenSections] = useState({ onboarding: true });
-  const toggle = (id) => setOpenSections(p => ({ ...p, [id]: !p[id] }));
+  // ── Section state (persisted to localStorage) ──
+  const [openSections, setOpenSections] = useState(() => {
+    if (typeof window === "undefined") return { onboarding: true };
+    try { return JSON.parse(localStorage.getItem("fulkit-playground-folds")) || { onboarding: true }; } catch { return { onboarding: true }; }
+  });
+  const toggle = (id) => setOpenSections(p => {
+    const next = { ...p, [id]: !p[id] };
+    try { localStorage.setItem("fulkit-playground-folds", JSON.stringify(next)); } catch {}
+    return next;
+  });
 
   // ── Onboarding state ──
   const [tiers, setTiers] = useState([]);
@@ -6334,46 +6341,36 @@ function PlaygroundTab() {
         )}
       </div>
 
-      {/* ═══ PAYMENT ═══ */}
+      {/* ═══ QUICK PREVIEWS ═══ */}
       <div style={FOLD}>
-        <button onClick={() => toggle("payment")} style={FOLD_BTN}>
-          <CreditCard size={13} strokeWidth={2} color="var(--color-text-muted)" />
-          <span style={FOLD_LABEL}>Payment</span>
-          {openSections.payment ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
-        </button>
-        {openSections.payment && (
-          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-            <iframe src="/payment-preview" title="Payment preview" style={{ width: "100%", height: 600, border: "none" }} />
-          </div>
-        )}
-      </div>
-
-      {/* ═══ LOADING ═══ */}
-      <div style={FOLD}>
-        <button onClick={() => toggle("loading")} style={FOLD_BTN}>
-          <Zap size={13} strokeWidth={2} color="var(--color-text-muted)" />
-          <span style={FOLD_LABEL}>Loading</span>
-          {openSections.loading ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
-        </button>
-        {openSections.loading && (
-          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-            <iframe src="/loading-preview" title="Loading preview" style={{ width: "100%", height: 600, border: "none" }} />
-          </div>
-        )}
-      </div>
-
-      {/* ═══ SHARE ═══ */}
-      <div style={FOLD}>
-        <button onClick={() => toggle("share")} style={FOLD_BTN}>
-          <ExternalLink size={13} strokeWidth={2} color="var(--color-text-muted)" />
-          <span style={FOLD_LABEL}>Share Page</span>
-          {openSections.share ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
-        </button>
-        {openSections.share && (
-          <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-            <iframe src="/share-preview" title="Share preview" style={{ width: "100%", height: 600, border: "none" }} />
-          </div>
-        )}
+        <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <span style={{ ...FOLD_LABEL, marginBottom: "var(--space-1)" }}>Page Previews</span>
+          {[
+            { href: "/payment-preview", icon: CreditCard, label: "Payment" },
+            { href: "/loading-preview", icon: Zap, label: "Loading" },
+            { href: "/share-preview", icon: ExternalLink, label: "Share Page" },
+          ].map(p => (
+            <a
+              key={p.href}
+              href={p.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex", alignItems: "center", gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-3)",
+                background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-sm)", textDecoration: "none",
+                fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                color: "var(--color-text-secondary)", cursor: "pointer",
+              }}
+            >
+              <p.icon size={13} strokeWidth={2} color="var(--color-text-muted)" />
+              {p.label}
+              <span style={{ flex: 1 }} />
+              <ExternalLink size={10} strokeWidth={1.5} color="var(--color-text-dim)" />
+            </a>
+          ))}
+        </div>
       </div>
 
     </div>
