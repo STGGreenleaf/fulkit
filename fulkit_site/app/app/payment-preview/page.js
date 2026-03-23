@@ -146,7 +146,7 @@ export default function PaymentPreview() {
   const remaining = seatLimit - mockProfile.messages_this_month;
 
   return (
-    <AuthGuard>
+    <>
           {/* Scrollable content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4) var(--space-6) var(--space-6)" }}>
 
@@ -860,6 +860,6 @@ export default function PaymentPreview() {
             )}
           </div>
           </div>
-    </AuthGuard>
+    </>
   );
 }

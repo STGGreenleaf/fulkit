@@ -178,9 +178,5 @@ My call: pricing page Monday, onboarding Tuesday-Wednesday, partner list Thursda
 }
 
 export default function SharePreview() {
-  return (
-    <AuthGuard>
-      <SharePagePreview />
-    </AuthGuard>
-  );
+  return <SharePagePreview />;
 }
