@@ -4586,10 +4586,10 @@ export default function FabricPage() {
                                   onClick={(e) => { e.stopPropagation(); flag(track); }}
                                   style={{
                                     background: "none", border: "none", cursor: "pointer", padding: 2,
-                                    color: "var(--color-text-dim)", display: "flex", flexShrink: 0, opacity: 0.5,
+                                    color: "var(--color-text-secondary)", display: "flex", flexShrink: 0, opacity: 0.6,
                                   }}
                                 >
-                                  <ListX size={10} strokeWidth={1.8} />
+                                  <ListX size={14} strokeWidth={1.8} />
                                 </button>
                               </div>
                             );
