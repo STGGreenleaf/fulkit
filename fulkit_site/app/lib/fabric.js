@@ -878,8 +878,28 @@ export function FabricProvider({ children }) {
     // YouTube tracks: route directly to iframe engine
     if (track.provider === "youtube") {
       const videoId = track.id || track.uri?.replace("youtube:video:", "");
-      if (videoId && window.__ytEngine) {
+      // Real YouTube IDs are 11 chars, base64-ish. B-Side slugs (btc-*) and search slugs aren't.
+      const isRealYtId = videoId && /^[A-Za-z0-9_-]{10,12}$/.test(videoId);
+      if (isRealYtId && window.__ytEngine) {
         window.__ytEngine.play(videoId);
+        return;
+      }
+      // Slug ID — search YouTube for the real video
+      if (window.__ytEngine && track.title) {
+        try {
+          const q = `${track.artist || ""} ${track.title}`.trim();
+          const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
+          if (playInFlightRef.current !== requestId) return;
+          const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
+          if (ytMatch) {
+            window.__ytEngine.play(ytMatch.source_id);
+            if (!track.art) {
+              fetchAlbumArt(track.artist, track.title).then((art) => {
+                if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
+              });
+            }
+          }
+        } catch {}
       }
       return;
     }
