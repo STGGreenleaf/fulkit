@@ -777,6 +777,7 @@ export default function ChatContent({ isPopout = false }) {
                                   const { url } = await res.json();
                                   const fullUrl = `${window.location.origin}${url}`;
                                   navigator.clipboard.writeText(fullUrl);
+                                  window.open(url, "_blank");
                                   setSharedMsg(i);
                                   setTimeout(() => setSharedMsg(null), 2000);
                                 } catch {}
