@@ -983,12 +983,30 @@ export function FabricProvider({ children }) {
       // If track has a precached YouTube video ID, play directly — zero quota
       if (track.ytId) {
         window.__ytEngine.play(track.ytId);
+        if (!track.art) {
+          fetchAlbumArt(track.artist, track.title).then((art) => {
+            if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
+            else {
+              const fallback = `https://img.youtube.com/vi/${track.ytId}/mqdefault.jpg`;
+              setCurrentTrack((cur) => cur ? { ...cur, art: fallback } : cur);
+            }
+          });
+        }
         return true;
       }
       // If track ID is already a real YouTube video ID, play directly
       const rawId = track.id || track.uri?.replace("youtube:video:", "");
       if (rawId && /^[A-Za-z0-9_-]{10,12}$/.test(rawId)) {
         window.__ytEngine.play(rawId);
+        if (!track.art) {
+          fetchAlbumArt(track.artist, track.title).then((art) => {
+            if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
+            else {
+              const fallback = `https://img.youtube.com/vi/${rawId}/mqdefault.jpg`;
+              setCurrentTrack((cur) => cur ? { ...cur, art: fallback } : cur);
+            }
+          });
+        }
         return true;
       }
       // Search YouTube for the real video
