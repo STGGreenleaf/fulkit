@@ -956,6 +956,10 @@ function SourcesTab() {
   const [fabricConnected, setFabricConnected] = useState(false);
   const [fabricDisconnecting, setFabricDisconnecting] = useState(false);
   const [fabricExpanded, setFabricExpanded] = useState(false);
+  const [spotifySeats, setSpotifySeats] = useState(null);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
   const [fabricPlayerEnabled, setFabricPlayerEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("fulkit-fabric-player") !== "false";
@@ -1078,7 +1082,10 @@ function SourcesTab() {
       check("/api/toast/status"),
       check("/api/trello/status"),
     ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello]) => {
-      if (fabric) setFabricConnected(fabric.connected);
+      if (fabric) {
+        setFabricConnected(fabric.connected);
+        if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
+      }
       if (numbrly) { setNumbrlyConnected(numbrly.connected); if (numbrly.lastSynced) setNumbrlyLastSynced(numbrly.lastSynced); }
       if (tg) { setTgConnected(tg.connected); if (tg.lastSynced) setTgLastSynced(tg.lastSynced); }
       if (square) { setSquareConnected(square.connected); if (square.lastSynced) setSquareLastSynced(square.lastSynced); }
@@ -1127,6 +1134,7 @@ function SourcesTab() {
   }
 
   function connectFabric() {
+    if (spotifySeats && spotifySeats.used >= spotifySeats.max) return;
     if (accessToken) {
       window.open("/api/fabric/connect?token=" + encodeURIComponent(accessToken), "_blank");
       return;
@@ -1171,6 +1179,20 @@ function SourcesTab() {
       setFabricConnected(false);
     } catch {}
     setFabricDisconnecting(false);
+  }
+
+  async function submitWaitlist() {
+    if (!waitlistEmail.trim() || waitlistSubmitting) return;
+    setWaitlistSubmitting(true);
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail.trim(), category: "spotify" }),
+      });
+      if (res.ok) setWaitlistDone(true);
+    } catch {}
+    setWaitlistSubmitting(false);
   }
 
   async function connectNumbrly() {
@@ -1698,7 +1720,7 @@ function SourcesTab() {
                 <CardHeader
                   logo={SOURCE_LOGOS.fabric}
                   name="Spotify"
-                  subtitle={fabricPlayerEnabled ? "Player active" : "Player off"}
+                  subtitle={`${spotifySeats ? `${spotifySeats.used}/${spotifySeats.max} seats · ` : ""}${fabricPlayerEnabled ? "Player active" : "Player off"}`}
                   isExpanded={fabricExpanded}
                   onToggle={() => setFabricExpanded(!fabricExpanded)}
                 />
@@ -2171,16 +2193,19 @@ function SourcesTab() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: moreTiles.length > 0 ? "var(--space-4)" : 0 }}>
               {moreCards.map((src) => {
                 const desc = SOURCE_DESCRIPTIONS[src.id];
-                const isOpen = src.id === "shopify" ? shopifyExpanded : !!expanded[src.id];
+                const isOpen = src.id === "shopify" ? shopifyExpanded : src.id === "fabric" ? fabricExpanded : !!expanded[src.id];
                 const toggle = src.id === "shopify"
                   ? () => setShopifyExpanded(!shopifyExpanded)
+                  : src.id === "fabric"
+                  ? () => setFabricExpanded(!fabricExpanded)
                   : () => setExpanded((prev) => ({ ...prev, [src.id]: !prev[src.id] }));
+                const seatsFull = src.id === "fabric" && spotifySeats && spotifySeats.used >= spotifySeats.max;
                 return (
                   <Card key={src.id} style={{ padding: 0, overflow: "hidden" }}>
                     <CardHeader
                       logo={SOURCE_LOGOS[src.id]}
                       name={src.name}
-                      subtitle={desc?.subtitle || src.cat}
+                      subtitle={src.id === "fabric" && spotifySeats ? `${spotifySeats.used}/${spotifySeats.max} seats` : (desc?.subtitle || src.cat)}
                       isExpanded={isOpen}
                       onToggle={toggle}
                     />
@@ -2193,7 +2218,48 @@ function SourcesTab() {
                         tryPrompt: desc.tryPrompt,
                         linkLabel: desc.linkLabel,
                         linkHref: desc.linkHref,
-                        footer: src.id === "shopify" ? (
+                        footer: seatsFull ? (
+                          <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                            <DrawerItem index={5} visible={isOpen}>
+                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                                All Spotify seats are taken.
+                              </div>
+                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                                Spotify limitation, not ours.
+                              </div>
+                            </DrawerItem>
+                            <DrawerItem index={6} visible={isOpen}>
+                              {waitlistDone ? (
+                                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: "var(--space-3)" }}>
+                                  You're on the list.
+                                </div>
+                              ) : (
+                                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+                                  <input
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={waitlistEmail}
+                                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && submitWaitlist()}
+                                    style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
+                                  />
+                                  <button
+                                    onClick={submitWaitlist}
+                                    disabled={waitlistSubmitting || !waitlistEmail.trim()}
+                                    style={{ background: "none", border: "none", cursor: waitlistSubmitting || !waitlistEmail.trim() ? "default" : "pointer", padding: 4, color: "var(--color-text-muted)", opacity: waitlistSubmitting || !waitlistEmail.trim() ? 0.3 : 0.7, fontSize: 14, lineHeight: 1 }}
+                                  >
+                                    {waitlistSubmitting ? "…" : "→"}
+                                  </button>
+                                </div>
+                              )}
+                            </DrawerItem>
+                            <DrawerItem index={7} visible={isOpen}>
+                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-3)" }}>
+                                Music plays via YouTube.
+                              </div>
+                            </DrawerItem>
+                          </div>
+                        ) : src.id === "shopify" ? (
                           <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
                             <DrawerItem index={5} visible={isOpen}>
                               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>

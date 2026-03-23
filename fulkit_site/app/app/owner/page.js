@@ -1871,6 +1871,10 @@ function DeveloperTab() {
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
 
+  // ── Waitlist ──
+  const [waitlist, setWaitlist] = useState([]);
+  const [waitlistLoading, setWaitlistLoading] = useState(true);
+
   useEffect(() => {
     if (!accessToken) return;
     fetch("/api/feedback", { headers: { Authorization: `Bearer ${accessToken}` } })
@@ -1878,6 +1882,11 @@ function DeveloperTab() {
       .then(data => setTickets(data || []))
       .catch(() => {})
       .finally(() => setTicketsLoading(false));
+    fetch("/api/waitlist", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setWaitlist(data || []))
+      .catch(() => {})
+      .finally(() => setWaitlistLoading(false));
   }, [accessToken]);
 
   const updateStatus = async (id, status) => {
@@ -2677,6 +2686,46 @@ function DeveloperTab() {
                 >
                   {t.status}
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Waitlist ── */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
+            Waitlist
+          </span>
+          {waitlist.length > 0 && (
+            <span style={{
+              fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)",
+              background: "var(--color-text)", color: "var(--color-bg)",
+              padding: "1px 6px", borderRadius: "var(--radius-full)",
+            }}>
+              {waitlist.length}
+            </span>
+          )}
+        </div>
+        {waitlistLoading ? (
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+        ) : waitlist.length === 0 ? (
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No waitlist entries.</div>
+        ) : (
+          <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+            {waitlist.map((w, i) => (
+              <div key={w.id} style={{
+                display: "flex", alignItems: "center", gap: "var(--space-3)",
+                padding: "var(--space-2-5) var(--space-3)",
+                borderBottom: i < waitlist.length - 1 ? "1px solid var(--color-border-light)" : "none",
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{w.email}</div>
+                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
+                    {w.category} {"\u00b7"} {new Date(w.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
