@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./auth";
+import PlaybackEngine from "../components/PlaybackEngine";
 
 const FabricContext = createContext(null);
 
@@ -1284,6 +1285,7 @@ export function FabricProvider({ children }) {
         connectedProviders,
       }}
     >
+      <PlaybackEngine connectedProviders={connectedProviders} />
       {children}
     </FabricContext.Provider>
   );
