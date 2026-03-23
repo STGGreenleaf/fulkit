@@ -556,6 +556,28 @@ export function FabricProvider({ children }) {
     });
   }, [currentTrack?.id, flagged, connected, accessToken, apiFetch, audioFeatures]);
 
+  // Auto-sync crowned set to Supabase after any mutation (fire-and-forget)
+  const autoSyncCrowned = useCallback((setId, sets) => {
+    const set = sets.find(s => s.id === setId);
+    if (!set) return;
+    const crateId = publishedSetsRef.current[set.name];
+    if (!crateId) return; // Not crowned — skip
+    // Re-publish in background
+    apiFetch("/api/fabric/sets/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        name: set.name,
+        tracks: set.tracks.map((t, i) => ({
+          source_id: t.id,
+          title: t.title,
+          artist: t.artist,
+          duration_ms: t.duration_ms || (t.duration ? t.duration * 1000 : 0),
+          position: i,
+        })),
+      }),
+    }).catch(() => {});
+  }, [apiFetch]);
+
   const reorderFlagged = useCallback((fromIndex, toIndex) => {
     setSetsData((prev) => {
       const next = { ...prev, sets: prev.sets.map(s => {
@@ -566,9 +588,10 @@ export function FabricProvider({ children }) {
         return { ...s, tracks };
       })};
       persistSets(next);
+      autoSyncCrowned(prev.activeId, next.sets);
       return next;
     });
-  }, [persistSets]);
+  }, [persistSets, autoSyncCrowned]);
 
   const flag = useCallback((track) => {
     setSetsData((prev) => {
@@ -579,11 +602,11 @@ export function FabricProvider({ children }) {
         return { ...s, tracks: wasInSet ? s.tracks.filter(t => t.id !== track.id) : [...s.tracks, track] };
       })};
       persistSets(next);
-      // Mark adoption via ref (history state declared below, accessed via flagAdoptionRef)
+      autoSyncCrowned(prev.activeId, next.sets);
       if (!wasInSet && activeSet) flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
       return next;
     });
-  }, [persistSets]);
+  }, [persistSets, autoSyncCrowned]);
 
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),
@@ -1052,6 +1075,8 @@ export function FabricProvider({ children }) {
 
   // ═══ Published sets (featured mixes) ═══
   const [publishedSets, setPublishedSets] = useState({}); // { setName: crateId }
+  const publishedSetsRef = useRef({});
+  useEffect(() => { publishedSetsRef.current = publishedSets; }, [publishedSets]);
 
   // Fetch published sets on mount — auto-restore missing personal sets from crowned crates
   useEffect(() => {
