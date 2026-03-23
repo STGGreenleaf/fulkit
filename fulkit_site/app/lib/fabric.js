@@ -238,6 +238,28 @@ export function FabricProvider({ children }) {
     });
   }, [accessToken, apiFetch, onFabricPage]);
 
+  // Bulk-resolve unresolved tracks on Fabric page load — precache YouTube IDs
+  const bulkResolveRan = useRef(false);
+  useEffect(() => {
+    if (!accessToken || !onFabricPage || bulkResolveRan.current) return;
+    bulkResolveRan.current = true;
+    // Collect all tracks without a ytId that need resolution
+    const unresolved = [];
+    for (const s of setsData.sets || []) {
+      for (const t of s.tracks || []) {
+        if (t.ytId) continue; // already resolved
+        if (/^[A-Za-z0-9_-]{10,12}$/.test(t.id)) continue; // already a real YT ID
+        if (t.title) unresolved.push(t.id);
+      }
+    }
+    if (!unresolved.length) return;
+    console.log(`[fabric] Precaching ${unresolved.length} track(s)...`);
+    // Stagger resolves — 500ms apart to avoid hammering API
+    unresolved.forEach((trackId, i) => {
+      setTimeout(() => resolveYouTubeId(trackId), i * 500);
+    });
+  }, [accessToken, onFabricPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
   // YouTube tracks don't need polling — state is managed client-side
   const hasSpotify = connectedProvidersRef.current?.spotify;
@@ -614,7 +636,10 @@ export function FabricProvider({ children }) {
       })};
       persistSets(next);
       autoSyncCrowned(prev.activeId, next.sets);
-      if (!wasInSet && activeSet) flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
+      if (!wasInSet && activeSet) {
+        flagAdoptionRef.current = { trackId: track.id, setName: activeSet.name };
+        resolveYouTubeId(track.id);
+      }
       return next;
     });
   }, [persistSets, autoSyncCrowned]);
@@ -623,6 +648,43 @@ export function FabricProvider({ children }) {
     (trackId) => flagged.some((t) => t.id === trackId),
     [flagged]
   );
+
+  // Resolve YouTube video ID for a track — one search, stored forever.
+  // Tracks with real YT IDs (11-char) skip resolution. Slug IDs (btc-*, search-*) get resolved.
+  // Uses a ref-based pattern to avoid circular hook dependencies with flag/addToGuyCrate.
+  const resolveYouTubeIdRef = useRef(null);
+  const resolveYouTubeId = useCallback((trackId) => {
+    resolveYouTubeIdRef.current?.(trackId);
+  }, []);
+  useEffect(() => {
+    resolveYouTubeIdRef.current = (trackId) => {
+      if (!trackId) return;
+      if (/^[A-Za-z0-9_-]{10,12}$/.test(trackId)) return;
+      // Read current sets to find the track's metadata
+      setSetsData((prev) => {
+        for (const s of prev.sets) {
+          const t = s.tracks.find(t => t.id === trackId);
+          if (t?.title) {
+            const q = `${t.artist || ""} ${t.title}`.trim();
+            apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`).then((data) => {
+              const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
+              if (!ytMatch) return;
+              setSetsData((cur) => {
+                const next = { ...cur, sets: cur.sets.map(s => ({
+                  ...s,
+                  tracks: s.tracks.map(t => t.id === trackId ? { ...t, ytId: ytMatch.source_id, provider: "youtube" } : t),
+                }))};
+                persistSets(next);
+                return next;
+              });
+            });
+            break;
+          }
+        }
+        return prev;
+      });
+    };
+  });
 
   // Guy's Crate — auto-populated by BTC recommendations
   const guyCrate = setsData.sets.find(s => s.id === "guy-crate") || null;
@@ -738,6 +800,7 @@ export function FabricProvider({ children }) {
         gc = { id: "guy-crate", name: "Guy's Crate", source: "guy", tracks: [] };
         const next = { ...prev, sets: [...prev.sets, { ...gc, tracks: [track] }] };
         persistSets(next);
+        resolveYouTubeId(track.id);
         return next;
       }
       if (gc.tracks.some(t => t.id === track.id)) return prev;
@@ -745,6 +808,7 @@ export function FabricProvider({ children }) {
         s.id === "guy-crate" ? { ...s, tracks: [...s.tracks, track] } : s
       )};
       persistSets(next);
+      resolveYouTubeId(track.id);
       return next;
     });
   }, [persistSets]);
@@ -880,6 +944,11 @@ export function FabricProvider({ children }) {
       if (!window.__ytEngine || !track.title) {
         console.warn("[playTrack] No ytEngine or no title, cannot play:", track.id);
         return false;
+      }
+      // If track has a precached YouTube video ID, play directly — zero quota
+      if (track.ytId) {
+        window.__ytEngine.play(track.ytId);
+        return true;
       }
       // If track ID is already a real YouTube video ID, play directly
       const rawId = track.id || track.uri?.replace("youtube:video:", "");
