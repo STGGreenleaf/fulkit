@@ -106,6 +106,80 @@ CREATE TABLE user_playlist_tracks (
 - Does NOT require any source to be connected to view playlists
 - Does NOT change Fabric page layout
 
+## Trophy System — Sets → Playlists Promotion
+
+### The Flow
+1. User creates a **set** (workspace, localStorage, editable)
+2. User clicks **trophy** (Lucide `Trophy` icon) → set becomes a **playlist** (personal, permanent, Supabase)
+3. Owner clicks **crown** (Lucide `Crown` icon) → set becomes a **Bin Pick** (public, permanent, Supabase)
+
+### Who Gets What
+- **Users** → see trophy icon on every set header
+- **Owner** → sees both trophy AND crown on every set header
+
+### What Trophy Does
+- Saves the set to `user_playlists` + `user_playlist_tracks` in Supabase
+- Moves the set from **Active Sets** (top) to **Completed Sets** fold (bottom) in the sets column
+- Still editable — expand the fold, click into the set, make changes
+- Edits auto-sync to Supabase (same pattern as crowned sets)
+- If localStorage gets cleared, trophied sets auto-restore from Supabase
+
+### Sets Column Layout (right side)
+```
+┌─────────────────────────┐
+│  + New Set              │
+├─────────────────────────┤
+│  Set 1 (drag to reorder)│  ← Active sets (top, reorderable)
+│  Set 2                  │
+├─────────────────────────┤
+│  ▸ Completed Sets (3)   │  ← Collapsed fold (bottom, not reorderable)
+│    Electro Static ★     │
+│    Work Tech ★          │
+│    Late Night Vibes ★   │
+└─────────────────────────┘
+```
+
+- **Active Sets**: top, reorderable via drag-and-drop, your workspace
+- **Completed Sets**: bottom fold, collapsible, trophied sets. Still editable inside the fold. Not reorderable — they just stack. Defaults collapsed.
+
+### Left Column — Library (browse)
+- **Bin Picks** — owner-crowned sets. Curated by owner, visible to ALL users. Public storefront.
+- **Playlists** — imported from Spotify/Apple Music/etc. Broad lists from external sources. Stored in Supabase, persist forever.
+
+### Right Column — Workspace (build)
+- **Active Sets** (top) — user's workspace. Editable, reorderable, in progress.
+- **Completed Sets** fold (bottom) — trophied sets. Collapsible. Still editable inside the fold. Saved to Supabase. Private to user.
+
+### The Three Things
+| Thing | Icon | Who can do it | Who sees it | Where it lives | Editable |
+|-------|------|--------------|-------------|---------------|----------|
+| **Bin Pick** | Crown | Owner ONLY | Everyone | Supabase (public) | Owner only |
+| **Playlist** | — | Auto-import | User only | Supabase (imported) | No (read-only) |
+| **Completed Set** | Trophy | ANY user | User only (private) | Supabase (private) | Yes, always |
+
+### Crown vs Trophy — clear distinction
+- **Crown** (Lucide `Crown`) = **OWNER ONLY**. Makes a set public. Every user sees it in Bin Picks. Only the owner has this icon. This is the house curating for guests.
+- **Trophy** (Lucide `Trophy`) = **ANY USER**. Marks a set as complete. Saves it permanently to Supabase. Private to that user — nobody else sees it. Moves it to the Completed Sets fold. This is the user saving their own work.
+- **Owner gets BOTH icons** on every set. Trophy for personal save, Crown for public feature.
+- **Users get ONLY trophy**. They never see Crown. They can't publish to Bin Picks.
+
+### Key Distinctions
+- **Playlists** = imported from external music apps (Spotify, Apple Music, etc). Broad collections. Not made here. Read-only.
+- **Sets** = made in Fabric. User's private curation. Trophy = permanent save. Exclusive to that user.
+- **Bin Picks** = owner-crowned sets. The record store's recommendations. Public.
+
+### Three States Per Set
+1. **Active** — top of sets column, editable, in progress, reorderable
+2. **Completed** (trophy) — bottom fold, editable if needed, saved to Supabase, private to user
+3. **Featured** (crown, owner only) — appears in Bin Picks for all users. A set can be both trophied AND crowned.
+
+### No Source Required
+- Users can create sets and trophy them without ANY music source connected
+- Tracks play via YouTube fallback
+- Importing from Spotify/Apple Music is optional — adds to Imported section
+
+---
+
 ## The Promise
 
 Your music library is yours. Connect a source, import your playlists, disconnect if you want. The music stays. The playlists stay. Play from whatever source is available. No lock-in. Complete freedom.
