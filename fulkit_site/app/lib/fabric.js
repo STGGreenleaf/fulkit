@@ -249,7 +249,7 @@ export function FabricProvider({ children }) {
       const data = await apiFetch("/api/fabric/now-playing");
       if (!data || data.error) {
         failCount++;
-        if (failCount >= 3) { setConnected(false); clearInterval(pollRef.current); }
+        if (failCount >= 3) { clearInterval(pollRef.current); }
         return;
       }
       failCount = 0;
