@@ -121,6 +121,7 @@ export default function ChatContent({ isPopout = false }) {
   const [hoveredMsg, setHoveredMsg] = useState(null);
   const [copiedMsg, setCopiedMsg] = useState(null);
   const [sharedMsg, setSharedMsg] = useState(null);
+  const [sharePopup, setSharePopup] = useState(null); // { index, url }
   const [showPins, setShowPins] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/pinned");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
@@ -760,8 +761,8 @@ export default function ChatContent({ isPopout = false }) {
                             <button
                               onClick={async () => {
                                 if (!accessToken) return;
+                                if (sharePopup?.index === i) { setSharePopup(null); return; }
                                 try {
-                                  // Find the preceding user message to share as a pair
                                   const prevUserMsg = chat.messages.slice(0, i).reverse().find(m => m.role === "user");
                                   const convTitle = chat.conversations.find(c => c.id === chat.conversationId)?.title || null;
                                   const res = await fetch("/api/share", {
@@ -776,26 +777,107 @@ export default function ChatContent({ isPopout = false }) {
                                   if (!res.ok) return;
                                   const { url } = await res.json();
                                   const fullUrl = `${window.location.origin}${url}`;
-                                  navigator.clipboard.writeText(fullUrl);
-                                  window.open(url, "_blank");
-                                  setSharedMsg(i);
-                                  setTimeout(() => setSharedMsg(null), 2000);
+                                  setSharePopup({ index: i, url: fullUrl });
                                 } catch {}
                               }}
-                              title={sharedMsg === i ? "Link copied!" : "Share this message"}
+                              title="Share"
                               style={{
                                 background: "none",
                                 border: "none",
                                 cursor: "pointer",
                                 padding: 4,
-                                color: sharedMsg === i ? "var(--color-text)" : "var(--color-text-dim)",
+                                color: sharePopup?.index === i ? "var(--color-text)" : "var(--color-text-dim)",
                                 display: "flex",
                               }}
                             >
-                              {sharedMsg === i ? <Check size={13} strokeWidth={2} /> : <ExternalLink size={13} strokeWidth={2} />}
+                              <ExternalLink size={13} strokeWidth={2} />
                             </button>
                           </>
                         )}
+                      </div>
+                    )}
+                    {/* Share popup */}
+                    {sharePopup?.index === i && (
+                      <div style={{
+                        alignSelf: "flex-end",
+                        marginTop: 4,
+                        padding: "var(--space-3)",
+                        background: "var(--color-bg-elevated, var(--color-bg))",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "var(--radius-md)",
+                        maxWidth: 320,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "var(--space-2)",
+                      }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                          Share this moment
+                        </div>
+                        <div style={{
+                          fontSize: "var(--font-size-2xs)",
+                          fontFamily: "var(--font-mono)",
+                          color: "var(--color-text-muted)",
+                          background: "var(--color-bg-alt)",
+                          padding: "var(--space-2)",
+                          borderRadius: "var(--radius-sm)",
+                          wordBreak: "break-all",
+                          userSelect: "all",
+                        }}>
+                          {sharePopup.url}
+                        </div>
+                        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(sharePopup.url);
+                              setSharedMsg(i);
+                              setTimeout(() => setSharedMsg(null), 1500);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "var(--space-2)",
+                              fontSize: "var(--font-size-2xs)",
+                              fontFamily: "var(--font-mono)",
+                              fontWeight: "var(--font-weight-semibold)",
+                              background: "var(--color-text)",
+                              color: "var(--color-bg)",
+                              border: "none",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {sharedMsg === i ? "Copied!" : "Copy link"}
+                          </button>
+                          <button
+                            onClick={() => window.open(sharePopup.url, "_blank")}
+                            style={{
+                              flex: 1,
+                              padding: "var(--space-2)",
+                              fontSize: "var(--font-size-2xs)",
+                              fontFamily: "var(--font-mono)",
+                              fontWeight: "var(--font-weight-semibold)",
+                              background: "var(--color-bg-alt)",
+                              color: "var(--color-text)",
+                              border: "1px solid var(--color-border-light)",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Preview
+                          </button>
+                          <button
+                            onClick={() => setSharePopup(null)}
+                            style={{
+                              padding: "var(--space-2)",
+                              fontSize: "var(--font-size-2xs)",
+                              background: "none",
+                              border: "none",
+                              color: "var(--color-text-dim)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <X size={12} strokeWidth={2} />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
