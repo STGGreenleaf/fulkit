@@ -34,6 +34,16 @@ export async function POST(request) {
     }, { onConflict: "email,category", ignoreDuplicates: true }).select().single();
 
     if (error) return Response.json({ error: "Failed to join waitlist" }, { status: 500 });
+
+    // Fire-and-forget: send "added" confirmation email
+    const origin = request.headers.get("origin") || request.headers.get("x-forwarded-host") || "https://fulkit.app";
+    const authHeader = request.headers.get("authorization");
+    fetch(`${origin.startsWith("http") ? origin : `https://${origin}`}/api/email/waitlist`, {
+      method: "POST",
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: finalEmail, template: "added" }),
+    }).catch(() => {});
+
     return Response.json(data);
   } catch {
     return Response.json({ error: "Failed to join waitlist" }, { status: 500 });

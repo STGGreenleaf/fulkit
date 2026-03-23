@@ -1876,6 +1876,7 @@ function DeveloperTab() {
   const [waitlistLoading, setWaitlistLoading] = useState(true);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [notifyCategory, setNotifyCategory] = useState("all");
+  const [notifyTemplate, setNotifyTemplate] = useState("seat-open");
   const [notifyMsg, setNotifyMsg] = useState("");
   const [notifySending, setNotifySending] = useState(false);
   const [notifyResult, setNotifyResult] = useState(null);
@@ -2755,24 +2756,55 @@ function DeveloperTab() {
                   );
                 })()}
               </div>
+              {/* Template select */}
+              <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-2)" }}>
+                {[
+                  { id: "seat-open", label: "Seat opened" },
+                  { id: "custom", label: "Custom" },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setNotifyTemplate(t.id)}
+                    style={{
+                      padding: "1px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
+                      background: notifyTemplate === t.id ? "var(--color-text)" : "transparent",
+                      color: notifyTemplate === t.id ? "var(--color-bg)" : "var(--color-text-dim)",
+                      fontSize: 9, fontFamily: "var(--font-mono)", cursor: "pointer",
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {/* Custom message input (only for custom template) */}
+              {notifyTemplate === "custom" && (
+                <div style={{ marginBottom: "var(--space-2)" }}>
+                  <input
+                    type="text"
+                    placeholder="Message to send..."
+                    value={notifyMsg}
+                    onChange={(e) => setNotifyMsg(e.target.value)}
+                    style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <input
-                  type="text"
-                  placeholder="Message to send..."
-                  value={notifyMsg}
-                  onChange={(e) => setNotifyMsg(e.target.value)}
-                  style={{ flex: 1, padding: "var(--space-2) var(--space-3)", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none" }}
-                />
                 <button
                   onClick={async () => {
-                    if (!notifyMsg.trim() || notifySending) return;
+                    if (notifySending) return;
+                    if (notifyTemplate === "custom" && !notifyMsg.trim()) return;
                     setNotifySending(true);
                     const targets = notifyCategory === "all" ? waitlist : waitlist.filter(w => w.category === notifyCategory);
                     try {
                       const res = await fetch("/api/email/waitlist", {
                         method: "POST",
                         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-                        body: JSON.stringify({ emails: targets.map(w => w.email), message: notifyMsg.trim(), category: notifyCategory }),
+                        body: JSON.stringify({
+                          emails: targets.map(w => w.email),
+                          template: notifyTemplate,
+                          message: notifyTemplate === "custom" ? notifyMsg.trim() : undefined,
+                          category: notifyCategory,
+                        }),
                       });
                       if (res.ok) {
                         const data = await res.json();
@@ -2784,10 +2816,19 @@ function DeveloperTab() {
                     setNotifySending(false);
                     setTimeout(() => setNotifyResult(null), 3000);
                   }}
-                  disabled={notifySending || !notifyMsg.trim()}
-                  style={{ background: "none", border: "none", cursor: notifySending || !notifyMsg.trim() ? "default" : "pointer", padding: 4, color: "var(--color-text-muted)", opacity: notifySending || !notifyMsg.trim() ? 0.3 : 0.7, fontSize: 14, lineHeight: 1 }}
+                  disabled={notifySending || (notifyTemplate === "custom" && !notifyMsg.trim())}
+                  style={{
+                    flex: 1, padding: "var(--space-2) var(--space-3)",
+                    background: notifySending ? "var(--color-bg-alt)" : "var(--color-accent)",
+                    color: notifySending ? "var(--color-text-muted)" : "var(--color-text-inverse)",
+                    border: "none", borderRadius: "var(--radius-sm)",
+                    fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
+                    fontFamily: "var(--font-primary)",
+                    cursor: notifySending ? "default" : "pointer",
+                    opacity: (notifyTemplate === "custom" && !notifyMsg.trim()) ? 0.5 : 1,
+                  }}
                 >
-                  {notifySending ? "…" : "→"}
+                  {notifySending ? "Sending..." : `Send ${notifyTemplate === "seat-open" ? "\"Seat opened\"" : "message"}`}
                 </button>
               </div>
               {notifyResult && (
