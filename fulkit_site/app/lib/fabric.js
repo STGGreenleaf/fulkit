@@ -239,9 +239,11 @@ export function FabricProvider({ children }) {
     });
   }, [connected, accessToken, apiFetch, onFabricPage]);
 
-  // Poll now playing every 4s when connected (only on fabric page or if already playing)
+  // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
+  // YouTube tracks don't need polling — state is managed client-side
+  const hasSpotify = connectedProviders?.spotify;
   useEffect(() => {
-    if (!connected || !accessToken) return;
+    if (!hasSpotify || !accessToken) return;
     if (!onFabricPage && !isPlaying) return;
 
     let failCount = 0;
@@ -333,7 +335,7 @@ export function FabricProvider({ children }) {
     const interval = onFabricPage ? 4000 : 30000;
     pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [connected, accessToken, apiFetch, onFabricPage, isPlaying]);
+  }, [hasSpotify, accessToken, apiFetch, onFabricPage, isPlaying]);
 
   // Smooth progress interpolation between polls
   useEffect(() => {
@@ -802,35 +804,32 @@ export function FabricProvider({ children }) {
     // Reset lastPollState so first non-suppressed poll starts fresh (avoids stale trackGone)
     lastPollState.current = { isPlaying: true, trackId: track.id, progress: 0 };
 
-    // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
-    let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
-    if (!uri && track.artist && track.title) {
-      try {
-        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
-        if (playInFlightRef.current !== requestId) return; // superseded by newer click
-        if (data?.tracks?.[0]) {
-          const match = data.tracks[0];
-          uri = match.uri;
-          // Cache so we don't search again
-          track.uri = uri;
-          if (match.source_id) track.id = match.source_id;
-          if (match.image) track.art = match.image;
-          // Update currentTrack state so player shows resolved art + ID
-          setCurrentTrack((cur) => (cur && cur.uri === uri) ? cur : { ...track });
-        }
-      } catch {}
-    }
-    if (playInFlightRef.current !== requestId) return; // superseded
-
-    // Route to correct engine based on provider
+    // YouTube: route directly to iframe engine — no API calls needed
     if (track.provider === "youtube") {
-      // YouTube: play via hidden iframe engine
-      const videoId = track.id || uri?.replace("youtube:video:", "");
+      const videoId = track.id || track.uri?.replace("youtube:video:", "");
       if (videoId && window.__ytEngine) {
         window.__ytEngine.play(videoId);
       }
       return;
     }
+
+    // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
+    let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
+    if (!uri && track.artist && track.title) {
+      try {
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        if (playInFlightRef.current !== requestId) return;
+        if (data?.tracks?.[0]) {
+          const match = data.tracks[0];
+          uri = match.uri;
+          track.uri = uri;
+          if (match.source_id) track.id = match.source_id;
+          if (match.image) track.art = match.image;
+          setCurrentTrack((cur) => (cur && cur.uri === uri) ? cur : { ...track });
+        }
+      } catch {}
+    }
+    if (playInFlightRef.current !== requestId) return;
 
     // Spotify (and other OAuth providers): play via API
     if (!uri) return;
