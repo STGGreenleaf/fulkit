@@ -3910,11 +3910,11 @@ export default function FabricPage() {
                               onClick={(e) => { e.stopPropagation(); flag(track); }}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: inSet ? "var(--color-text)" : "var(--color-text-muted)",
+                                color: inSet ? "var(--color-text)" : "var(--color-text-secondary)",
                                 transition: "color 120ms",
                               }}
                               onMouseEnter={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text)"; }}
-                              onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-muted)"; }}
+                              onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-secondary)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
                               {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
@@ -4182,7 +4182,7 @@ export default function FabricPage() {
                               padding: 2,
                               flexShrink: 0,
                               color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
-                              opacity: trackFlagged ? 1 : 0.3,
+                              opacity: trackFlagged ? 1 : 0.6,
                               transition: "opacity 120ms",
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
@@ -4308,7 +4308,7 @@ export default function FabricPage() {
                               padding: 2,
                               flexShrink: 0,
                               color: trackFlagged ? "var(--color-text)" : "var(--color-text-dim)",
-                              opacity: trackFlagged ? 1 : 0.3,
+                              opacity: trackFlagged ? 1 : 0.6,
                               transition: "opacity 120ms",
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
@@ -4487,10 +4487,10 @@ export default function FabricPage() {
                             background: "none", border: "none",
                             cursor: publishing ? "wait" : "pointer", padding: 2,
                             color: setPublished ? "var(--color-text)" : "var(--color-text-dim)",
-                            opacity: setPublished ? 1 : 0.3, transition: "opacity 120ms", flexShrink: 0,
+                            opacity: setPublished ? 1 : 0.6, transition: "opacity 120ms", flexShrink: 0,
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = setPublished ? "1" : "0.3"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = setPublished ? "1" : "0.6"}
                           title={setPublished ? "Unpublish" : "Feature this set"}
                         >
                           <Crown size={10} strokeWidth={1.8} />
@@ -4501,11 +4501,11 @@ export default function FabricPage() {
                             onClick={(e) => { e.stopPropagation(); deleteSet(set.id); }}
                             style={{
                               background: "none", border: "none", cursor: "pointer", padding: 2,
-                              color: "var(--color-text-dim)", opacity: 0.3, transition: "opacity 120ms",
+                              color: "var(--color-text-muted)", opacity: 0.6, transition: "opacity 120ms",
                               flexShrink: 0, display: "flex",
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.3"}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
                             title="Delete set"
                           >
                             <Trash2 size={9} strokeWidth={1.8} />
