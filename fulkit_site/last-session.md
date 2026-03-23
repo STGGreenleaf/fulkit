@@ -1,25 +1,20 @@
 # Last Session
 
-**Date**: 2026-03-22
-**Scope**: Mega session — Spend Moderator, v3, features, perf, Fabric independence, Thumbprint
+**Date**: 2026-03-23
+**Scope**: YouTube provider working, Fabric plays for everyone
 
-**Shipped**:
-- Spend Moderator v2 + lean tool loading (~96% reduction) + tool description compression
-- v3 Cognizant Layer Phases 0-5 complete
-- Shareable conversation links + Welcome email (Resend) + Loading skeletons
-- Chat preload during splash + convert-to-action prompt tuning
-- Fabric DB migration (multi-provider complete)
-- YouTube provider + engine + always-connected + default Work Tech set
-- Multi-source search API (/api/fabric/search)
-- Client-side ThumbprintBuilder (lib/thumbprint.js)
-- SpotifyEngine AnalyserNode capture + auto-upload
-- Timeline API: POST for uploads + cross-reference by title+artist
-- Spotify Extended Quota submitted (pending)
-- Meta App live
-- Chappie 2.0: 126/136 verified
-- Three specs written: v3-spec.md, fabric-independence-spec.md, thumbprint-spec.md
-- Full doc audit + housecleaning
+**Shipped (continued from 3/22)**:
+- YouTube provider + engine fully working (CSP fix, PlaybackEngine mounted, closure fix)
+- YouTube fallback: ANY track plays via YouTube search when Spotify disconnected
+- Default Work Tech set with YouTube tracks
+- Multi-source search API
+- CSP blocks YouTube ad trackers automatically (no-ads rule enforced by security headers)
+- Volume routing for YouTube, default volume 50
+- Client-side thumbprint builder + SpotifyEngine capture
+- Share popup (copy link + preview)
 
-**Rules locked**: No ads in Fabric. Fabric + B-Side scope only. No visual changes outside Fabric.
+**Key fix**: PlaybackEngine was never mounted — YouTubeEngine never initialized. Mounting it in FabricProvider fixed everything.
 
-**Next**: Pre-analyze curated sets, Apple Music provider, compression testing
+**Spotify status**: Disconnected (old Client ID token deleted). Reconnect with new Client ID when ready. Extended Quota submitted, pending.
+
+**Next**: Reconnect Spotify, pre-analyze curated sets, Apple Music provider, compression testing
