@@ -75,7 +75,7 @@ const CSP = [
   "img-src 'self' https://*.scdn.co https://*.googleusercontent.com https://*.supabase.co https://img.youtube.com https://i.ytimg.com https://is1-ssl.mzstatic.com https://coverartarchive.org data:",
   "font-src 'self'",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com https://www.googleapis.com https://itunes.apple.com https://musicbrainz.org https://coverartarchive.org",
-  "frame-src https://www.youtube.com",
+  "frame-src 'self' https://www.youtube.com",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
