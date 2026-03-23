@@ -71,26 +71,28 @@ const TEMPLATES = {
   added: () => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      Spotify limits how many people can connect at once — it's their developer platform restriction, not ours. We saved your spot.
+      Spotify's developer platform limits how many people can connect at once. We saved your spot.
     </div>
-
-    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">
-      Fabric doesn't need Spotify
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
+      In the meantime — you're not waiting. You're already inside.
     </div>
-    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:12px;">
-      Everything works without it. Fabric is its own music system:
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
+      Fabric is a music system. Not a wrapper around someone else's. Every track plays instantly. No login, no permissions. Just music.
     </div>
     <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Sets</strong> — build your own playlists, drag to reorder, flag tracks from anywhere</div>
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Crates</strong> — curated recommendations that learn what you like</div>
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Playback</strong> — every track plays instantly via YouTube, no login required</div>
-      <div><strong style="color:#2A2826;">Signal Terrain</strong> — real-time audio visualization that responds to what's playing</div>
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Dig</strong> — search across sources, discover new music, tap "more like this" on anything that catches your ear.</div>
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Crates</strong> — not algorithmic playlists. Curated shelves that get sharper the more you use them.</div>
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Sets</strong> — your playlists, built here. Drag to reorder, flag tracks from anywhere, trophy the ones worth keeping.</div>
+      <div><strong style="color:#2A2826;">Signal Terrain</strong> — a visualization that actually listens.</div>
     </div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      Spotify is a nice-to-have — it syncs your existing playlists. But your Fabric library is yours, built here, independent of any source.
+      And behind the counter, there's someone who knows the catalog better than you do. He has opinions. He's usually right. Ask him what to play next.
     </div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">
-      When a seat opens or Spotify updates their access, we'll let you know.
+      When a Spotify seat opens, we'll let you know. But most people forget they were waiting.
+    </div>
+    <div style="font-size:16px;font-weight:600;color:#2A2826;margin-bottom:28px;">
+      Go dig.
     </div>
     ${cta("https://fulkit.app/fabric", "Open Fabric")}
   `,
