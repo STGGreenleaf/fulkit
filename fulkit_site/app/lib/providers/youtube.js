@@ -10,8 +10,10 @@ const YT_API = "https://www.googleapis.com/youtube/v3";
 function _getApiKeys() {
   const keys = [];
   if (process.env.YOUTUBE_API_KEY) keys.push(process.env.YOUTUBE_API_KEY);
-  if (process.env.YOUTUBE_API_KEY_2) keys.push(process.env.YOUTUBE_API_KEY_2);
-  if (process.env.YOUTUBE_API_KEY_3) keys.push(process.env.YOUTUBE_API_KEY_3);
+  for (let i = 2; i <= 20; i++) {
+    const k = process.env[`YOUTUBE_API_KEY_${i}`];
+    if (k) keys.push(k);
+  }
   return keys;
 }
 
