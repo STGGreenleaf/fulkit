@@ -371,9 +371,32 @@ export function FabricProvider({ children }) {
     return () => clearInterval(pollRef.current);
   }, [hasSpotify, accessToken, apiFetch, onFabricPage, isPlaying]);
 
-  // Smooth progress interpolation between polls
+  // YouTube progress poll — read iframe state for time/duration
+  useEffect(() => {
+    if (!isPlaying) return;
+    const isYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    if (!isYT || !window.__ytEngine) return;
+
+    const interval = setInterval(() => {
+      const state = window.__ytEngine.getState?.();
+      if (!state) return;
+      const { currentTime, duration } = state;
+      if (duration > 0) {
+        setProgress(currentTime / duration);
+        // Update duration on currentTrack if missing
+        if (!currentTrack?.duration || currentTrack.duration < 10) {
+          setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
+        }
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack?.provider]);
+
+  // Smooth progress interpolation between Spotify polls
   useEffect(() => {
     if (!isPlaying || !currentTrack?.duration) return;
+    const isYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    if (isYT) return; // YouTube handles its own progress above
     const interval = setInterval(() => {
       setProgress((p) => {
         const step = 0.25 / currentTrack.duration;
@@ -381,7 +404,7 @@ export function FabricProvider({ children }) {
       });
     }, 250);
     return () => clearInterval(interval);
-  }, [isPlaying, currentTrack?.duration]);
+  }, [isPlaying, currentTrack?.duration, currentTrack?.provider]);
 
   // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
