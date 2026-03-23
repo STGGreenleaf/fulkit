@@ -829,11 +829,10 @@ export function FabricProvider({ children }) {
         const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
         if (ytMatch) {
           const videoId = ytMatch.source_id;
-          if (ytMatch.image) {
-            track.art = ytMatch.image;
-            setCurrentTrack((cur) => cur?.title === track.title ? { ...cur, art: ytMatch.image, provider: "youtube" } : cur);
-          }
           window.__ytEngine.play(videoId);
+          // Set art from YouTube thumbnail
+          const art = ytMatch.image || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+          setCurrentTrack((cur) => cur ? { ...cur, art, provider: "youtube" } : cur);
           return;
         }
       } catch {}
