@@ -3917,7 +3917,7 @@ export default function FabricPage() {
                               onMouseLeave={(e) => { if (!inSet) e.currentTarget.style.color = "var(--color-text-secondary)"; }}
                               title={inSet ? "Remove from set" : "Add to set"}
                             >
-                              {inSet ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                              {inSet ? <ListX size={14} strokeWidth={2} /> : <ListMusic size={14} strokeWidth={1.8} />}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); removeFromGuyCrate(track.id); }}
@@ -4187,7 +4187,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                            {trackFlagged ? <ListX size={14} strokeWidth={2} /> : <ListMusic size={14} strokeWidth={1.8} />}
                           </button>
                         </div>
                       );
@@ -4313,7 +4313,7 @@ export default function FabricPage() {
                             }}
                             title={trackFlagged ? "Remove from set" : "Add to set"}
                           >
-                            {trackFlagged ? <ListX size={12} strokeWidth={2} /> : <ListMusic size={12} strokeWidth={1.5} />}
+                            {trackFlagged ? <ListX size={14} strokeWidth={2} /> : <ListMusic size={14} strokeWidth={1.8} />}
                           </button>
                         </div>
                       );
