@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -1507,6 +1507,9 @@ export default function FabricPage() {
     isFlagged,
     reorderFlagged,
     allSets,
+    trophiedSets,
+    trophySet,
+    untrophySet,
     activeSetId,
     createSet,
     deleteSet,
@@ -1585,6 +1588,10 @@ export default function FabricPage() {
   }, []);
   const [crateTracks, setCrateTracks] = useState([]);
   const [publishing, setPublishing] = useState(false);
+  const [completedFoldOpen, setCompletedFoldOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("fulkit-completed-fold") === "true"; } catch { return false; }
+  });
   const [publishMsg, setPublishMsg] = useState(null);
   const [musicInput, setMusicInput] = useState("");
   const [expandedFeatured, setExpandedFeatured] = useState(null);
@@ -1745,7 +1752,7 @@ export default function FabricPage() {
     return () => clearTimeout(t);
   }, [deckHintShown]);
 
-  const { accessToken, compactMode } = useAuth();
+  const { accessToken, compactMode, isOwner } = useAuth();
 
   // Discovery — load album tracks from BTC album links
   const loadDiscovery = useCallback(async (query) => {
@@ -3595,7 +3602,7 @@ export default function FabricPage() {
                     )}
                     {playlists.length === 0 && (
                       <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", padding: "var(--space-2) var(--space-3)" }}>
-                        Connect Spotify in Settings → Sources
+                        No playlists yet — add songs to sets to get started
                       </div>
                     )}
                   </div>
@@ -4490,7 +4497,21 @@ export default function FabricPage() {
                           {set.trackCount}
                         </span>
                         <div style={{ flex: 1 }} />
-                        {/* Crown — publish/unpublish */}
+                        {/* Trophy — complete/uncomplete */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); trophySet(set.id); }}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer", padding: 2,
+                            color: "var(--color-text-dim)", opacity: 0.6, transition: "opacity 120ms", flexShrink: 0, display: "flex",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
+                          title="Complete this set"
+                        >
+                          <Trophy size={10} strokeWidth={1.8} />
+                        </button>
+                        {/* Crown — publish/unpublish (owner only) */}
+                        {isOwner && (
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -4528,6 +4549,7 @@ export default function FabricPage() {
                         >
                           <Crown size={10} strokeWidth={1.8} />
                         </button>
+                        )}
                         {/* Delete set */}
                         {allSets.length >= 1 && (
                           <button
@@ -4632,10 +4654,137 @@ export default function FabricPage() {
                     </div>
                   );
                 })}
-                {allSets.length === 0 && (
+                {allSets.length === 0 && trophiedSets.length === 0 && (
                   <div style={{ padding: "var(--space-10) var(--space-2)", textAlign: "center" }}>
                     <Plus size={16} strokeWidth={1.2} color="var(--color-text-dim)" style={{ marginBottom: 6 }} />
                     <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Create a set to get started</div>
+                  </div>
+                )}
+
+                {/* ═══ COMPLETED SETS FOLD ═══ */}
+                {trophiedSets.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--color-border)" }}>
+                    <div
+                      onClick={() => { setCompletedFoldOpen(p => { const next = !p; try { localStorage.setItem("fulkit-completed-fold", String(next)); } catch {} return next; }); }}
+                      style={{
+                        padding: "var(--space-2) var(--space-3)",
+                        display: "flex", alignItems: "center", gap: "var(--space-2)",
+                        cursor: "pointer", background: "var(--color-bg)",
+                      }}
+                    >
+                      <ChevronDown size={10} strokeWidth={2} style={{
+                        color: "var(--color-text-dim)",
+                        transform: completedFoldOpen ? "none" : "rotate(-90deg)",
+                        transition: "transform 120ms",
+                      }} />
+                      <Trophy size={10} strokeWidth={1.8} style={{ color: "var(--color-text-muted)" }} />
+                      <span style={{
+                        fontFamily: "var(--font-mono)", fontSize: 9,
+                        fontWeight: "var(--font-weight-bold)",
+                        color: "var(--color-text-muted)",
+                        textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                      }}>
+                        Completed ({trophiedSets.length})
+                      </span>
+                    </div>
+                    {completedFoldOpen && trophiedSets.map((set, setIdx) => {
+                      const isExpanded = expandedSetIds.includes(set.id);
+                      const isPlayingFromThisSet = currentTrack && set.tracks.some(t => t.id === currentTrack.id);
+                      return (
+                        <div key={set.id} style={{
+                          borderBottom: "1px solid var(--color-border-light)",
+                          overflow: "hidden",
+                          background: "var(--color-bg)",
+                        }}>
+                          <div
+                            onClick={() => { switchSet(set.id); toggleSetExpanded(set.id); }}
+                            style={{
+                              padding: "var(--space-2) var(--space-3)",
+                              borderBottom: isExpanded ? "1px solid var(--color-border-light)" : "none",
+                              borderLeft: isPlayingFromThisSet ? "3px solid var(--color-accent)" : "3px solid transparent",
+                              display: "flex", alignItems: "center", gap: "var(--space-2)",
+                              cursor: "pointer",
+                              background: isPlayingFromThisSet ? "var(--color-bg-alt)" : "var(--color-bg)",
+                            }}
+                          >
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSetExpanded(set.id); }}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 0,
+                                color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                                transform: isExpanded ? "none" : "rotate(-90deg)",
+                                transition: "transform 120ms",
+                              }}
+                            >
+                              <ChevronDown size={10} strokeWidth={2} />
+                            </button>
+                            <span style={{
+                              fontFamily: "var(--font-mono)", fontSize: 9,
+                              fontWeight: "var(--font-weight-bold)",
+                              color: isPlayingFromThisSet ? "var(--color-text)" : "var(--color-text-muted)",
+                              textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+                            }}>
+                              {set.name}
+                            </span>
+                            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", flexShrink: 0 }}>
+                              {set.trackCount}
+                            </span>
+                            <div style={{ flex: 1 }} />
+                            {/* Un-trophy */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); untrophySet(set.id); }}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2,
+                                color: "var(--color-text)", opacity: 0.8, transition: "opacity 120ms", flexShrink: 0, display: "flex",
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = "0.8"}
+                              title="Move back to active sets"
+                            >
+                              <Trophy size={10} strokeWidth={1.8} />
+                            </button>
+                          </div>
+                          {isExpanded && (
+                            <div>
+                              {set.tracks.map((track, i) => {
+                                const isActive = currentTrack?.id === track.id;
+                                return (
+                                  <div
+                                    key={track.id}
+                                    onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
+                                    style={{
+                                      display: "flex", alignItems: "center", gap: "var(--space-2)",
+                                      padding: "var(--space-2) var(--space-2)",
+                                      borderBottom: "1px solid var(--color-border-light)",
+                                      borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
+                                      background: isActive ? "var(--color-bg-alt)" : "var(--color-bg)",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <span style={{ width: 18, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", textAlign: "right", flexShrink: 0 }}>
+                                      {String(i + 1).padStart(2, "0")}
+                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{
+                                        fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                                        fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                                        color: "var(--color-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                      }}>
+                                        {track.title}
+                                      </div>
+                                      <div style={{ fontSize: 9, color: "var(--color-text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {track.artist}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

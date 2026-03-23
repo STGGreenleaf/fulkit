@@ -851,7 +851,9 @@ export function FabricProvider({ children }) {
   }, [persistSets, setsData.sets, updateHistorySignal]);
 
   // Multi-set CRUD
-  const allSets = setsData.sets.filter(s => s.source !== "guy").map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks }));
+  const userSets = setsData.sets.filter(s => s.source !== "guy");
+  const allSets = userSets.filter(s => !s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks }));
+  const trophiedSets = userSets.filter(s => s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks, trophied: true }));
   const activeSetId = setsData.activeId;
 
   const createSet = useCallback((name) => {
@@ -924,6 +926,39 @@ export function FabricProvider({ children }) {
       return next;
     });
   }, [persistSets]);
+
+  // Trophy — mark set as complete, persist to Supabase
+  const trophySet = useCallback((setId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s =>
+        s.id === setId ? { ...s, trophied: true } : s
+      )};
+      persistSets(next);
+      // Fire-and-forget: save to Supabase
+      const set = next.sets.find(s => s.id === setId);
+      if (set && apiFetch) {
+        apiFetch("/api/fabric/sets/trophy", {
+          method: "POST",
+          body: JSON.stringify({ setId: set.id, name: set.name, tracks: set.tracks }),
+        }).catch(() => {});
+      }
+      return next;
+    });
+  }, [persistSets, apiFetch]);
+
+  const untrophySet = useCallback((setId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s =>
+        s.id === setId ? { ...s, trophied: false } : s
+      )};
+      persistSets(next);
+      // Fire-and-forget: remove from Supabase
+      if (apiFetch) {
+        apiFetch(`/api/fabric/sets/trophy?setId=${setId}`, { method: "DELETE" }).catch(() => {});
+      }
+      return next;
+    });
+  }, [persistSets, apiFetch]);
 
   const playTrack = useCallback(async (track) => {
     const requestId = Date.now();
@@ -1438,6 +1473,9 @@ export function FabricProvider({ children }) {
         isFlagged,
         reorderFlagged,
         allSets,
+        trophiedSets,
+        trophySet,
+        untrophySet,
         activeSetId,
         createSet,
         deleteSet,
