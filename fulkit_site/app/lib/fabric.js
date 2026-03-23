@@ -54,6 +54,8 @@ export function FabricProvider({ children }) {
 
   const [connected, setConnected] = useState(false);
   const [connectedProviders, setConnectedProviders] = useState({});
+  const connectedProvidersRef = useRef({});
+  useEffect(() => { connectedProvidersRef.current = connectedProviders; }, [connectedProviders]);
   const [statusChecked, setStatusChecked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -241,7 +243,7 @@ export function FabricProvider({ children }) {
 
   // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
   // YouTube tracks don't need polling — state is managed client-side
-  const hasSpotify = connectedProviders?.spotify;
+  const hasSpotify = connectedProvidersRef.current?.spotify;
   useEffect(() => {
     if (!hasSpotify || !accessToken) return;
     if (!onFabricPage && !isPlaying) return;
@@ -352,7 +354,7 @@ export function FabricProvider({ children }) {
   // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
     // YouTube or no Spotify: control via iframe engine
-    const useYT = currentTrack?.provider === "youtube" || !connectedProviders?.spotify;
+    const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (useYT && window.__ytEngine) {
       if (action === "play") window.__ytEngine.resume();
       else if (action === "pause") window.__ytEngine.pause();
@@ -363,7 +365,7 @@ export function FabricProvider({ children }) {
       method: "POST",
       body: JSON.stringify({ action }),
     });
-  }, [apiFetch, currentTrack?.provider, connectedProviders?.spotify]);
+  }, [apiFetch, currentTrack?.provider, connectedProvidersRef.current?.spotify]);
 
   const play = useCallback(() => {
     setIsPlaying(true);
@@ -435,7 +437,7 @@ export function FabricProvider({ children }) {
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
       // YouTube or no Spotify: set volume directly on iframe
-      const useYT = currentTrack?.provider === "youtube" || !connectedProviders?.spotify;
+      const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
       if (useYT && window.__ytEngine) {
         window.__ytEngine.setVolume(v);
         return;
@@ -816,7 +818,7 @@ export function FabricProvider({ children }) {
     }
 
     // If Spotify isn't connected, fall back to YouTube for ANY track
-    const spotifyConnected = connectedProviders?.spotify;
+    const spotifyConnected = connectedProvidersRef.current?.spotify;
     if (!spotifyConnected && window.__ytEngine && track.title) {
       // Search YouTube for this song and play it there
       try {
