@@ -347,13 +347,20 @@ export function FabricProvider({ children }) {
     return () => clearInterval(interval);
   }, [isPlaying, currentTrack?.duration]);
 
-  // Controls — send to API
+  // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
+    // YouTube: control via iframe engine
+    if (currentTrack?.provider === "youtube" && window.__ytEngine) {
+      if (action === "play") window.__ytEngine.resume();
+      else if (action === "pause") window.__ytEngine.pause();
+      return;
+    }
+    // Spotify / other: control via API
     await apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action }),
     });
-  }, [apiFetch]);
+  }, [apiFetch, currentTrack?.provider]);
 
   const play = useCallback(() => {
     setIsPlaying(true);
@@ -808,8 +815,20 @@ export function FabricProvider({ children }) {
         }
       } catch {}
     }
-    if (!uri) return;
     if (playInFlightRef.current !== requestId) return; // superseded
+
+    // Route to correct engine based on provider
+    if (track.provider === "youtube") {
+      // YouTube: play via hidden iframe engine
+      const videoId = track.id || uri?.replace("youtube:video:", "");
+      if (videoId && window.__ytEngine) {
+        window.__ytEngine.play(videoId);
+      }
+      return;
+    }
+
+    // Spotify (and other OAuth providers): play via API
+    if (!uri) return;
 
     let result = await apiFetch("/api/fabric/controls", {
       method: "POST",
