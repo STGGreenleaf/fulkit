@@ -3061,7 +3061,7 @@ export default function FabricPage() {
                                 }}
                                   onClick={() => {
                                     if (track.source_id) {
-                                      playTrack({ id: track.source_id, title: track.title, artist: track.artist });
+                                      playTrack({ id: track.source_id, title: track.title, artist: track.artist, provider: track.provider || "youtube" });
                                     }
                                   }}
                                 >
@@ -3084,7 +3084,7 @@ export default function FabricPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const trackId = `search-${track.artist}-${track.title}`.toLowerCase().replace(/\s+/g, "-");
-                                      addToGuyCrate({ id: trackId, title: track.title, artist: track.artist });
+                                      addToGuyCrate({ id: trackId, title: track.title, artist: track.artist, provider: track.provider || "youtube" });
                                       setGuyCrateCollapsed(false);
                                       try { localStorage.setItem("fulkit-guy-crate-collapsed", "false"); } catch {}
                                     }}
@@ -3315,6 +3315,7 @@ export default function FabricPage() {
                                 album: discoveryAlbum?.name || "",
                                 art: discoveryAlbum?.image || null,
                                 duration: Math.round((track.duration_ms || 0) / 1000),
+                                provider: track.provider || "youtube",
                               }); }}
                               style={{
                                 background: "none",
@@ -4178,6 +4179,7 @@ export default function FabricPage() {
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),
+                              provider: track.provider || "youtube",
                             }); }}
                             style={{
                               background: "none",
@@ -4304,6 +4306,7 @@ export default function FabricPage() {
                               title: track.title,
                               artist: track.artist,
                               duration: Math.round((track.duration_ms || 0) / 1000),
+                              provider: track.provider || "youtube",
                             }); }}
                             style={{
                               background: "none",
