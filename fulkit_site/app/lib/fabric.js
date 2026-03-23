@@ -875,62 +875,61 @@ export function FabricProvider({ children }) {
     // Reset lastPollState so first non-suppressed poll starts fresh (avoids stale trackGone)
     lastPollState.current = { isPlaying: true, trackId: track.id, progress: 0 };
 
-    // YouTube tracks: route directly to iframe engine
-    if (track.provider === "youtube") {
-      const videoId = track.id || track.uri?.replace("youtube:video:", "");
-      // Real YouTube IDs are 11 chars, base64-ish. B-Side slugs (btc-*) and search slugs aren't.
-      const isRealYtId = videoId && /^[A-Za-z0-9_-]{10,12}$/.test(videoId);
-      if (isRealYtId && window.__ytEngine) {
-        window.__ytEngine.play(videoId);
-        return;
+    // Resolve YouTube video ID — search by artist+title, works for any track
+    const resolveAndPlayYT = async () => {
+      if (!window.__ytEngine || !track.title) {
+        console.warn("[playTrack] No ytEngine or no title, cannot play:", track.id);
+        return false;
       }
-      // Slug ID — search YouTube for the real video
-      if (window.__ytEngine && track.title) {
-        try {
-          const q = `${track.artist || ""} ${track.title}`.trim();
-          const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
-          if (playInFlightRef.current !== requestId) return;
-          const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
-          if (ytMatch) {
-            window.__ytEngine.play(ytMatch.source_id);
-            if (!track.art) {
-              fetchAlbumArt(track.artist, track.title).then((art) => {
-                if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
-              });
-            }
-          }
-        } catch {}
+      // If track ID is already a real YouTube video ID, play directly
+      const rawId = track.id || track.uri?.replace("youtube:video:", "");
+      if (rawId && /^[A-Za-z0-9_-]{10,12}$/.test(rawId)) {
+        window.__ytEngine.play(rawId);
+        return true;
       }
-      return;
-    }
-
-    // If Spotify isn't connected, fall back to YouTube for ANY track
-    const spotifyConnected = connectedProvidersRef.current?.spotify;
-    if (!spotifyConnected && window.__ytEngine && track.title) {
-      // Search YouTube for this song and play it there
+      // Search YouTube for the real video
       try {
         const q = `${track.artist || ""} ${track.title}`.trim();
+        console.log("[playTrack] YouTube search:", q);
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
-        if (playInFlightRef.current !== requestId) return;
+        if (playInFlightRef.current !== requestId) return false;
         const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
         if (ytMatch) {
-          const videoId = ytMatch.source_id;
-          window.__ytEngine.play(videoId);
-          // Art: keep existing Spotify art if available, otherwise fetch real album art
+          console.log("[playTrack] YouTube match:", ytMatch.source_id);
+          window.__ytEngine.play(ytMatch.source_id);
           if (!track.art) {
             fetchAlbumArt(track.artist, track.title).then((art) => {
               if (art) setCurrentTrack((cur) => cur ? { ...cur, art, provider: "youtube" } : cur);
               else {
-                const fallback = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+                const fallback = `https://img.youtube.com/vi/${ytMatch.source_id}/mqdefault.jpg`;
                 setCurrentTrack((cur) => cur ? { ...cur, art: fallback, provider: "youtube" } : cur);
               }
             });
           } else {
             setCurrentTrack((cur) => cur ? { ...cur, provider: "youtube" } : cur);
           }
-          return;
+          return true;
         }
-      } catch {}
+        console.warn("[playTrack] YouTube search returned no results for:", q, data);
+        return false;
+      } catch (err) {
+        console.error("[playTrack] YouTube search failed:", err);
+        return false;
+      }
+    };
+
+    // YouTube tracks: route directly
+    if (track.provider === "youtube") {
+      await resolveAndPlayYT();
+      return;
+    }
+
+    // If Spotify isn't connected, fall back to YouTube for ANY track
+    const spotifyConnected = connectedProvidersRef.current?.spotify;
+    if (!spotifyConnected && window.__ytEngine && track.title) {
+      const played = await resolveAndPlayYT();
+      if (played) return;
+      // If YouTube search failed too, nothing to do
       return;
     }
 
