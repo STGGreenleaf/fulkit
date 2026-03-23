@@ -111,7 +111,18 @@ export function FabricProvider({ children }) {
       const newFormat = localStorage.getItem("fulkit-sets");
       if (newFormat) {
         const parsed = JSON.parse(newFormat);
-        // Never overwrite existing sets — user data is sacred
+        // Patch: backfill missing provider field on tracks (YouTube regression fix)
+        let patched = false;
+        for (const s of parsed.sets || []) {
+          for (const t of s.tracks || []) {
+            if (!t.provider) {
+              // Spotify IDs are 22-char base62; everything else is YouTube
+              t.provider = /^[A-Za-z0-9]{22}$/.test(t.id) ? "spotify" : "youtube";
+              patched = true;
+            }
+          }
+        }
+        if (patched) localStorage.setItem("fulkit-sets", JSON.stringify(parsed));
         return parsed;
       }
       // Migrate old format
@@ -623,7 +634,18 @@ export function FabricProvider({ children }) {
     try {
       const raw = JSON.parse(localStorage.getItem("fulkit-guy-history") || "[]");
       const version = localStorage.getItem("fulkit-guy-history-version");
-      if (version === "2") return raw;
+      if (version === "2") {
+        // Patch: backfill missing provider field
+        let patched = false;
+        for (const t of raw) {
+          if (!t.provider) {
+            t.provider = /^[A-Za-z0-9]{22}$/.test(t.id) ? "spotify" : "youtube";
+            patched = true;
+          }
+        }
+        if (patched) localStorage.setItem("fulkit-guy-history", JSON.stringify(raw));
+        return raw;
+      }
       // Migrate v1 → v2
       const now = Date.now();
       const guyCrateIds = new Set();
@@ -677,7 +699,7 @@ export function FabricProvider({ children }) {
   const appendToHistory = useCallback((track) => {
     setGuyHistory((prev) => {
       if (prev.some(t => t.id === track.id)) return prev;
-      const entry = { id: track.id, title: track.title, artist: track.artist, ...makeHistoryDefaults(), addedAt: Date.now() };
+      const entry = { id: track.id, title: track.title, artist: track.artist, provider: track.provider, ...makeHistoryDefaults(), addedAt: Date.now() };
       let next = [...prev, entry];
       // Cap at 500 — prune lowest-scored removed entries
       if (next.length > 500) {
