@@ -92,54 +92,14 @@ export function FabricProvider({ children }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [queue, setQueue] = useState([]);
-  // Seed data — pre-populated sets for fresh installs
-  // YouTube sets use provider: "youtube" so PlaybackEngine routes to YouTubeEngine
-  // Spotify sets use Spotify IDs (default provider)
+  // Seed data — one empty set for truly fresh installs. Users create their own.
   const SEED_SETS = {
-    activeId: "work-tech",
+    activeId: "set-1",
     sets: [
       {
-        id: "work-tech",
-        name: "Work Tech",
-        source: "fulkit",
-        tracks: [
-          { id: "9aZFcosBTaQ", title: "Midnight City", artist: "M83", duration: 243, provider: "youtube", uri: "youtube:video:9aZFcosBTaQ", art: "https://img.youtube.com/vi/9aZFcosBTaQ/mqdefault.jpg" },
-          { id: "hHW1oY26kxQ", title: "Tadow", artist: "Masego, FKJ", duration: 295, provider: "youtube", uri: "youtube:video:hHW1oY26kxQ", art: "https://img.youtube.com/vi/hHW1oY26kxQ/mqdefault.jpg" },
-          { id: "8UVNT4wvIGY", title: "Somebody Else", artist: "The 1975", duration: 318, provider: "youtube", uri: "youtube:video:8UVNT4wvIGY", art: "https://img.youtube.com/vi/8UVNT4wvIGY/mqdefault.jpg" },
-          { id: "tKi9Z-f6qX4", title: "Strobe", artist: "Deadmau5", duration: 637, provider: "youtube", uri: "youtube:video:tKi9Z-f6qX4", art: "https://img.youtube.com/vi/tKi9Z-f6qX4/mqdefault.jpg" },
-          { id: "PaXslpx3MWY", title: "Innerbloom", artist: "RUFUS DU SOL", duration: 575, provider: "youtube", uri: "youtube:video:PaXslpx3MWY", art: "https://img.youtube.com/vi/PaXslpx3MWY/mqdefault.jpg" },
-        ],
-      },
-      {
-        id: "guy-crate",
-        name: "Guy\u2019s Crate",
-        source: "guy",
-        tracks: [
-          { id: "3n3Ppam7vgaVa1iaRUc9Lp", title: "Midnight City", artist: "M83", album: "Hurry Up, We\u2019re Dreaming", duration: 243 },
-          { id: "7GhIk7Il098yCjg4BQjzvb", title: "Young Folks", artist: "Peter Bjorn and John", album: "Writer\u2019s Block", duration: 276 },
-          { id: "60nZcImufyMA1MKQY3dcCH", title: "Intro", artist: "The xx", album: "xx", duration: 128 },
-        ],
-      },
-      {
         id: "set-1",
-        name: "Late Night",
-        tracks: [
-          { id: "6nek1Nin9q48AVZcWs9e9D", title: "Tadow", artist: "Masego, FKJ", album: "Tadow", duration: 295 },
-          { id: "2nLtzopw4rPReszdYBJU6h", title: "Skinny Love", artist: "Bon Iver", album: "For Emma, Forever Ago", duration: 227 },
-          { id: "3JOVTQ5h8HGFnDdp4VT3MP", title: "Breathe", artist: "Telepopmusik", album: "Genetic World", duration: 258 },
-          { id: "5CMjjywI0eZMixPeqNd75R", title: "Holocene", artist: "Bon Iver", album: "Bon Iver", duration: 337 },
-        ],
-      },
-      {
-        id: "set-2",
-        name: "Drive",
-        tracks: [
-          { id: "2tpWsVSb9UEmDRxAl1zhX1", title: "Bohemian Rhapsody", artist: "Queen", album: "A Night at the Opera", duration: 355 },
-          { id: "4cOdK2wGLETKBW3PvgPWqT", title: "Lose Yourself", artist: "Eminem", album: "8 Mile", duration: 326 },
-          { id: "7lQ8MOhq6IN2w8EYcFNSUk", title: "Strobe", artist: "Deadmau5", album: "For Lack of a Better Name", duration: 637 },
-          { id: "0VjIjW4GlUZAMYd2vXMi3b", title: "Blinding Lights", artist: "The Weeknd", album: "After Hours", duration: 200 },
-          { id: "3AJwUDP919kvQ9QcozQPxg", title: "Heart-Shaped Box", artist: "Nirvana", album: "In Utero", duration: 281 },
-        ],
+        name: "My Set",
+        tracks: [],
       },
     ],
   };
@@ -151,14 +111,8 @@ export function FabricProvider({ children }) {
       const newFormat = localStorage.getItem("fulkit-sets");
       if (newFormat) {
         const parsed = JSON.parse(newFormat);
-        // Ensure guy-crate has source:"guy" (migration fix)
-        const gc = (parsed.sets || []).find(s => s.id === "guy-crate");
-        if (gc && !gc.source) { gc.source = "guy"; localStorage.setItem("fulkit-sets", JSON.stringify(parsed)); }
-        // If all sets are empty, replace with seed data
-        const totalTracks = (parsed.sets || []).reduce((n, s) => n + (s.tracks?.length || 0), 0);
-        if (totalTracks > 0) return parsed;
-        localStorage.setItem("fulkit-sets", JSON.stringify(SEED_SETS));
-        return SEED_SETS;
+        // Never overwrite existing sets — user data is sacred
+        return parsed;
       }
       // Migrate old format
       const oldTracks = localStorage.getItem("fulkit-flagged-tracks");
