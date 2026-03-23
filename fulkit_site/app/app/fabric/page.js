@@ -4496,7 +4496,7 @@ export default function FabricPage() {
                           <Crown size={10} strokeWidth={1.8} />
                         </button>
                         {/* Delete set */}
-                        {allSets.length > 1 && (
+                        {allSets.length >= 1 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteSet(set.id); }}
                             style={{
