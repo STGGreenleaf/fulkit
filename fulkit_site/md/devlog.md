@@ -3,6 +3,37 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 23 — 2026-03-23: YouTube Playback Fix + Quota Architecture
+
+### What shipped
+- **YouTube playback restored** — root cause was YouTube Data API v3 quota exhaustion (10,000 units/day = 100 searches). Heavy testing in prior session burned the daily quota. All tracks silently failed because search returned empty results and errors were swallowed.
+- **Provider field fix** — `playTrack`, `flag`, `addToGuyCrate` calls from search results were missing `provider: "youtube"`. Added to all 5 call sites in fabric/page.js. localStorage migration backfills provider on all existing tracks.
+- **Unified YouTube playback** — `resolveAndPlayYT()` replaces three separate code paths. Detects real YT video IDs (11-char) vs slug IDs (btc-*, search-*), searches when needed, logs every step.
+- **Server-side LRU search cache** — 500 entries, 24h TTL. Same search query = zero quota burn. In-memory Map in youtube.js, persists across Vercel function invocations.
+- **Multi-key rotation** — supports up to 20 API keys (`YOUTUBE_API_KEY`, `_2`, ..., `_20`). Auto-detects 403 quota errors, blocks that key until midnight Pacific, rotates to next key.
+- **Precaching** — when a track is flagged or added to guy crate, `resolveYouTubeId` fires a background search and stores the real video ID as `track.ytId`. Subsequent plays use `ytId` directly — zero quota forever. On Fabric page load, bulk-resolves all unresolved tracks (staggered 500ms).
+- **5 GCP projects** — each with its own API key and 10,000 unit quota. Total: 500 searches/day before caching. With precaching, effectively unlimited for normal usage.
+
+### Key decisions
+- YouTube API quota is per-GCP-project, not per-key. Multiple keys on same project share quota.
+- "Resolve once, play forever" — precaching is the real fix. Key rotation is the safety net.
+- Server cache covers cross-user overlap — if any user searched "Burial Archangel" today, nobody else burns quota for it.
+- With precaching + server cache + 5 keys: supports ~100-200 active users. Returning users with built libraries cost zero.
+
+### Key files modified
+- `app/app/fabric/page.js` — provider field added to all playTrack/flag/addToGuyCrate calls from search
+- `app/lib/fabric.js` — resolveAndPlayYT, resolveYouTubeId (precache), bulk resolve on mount, localStorage migration
+- `app/lib/providers/youtube.js` — LRU cache, multi-key rotation, _blockKey/_isKeyBlocked
+
+### Quota math
+- 10,000 units/project/day, search = 100 units = 100 searches/project
+- 5 projects = 500 searches/day raw
+- Server cache eliminates repeat searches across users
+- Precaching eliminates repeat searches per user forever
+- Net: ~5-10 new searches per active user on day 1, ~0-3/day after library built
+
+---
+
 ## Session 22 — 2026-03-21: Spend Moderator + Lean Tool Loading + v3 Cognizant Layer
 
 ### What shipped
