@@ -151,7 +151,7 @@ export function FabricProvider({ children }) {
   const flagged = activeSet?.tracks || [];
   const [playlists, setPlaylists] = useState([]);
   const [progress, setProgress] = useState(0);
-  const [volume, setVolumeState] = useState(null);
+  const [volume, setVolumeState] = useState(50);
   const [audioFeatures, setAudioFeatures] = useState({});
   const [timeline, setTimeline] = useState(null); // Fabric per-second data
   const [timelineResolution, setTimelineResolution] = useState(500);
@@ -351,8 +351,9 @@ export function FabricProvider({ children }) {
 
   // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
-    // YouTube: control via iframe engine
-    if (currentTrack?.provider === "youtube" && window.__ytEngine) {
+    // YouTube or no Spotify: control via iframe engine
+    const useYT = currentTrack?.provider === "youtube" || !connectedProviders?.spotify;
+    if (useYT && window.__ytEngine) {
       if (action === "play") window.__ytEngine.resume();
       else if (action === "pause") window.__ytEngine.pause();
       return;
@@ -362,7 +363,7 @@ export function FabricProvider({ children }) {
       method: "POST",
       body: JSON.stringify({ action }),
     });
-  }, [apiFetch, currentTrack?.provider]);
+  }, [apiFetch, currentTrack?.provider, connectedProviders?.spotify]);
 
   const play = useCallback(() => {
     setIsPlaying(true);
@@ -433,8 +434,9 @@ export function FabricProvider({ children }) {
     volumeLockedUntil.current = Date.now() + 5000;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
-      // YouTube: set volume directly on iframe
-      if (currentTrack?.provider === "youtube" && window.__ytEngine) {
+      // YouTube or no Spotify: set volume directly on iframe
+      const useYT = currentTrack?.provider === "youtube" || !connectedProviders?.spotify;
+      if (useYT && window.__ytEngine) {
         window.__ytEngine.setVolume(v);
         return;
       }
@@ -804,7 +806,7 @@ export function FabricProvider({ children }) {
     // Reset lastPollState so first non-suppressed poll starts fresh (avoids stale trackGone)
     lastPollState.current = { isPlaying: true, trackId: track.id, progress: 0 };
 
-    // YouTube: route directly to iframe engine — no API calls needed
+    // YouTube tracks: route directly to iframe engine
     if (track.provider === "youtube") {
       const videoId = track.id || track.uri?.replace("youtube:video:", "");
       if (videoId && window.__ytEngine) {
@@ -813,7 +815,29 @@ export function FabricProvider({ children }) {
       return;
     }
 
-    // BTC tracks need Spotify resolution (synthetic IDs like btc-artist-title)
+    // If Spotify isn't connected, fall back to YouTube for ANY track
+    const spotifyConnected = connectedProviders?.spotify;
+    if (!spotifyConnected && window.__ytEngine && track.title) {
+      // Search YouTube for this song and play it there
+      try {
+        const q = `${track.artist || ""} ${track.title}`.trim();
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
+        if (playInFlightRef.current !== requestId) return;
+        const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
+        if (ytMatch) {
+          const videoId = ytMatch.source_id;
+          if (ytMatch.image) {
+            track.art = ytMatch.image;
+            setCurrentTrack((cur) => cur?.title === track.title ? { ...cur, art: ytMatch.image, provider: "youtube" } : cur);
+          }
+          window.__ytEngine.play(videoId);
+          return;
+        }
+      } catch {}
+      return;
+    }
+
+    // Spotify path: resolve URI and play via API
     let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
     if (!uri && track.artist && track.title) {
       try {
