@@ -817,6 +817,19 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets]);
 
+  const reorderSets = useCallback((fromIndex, toIndex) => {
+    setSetsData((prev) => {
+      // Only reorder non-guy sets
+      const userSets = prev.sets.filter(s => s.source !== "guy");
+      const guySets = prev.sets.filter(s => s.source === "guy");
+      const [moved] = userSets.splice(fromIndex, 1);
+      userSets.splice(toIndex, 0, moved);
+      const next = { ...prev, sets: [...guySets, ...userSets] };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
   const switchSet = useCallback((setId) => {
     if (setId === "guy-crate") return;
     setSetsData((prev) => {
@@ -1319,6 +1332,7 @@ export function FabricProvider({ children }) {
         createSet,
         deleteSet,
         renameSet,
+        reorderSets,
         switchSet,
         guyCrate,
         saveGuyCrateAsSet,

@@ -1511,6 +1511,7 @@ export default function FabricPage() {
     createSet,
     deleteSet,
     renameSet,
+    reorderSets,
     switchSet,
     guyCrate,
     saveGuyCrateAsSet,
@@ -1556,6 +1557,9 @@ export default function FabricPage() {
   const [importing, setImporting] = useState(null); // playlist id being imported
   const [showSetMenu, setShowSetMenu] = useState(false);
   const [renamingSet, setRenamingSet] = useState(null);
+  const [headerDragIdx, setHeaderDragIdx] = useState(null);
+  const [headerDragOverIdx, setHeaderDragOverIdx] = useState(null);
+  const setDragNode = useRef(null);
   const [renameValue, setRenameValue] = useState("");
   const [crates, setCrates] = useState([]); // imported crates from DB
   const [cratesLoading, setCratesLoading] = useState(true);
@@ -4380,11 +4384,12 @@ export default function FabricPage() {
 
               {/* ═══ ALL SETS STACKED ═══ */}
               <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-                {allSets.map((set) => {
+                {allSets.map((set, setIdx) => {
                   const isExpanded = expandedSetIds.includes(set.id);
                   const isActiveSet = set.id === activeSetId;
                   const isPlayingFromThisSet = isActiveSet && currentTrack && set.tracks.some(t => t.id === currentTrack.id);
                   const setPublished = publishedSets[set.name] || null;
+                  const isSetDragTarget = headerDragOverIdx === setIdx && headerDragIdx !== setIdx;
                   return (
                     <div key={set.id} style={{
                       borderBottom: "1px solid var(--color-border-light)",
@@ -4393,11 +4398,36 @@ export default function FabricPage() {
                     }}>
                       {/* Set header row */}
                       <div
+                        draggable
+                        onDragStart={(e) => {
+                          setHeaderDragIdx(setIdx);
+                          setDragNode.current = e.currentTarget;
+                          setTimeout(() => { if (setDragNode.current) setDragNode.current.style.opacity = "0.4"; }, 0);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (setIdx !== headerDragOverIdx) setHeaderDragOverIdx(setIdx);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (headerDragIdx !== null && headerDragIdx !== setIdx) {
+                            reorderSets(headerDragIdx, setIdx);
+                          }
+                          setHeaderDragIdx(null);
+                          setHeaderDragOverIdx(null);
+                          if (setDragNode.current) setDragNode.current.style.opacity = "1";
+                        }}
+                        onDragEnd={() => {
+                          setHeaderDragIdx(null);
+                          setHeaderDragOverIdx(null);
+                          if (setDragNode.current) setDragNode.current.style.opacity = "1";
+                        }}
                         onClick={() => { switchSet(set.id); toggleSetExpanded(set.id); }}
                         style={{
                           padding: "var(--space-2) var(--space-3)",
                           borderBottom: isExpanded ? "1px solid var(--color-border-light)" : "none",
                           borderLeft: isPlayingFromThisSet ? "3px solid var(--color-accent)" : "3px solid transparent",
+                          borderTop: isSetDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
                           display: "flex",
                           alignItems: "center",
                           gap: "var(--space-2)",
