@@ -1053,7 +1053,7 @@ export function FabricProvider({ children }) {
   // ═══ Published sets (featured mixes) ═══
   const [publishedSets, setPublishedSets] = useState({}); // { setName: crateId }
 
-  // Fetch published sets on mount
+  // Fetch published sets on mount — auto-restore missing personal sets from crowned crates
   useEffect(() => {
     if (!accessToken) return;
     apiFetch("/api/fabric/featured").then((data) => {
@@ -1063,6 +1063,33 @@ export function FabricProvider({ children }) {
         if (c.source === "set") map[c.name] = c.id;
       }
       setPublishedSets(map);
+
+      // Auto-restore: if a crowned set exists in Supabase but not in personal sets, recreate it
+      const currentSetNames = new Set(setsData.sets.map(s => s.name));
+      let restored = false;
+      for (const c of data.crates) {
+        if (c.source === "set" && !currentSetNames.has(c.name) && c.tracks?.length > 0) {
+          const restoredSet = {
+            id: `restored-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: c.name,
+            tracks: c.tracks.map(t => ({
+              id: t.source_id || t.id,
+              title: t.title,
+              artist: t.artist,
+              album: t.album || "",
+              duration: Math.round((t.duration_ms || 0) / 1000),
+              art: t.art || null,
+            })),
+          };
+          setSetsData((prev) => {
+            const next = { ...prev, sets: [...prev.sets, restoredSet] };
+            persistSets(next);
+            return next;
+          });
+          restored = true;
+        }
+      }
+      if (restored) console.log("[fabric] Restored crowned sets to personal list");
     });
   }, [accessToken, apiFetch]);
 
