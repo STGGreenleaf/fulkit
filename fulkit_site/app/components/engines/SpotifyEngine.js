@@ -1,14 +1,20 @@
 "use client";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useAuth } from "../../lib/auth";
+import { ThumbprintBuilder } from "../../lib/thumbprint";
 
 // Spotify Web Playback SDK — makes Fulkit a Spotify Connect device
-// Loads the SDK script, initializes a player, auto-transfers playback
+// Also captures thumbprint data via Web Audio API AnalyserNode
 export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }) {
   const { accessToken } = useAuth();
   const playerRef = useRef(null);
   const deviceIdRef = useRef(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const analyserRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const thumbprintRef = useRef(null);
+  const captureFrameRef = useRef(null);
+  const currentTrackRef = useRef(null);
 
   // Fetch a fresh Spotify token from our server
   const getToken = useCallback(async () => {
@@ -86,16 +92,105 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
         console.error("[Spotify SDK] Account error (Premium required):", message);
       });
 
+      // Track changes — manage thumbprint capture per song
+      player.addListener("player_state_changed", (state) => {
+        if (!state) return;
+        const trackId = state.track_window?.current_track?.id;
+        const isPlaying = !state.paused;
+
+        // New track started
+        if (trackId && trackId !== currentTrackRef.current) {
+          // Finalize previous thumbprint if exists
+          if (thumbprintRef.current && currentTrackRef.current) {
+            const result = thumbprintRef.current.finalize();
+            if (result && result.snapshot_count > 10) {
+              uploadThumbprint(currentTrackRef.current, result);
+            }
+          }
+          currentTrackRef.current = trackId;
+          if (!thumbprintRef.current) thumbprintRef.current = new ThumbprintBuilder();
+          thumbprintRef.current.reset();
+        }
+
+        // Start/stop capture loop based on play state
+        if (isPlaying && analyserRef.current && thumbprintRef.current) {
+          startCapture();
+        } else {
+          stopCapture();
+        }
+      });
+
       const success = await player.connect();
       if (success) {
         console.log("[Spotify SDK] Connected to Spotify");
         playerRef.current = player;
+
+        // Try to attach Web Audio AnalyserNode to SDK's audio output
+        try {
+          if (typeof AudioContext !== "undefined" && !audioCtxRef.current) {
+            audioCtxRef.current = new AudioContext();
+          }
+          // Spotify SDK exposes _activeDeviceId and internal audio — try to find it
+          const audioElements = document.querySelectorAll("audio");
+          for (const el of audioElements) {
+            if (el.src?.includes("scdn") || el.src?.includes("spotify")) {
+              const source = audioCtxRef.current.createMediaElementSource(el);
+              analyserRef.current = audioCtxRef.current.createAnalyser();
+              analyserRef.current.fftSize = 16384;
+              source.connect(analyserRef.current);
+              analyserRef.current.connect(audioCtxRef.current.destination);
+              console.log("[Spotify SDK] AnalyserNode attached for thumbprint capture");
+              break;
+            }
+          }
+        } catch (e) {
+          console.log("[Spotify SDK] Could not attach AnalyserNode:", e.message);
+        }
+      }
+    };
+
+    const startCapture = () => {
+      if (captureFrameRef.current) return;
+      const loop = () => {
+        if (analyserRef.current && thumbprintRef.current) {
+          thumbprintRef.current.capture(analyserRef.current, performance.now());
+        }
+        captureFrameRef.current = requestAnimationFrame(loop);
+      };
+      captureFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    const stopCapture = () => {
+      if (captureFrameRef.current) {
+        cancelAnimationFrame(captureFrameRef.current);
+        captureFrameRef.current = null;
+      }
+    };
+
+    const uploadThumbprint = async (trackId, data) => {
+      try {
+        const res = await fetch("/api/fabric/timeline", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ trackId, ...data }),
+        });
+        if (res.ok) console.log("[Thumbprint] Uploaded for track:", trackId);
+      } catch (e) {
+        console.log("[Thumbprint] Upload failed:", e.message);
       }
     };
 
     initPlayer();
 
     return () => {
+      stopCapture();
+      // Finalize any in-progress thumbprint
+      if (thumbprintRef.current && currentTrackRef.current) {
+        const result = thumbprintRef.current.finalize();
+        if (result && result.snapshot_count > 10) {
+          uploadThumbprint(currentTrackRef.current, result);
+        }
+      }
       if (playerRef.current) {
         playerRef.current.disconnect();
         playerRef.current = null;
@@ -103,6 +198,12 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
       }
     };
   }, [sdkReady, connected, accessToken, getToken, onDeviceReady, onDeviceLost]);
+
+  // Expose analyser for Signal Terrain real-time visualization
+  useEffect(() => {
+    window.__spotifyAnalyser = analyserRef.current;
+    return () => { delete window.__spotifyAnalyser; };
+  });
 
   // No UI — this is a headless component
   return null;

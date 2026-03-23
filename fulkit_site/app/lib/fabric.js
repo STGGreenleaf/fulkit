@@ -59,9 +59,23 @@ export function FabricProvider({ children }) {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [queue, setQueue] = useState([]);
   // Seed data — pre-populated sets for fresh installs
+  // YouTube sets use provider: "youtube" so PlaybackEngine routes to YouTubeEngine
+  // Spotify sets use Spotify IDs (default provider)
   const SEED_SETS = {
-    activeId: "set-1",
+    activeId: "work-tech",
     sets: [
+      {
+        id: "work-tech",
+        name: "Work Tech",
+        source: "fulkit",
+        tracks: [
+          { id: "dQw4w9WgXcQ", title: "Midnight City", artist: "M83", duration: 243, provider: "youtube", uri: "youtube:video:dQw4w9WgXcQ" },
+          { id: "lTRiuFIWV54", title: "Intro", artist: "The xx", duration: 128, provider: "youtube", uri: "youtube:video:lTRiuFIWV54" },
+          { id: "hHW1oY26kxQ", title: "Tadow", artist: "Masego, FKJ", duration: 295, provider: "youtube", uri: "youtube:video:hHW1oY26kxQ" },
+          { id: "8UVNT4wvIGY", title: "Somebody Else", artist: "The 1975", duration: 318, provider: "youtube", uri: "youtube:video:8UVNT4wvIGY" },
+          { id: "IKniXABsUeE", title: "Strobe", artist: "Deadmau5", duration: 637, provider: "youtube", uri: "youtube:video:IKniXABsUeE" },
+        ],
+      },
       {
         id: "guy-crate",
         name: "Guy\u2019s Crate",

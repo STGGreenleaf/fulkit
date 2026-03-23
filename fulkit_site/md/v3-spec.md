@@ -242,26 +242,15 @@ The system prompt is one cache block but ~90% changes between messages (date, co
 
 ## Implementation Phases
 
-### Phase 0: KB Security Fix + Doc Audit (do first)
-Fix `executeKbSearch()` to filter `owner-context` by role. Then audit each core doc against current code. Tighten what's drifted. This is the foundation — if the shelves leak or hold stale content, nothing works.
+### Phase 0: KB Security Fix + Doc Audit ✅ Session 22
+### Phase 1: Stock the Shelves ✅ Session 22
+### Phase 2: The Bridge ✅ Session 22
+### Phase 3: Cache Optimization ✅ Session 22
+### Phase 4: The Heartbeat ✅ Session 22
+### Phase 5: The Audit Loop ✅ Session 22
 
-### Phase 1: Stock the Shelves (content, minimal code)
-Upload 5 KB articles to `vault_broadcasts` as `owner-context`. One script to seed them. Add owner-only coverage hint: "You have architecture reference in KB. Search it for code questions. Save file-to-problem patterns as memories."
-
-### Phase 2: The Bridge (lightweight version)
-Chappie writes `last-session.md` as a markdown file in the repo during checkpoint. No API needed — chat Fulkit reads it via `github_fetch_files` when the owner asks about recent work. Simple, zero infrastructure.
-
-### Phase 3: Cache Optimization
-Split system prompt: static BASE_PROMPT in its own cache block, dynamic content (date, context, memories, hints) assembled after. Target: 60-70% cache hit rate. This is the biggest cost lever after lean loading.
-
-### Phase 4: The Heartbeat
-One new endpoint: `/api/owner/heartbeat`. Composite query across Spend Moderator + Signal Radio + KB freshness. Returns a single health pulse.
-
-### Phase 5: The Audit Loop
-Add doc-freshness checks to the existing signal block. Flag stale docs, missing file map entries, spec-code drift. New flag types in existing Spend Moderator UI.
-
-### Phase 6: The Meta-Tool (100+ integrations)
-`load_integration` tool — Claude requests specific integration tools mid-conversation. The librarian asks "shop orders or restaurant orders?" then loads only what's needed. The ultimate scale play.
+### Phase 6: The Meta-Tool (100+ integrations) — future
+`load_integration` tool — Claude requests specific integration tools mid-conversation. Build when keyword collisions become a problem.
 
 ---
 
