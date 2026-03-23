@@ -36,8 +36,8 @@ export default function YouTubeEngine({ onStateChange, onTrackChange }) {
     onYTReady(() => {
       if (playerRef.current) return;
       playerRef.current = new window.YT.Player(containerRef.current, {
-        height: "0",
-        width: "0",
+        height: "1",
+        width: "1",
         playerVars: {
           autoplay: 0,
           controls: 0,
@@ -97,6 +97,6 @@ export default function YouTubeEngine({ onStateChange, onTrackChange }) {
     return () => { delete window.__ytEngine; };
   }, [onTrackChange]);
 
-  // Hidden container — the iframe renders at 0x0, no visual presence
-  return <div ref={containerRef} style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", pointerEvents: "none" }} />;
+  // Off-screen container — needs real dimensions for audio to play, but visually hidden
+  return <div ref={containerRef} style={{ position: "fixed", left: -9999, top: -9999, width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />;
 }

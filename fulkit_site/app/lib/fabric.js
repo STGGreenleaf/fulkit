@@ -428,16 +428,21 @@ export function FabricProvider({ children }) {
   const setVolume = useCallback((val) => {
     const v = Math.max(0, Math.min(100, Math.round(val)));
     setVolumeState(v);
-    // Suppress poll-based volume updates for 5s so the slider doesn't snap back
     volumeLockedUntil.current = Date.now() + 5000;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
+      // YouTube: set volume directly on iframe
+      if (currentTrack?.provider === "youtube" && window.__ytEngine) {
+        window.__ytEngine.setVolume(v);
+        return;
+      }
+      // Spotify / other: set via API
       apiFetch("/api/fabric/controls", {
         method: "POST",
         body: JSON.stringify({ action: "volume", value: v }),
       });
     }, 300);
-  }, [apiFetch]);
+  }, [apiFetch, currentTrack?.provider]);
 
   // Save track to Spotify Liked Songs (fire-and-forget)
   const likeTrack = useCallback((track) => {
