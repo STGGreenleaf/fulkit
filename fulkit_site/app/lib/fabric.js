@@ -7,6 +7,37 @@ import PlaybackEngine from "../components/PlaybackEngine";
 
 const FabricContext = createContext(null);
 
+// Fetch real album art — iTunes first, MusicBrainz fallback
+async function fetchAlbumArt(artist, title) {
+  if (!artist || !title) return null;
+  // 1. iTunes Search API
+  try {
+    const q = encodeURIComponent(`${artist} ${title}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.results?.[0]?.artworkUrl100) {
+        return data.results[0].artworkUrl100.replace("100x100", "600x600");
+      }
+    }
+  } catch {}
+  // 2. MusicBrainz + Cover Art Archive
+  try {
+    const q = encodeURIComponent(`recording:"${title}" AND artist:"${artist}"`);
+    const res = await fetch(`https://musicbrainz.org/ws/2/recording/?query=${q}&limit=1&fmt=json`, {
+      headers: { "User-Agent": "Fulkit/1.0 (https://fulkit.app)" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const releaseId = data.recordings?.[0]?.releases?.[0]?.id;
+      if (releaseId) {
+        return `https://coverartarchive.org/release/${releaseId}/front-250`;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 // --- Taste Signal Utilities ---
 function normalizeForMatch(str) {
   if (!str) return "";
@@ -830,9 +861,18 @@ export function FabricProvider({ children }) {
         if (ytMatch) {
           const videoId = ytMatch.source_id;
           window.__ytEngine.play(videoId);
-          // Set art from YouTube thumbnail
-          const art = ytMatch.image || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-          setCurrentTrack((cur) => cur ? { ...cur, art, provider: "youtube" } : cur);
+          // Art: keep existing Spotify art if available, otherwise fetch real album art
+          if (!track.art) {
+            fetchAlbumArt(track.artist, track.title).then((art) => {
+              if (art) setCurrentTrack((cur) => cur ? { ...cur, art, provider: "youtube" } : cur);
+              else {
+                const fallback = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+                setCurrentTrack((cur) => cur ? { ...cur, art: fallback, provider: "youtube" } : cur);
+              }
+            });
+          } else {
+            setCurrentTrack((cur) => cur ? { ...cur, provider: "youtube" } : cur);
+          }
           return;
         }
       } catch {}
