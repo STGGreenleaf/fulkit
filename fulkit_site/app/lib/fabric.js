@@ -582,7 +582,7 @@ export function FabricProvider({ children }) {
 
       if (duration > 0) {
         const pct = currentTime / duration;
-        if (ytPlaying) setProgress(pct);
+        if (ytPlaying && Date.now() > pollSuppressedUntil.current) setProgress(pct);
         // Update duration on currentTrack if missing
         if (!currentTrack?.duration || currentTrack.duration < 10) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
