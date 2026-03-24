@@ -941,12 +941,15 @@ export function FabricProvider({ children }) {
           if (!fromTrackId) return s;
           const tracks = [...s.tracks];
           const fromStoredIdx = tracks.findIndex(t => t.id === fromTrackId);
-          const toStoredIdx = toTrackId ? tracks.findIndex(t => t.id === toTrackId) : toIndex;
           if (fromStoredIdx < 0) return s;
           const [moved] = tracks.splice(fromStoredIdx, 1);
-          const insertAt = toStoredIdx >= 0 ? Math.min(toStoredIdx, tracks.length) : toIndex;
-          tracks.splice(insertAt, 0, moved);
-          return { ...s, tracks };
+          // Find target AFTER splice so index accounts for the removal
+          const toStoredIdx = toTrackId ? tracks.findIndex(t => t.id === toTrackId) : -1;
+          tracks.splice(toStoredIdx >= 0 ? toStoredIdx : Math.min(toIndex, tracks.length), 0, moved);
+          // Manual reorder overrides arc sort
+          return s.arcActive
+            ? { ...s, tracks, arcActive: false, manualOrder: null }
+            : { ...s, tracks };
         }
         // Fallback: direct index reorder
         const tracks = [...s.tracks];
