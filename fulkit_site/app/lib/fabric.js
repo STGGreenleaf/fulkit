@@ -739,16 +739,26 @@ export function FabricProvider({ children }) {
 
   // Seek to position (fraction 0-1)
   const seekTo = useCallback((fraction) => {
-    if (!currentTrack?.duration) return;
-    const ms = Math.round(fraction * currentTrack.duration * 1000);
+    if (!currentTrack) return;
     setProgress(fraction);
-    pollSuppressedUntil.current = Date.now() + 3000;
+    pollSuppressedUntil.current = Date.now() + 1500;
     // YouTube: seek via iframe engine
     const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (useYT && window.__ytEngine) {
-      window.__ytEngine.seek(ms);
+      // Get duration directly from iframe (more reliable than currentTrack.duration)
+      const state = window.__ytEngine.getState?.();
+      const durationMs = state?.duration || (currentTrack.duration ? currentTrack.duration * 1000 : 0);
+      if (durationMs > 0) {
+        const seekMs = Math.round(fraction * durationMs);
+        window.__ytEngine.seek(seekMs);
+        // Ensure playing after seek
+        if (!state?.isPlaying) window.__ytEngine.resume();
+      }
       return;
     }
+    // Spotify: seek via API
+    const ms = Math.round(fraction * (currentTrack.duration || 0) * 1000);
+    if (!ms) return;
     // Spotify: seek via API
     apiFetch("/api/fabric/controls", {
       method: "POST",
