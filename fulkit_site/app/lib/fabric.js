@@ -887,6 +887,23 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets, autoSyncCrowned]);
 
+  // Add track to a specific set (for cross-set drag)
+  const addTrackToSet = useCallback((track, setId) => {
+    setSetsData((prev) => {
+      const targetSet = prev.sets.find(s => s.id === setId);
+      if (!targetSet) return prev;
+      if (targetSet.tracks.some(t => t.id === track.id)) return prev; // already in set
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id !== setId) return s;
+        return { ...s, tracks: [...s.tracks, track] };
+      })};
+      persistSets(next);
+      autoSyncCrowned(setId, next.sets);
+      resolveYouTubeId(track.id);
+      return next;
+    });
+  }, [persistSets, autoSyncCrowned]);
+
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),
     [flagged]
@@ -1926,6 +1943,7 @@ export function FabricProvider({ children }) {
         flag,
         isFlagged,
         reorderFlagged,
+        addTrackToSet,
         allSets,
         trophiedSets,
         trophySet,

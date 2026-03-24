@@ -1506,6 +1506,7 @@ export default function FabricPage() {
     flag,
     isFlagged,
     reorderFlagged,
+    addTrackToSet,
     allSets,
     trophiedSets,
     trophySet,
@@ -4471,7 +4472,14 @@ export default function FabricPage() {
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          if (headerDragIdx !== null && headerDragIdx !== setIdx) {
+                          // Cross-set track drag: add track to this set
+                          if (crossDragTrack.current && crossDragTrack.current._fromSet !== set.id) {
+                            const t = crossDragTrack.current;
+                            addTrackToSet({ id: t.id, title: t.title, artist: t.artist, provider: t.provider, ytId: t.ytId, duration: t.duration, art: t.art }, set.id);
+                            crossDragTrack.current = null;
+                          }
+                          // Set header reorder
+                          else if (headerDragIdx !== null && headerDragIdx !== setIdx) {
                             reorderSets(headerDragIdx, setIdx);
                           }
                           setHeaderDragIdx(null);
@@ -4637,10 +4645,10 @@ export default function FabricPage() {
                               <div
                                 key={track.id}
                                 draggable={isExpanded}
-                                onDragStart={isExpanded ? (e) => handleDragStart(e, i) : undefined}
+                                onDragStart={isExpanded ? (e) => { handleDragStart(e, i); crossDragTrack.current = { ...track, _fromSet: set.id }; } : undefined}
                                 onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
                                 onDrop={isExpanded ? (e) => handleDrop(e, i) : undefined}
-                                onDragEnd={isActiveSet ? handleDragEnd : undefined}
+                                onDragEnd={() => { handleDragEnd(); crossDragTrack.current = null; }}
                                 onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: "var(--space-2)",
