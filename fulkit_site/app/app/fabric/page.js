@@ -72,7 +72,7 @@ function posterTerrain(seed, w, h, layers, yOff) {
   return paths;
 }
 
-function PosterModal({ track, features, onClose }) {
+function PosterModal({ track, features, timestamp, onClose }) {
   const [theme, setTheme] = useState("dark");
   const [showInfo, setShowInfo] = useState(false);
   const W = 380, H = Math.round(W * (17 / 11)), m = 40;
@@ -82,15 +82,12 @@ function PosterModal({ track, features, onClose }) {
   const fgMuted = theme === "dark" ? "#5C5955" : "#B0ADA8";
   const divColor = theme === "dark" ? "#3D3A37" : "#D4D1CC";
 
-  const seed = (track.title || "") + (track.artist || "");
+  const tsLabel = `${Math.floor(timestamp / 60)}:${String(timestamp % 60).padStart(2, "0")}`;
+  const seed = (track.title || "") + (track.artist || "") + String(timestamp);
   const terrain = useMemo(() => posterTerrain(seed, W, H, 18, H * 0.22), [seed, W, H]);
 
   const dur = track.duration ? `${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, "0")}` : "";
-  const meta = [dur, features?.bpm ? `${features.bpm} BPM` : null, features?.key || null].filter(Boolean).join("  \u00b7  ");
-
-  const posterScale = typeof window !== "undefined" ? Math.min(1, (window.innerHeight - 80) / H) : 1;
-  const scaledW = Math.round(W * posterScale);
-  const scaledH = Math.round(H * posterScale);
+  const meta = [tsLabel + " / " + dur, features?.bpm ? `${features.bpm} BPM` : null, features?.key || null].filter(Boolean).join("  \u00b7  ");
 
   // Export: render to canvas at print resolution then download
   const exportPoster = useCallback(() => {
@@ -154,7 +151,7 @@ function PosterModal({ track, features, onClose }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${(track.title || "poster").replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-poster.png`;
+      a.download = `${(track.title || "poster").replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-${tsLabel.replace(":", "m")}s-poster.png`;
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
@@ -170,99 +167,95 @@ function PosterModal({ track, features, onClose }) {
   });
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9999,
-      background: bg,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      transition: "background 300ms",
-    }}>
-      {/* Close */}
-      <button
-        onClick={onClose}
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(42,40,38,0.7)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: "absolute", top: 20, right: 20, zIndex: 10,
-          width: 36, height: 36, borderRadius: "var(--radius-full)",
-          background: "transparent", border: `1px solid ${divColor}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer",
+          display: "flex", gap: "var(--space-6)",
+          padding: "var(--space-6)",
+          background: "var(--color-bg-elevated)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-xl)",
+          maxWidth: 700, width: "100%",
+          position: "relative",
         }}
       >
-        <X size={16} strokeWidth={2} color={fgDim} />
-      </button>
+        {/* Close */}
+        <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+          <X size={16} strokeWidth={2} color="var(--color-text-muted)" />
+        </button>
 
-      {/* Poster */}
-      <div style={{ width: scaledW, height: scaledH, position: "relative", overflow: "hidden" }}>
-        <svg width={scaledW} height={scaledH} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", top: 0, left: 0 }}>
-          {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
-        </svg>
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          display: "flex", flexDirection: "column",
-          padding: `${m * posterScale}px`, justifyContent: "space-between",
-        }}>
-          <div>
-            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24 * posterScale, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 * posterScale }}>
-              {track.title || "Untitled"}
-            </div>
-            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11 * posterScale, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-              {track.artist || "Unknown"}
-            </div>
-            <div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} />
-          </div>
-          <div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9 * posterScale, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
-            <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7 * posterScale, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 * posterScale }}>
-              F{"\u00fc"}lkit Fabric
+        {/* Poster */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{
+            width: W, height: H, background: bg, borderRadius: 4,
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 8px 24px rgba(42,40,38,0.18), 0 2px 6px rgba(42,40,38,0.08)",
+            transition: "background 300ms",
+          }}>
+            <svg width={W} height={H} style={{ position: "absolute", top: 0, left: 0 }}>
+              {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
+            </svg>
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+              display: "flex", flexDirection: "column",
+              padding: m, justifyContent: "space-between",
+            }}>
+              <div>
+                <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
+                  {track.title || "Untitled"}
+                </div>
+                <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                  {track.artist || "Unknown"}
+                </div>
+                <div style={{ height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
+                <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
+                  F{"\u00fc"}lkit Fabric
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Info overlay */}
-      {showInfo && (
-        <div
-          onClick={() => setShowInfo(false)}
-          style={{
-            position: "absolute", inset: 0, zIndex: 5,
-            background: `${bg}ee`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ maxWidth: 400, padding: "0 24px", textAlign: "center" }}>
-            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 16, fontWeight: 700, color: fg, marginBottom: 12, letterSpacing: "-0.2px" }}>
+        {/* Right panel — info + controls */}
+        <div style={{ flex: 1, minWidth: 180, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 4 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 10 }}>
               Procedural Fingerprint
             </div>
-            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 13, color: fgDim, lineHeight: 1.6 }}>
-              This terrain is generated deterministically from the track's identity. The title and artist seed a unique landscape of layered contours — same song, same poster, every time. No two recordings produce the same image.
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.65, marginBottom: 16 }}>
+              This terrain is generated from the track's identity and the moment you captured it. The title, artist, and playback position ({tsLabel}) seed a unique landscape of layered contours.
             </div>
-            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, color: fgMuted, marginTop: 16, lineHeight: 1.5 }}>
-              Formatted for 11{"\u00d7"}17 in print at 300 DPI.
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.65, marginBottom: 16 }}>
+              Press at a different moment, get a different print. No two are the same.
+            </div>
+            <div style={{ fontSize: 10, color: "var(--color-text-dim)", lineHeight: 1.5 }}>
+              11{"\u00d7"}17 in {"\u00b7"} 3300{"\u00d7"}5100 px {"\u00b7"} 300 DPI
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Bottom bar: dark/light · info · export */}
-      <div style={{
-        position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
-        display: "flex", gap: 8, alignItems: "center",
-        background: `${theme === "dark" ? "rgba(239,237,232,0.06)" : "rgba(42,40,38,0.04)"}`,
-        backdropFilter: "blur(12px)",
-        borderRadius: "var(--radius-full)", padding: "5px 12px",
-        border: `1px solid ${divColor}`,
-      }}>
-        <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} style={pill(false)}>
-          {theme === "dark" ? "light" : "dark"}
-        </button>
-        <div style={{ width: 1, height: 14, background: divColor }} />
-        <button onClick={() => setShowInfo(true)} style={pill(false)}>
-          info
-        </button>
-        <div style={{ width: 1, height: 14, background: divColor }} />
-        <button onClick={exportPoster} style={pill(true)}>
-          export
-        </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 20 }}>
+            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} style={pill(false)}>
+              {theme === "dark" ? "light" : "dark"}
+            </button>
+            <div style={{ flex: 1 }} />
+            <button onClick={exportPoster} style={pill(true)}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Download size={10} strokeWidth={2.2} /> export
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1789,6 +1782,7 @@ export default function FabricPage() {
   const [mixLoading, setMixLoading] = useState(false);
   const [visualizing, setVisualizing] = useState(false);
   const [posterOpen, setPosterOpen] = useState(false);
+  const [posterTimestamp, setPosterTimestamp] = useState(0);
   const [showSpotifyBrowser, setShowSpotifyBrowser] = useState(false);
   const [importing, setImporting] = useState(null); // playlist id being imported
   const [showSetMenu, setShowSetMenu] = useState(false);
@@ -2253,6 +2247,7 @@ export default function FabricPage() {
         <PosterModal
           track={currentTrack}
           features={features}
+          timestamp={posterTimestamp}
           onClose={() => setPosterOpen(false)}
         />
       )}
@@ -2634,7 +2629,7 @@ export default function FabricPage() {
                 {/* Poster — far right */}
                 {currentTrack && (
                   <button
-                    onClick={() => setPosterOpen(true)}
+                    onClick={() => { setPosterTimestamp(Math.round(progress * (currentTrack?.duration || 0))); setPosterOpen(true); }}
                     title="Poster"
                     style={{
                       width: 32, height: 32, borderRadius: "var(--radius-full)",
