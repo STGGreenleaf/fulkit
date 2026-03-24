@@ -4096,7 +4096,7 @@ export default function FabricPage() {
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
                     {playlists.length > 0
                       ? "Import a playlist to get started"
-                      : "Connect Spotify in Settings → Sources"
+                      : "Connect music in Settings \u2192 Sources"
                     }
                   </div>
                   {playlists.length > 0 && (
