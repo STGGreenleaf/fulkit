@@ -89,6 +89,11 @@ export function FabricProvider({ children }) {
   const connectedProvidersRef = useRef({});
   useEffect(() => { connectedProvidersRef.current = connectedProviders; }, [connectedProviders]);
   const [statusChecked, setStatusChecked] = useState(false);
+
+  // ── Thumbs Down (permanent rejection) ──
+  const [thumbsDownSet, setThumbsDownSet] = useState(new Set());
+  const thumbsDownRef = useRef(new Set());
+  useEffect(() => { thumbsDownRef.current = thumbsDownSet; }, [thumbsDownSet]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [queue, setQueue] = useState([]);
@@ -228,6 +233,17 @@ export function FabricProvider({ children }) {
       setConnectedProviders({ youtube: true });
       setStatusChecked(true);
     });
+  }, [accessToken, apiFetch]);
+
+  // Load thumbs-down list from Supabase
+  useEffect(() => {
+    if (!accessToken) return;
+    apiFetch("/api/fabric/thumbsdown").then((data) => {
+      if (Array.isArray(data)) {
+        const keys = new Set(data.map(d => d.track_key));
+        setThumbsDownSet(keys);
+      }
+    }).catch(() => {});
   }, [accessToken, apiFetch]);
 
   // Fetch playlists from Supabase (works regardless of source connection)
@@ -850,6 +866,35 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets, setsData.sets, updateHistorySignal]);
 
+  // ── Thumbs Down ──
+  const thumbsDownTrack = useCallback((track) => {
+    if (!track?.artist && !track?.title) return;
+    const key = `${(track.artist || "").trim().toLowerCase()}|${(track.title || "").trim().toLowerCase()}`;
+    // Update local state immediately
+    setThumbsDownSet(prev => new Set([...prev, key]));
+    // Remove from guy crate
+    if (track.id) {
+      updateHistorySignal(track.id, { kept: false, removedAt: Date.now(), thumbedDown: true });
+      setSetsData((prev) => {
+        const next = { ...prev, sets: prev.sets.map(s =>
+          s.id === "guy-crate" ? { ...s, tracks: s.tracks.filter(t => t.id !== track.id) } : s
+        )};
+        persistSets(next);
+        return next;
+      });
+    }
+    // Fire-and-forget: persist to Supabase
+    apiFetch("/api/fabric/thumbsdown", {
+      method: "POST",
+      body: JSON.stringify({ trackId: track.id, artist: track.artist, title: track.title }),
+    }).catch(() => {});
+  }, [apiFetch, persistSets, updateHistorySignal]);
+
+  const isThumbedDown = useCallback((artist, title) => {
+    const key = `${(artist || "").trim().toLowerCase()}|${(title || "").trim().toLowerCase()}`;
+    return thumbsDownRef.current.has(key);
+  }, []);
+
   // Multi-set CRUD
   const userSets = setsData.sets.filter(s => s.source !== "guy");
   const allSets = userSets.filter(s => !s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks }));
@@ -1161,7 +1206,13 @@ export function FabricProvider({ children }) {
     const ctx = playbackContextRef.current;
     if (!ctx?.tracks?.length) return;
 
-    const nextIndex = ctx.currentIndex + 1;
+    // Find next non-thumbed-down track in context
+    let nextIndex = ctx.currentIndex + 1;
+    while (nextIndex < ctx.tracks.length) {
+      const t = ctx.tracks[nextIndex];
+      if (!isThumbedDown(t.artist, t.title)) break;
+      nextIndex++;
+    }
 
     // Next track in current context
     if (nextIndex < ctx.tracks.length) {
@@ -1505,6 +1556,8 @@ export function FabricProvider({ children }) {
         addToGuyCrate,
         enrichGuyCrateTrack,
         removeFromGuyCrate,
+        thumbsDownTrack,
+        isThumbedDown,
         clearGuyCrate,
         playTrack,
         playTrackInContext,

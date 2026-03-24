@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -1520,6 +1520,8 @@ export default function FabricPage() {
     saveGuyCrateAsSet,
     addToGuyCrate,
     removeFromGuyCrate,
+    thumbsDownTrack,
+    isThumbedDown,
     clearGuyCrate,
     playTrack,
     playTrackInContext,
@@ -3942,6 +3944,18 @@ export default function FabricPage() {
                               title="Remove"
                             >
                               <MessageCircleX size={12} strokeWidth={1.5} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); thumbsDownTrack(track); }}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
+                                color: "var(--color-text-dim)", transition: "color 120ms",
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
+                              title="Never suggest again"
+                            >
+                              <ThumbsDown size={11} strokeWidth={1.8} />
                             </button>
                           </div>
                         );
