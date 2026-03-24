@@ -902,7 +902,7 @@ export function FabricProvider({ children }) {
 
   // Fetch audio features for tracks we haven't fetched yet (via ReccoBeats)
   useEffect(() => {
-    if (!connected || !accessToken) return;
+    if (!accessToken) return;
     const ids = [];
     if (currentTrack?.id && !audioFeatures[currentTrack.id] && !featuresRequested.current.has(currentTrack.id)) {
       ids.push(currentTrack.id);
@@ -917,7 +917,7 @@ export function FabricProvider({ children }) {
         setAudioFeatures((prev) => ({ ...prev, ...data.features }));
       }
     });
-  }, [currentTrack?.id, flagged, connected, accessToken, apiFetch, audioFeatures]);
+  }, [currentTrack?.id, flagged, accessToken, apiFetch, audioFeatures]);
 
   // Auto-sync crowned set to Supabase after any mutation (fire-and-forget)
   const autoSyncCrowned = useCallback((setId, sets) => {

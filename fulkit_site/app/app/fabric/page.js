@@ -2398,11 +2398,6 @@ export default function FabricPage() {
                       {currentTrack.artist}{features ? ` — ${features.bpm} BPM / ${features.key}` : ""}
                     </MarqueeText>
                   </>
-                ) : statusChecked && !connected ? (
-                  <>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", color: "var(--color-text-muted)" }}>Spotify disconnected</div>
-                    <button onClick={reconnectSpotify} style={{ background: "none", border: "none", padding: 0, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", cursor: "pointer", textDecoration: "underline" }}>Reconnect</button>
-                  </>
                 ) : (
                   <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>No track</div>
                 )}
@@ -2501,7 +2496,7 @@ export default function FabricPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {currentTrack?.title || (statusChecked && !connected ? "Spotify disconnected" : "No track")}
+                    {currentTrack?.title || "No track"}
                   </div>
                   <div
                     style={{
@@ -2514,9 +2509,7 @@ export default function FabricPage() {
                   >
                     {currentTrack
                       ? `${currentTrack.artist}${currentTrack.album ? ` — ${currentTrack.album}` : ""}`
-                      : statusChecked && !connected
-                        ? <button onClick={reconnectSpotify} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: 0, padding: "var(--space-1) var(--space-3)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", cursor: "pointer" }}>Reconnect</button>
-                        : ""}
+                      : ""}
                   </div>
                 </div>
 
