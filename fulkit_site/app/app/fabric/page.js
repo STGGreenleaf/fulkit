@@ -4154,19 +4154,25 @@ export default function FabricPage() {
                       ) : guyCrate.tracks.map((track, i) => {
                         const inSet = isFlagged(track.id);
                         const isActive = currentTrack?.id === track.id;
+                        const isDowned = thumbedDownIds.has(track.id);
+                        const isFading = thumbFadingIds.has(track.id);
                         return (
                           <div key={track.id}
-                            draggable
-                            onDragStart={() => { crossDragTrack.current = { ...track, _fromSource: "guy-crate" }; }}
+                            draggable={!isDowned}
+                            onDragStart={!isDowned ? () => { crossDragTrack.current = { ...track, _fromSource: "guy-crate" }; } : undefined}
                             onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
-                            onClick={() => playTrackInContext(track, "bsides", "guy-crate", guyCrate.tracks, i)}
+                            onClick={!isDowned ? () => playTrackInContext(track, "bsides", "guy-crate", guyCrate.tracks, i) : undefined}
                             style={{
                               display: "flex", alignItems: "center", gap: "var(--space-2)",
-                              padding: "var(--space-2)", cursor: "grab",
+                              padding: "var(--space-2)", cursor: isDowned ? "default" : "grab",
                               borderBottom: "1px solid var(--color-border-light)",
                               borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
                               background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                              transition: "background var(--duration-fast) var(--ease-default)",
+                              opacity: isFading ? 0 : 1,
+                              maxHeight: isFading ? 0 : 100,
+                              overflow: "hidden",
+                              transition: isFading ? "opacity 0.6s ease-out, max-height 0.4s 0.5s ease-out, padding 0.4s 0.5s ease-out" : "background var(--duration-fast) var(--ease-default)",
+                              ...(isFading ? { padding: 0, borderBottom: "none" } : {}),
                             }}>
                             <div style={{
                               width: 16, fontSize: 9, fontFamily: "var(--font-mono)",
@@ -4202,23 +4208,24 @@ export default function FabricPage() {
                                 if (thumbedDownIds.has(track.id)) return;
                                 thumbsDownTrack(track);
                                 setThumbedDownIds(prev => new Set([...prev, track.id]));
-                                // After 400ms (black flash visible), start fade
+                                // After 400ms (thumb fill visible), start row fade
                                 setTimeout(() => setThumbFadingIds(prev => new Set([...prev, track.id])), 400);
+                                // After fade + collapse completes, remove from Guy's Crate
+                                setTimeout(() => removeFromGuyCrate(track.id), 1500);
                               }}
                               style={{
                                 background: "none", border: "none",
                                 cursor: thumbedDownIds.has(track.id) ? "default" : "pointer",
                                 padding: 2, flexShrink: 0,
                                 marginRight: "var(--space-2)",
-                                color: thumbedDownIds.has(track.id) ? "var(--color-text)" : "var(--color-text-dim)",
-                                opacity: thumbFadingIds.has(track.id) ? 0 : 1,
-                                transition: thumbFadingIds.has(track.id) ? "opacity 2s ease-out" : "color 120ms",
+                                color: isDowned ? "var(--color-text)" : "var(--color-text-dim)",
+                                transition: "color 120ms",
                               }}
-                              onMouseEnter={(e) => { if (!thumbedDownIds.has(track.id)) e.currentTarget.style.color = "var(--color-text)"; }}
-                              onMouseLeave={(e) => { if (!thumbedDownIds.has(track.id)) e.currentTarget.style.color = "var(--color-text-dim)"; }}
+                              onMouseEnter={(e) => { if (!isDowned) e.currentTarget.style.color = "var(--color-text)"; }}
+                              onMouseLeave={(e) => { if (!isDowned) e.currentTarget.style.color = "var(--color-text-dim)"; }}
                               title="Never suggest again"
                             >
-                              <ThumbsDown size={11} strokeWidth={1.8} fill={thumbedDownIds.has(track.id) ? "var(--color-text)" : "none"} />
+                              <ThumbsDown size={11} strokeWidth={1.8} fill={isDowned ? "var(--color-text)" : "none"} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); flag(track); }}
