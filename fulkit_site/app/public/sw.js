@@ -1,4 +1,4 @@
-const CACHE_NAME = "fulkit-v2";
+const CACHE_NAME = "fulkit-v3";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -7,42 +7,19 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(["/", "/index.html"]).catch(() => {})
-    )
-  );
+  self.skipWaiting(); // Force activate immediately
 });
 
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  if (!event.request.url.startsWith("http")) return;
-
-  const url = new URL(event.request.url);
-
-  // Never intercept JS/CSS — let browser handle naturally
-  if (url.pathname.endsWith(".js") || url.pathname.endsWith(".css")) return;
-
-  // Cache-first for same-origin static assets only (images + fonts)
-  // External images (album art, YouTube thumbnails) pass through directly — no interception
-  if (url.origin === self.location.origin && url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/)) {
-    event.respondWith(
-      caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          return response;
-        })
-      ).catch(() => new Response("", { status: 404 }))
-    );
-  }
-});
+// No fetch interception — let the browser handle everything natively.
+// Album art caching is handled by localStorage (fulkit-art-cache).
+// Service worker exists only for PWA manifest + future push notifications.
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
+      // Clear all old caches
       caches.keys().then((names) =>
-        Promise.all(names.map((name) => name !== CACHE_NAME ? caches.delete(name) : undefined))
+        Promise.all(names.map((name) => caches.delete(name)))
       ),
       self.clients.claim(),
     ])
