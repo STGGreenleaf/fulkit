@@ -1500,6 +1500,83 @@ export function FabricProvider({ children }) {
       }
       if (restored) console.log("[fabric] Restored crowned sets to personal list");
     });
+
+    // Auto-restore trophied sets from Supabase
+    apiFetch("/api/fabric/playlists").then((data) => {
+      if (!data?.playlists) return;
+      const trophiedPlaylists = data.playlists.filter(p => p.source === "set");
+      if (!trophiedPlaylists.length) return;
+
+      setSetsData((prev) => {
+        const currentSetIds = new Set(prev.sets.map(s => s.id));
+        const currentSetNames = new Set(prev.sets.map(s => s.name));
+        let restored = false;
+
+        for (const pl of trophiedPlaylists) {
+          // Skip if set already exists (by ID or name)
+          if (currentSetIds.has(pl.id) || currentSetNames.has(pl.name)) continue;
+
+          // Fetch tracks for this playlist
+          apiFetch(`/api/fabric/playlists/${pl._fulkitId}/tracks`).then((trackData) => {
+            const tracks = (trackData?.tracks || []).map(t => ({
+              id: t.source_id || t.id,
+              title: t.title,
+              artist: t.artist,
+              album: t.album || "",
+              duration: Math.round((t.duration_ms || 0) / 1000),
+              provider: t.provider || "youtube",
+            }));
+            if (!tracks.length) return;
+
+            setSetsData((cur) => {
+              // Double-check it hasn't been restored already
+              if (cur.sets.some(s => s.name === pl.name)) return cur;
+              const restoredSet = {
+                id: pl.id || `trophy-${Date.now()}`,
+                name: pl.name,
+                tracks,
+                trophied: true,
+              };
+              const next = { ...cur, sets: [...cur.sets, restoredSet] };
+              persistSets(next);
+              console.log(`[fabric] Restored trophied set: ${pl.name}`);
+              return next;
+            });
+          });
+          restored = true;
+        }
+        return prev; // Don't mutate here — async callbacks handle it
+      });
+    });
+
+    // Auto-restore sets from B-Side adoption memory (sets that existed but were lost)
+    const guyHist = JSON.parse(localStorage.getItem("fulkit-guy-history") || "[]");
+    const adoptedSets = {};
+    for (const e of guyHist) {
+      if (e.adopted && e.adoptedTo) {
+        if (!adoptedSets[e.adoptedTo]) adoptedSets[e.adoptedTo] = [];
+        adoptedSets[e.adoptedTo].push({ id: e.id, title: e.title, artist: e.artist, provider: e.provider || "youtube" });
+      }
+    }
+    setSetsData((prev) => {
+      const currentNames = new Set(prev.sets.map(s => s.name));
+      let restored = false;
+      const newSets = [...prev.sets];
+      for (const [name, tracks] of Object.entries(adoptedSets)) {
+        if (currentNames.has(name) || !tracks.length) continue;
+        newSets.push({
+          id: `memory-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name,
+          tracks,
+        });
+        restored = true;
+        console.log(`[fabric] Restored set from B-Side memory: ${name} (${tracks.length} tracks)`);
+      }
+      if (!restored) return prev;
+      const next = { ...prev, sets: newSets };
+      persistSets(next);
+      return next;
+    });
   }, [accessToken, apiFetch]);
 
   const publishSet = useCallback(async (setId) => {
