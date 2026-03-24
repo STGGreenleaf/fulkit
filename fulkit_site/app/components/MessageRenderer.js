@@ -97,6 +97,15 @@ function InteractiveTable({ children, onFormSubmit }) {
 
   const submitted = formStore?.submitted;
 
+  // Auto-focus first input (hooks must be before any early return)
+  const formRef = useRef(null);
+  useEffect(() => {
+    if (formRef.current) {
+      const first = formRef.current.querySelector("input");
+      if (first) setTimeout(() => first.focus(), 100);
+    }
+  }, [fillableCol]);
+
   if (fillableCol === -1 || !onFormSubmit || submitted) {
     return (
       <div style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
@@ -111,15 +120,6 @@ function InteractiveTable({ children, onFormSubmit }) {
       </div>
     );
   }
-
-  // Auto-focus first input
-  const formRef = useRef(null);
-  useEffect(() => {
-    if (formRef.current) {
-      const first = formRef.current.querySelector("input");
-      if (first) setTimeout(() => first.focus(), 100);
-    }
-  }, [fillableCol]);
 
   return (
     <div ref={formRef} style={{ overflowX: "auto", marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
