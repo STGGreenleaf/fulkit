@@ -6655,7 +6655,17 @@ function generateTerrain(seed, width, height, layers, yOffset) {
 
 function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
   const [track, setTrack] = useState({ title: "Midnight Architecture", artist: "Rival Consoles", bpm: "128", key: "Am", duration: "4:37" });
-  const [layout, setLayout] = useState({ header: "top", align: "left", theme: "dark", margin: 40 });
+  const [layout, setLayoutState] = useState(() => {
+    if (typeof window === "undefined") return { header: "top", align: "left", theme: "dark", margin: 40 };
+    try { return JSON.parse(localStorage.getItem("fulkit-poster-layout")) || { header: "top", align: "left", theme: "dark", margin: 40 }; } catch { return { header: "top", align: "left", theme: "dark", margin: 40 }; }
+  });
+  const setLayout = useCallback((fn) => {
+    setLayoutState(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      try { localStorage.setItem("fulkit-poster-layout", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   const posterRef = useRef(null);
 
   const W = 340;

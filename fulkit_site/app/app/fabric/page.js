@@ -73,9 +73,15 @@ function posterTerrain(seed, w, h, layers, yOff) {
 }
 
 function PosterModal({ track, features, timestamp, onClose }) {
-  const [theme, setTheme] = useState("dark");
+  const savedLayout = useMemo(() => {
+    if (typeof window === "undefined") return { header: "top", align: "left", theme: "dark", margin: 40 };
+    try { return JSON.parse(localStorage.getItem("fulkit-poster-layout")) || { header: "top", align: "left", theme: "dark", margin: 40 }; } catch { return { header: "top", align: "left", theme: "dark", margin: 40 }; }
+  }, []);
+  const [theme, setTheme] = useState(savedLayout.theme || "dark");
   const [showInfo, setShowInfo] = useState(false);
-  const W = 380, H = Math.round(W * (17 / 11)), m = 40;
+  const header = savedLayout.header || "top";
+  const align = savedLayout.align || "left";
+  const W = 380, H = Math.round(W * (17 / 11)), m = savedLayout.margin || 40;
   const bg = theme === "dark" ? "#2A2826" : "#EFEDE8";
   const fg = theme === "dark" ? "#F0EEEB" : "#2A2826";
   const fgDim = theme === "dark" ? "#8A8784" : "#8A8784";
@@ -117,21 +123,27 @@ function PosterModal({ track, features, timestamp, onClose }) {
     });
     ctx.globalAlpha = 1;
 
-    // Header
     const pm = m * s;
+    const tx = align === "center" ? printW / 2 : align === "right" ? printW - pm : pm;
+    const ta = align === "center" ? "center" : align === "right" ? "right" : "left";
+
+    // Title + artist
+    const titleY = header === "bottom" ? printH - pm - 20 * s : pm + 24 * s;
+    const artistY = titleY + 16 * s;
     ctx.fillStyle = fg;
     ctx.font = `700 ${24 * s}px D-DIN, sans-serif`;
-    ctx.textAlign = "left";
-    ctx.fillText(track.title || "Untitled", pm, pm + 24 * s);
+    ctx.textAlign = ta;
+    ctx.fillText(track.title || "Untitled", tx, titleY);
     ctx.fillStyle = fgDim;
     ctx.font = `400 ${11 * s}px D-DIN, sans-serif`;
-    ctx.fillText((track.artist || "Unknown").toUpperCase(), pm, pm + 40 * s);
+    ctx.fillText((track.artist || "Unknown").toUpperCase(), tx, artistY);
 
-    // Footer metadata
+    // Metadata
+    const metaY = header === "bottom" ? pm + 12 * s : printH - pm - 18 * s;
     ctx.fillStyle = fgDim;
     ctx.font = `400 ${9 * s}px JetBrains Mono, monospace`;
-    ctx.textAlign = "left";
-    ctx.fillText(meta, pm, printH - pm - 18 * s);
+    ctx.textAlign = ta;
+    ctx.fillText(meta, tx, metaY);
 
     // Watermark
     ctx.fillStyle = fgMuted;
@@ -201,20 +213,31 @@ function PosterModal({ track, features, timestamp, onClose }) {
               display: "flex", flexDirection: "column",
               padding: m, justifyContent: "space-between",
             }}>
-              <div>
-                <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
-                  {track.title || "Untitled"}
-                </div>
-                <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-                  {track.artist || "Unknown"}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
-                <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
-                  F{"\u00fc"}lkit Fabric
-                </div>
-              </div>
+              {(() => {
+                const titleBlock = (
+                  <div style={{ textAlign: align }}>
+                    <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
+                      {track.title || "Untitled"}
+                    </div>
+                    <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                      {track.artist || "Unknown"}
+                    </div>
+                  </div>
+                );
+                const metaBlock = (
+                  <div style={{ textAlign: align }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
+                  </div>
+                );
+                const wm = (
+                  <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
+                    F{"\u00fc"}lkit Fabric
+                  </div>
+                );
+                if (header === "bottom") return <>{metaBlock}<div style={{ flex: 1 }} />{titleBlock}{wm}</>;
+                if (header === "overlay") return <><div style={{ flex: 1 }} />{titleBlock}<div style={{ marginTop: 6 }}>{metaBlock}</div>{wm}</>;
+                return <>{titleBlock}<div style={{ flex: 1 }} />{metaBlock}{wm}</>;
+              })()}
             </div>
           </div>
         </div>
