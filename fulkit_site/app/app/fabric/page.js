@@ -223,7 +223,7 @@ function PosterModal({ track, features, timestamp, onClose }) {
         <div style={{ flex: 1, minWidth: 180, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 4 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 14 }}>
-              Procedural Fingerprint
+              Fabric Procedural Fingerprint
             </div>
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
               Eighteen terrain layers, each driven by a seeded pseudorandom number generator. The hash input is three values: track title, artist name, and the playback position you captured ({tsLabel}). That seed determines the amplitude, frequency, and phase of three overlapping sine functions per layer — producing a unique topographic contour that belongs to this exact moment in this exact recording.
