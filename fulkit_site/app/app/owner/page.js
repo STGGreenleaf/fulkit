@@ -6751,13 +6751,13 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
                 }}>
                   {layout.header === "top" && (
                     <>
-                      <div>{headerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /></div>
+                      <div>{headerBlock}</div>
                       <div>{footerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></div>
                     </>
                   )}
                   {layout.header === "bottom" && (
                     <>
-                      <div>{footerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /></div>
+                      <div>{footerBlock}</div>
                       <div>{headerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></div>
                     </>
                   )}

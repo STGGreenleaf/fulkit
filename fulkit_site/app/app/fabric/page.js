@@ -127,13 +127,6 @@ function PosterModal({ track, features, timestamp, onClose }) {
     ctx.font = `400 ${11 * s}px D-DIN, sans-serif`;
     ctx.fillText((track.artist || "Unknown").toUpperCase(), pm, pm + 40 * s);
 
-    // Divider
-    ctx.strokeStyle = divColor;
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 0.5 * s;
-    ctx.beginPath(); ctx.moveTo(pm, pm + 50 * s); ctx.lineTo(printW - pm, pm + 50 * s); ctx.stroke();
-    ctx.globalAlpha = 1;
-
     // Footer metadata
     ctx.fillStyle = fgDim;
     ctx.font = `400 ${9 * s}px JetBrains Mono, monospace`;
@@ -215,7 +208,6 @@ function PosterModal({ track, features, timestamp, onClose }) {
                 <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
                   {track.artist || "Unknown"}
                 </div>
-                <div style={{ height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} />
               </div>
               <div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
