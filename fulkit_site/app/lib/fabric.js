@@ -82,7 +82,17 @@ function camelotCompatible(keyA, keyB) {
 
 // ═══ Arc Sort — Three-Act Energy Sequencing ═══
 function sortByArc(tracks, features) {
-  if (!tracks || tracks.length < 3) return tracks;
+  if (!tracks || tracks.length === 0) return tracks;
+  // Short lists: just sort by energy (low → high → low)
+  if (tracks.length <= 3) {
+    const withEnergy = tracks.map(t => ({ t, e: features[t.id]?.energy ?? 50 }));
+    withEnergy.sort((a, b) => a.e - b.e);
+    if (withEnergy.length === 3) {
+      // low, high, medium — simple arc
+      return [withEnergy[0].t, withEnergy[2].t, withEnergy[1].t];
+    }
+    return withEnergy.map(x => x.t);
+  }
 
   // Build target energy curve: intro → build → peak (with valley) → cool → close
   const n = tracks.length;

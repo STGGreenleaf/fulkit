@@ -4398,8 +4398,8 @@ export default function FabricPage() {
                       style={{
                         background: "none", border: "none", cursor: "pointer", padding: 2,
                         display: "flex", alignItems: "center",
-                        color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-dim)",
-                        opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.4,
+                        color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-muted)",
+                        opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.6,
                         transition: "opacity 150ms, color 150ms",
                       }}
                     >
