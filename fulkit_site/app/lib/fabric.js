@@ -1206,6 +1206,8 @@ export function FabricProvider({ children }) {
   const playSessionRef = useRef({ trackId: null, maxProgress: 0 });
 
   const addToGuyCrate = useCallback((track) => {
+    // Never re-add thumbed-down tracks
+    if (isThumbedDown(track.artist, track.title)) return;
     appendToHistory(track);
     setSetsData((prev) => {
       let gc = prev.sets.find(s => s.id === "guy-crate");
