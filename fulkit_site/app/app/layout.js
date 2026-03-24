@@ -99,7 +99,7 @@ export default function RootLayout({ children }) {
           </VaultProvider>
         </AuthProvider>
         <Script id="sw-register" strategy="afterInteractive">
-          {`if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`}
+          {`if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js?v=3").then(function(r){r.update()}).catch(function(){})})}`}
         </Script>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-94X31TXJ2F" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
