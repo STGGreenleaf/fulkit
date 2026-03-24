@@ -6697,7 +6697,7 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
   );
 
   const footerBlock = (
-    <div style={{ textAlign: layout.align }}>
+    <div style={{ textAlign: layout.footerAlign || layout.align }}>
       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>
         {metaLine}
       </div>
@@ -6705,7 +6705,7 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
   );
 
   const watermark = (
-    <div style={{ textAlign: layout.align, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
+    <div style={{ textAlign: layout.footerAlign || layout.align, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
       Fülkit Fabric
     </div>
   );
@@ -6827,10 +6827,18 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
                 </div>
               </div>
               <div style={controlRow}>
-                <span style={controlLabel}>Align</span>
+                <span style={controlLabel}>Header</span>
                 <div style={{ display: "flex", gap: 4 }}>
                   {["left", "center", "right"].map(v => (
                     <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pillBtn(layout.align === v)}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Footer</span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["left", "center", "right"].map(v => (
+                    <button key={v} onClick={() => setLayout(p => ({ ...p, footerAlign: v }))} style={pillBtn((layout.footerAlign || layout.align) === v)}>{v}</button>
                   ))}
                 </div>
               </div>

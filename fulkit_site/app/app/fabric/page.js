@@ -81,6 +81,7 @@ function PosterModal({ track, features, timestamp, onClose }) {
   const [showInfo, setShowInfo] = useState(false);
   const header = savedLayout.header || "top";
   const align = savedLayout.align || "left";
+  const footerAlign = savedLayout.footerAlign || align;
   const W = 380, H = Math.round(W * (17 / 11)), m = savedLayout.margin || 40;
   const bg = theme === "dark" ? "#2A2826" : "#EFEDE8";
   const fg = theme === "dark" ? "#F0EEEB" : "#2A2826";
@@ -126,6 +127,8 @@ function PosterModal({ track, features, timestamp, onClose }) {
     const pm = m * s;
     const tx = align === "center" ? printW / 2 : align === "right" ? printW - pm : pm;
     const ta = align === "center" ? "center" : align === "right" ? "right" : "left";
+    const ftx = footerAlign === "center" ? printW / 2 : footerAlign === "right" ? printW - pm : pm;
+    const fta = footerAlign === "center" ? "center" : footerAlign === "right" ? "right" : "left";
 
     // Title + artist
     const titleY = header === "bottom" ? printH - pm - 20 * s : pm + 24 * s;
@@ -142,14 +145,14 @@ function PosterModal({ track, features, timestamp, onClose }) {
     const metaY = header === "bottom" ? pm + 12 * s : printH - pm - 18 * s;
     ctx.fillStyle = fgDim;
     ctx.font = `400 ${9 * s}px JetBrains Mono, monospace`;
-    ctx.textAlign = ta;
-    ctx.fillText(meta, tx, metaY);
+    ctx.textAlign = fta;
+    ctx.fillText(meta, ftx, metaY);
 
     // Watermark
     ctx.fillStyle = fgMuted;
     ctx.font = `400 ${7 * s}px D-DIN, sans-serif`;
-    ctx.textAlign = ta;
-    ctx.fillText("F\u00dcLKIT FABRIC", tx, printH - pm);
+    ctx.textAlign = fta;
+    ctx.fillText("F\u00dcLKIT FABRIC", ftx, printH - pm);
 
     // Download
     canvas.toBlob((blob) => {
@@ -225,12 +228,12 @@ function PosterModal({ track, features, timestamp, onClose }) {
                   </div>
                 );
                 const metaBlock = (
-                  <div style={{ textAlign: align }}>
+                  <div style={{ textAlign: footerAlign }}>
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
                   </div>
                 );
                 const wm = (
-                  <div style={{ textAlign: align, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
+                  <div style={{ textAlign: footerAlign, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
                     F{"\u00fc"}lkit Fabric
                   </div>
                 );
