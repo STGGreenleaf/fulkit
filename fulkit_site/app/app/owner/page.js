@@ -6741,8 +6741,6 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
                   {terrain.map((p, i) => (
                     <path key={i} d={p.d} fill={fg} opacity={p.opacity} />
                   ))}
-                  {/* Horizon line */}
-                  <line x1={m} y1={H * 0.42} x2={W - m} y2={H * 0.42} stroke={divColor} strokeWidth={0.5} opacity={0.5} />
                 </svg>
 
                 {/* Content overlay */}
