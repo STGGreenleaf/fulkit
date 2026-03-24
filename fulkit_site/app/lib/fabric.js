@@ -1559,9 +1559,25 @@ export function FabricProvider({ children }) {
       }
     }
     setSetsData((prev) => {
-      const currentNames = new Set(prev.sets.map(s => s.name));
-      let restored = false;
-      const newSets = [...prev.sets];
+      let changed = false;
+      const newSets = prev.sets.map(s => {
+        const memoryTracks = adoptedSets[s.name];
+        if (!memoryTracks?.length) return s;
+        // Merge missing tracks from B-Side memory into existing set
+        const existingIds = new Set(s.tracks.map(t => t.id));
+        const existingKeys = new Set(s.tracks.map(t => `${(t.artist || "").toLowerCase()}|${(t.title || "").toLowerCase()}`));
+        const missing = memoryTracks.filter(t => {
+          if (existingIds.has(t.id)) return false;
+          const key = `${(t.artist || "").toLowerCase()}|${(t.title || "").toLowerCase()}`;
+          return !existingKeys.has(key);
+        });
+        if (!missing.length) return s;
+        changed = true;
+        console.log(`[fabric] Restored ${missing.length} track(s) to "${s.name}" from B-Side memory`);
+        return { ...s, tracks: [...s.tracks, ...missing] };
+      });
+      // Also create sets that don't exist at all
+      const currentNames = new Set(newSets.map(s => s.name));
       for (const [name, tracks] of Object.entries(adoptedSets)) {
         if (currentNames.has(name) || !tracks.length) continue;
         newSets.push({
@@ -1569,10 +1585,10 @@ export function FabricProvider({ children }) {
           name,
           tracks,
         });
-        restored = true;
+        changed = true;
         console.log(`[fabric] Restored set from B-Side memory: ${name} (${tracks.length} tracks)`);
       }
-      if (!restored) return prev;
+      if (!changed) return prev;
       const next = { ...prev, sets: newSets };
       persistSets(next);
       return next;
