@@ -872,23 +872,16 @@ export function FabricProvider({ children }) {
     const key = `${(track.artist || "").trim().toLowerCase()}|${(track.title || "").trim().toLowerCase()}`;
     // Update local state immediately
     setThumbsDownSet(prev => new Set([...prev, key]));
-    // Remove from guy crate
+    // Mark in history (does NOT remove from crate — user controls that separately)
     if (track.id) {
-      updateHistorySignal(track.id, { kept: false, removedAt: Date.now(), thumbedDown: true });
-      setSetsData((prev) => {
-        const next = { ...prev, sets: prev.sets.map(s =>
-          s.id === "guy-crate" ? { ...s, tracks: s.tracks.filter(t => t.id !== track.id) } : s
-        )};
-        persistSets(next);
-        return next;
-      });
+      updateHistorySignal(track.id, { thumbedDown: true });
     }
     // Fire-and-forget: persist to Supabase
     apiFetch("/api/fabric/thumbsdown", {
       method: "POST",
       body: JSON.stringify({ trackId: track.id, artist: track.artist, title: track.title }),
     }).catch(() => {});
-  }, [apiFetch, persistSets, updateHistorySignal]);
+  }, [apiFetch, updateHistorySignal]);
 
   const isThumbedDown = useCallback((artist, title) => {
     const key = `${(artist || "").trim().toLowerCase()}|${(title || "").trim().toLowerCase()}`;
