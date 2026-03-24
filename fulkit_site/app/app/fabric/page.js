@@ -4631,15 +4631,15 @@ export default function FabricPage() {
                           )}
                           {set.tracks.map((track, i) => {
                             const isActive = currentTrack?.id === track.id;
-                            const isDragTarget = isActiveSet && dragOverIdx === i && dragIdx !== i;
+                            const isDragTarget = isExpanded && dragOverIdx === i && dragIdx !== i;
                             const setFeat = audioFeatures[track.id];
                             return (
                               <div
                                 key={track.id}
-                                draggable={isActiveSet}
-                                onDragStart={isActiveSet ? (e) => handleDragStart(e, i) : undefined}
-                                onDragOver={isActiveSet ? (e) => handleDragOver(e, i) : undefined}
-                                onDrop={isActiveSet ? (e) => handleDrop(e, i) : undefined}
+                                draggable={isExpanded}
+                                onDragStart={isExpanded ? (e) => handleDragStart(e, i) : undefined}
+                                onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
+                                onDrop={isExpanded ? (e) => handleDrop(e, i) : undefined}
                                 onDragEnd={isActiveSet ? handleDragEnd : undefined}
                                 onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{
@@ -4649,7 +4649,7 @@ export default function FabricPage() {
                                   borderTop: isDragTarget ? "2px solid var(--color-text)" : "2px solid transparent",
                                   borderLeft: isActive ? "3px solid var(--color-accent)" : "3px solid transparent",
                                   background: isActive ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                                  cursor: isActiveSet ? "grab" : "pointer",
+                                  cursor: isExpanded ? "grab" : "pointer",
                                   transition: "background var(--duration-fast) var(--ease-default)", userSelect: "none",
                                 }}
                               >
