@@ -522,6 +522,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         });
       }
     } finally {
+      clearTimeout(safetyTimeout);
       console.log("[sendMessage] finally — unlocking, response length:", fullResponse?.length || 0);
       setStreaming(false);
       setStreamPhase(null);

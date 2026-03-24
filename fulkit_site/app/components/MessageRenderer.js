@@ -192,6 +192,7 @@ function FormStoreProvider({ children, onFormSubmit }) {
   const [submitted, setSubmitted] = useState(false);
   const [registered, setRegistered] = useState(0);
 
+  const submittedRef = useRef(false);
   const store = useRef({
     register: (id) => setRegistered(prev => prev + 1),
     update: (id, entries) => setTables(prev => ({ ...prev, [id]: entries })),
@@ -200,10 +201,12 @@ function FormStoreProvider({ children, onFormSubmit }) {
   });
 
   store.current.submitted = submitted;
+  submittedRef.current = submitted;
   store.current.submit = () => {
-    if (submitted || !onFormSubmit) return;
+    if (submittedRef.current || !onFormSubmit) return;
+    submittedRef.current = true; // sync guard — prevents double-fire
     const allEntries = Object.values(tables).flat().filter(e => e.value !== undefined && e.value !== "");
-    if (allEntries.length === 0) return;
+    if (allEntries.length === 0) { submittedRef.current = false; return; }
     const text = allEntries.map(e => `${e.label}: ${e.value}`).join(", ");
     onFormSubmit(text);
     setSubmitted(true);

@@ -896,11 +896,12 @@ async function executeSquareTool(toolName, input, userId, userToday) {
           body: JSON.stringify({ idempotency_key: idempotencyKey, changes }),
         });
 
-        sqConsumePreview(input.preview_id);
-
         if (res.error) return { error: res.error };
         const result = await res.json();
         if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
+
+        // Only consume preview after confirmed success — allows retry on failure
+        sqConsumePreview(input.preview_id);
 
         return {
           status: "confirmed",
