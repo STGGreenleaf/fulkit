@@ -52,6 +52,127 @@ function fuzzyMatch(a, b) {
   const longer = na.length < nb.length ? nb : na;
   return longer.startsWith(shorter) && shorter.length / longer.length > 0.7;
 }
+// ═══ Camelot Key Compatibility ═══
+const CAMELOT = {
+  "Ab": "1B", "Abm": "1A", "G#m": "1A",
+  "Eb": "2B", "Ebm": "2A", "Cm": "2A",
+  "Bb": "3B", "Bbm": "3A", "Gm": "3A",
+  "F": "4B", "Fm": "4A", "Dm": "4A",
+  "C": "5B", "C#m": "5A", "Am": "5A",
+  "G": "6B", "Gm": "6A", "Em": "6A",
+  "D": "7B", "D#m": "7A", "Bm": "7A",
+  "A": "8B", "A#m": "8A", "F#m": "8A",
+  "E": "9B", "E#m": "9A", "C#m": "9A",
+  "B": "10B", "B#m": "10A", "G#m": "10A",
+  "F#": "11B", "F#m": "11A", "D#m": "11A",
+  "Db": "12B", "Dbm": "12A", "Bbm": "12A",
+};
+
+function camelotCompatible(keyA, keyB) {
+  if (!keyA || !keyB) return true; // no data = no penalty
+  const a = CAMELOT[keyA], b = CAMELOT[keyB];
+  if (!a || !b) return true;
+  const numA = parseInt(a), numB = parseInt(b);
+  const modeA = a.slice(-1), modeB = b.slice(-1);
+  if (a === b) return true; // same key
+  if (numA === numB) return true; // same number (A↔B)
+  if (modeA === modeB && (Math.abs(numA - numB) === 1 || Math.abs(numA - numB) === 11)) return true; // ±1
+  return false;
+}
+
+// ═══ Arc Sort — Three-Act Energy Sequencing ═══
+function sortByArc(tracks, features) {
+  if (!tracks || tracks.length < 3) return tracks;
+
+  // Build target energy curve: intro → build → peak (with valley) → cool → close
+  const n = tracks.length;
+  const targets = [];
+  for (let i = 0; i < n; i++) {
+    const p = i / (n - 1); // 0 to 1
+    let target;
+    if (p < 0.15) target = 35 + p / 0.15 * 15; // intro: 35→50
+    else if (p < 0.35) target = 50 + (p - 0.15) / 0.2 * 30; // build: 50→80
+    else if (p < 0.5) target = 80 + (p - 0.35) / 0.15 * 20; // peak 1: 80→100
+    else if (p < 0.55) target = 100 - (p - 0.5) / 0.05 * 30; // valley: 100→70
+    else if (p < 0.7) target = 70 + (p - 0.55) / 0.15 * 30; // peak 2: 70→100
+    else if (p < 0.9) target = 100 - (p - 0.7) / 0.2 * 60; // cool: 100→40
+    else target = 40 - (p - 0.9) / 0.1 * 10; // close: 40→30
+    targets.push(target);
+  }
+
+  // Score each track for each slot, pick best assignment
+  const available = tracks.map((t, i) => ({
+    track: t,
+    energy: features[t.id]?.energy ?? 50,
+    bpm: features[t.id]?.bpm ?? 120,
+    key: features[t.id]?.key ?? null,
+    valence: features[t.id]?.valence ?? 50,
+    hasFeatures: !!features[t.id],
+    origIndex: i,
+  }));
+
+  // Greedy assignment: for each slot, pick the best remaining track
+  const sorted = [];
+  const used = new Set();
+
+  for (let slot = 0; slot < n; slot++) {
+    let bestIdx = -1;
+    let bestScore = Infinity;
+
+    for (let j = 0; j < available.length; j++) {
+      if (used.has(j)) continue;
+      const t = available[j];
+
+      // Tracks without features go to the end
+      if (!t.hasFeatures) {
+        if (bestIdx === -1) bestIdx = j;
+        continue;
+      }
+
+      // Energy distance to target (primary)
+      let score = Math.abs(t.energy - targets[slot]) * 3;
+
+      // BPM smoothness with previous track
+      if (sorted.length > 0) {
+        const prev = available[sorted[sorted.length - 1]];
+        const bpmDiff = Math.abs(t.bpm - prev.bpm);
+        if (bpmDiff > 15) score += bpmDiff * 0.5;
+        else if (bpmDiff > 10) score += bpmDiff * 0.2;
+
+        // Key compatibility
+        if (!camelotCompatible(t.key, prev.key)) score += 20;
+
+        // Valence clustering (avoid mood whiplash)
+        score += Math.abs(t.valence - prev.valence) * 0.1;
+      }
+
+      // Opener preference: medium energy, not too fast
+      if (slot === 0) {
+        if (t.energy > 70) score += 15;
+        if (t.bpm > 140) score += 10;
+      }
+
+      // Closer preference: lower energy, memorable (not weakest)
+      if (slot === n - 1) {
+        if (t.energy > 60) score += 15;
+        if (t.energy < 15) score += 10; // not the weakest either
+      }
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestIdx = j;
+      }
+    }
+
+    if (bestIdx >= 0) {
+      sorted.push(bestIdx);
+      used.add(bestIdx);
+    }
+  }
+
+  return sorted.map(i => available[i].track);
+}
+
 function computeScore(entry) {
   const ageWeeks = (Date.now() - (entry.addedAt || Date.now())) / 604800000;
   const decay = Math.max(0.3, 1 - ageWeeks * 0.02);
@@ -896,8 +1017,8 @@ export function FabricProvider({ children }) {
 
   // Multi-set CRUD
   const userSets = setsData.sets.filter(s => s.source !== "guy");
-  const allSets = userSets.filter(s => !s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks }));
-  const trophiedSets = userSets.filter(s => s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.tracks, trophied: true }));
+  const allSets = userSets.filter(s => !s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.arcActive ? sortByArc(s.tracks, audioFeatures) : s.tracks, arcActive: !!s.arcActive }));
+  const trophiedSets = userSets.filter(s => s.trophied).map(s => ({ id: s.id, name: s.name, trackCount: s.tracks.length, tracks: s.arcActive ? sortByArc(s.tracks, audioFeatures) : s.tracks, trophied: true, arcActive: !!s.arcActive }));
   const activeSetId = setsData.activeId;
 
   const createSet = useCallback((name) => {
@@ -966,6 +1087,33 @@ export function FabricProvider({ children }) {
     if (setId === "guy-crate") return;
     setSetsData((prev) => {
       const next = { ...prev, activeId: setId };
+      persistSets(next);
+      return next;
+    });
+  }, [persistSets]);
+
+  // Arc sort — toggle B-Side smart sequencing on a set
+  const toggleArc = useCallback((setId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id !== setId) return s;
+        const turning_on = !s.arcActive;
+        if (turning_on) {
+          // Save manual order before sorting
+          return { ...s, arcActive: true, manualOrder: s.tracks.map(t => t.id) };
+        } else {
+          // Restore manual order
+          if (s.manualOrder) {
+            const byId = Object.fromEntries(s.tracks.map(t => [t.id, t]));
+            const restored = s.manualOrder.map(id => byId[id]).filter(Boolean);
+            // Add any tracks that were added while arc was on
+            const restoredIds = new Set(restored.map(t => t.id));
+            const extras = s.tracks.filter(t => !restoredIds.has(t.id));
+            return { ...s, arcActive: false, tracks: [...restored, ...extras], manualOrder: null };
+          }
+          return { ...s, arcActive: false };
+        }
+      })};
       persistSets(next);
       return next;
     });
@@ -1544,6 +1692,7 @@ export function FabricProvider({ children }) {
         trophiedSets,
         trophySet,
         untrophySet,
+        toggleArc,
         activeSetId,
         createSet,
         deleteSet,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown, AudioLines } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -1510,6 +1510,7 @@ export default function FabricPage() {
     trophiedSets,
     trophySet,
     untrophySet,
+    toggleArc,
     activeSetId,
     createSet,
     deleteSet,
@@ -4390,21 +4391,33 @@ export default function FabricPage() {
                   <Turntable size={12} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />
                   <Label>Sets</Label>
                 </div>
-                <button
-                  onClick={() => createSet()}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--color-text-dim)",
-                    padding: 2,
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                  title="New set"
-                >
-                  <Plus size={10} strokeWidth={2} />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                  <Tooltip text="Arrange for flow">
+                    <button
+                      onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 2,
+                        display: "flex", alignItems: "center",
+                        color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-dim)",
+                        opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.4,
+                        transition: "opacity 150ms, color 150ms",
+                      }}
+                    >
+                      <AudioLines size={11} strokeWidth={2} />
+                    </button>
+                  </Tooltip>
+                  <button
+                    onClick={() => createSet()}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "var(--color-text-dim)", padding: 2,
+                      display: "flex", alignItems: "center",
+                    }}
+                    title="New set"
+                  >
+                    <Plus size={10} strokeWidth={2} />
+                  </button>
+                </div>
               </div>
 
               {/* ═══ ALL SETS STACKED ═══ */}
