@@ -25,8 +25,11 @@ export async function generateMetadata() {
   let meta = null;
   try {
     const admin = getSupabaseAdmin();
-    const { data } = await admin.from("site_metadata").select("*").limit(1).single();
-    if (data) meta = data;
+    const result = await Promise.race([
+      admin.from("site_metadata").select("*").limit(1).single(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+    ]);
+    if (result?.data) meta = result.data;
   } catch {}
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
