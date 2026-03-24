@@ -2569,6 +2569,22 @@ export default function FabricPage() {
                   <Maximize2 size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
 
+                {/* Poster — circled */}
+                {currentTrack && (
+                  <button
+                    onClick={() => setPosterOpen(true)}
+                    title="Poster"
+                    style={{
+                      width: 32, height: 32, borderRadius: "var(--radius-full)",
+                      background: "transparent", border: "1px solid var(--color-border)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", padding: 0, outline: "none",
+                    }}
+                  >
+                    <Frame size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                  </button>
+                )}
+
               </div>
             </div>
           </div>
