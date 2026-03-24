@@ -1660,10 +1660,10 @@ export function FabricProvider({ children }) {
 
   // Build taste summary for the API (computed per message, not stored)
   const buildTasteSummary = useCallback(() => {
-    if (!guyHistory.length) return null;
     const scored = guyHistory.map(e => ({ ...e, score: e.score ?? computeScore(e) })).sort((a, b) => b.score - a.score);
     const favorites = scored.filter(e => e.score > 3).slice(0, 8).map(e => ({ artist: e.artist, title: e.title, score: e.score }));
     const passes = scored.filter(e => e.score < 0).slice(-5).map(e => ({ artist: e.artist, title: e.title }));
+
     // Artist tendencies
     const artistMap = {};
     for (const e of scored) {
@@ -1673,6 +1673,7 @@ export function FabricProvider({ children }) {
     }
     const likedArtists = Object.entries(artistMap).filter(([, v]) => v.count >= 2 && v.total / v.count > 2).sort((a, b) => b[1].total / b[1].count - a[1].total / a[1].count).slice(0, 5).map(([a]) => a);
     const dislikedArtists = Object.entries(artistMap).filter(([, v]) => v.count >= 2 && v.total / v.count < -1).slice(0, 3).map(([a]) => a);
+
     // Set names + adoption patterns
     const setNames = setsData.sets.filter(s => s.source !== "guy" && s.tracks.length > 0).map(s => s.name);
     const adoptionPatterns = {};
@@ -1682,8 +1683,52 @@ export function FabricProvider({ children }) {
         adoptionPatterns[e.adoptedTo].push(`${e.artist} - ${e.title}`);
       }
     }
-    return { favorites, passes, likedArtists, dislikedArtists, setNames, adoptionPatterns };
-  }, [guyHistory, setsData.sets]);
+
+    // NEW: Full set contents (B-Side can reference what's in each set)
+    const setContents = setsData.sets
+      .filter(s => s.source !== "guy" && s.tracks.length > 0)
+      .map(s => ({ name: s.name, tracks: s.tracks.slice(0, 20).map(t => `${t.artist} - ${t.title}`) }));
+
+    // NEW: Thumbed-down tracks (never suggest these)
+    const thumbedDown = [...thumbsDownSet].slice(0, 15).map(key => {
+      const parts = key.split("|");
+      return parts.length === 2 ? `${parts[0]} - ${parts[1]}` : key;
+    });
+
+    // NEW: Audio feature preferences (aggregate across all set tracks)
+    let featureProfile = null;
+    const allFeats = setsData.sets.flatMap(s => s.tracks).map(t => audioFeatures[t.id]).filter(Boolean);
+    if (allFeats.length >= 3) {
+      const bpms = allFeats.map(f => f.bpm).filter(Boolean);
+      const energies = allFeats.map(f => f.energy).filter(Boolean);
+      const valences = allFeats.map(f => f.valence).filter(Boolean);
+      const keys = allFeats.map(f => f.key).filter(Boolean);
+      const keyCount = {};
+      for (const k of keys) { keyCount[k] = (keyCount[k] || 0) + 1; }
+      const topKeys = Object.entries(keyCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+      const avg = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+      featureProfile = {
+        bpmRange: bpms.length >= 2 ? [Math.min(...bpms), Math.max(...bpms)] : null,
+        avgEnergy: avg(energies),
+        avgValence: avg(valences),
+        topKeys,
+      };
+    }
+
+    // NEW: Recently played (recency signal)
+    const recentlyPlayed = guyHistory
+      .filter(e => e.lastPlayedAt)
+      .sort((a, b) => b.lastPlayedAt - a.lastPlayedAt)
+      .slice(0, 5)
+      .map(e => `${e.artist} - ${e.title}`);
+
+    return {
+      favorites, passes, likedArtists, dislikedArtists,
+      setNames, adoptionPatterns,
+      setContents, thumbedDown, featureProfile, recentlyPlayed,
+    };
+  }, [guyHistory, setsData.sets, audioFeatures, thumbsDownSet]);
 
   const sendMusicMessage = useCallback(async (text) => {
     if (!text.trim() || musicStreaming) return;
