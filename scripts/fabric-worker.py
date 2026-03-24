@@ -36,7 +36,7 @@ from supabase import create_client
 
 # ── Config ──
 
-RESOLUTION_MS = 500
+RESOLUTION_MS = 100
 SAMPLE_RATE = 44100
 SAMPLES_PER_WINDOW = int(SAMPLE_RATE * RESOLUTION_MS / 1000)  # 22050
 MAX_ATTEMPTS = 3
