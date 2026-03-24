@@ -1979,10 +1979,10 @@ export default function FabricPage() {
     if (idx !== dragOverIdx) setDragOverIdx(idx);
   }, [dragOverIdx]);
 
-  const handleDrop = useCallback((e, toIdx) => {
+  const handleDrop = useCallback((e, toIdx, setId) => {
     e.preventDefault();
     if (dragIdx != null && dragIdx !== toIdx) {
-      reorderFlagged(dragIdx, toIdx);
+      reorderFlagged(dragIdx, toIdx, setId);
     }
     setDragIdx(null);
     setDragOverIdx(null);
@@ -4661,7 +4661,7 @@ export default function FabricPage() {
                                 draggable={isExpanded}
                                 onDragStart={isExpanded ? (e) => { handleDragStart(e, i); crossDragTrack.current = { ...track, _fromSet: set.id }; } : undefined}
                                 onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
-                                onDrop={isExpanded ? (e) => handleDrop(e, i) : undefined}
+                                onDrop={isExpanded ? (e) => handleDrop(e, i, set.id) : undefined}
                                 onDragEnd={() => { handleDragEnd(); crossDragTrack.current = null; }}
                                 onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{

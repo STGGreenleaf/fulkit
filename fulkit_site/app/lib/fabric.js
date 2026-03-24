@@ -651,12 +651,20 @@ export function FabricProvider({ children }) {
       setCurrentTrack(cur => cur?.id === currentTrack.id ? { ...cur, art: cached } : cur);
       return;
     }
-    // Fetch and cache
+    // Fetch and cache — only cache real art, not broken fallback URLs
     const trackId = currentTrack.id;
+    const ytId = currentTrack.ytId;
     fetchAlbumArt(currentTrack.artist, currentTrack.title).then(art => {
-      const resolved = art || `https://img.youtube.com/vi/${currentTrack.ytId || currentTrack.id}/mqdefault.jpg`;
-      setCachedArt(currentTrack.artist, currentTrack.title, resolved);
-      setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art: resolved } : cur);
+      if (art) {
+        setCachedArt(currentTrack.artist, currentTrack.title, art);
+        setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art } : cur);
+      } else if (ytId && /^[A-Za-z0-9_-]{10,12}$/.test(ytId)) {
+        // Only use YouTube thumbnail if ytId is a real video ID
+        const fallback = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+        setCachedArt(currentTrack.artist, currentTrack.title, fallback);
+        setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art: fallback } : cur);
+      }
+      // If both fail, leave art empty — don't cache a broken URL
     });
   }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -921,17 +929,18 @@ export function FabricProvider({ children }) {
     }).catch(() => {});
   }, [apiFetch]);
 
-  const reorderFlagged = useCallback((fromIndex, toIndex) => {
+  const reorderFlagged = useCallback((fromIndex, toIndex, setId) => {
     setSetsData((prev) => {
+      const targetId = setId || prev.activeId;
       const next = { ...prev, sets: prev.sets.map(s => {
-        if (s.id !== prev.activeId) return s;
+        if (s.id !== targetId) return s;
         const tracks = [...s.tracks];
         const [moved] = tracks.splice(fromIndex, 1);
         tracks.splice(toIndex, 0, moved);
         return { ...s, tracks };
       })};
       persistSets(next);
-      autoSyncCrowned(prev.activeId, next.sets);
+      autoSyncCrowned(targetId, next.sets);
       return next;
     });
   }, [persistSets, autoSyncCrowned]);
