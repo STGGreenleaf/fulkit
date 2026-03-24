@@ -151,11 +151,11 @@ function PosterModal({ track, features, timestamp, onClose }) {
   }, [terrain, bg, fg, fgDim, fgMuted, divColor, track, meta, W, m]);
 
   const pill = (active) => ({
-    padding: "3px 10px", borderRadius: "var(--radius-full)",
-    border: `1px solid ${active ? fg : divColor}`,
-    background: active ? fg : "transparent",
-    color: active ? bg : fgDim,
-    fontSize: 9, fontFamily: "'D-DIN', sans-serif", cursor: "pointer", fontWeight: 500,
+    padding: "6px 16px", borderRadius: "var(--radius-full)",
+    border: `1px solid ${active ? "var(--color-text)" : "var(--color-border)"}`,
+    background: active ? "var(--color-text)" : "transparent",
+    color: active ? "var(--color-bg)" : "var(--color-text-secondary)",
+    fontSize: 11, fontFamily: "'D-DIN', sans-serif", cursor: "pointer", fontWeight: 600,
     letterSpacing: "0.3px",
   });
 
@@ -222,28 +222,28 @@ function PosterModal({ track, features, timestamp, onClose }) {
         {/* Right panel — info + controls */}
         <div style={{ flex: 1, minWidth: 180, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 4 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 14 }}>
               Procedural Fingerprint
             </div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.65, marginBottom: 16 }}>
-              This terrain is generated from the track's identity and the moment you captured it. The title, artist, and playback position ({tsLabel}) seed a unique landscape of layered contours.
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+              Eighteen terrain layers, each driven by a seeded pseudorandom number generator. The hash input is three values: track title, artist name, and the playback position you captured ({tsLabel}). That seed determines the amplitude, frequency, and phase of three overlapping sine functions per layer — producing a unique topographic contour that belongs to this exact moment in this exact recording.
             </div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.65, marginBottom: 16 }}>
-              Press at a different moment, get a different print. No two are the same.
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+              The result is deterministic. Same inputs, same landscape, every time. But shift the timestamp by even one second and the phase offsets cascade through all eighteen layers — a completely different print. The song has as many posters as it has seconds.
             </div>
-            <div style={{ fontSize: 10, color: "var(--color-text-dim)", lineHeight: 1.5 }}>
-              11{"\u00d7"}17 in {"\u00b7"} 3300{"\u00d7"}5100 px {"\u00b7"} 300 DPI
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.6, fontStyle: "italic", marginBottom: 14 }}>
+              Formatted for 11{"\u00d7"}17{"\u2033"} print {"\u00b7"} 3300{"\u00d7"}5100 px at 300 DPI.
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 20 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 20 }}>
             <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} style={pill(false)}>
               {theme === "dark" ? "light" : "dark"}
             </button>
             <div style={{ flex: 1 }} />
             <button onClick={exportPoster} style={pill(true)}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Download size={10} strokeWidth={2.2} /> export
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Download size={11} strokeWidth={2.2} /> export
               </span>
             </button>
           </div>
