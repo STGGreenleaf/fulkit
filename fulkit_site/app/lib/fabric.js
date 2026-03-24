@@ -934,28 +934,28 @@ export function FabricProvider({ children }) {
       const targetId = setId || prev.activeId;
       const next = { ...prev, sets: prev.sets.map(s => {
         if (s.id !== targetId) return s;
-        // Use displayed track order (may be arc-sorted) to find the right tracks by ID
-        if (displayedTracks) {
-          const fromTrackId = displayedTracks[fromIndex]?.id;
-          const toTrackId = displayedTracks[toIndex]?.id;
-          if (!fromTrackId) return s;
-          const tracks = [...s.tracks];
-          const fromStoredIdx = tracks.findIndex(t => t.id === fromTrackId);
-          if (fromStoredIdx < 0) return s;
-          const [moved] = tracks.splice(fromStoredIdx, 1);
-          // Find target AFTER splice so index accounts for the removal
-          const toStoredIdx = toTrackId ? tracks.findIndex(t => t.id === toTrackId) : -1;
-          tracks.splice(toStoredIdx >= 0 ? toStoredIdx : Math.min(toIndex, tracks.length), 0, moved);
-          // Manual reorder overrides arc sort
-          return s.arcActive
-            ? { ...s, tracks, arcActive: false, manualOrder: null }
-            : { ...s, tracks };
-        }
-        // Fallback: direct index reorder
-        const tracks = [...s.tracks];
-        const [moved] = tracks.splice(fromIndex, 1);
-        tracks.splice(toIndex, 0, moved);
-        return { ...s, tracks };
+        const originalCount = s.tracks.length;
+
+        // Resolve track IDs from displayed order
+        const fromId = displayedTracks?.[fromIndex]?.id;
+        const toId = displayedTracks?.[toIndex]?.id;
+        if (!fromId || fromId === toId) return s;
+
+        // Build new array: remove fromId, insert before toId
+        const without = s.tracks.filter(t => t.id !== fromId);
+        const moved = s.tracks.find(t => t.id === fromId);
+        if (!moved || without.length !== originalCount - 1) return s;
+
+        const insertIdx = toId ? without.findIndex(t => t.id === toId) : -1;
+        const tracks = [...without];
+        tracks.splice(insertIdx >= 0 ? insertIdx : Math.min(toIndex, tracks.length), 0, moved);
+
+        // Final guard: must have exact same count
+        if (tracks.length !== originalCount) return s;
+
+        return s.arcActive
+          ? { ...s, tracks, arcActive: false, manualOrder: null }
+          : { ...s, tracks };
       })};
       persistSets(next);
       autoSyncCrowned(targetId, next.sets);
@@ -1001,14 +1001,24 @@ export function FabricProvider({ children }) {
   // Move track between sets atomically (remove from source + add to target in one update)
   const moveTrackToSet = useCallback((track, fromSetId, toSetId) => {
     setSetsData((prev) => {
-      const targetSet = prev.sets.find(s => s.id === toSetId);
-      if (!targetSet) return prev;
-      if (targetSet.tracks.some(t => t.id === track.id)) return prev; // already in target
+      const fromSet = prev.sets.find(s => s.id === fromSetId);
+      const toSet = prev.sets.find(s => s.id === toSetId);
+      if (!fromSet || !toSet) return prev;
+      if (toSet.tracks.some(t => t.id === track.id)) return prev; // already in target
+      if (!fromSet.tracks.some(t => t.id === track.id)) return prev; // not in source
+
       const next = { ...prev, sets: prev.sets.map(s => {
         if (s.id === toSetId) return { ...s, tracks: [...s.tracks, track] };
         if (s.id === fromSetId) return { ...s, tracks: s.tracks.filter(t => t.id !== track.id) };
         return s;
       })};
+
+      // Guard: source lost one, target gained one
+      const newFrom = next.sets.find(s => s.id === fromSetId);
+      const newTo = next.sets.find(s => s.id === toSetId);
+      if (newFrom.tracks.length !== fromSet.tracks.length - 1) return prev;
+      if (newTo.tracks.length !== toSet.tracks.length + 1) return prev;
+
       persistSets(next);
       autoSyncCrowned(toSetId, next.sets);
       autoSyncCrowned(fromSetId, next.sets);
