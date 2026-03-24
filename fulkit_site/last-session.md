@@ -1,38 +1,24 @@
 # Last Session
 
-**Date**: 2026-03-23 (marathon session)
-**Scope**: YouTube fix, quota architecture, Fabric features, player hardening
+**Date**: 2026-03-24
+**Scope**: Set reorder fix, Poster feature, drag-and-drop overhaul
 
 **Shipped**:
-- YouTube playback fully restored (quota exhaustion root cause)
-- 5 GCP API keys + LRU cache + precaching (resolve once, play forever)
-- Trophy system (completed sets fold, Supabase persistence)
-- Spotify seat counter (X/5) + waitlist with branded email ("Go dig")
-- Playground reorganized (5 foldable sections, email preview with 4 templates)
-- Clean taste model (adopted +3, liked +2, thumbedDown -10, skip/remove neutral)
-- Permanent thumbs down on B-Side recs (Supabase, fade animation)
-- B-Side Arc Sort (three-act energy sequencing, Bold icon toggle)
-- B-Side enriched context (set contents, feature profile, recently played, dedup)
-- B-Side push-don't-echo persona ("launchpad not cage", 1-in-3 stretch recs)
-- YouTube auto-advance (end detection, poller not gated on isPlaying)
-- Playback resume after refresh (cue video, restore position)
-- YouTube seek/scrub (poll suppression)
-- Album art cache (standalone localStorage, independent of player)
-- Service worker gutted (no fetch interception, only PWA shell)
-- Cross-set track drag (drag track onto another set header)
-- One set expanded at a time
-- Remove targets correct set (not just active)
-- Reorder targets correct set by track ID (not index)
-- Click suppressed after drag (justDragged ref)
-- Crown publish gate removed (works without Fabric analysis)
-- Set auto-restore from trophied + B-Side memory (no merge into existing)
-- Spotify secret updated locally
+- Poster: Fabric Procedural Fingerprint (fullscreen → popup modal, timestamp-seeded terrain, dark/light toggle, export 3300×5100 PNG, info blurb)
+- Poster: Owner Playground controls (header/footer align, theme, margin) persist to user view via localStorage
+- Poster: Frame button in expanded deck transport, far-right justified
+- Set reorder: defensive rewrite with count guards (filter+find, no splice mutation, three validation gates)
+- Cross-set drag: atomic moveTrackToSet (single setSetsData call, count-balanced)
+- Guy's Crate → set: tagged _fromSource for proper move
+- Arc sort override: manual reorder turns off arc, clears manualOrder
+- justDragged guard on remove button
+- Set recovery page (/recover) with per-set Import buttons
+- Horizon line removed from poster
 
 **Known bugs (carry forward)**:
-1. Work Tech set reorder: track disappears on drag despite correct logic. Likely re-render/stale ref issue. Needs focused investigation.
-2. Album art: old service worker may still be cached in browser. User needs to manually unregister from DevTools → Application → Service Workers.
+None confirmed. Reorder and cross-set moves verified working by owner.
 
 **Next session priorities**:
-1. Fix Work Tech reorder bug (fresh deep-dive on set mutation flow)
-2. Verify album art after SW unregister
-3. Continue roadmap: Poster export, Essentia.js, AI Fill Crate enrichment
+1. Continue Fabric roadmap: Essentia.js, AI Fill Crate
+2. Clean up /recover and /api/recover-sets (temporary recovery tools)
+3. Album art: verify after SW unregister
