@@ -56,12 +56,12 @@ function computeScore(entry) {
   const ageWeeks = (Date.now() - (entry.addedAt || Date.now())) / 604800000;
   const decay = Math.max(0.3, 1 - ageWeeks * 0.02);
   let raw = 0;
-  if (entry.kept) raw += 2;
-  if (entry.adopted) raw += 3;
-  if (!entry.kept && entry.removedAt) raw -= 1.5;
-  raw += Math.min(entry.playCount || 0, 5) * 1.5;
+  if (entry.adopted) raw += 3;        // added to a set — strong positive
+  if (entry.liked) raw += 2;          // explicit like — positive taste signal
+  raw += Math.min(entry.playCount || 0, 5) * 1.5;  // passive positive (listened)
   raw += Math.min(entry.totalListenPct || 0, 5) * 0.5;
-  raw -= Math.min(entry.skipCount || 0, 3) * 2;
+  if (entry.thumbedDown) raw -= 10;   // permanent negative — never again
+  // Skip and remove are neutral — no penalty
   return Math.round(raw * decay * 10) / 10;
 }
 function makeHistoryDefaults() {
@@ -443,11 +443,7 @@ export function FabricProvider({ children }) {
   }, [sendControl]);
 
   const skip = useCallback(() => {
-    // Record skip signal if early (<50% through) and matches a BTC rec
-    if (progress < 0.5 && currentTrack && findHistoryMatchRef.current) {
-      const match = findHistoryMatchRef.current(currentTrack.id, currentTrack.title, currentTrack.artist);
-      if (match && updateHistorySignalRef.current) updateHistorySignalRef.current(match.id, { skipCount: (match.skipCount || 0) + 1 });
-    }
+    // Skip is neutral — no taste penalty (browsing is browsing)
     // Finalize play session
     if (playSessionRef.current.trackId && findHistoryMatchRef.current) {
       const match = findHistoryMatchRef.current(playSessionRef.current.trackId, currentTrack?.title, currentTrack?.artist);
@@ -511,10 +507,20 @@ export function FabricProvider({ children }) {
   // Save track to Spotify Liked Songs (fire-and-forget)
   const likeTrack = useCallback((track) => {
     if (!track?.id) return;
-    apiFetch("/api/fabric/controls", {
-      method: "POST",
-      body: JSON.stringify({ action: "save_track", value: { id: track.id } }),
-    }).catch(() => {});
+    // Fulkit taste signal — source-independent, works with any provider
+    if (findHistoryMatchRef.current) {
+      const match = findHistoryMatchRef.current(track.id, track.title, track.artist);
+      if (match && updateHistorySignalRef.current) {
+        updateHistorySignalRef.current(match.id, { liked: true });
+      }
+    }
+    // Also save to Spotify library if connected (bonus, not the gate)
+    if (connectedProvidersRef.current?.spotify) {
+      apiFetch("/api/fabric/controls", {
+        method: "POST",
+        body: JSON.stringify({ action: "save_track", value: { id: track.id } }),
+      }).catch(() => {});
+    }
   }, [apiFetch]);
 
   // Seek to position (fraction 0-1)
@@ -843,7 +849,7 @@ export function FabricProvider({ children }) {
   }, [persistSets]);
 
   const removeFromGuyCrate = useCallback((trackId) => {
-    updateHistorySignal(trackId, { kept: false, removedAt: Date.now() });
+    // Remove is neutral — "not right now", no taste judgment
     setSetsData((prev) => {
       const next = { ...prev, sets: prev.sets.map(s =>
         s.id === "guy-crate" ? { ...s, tracks: s.tracks.filter(t => t.id !== trackId) } : s
