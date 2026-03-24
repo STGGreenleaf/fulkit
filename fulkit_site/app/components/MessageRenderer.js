@@ -141,7 +141,7 @@ function InteractiveTable({ children, onFormSubmit }) {
             <tr key={i}>
               {headers.map((_, col) => {
                 if (col === 0) {
-                  return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{i + 1}</td>;
+                  return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{label}</td>;
                 }
                 if (col === fillableCol) {
                   const isPriceCol = headers[col]?.toLowerCase().match(/price|cost|amount|rate|total/);
