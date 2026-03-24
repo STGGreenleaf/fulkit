@@ -1618,7 +1618,8 @@ export default function FabricPage() {
   });
   const toggleSetExpanded = useCallback((setId) => {
     setExpandedSetIds(prev => {
-      const next = prev.includes(setId) ? prev.filter(id => id !== setId) : [...prev, setId];
+      // Only one set open at a time — toggle off if already open, otherwise switch
+      const next = prev.includes(setId) ? [] : [setId];
       try { localStorage.setItem("fulkit-expanded-sets", JSON.stringify(next)); } catch {}
       return next;
     });
