@@ -119,86 +119,85 @@ function PosterModal({ track, features, onClose }) {
   const cLabel = { fontSize: 9, color: "var(--color-text-dim)", width: 48, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 };
   const cRow = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 };
 
+  // Scale poster to fill viewport height with padding
+  const posterScale = typeof window !== "undefined" ? Math.min(1, (window.innerHeight - 80) / H) : 1;
+  const scaledW = Math.round(W * posterScale);
+  const scaledH = Math.round(H * posterScale);
+
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        background: "rgba(42,40,38,0.85)", backdropFilter: "blur(8px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: bg,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {/* Close — top right */}
+      <button
+        onClick={onClose}
         style={{
-          display: "flex", gap: "var(--space-6)", padding: "var(--space-6)",
-          background: "var(--color-bg-elevated)", borderRadius: "var(--radius-lg)",
-          boxShadow: "var(--shadow-xl)", maxWidth: 760, width: "100%",
-          position: "relative",
+          position: "absolute", top: 20, right: 20, zIndex: 10,
+          width: 36, height: 36, borderRadius: "var(--radius-full)",
+          background: "transparent", border: `1px solid ${divColor}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
         }}
       >
-        {/* Close */}
-        <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-          <X size={16} strokeWidth={2} color="var(--color-text-muted)" />
+        <X size={16} strokeWidth={2} color={fgDim} />
+      </button>
+
+      {/* Poster — centered, scaled to fill */}
+      <div style={{
+        width: scaledW, height: scaledH,
+        position: "relative", overflow: "hidden",
+      }}>
+        <svg width={scaledW} height={scaledH} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", top: 0, left: 0 }}>
+          {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
+        </svg>
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          display: "flex", flexDirection: "column",
+          padding: `${m * posterScale}px`, justifyContent: "space-between",
+        }}>
+          {layout.header === "top" && (
+            <>
+              <div>{headerBlock}<div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} /></div>
+              <div>{footerBlock}<div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
+            </>
+          )}
+          {layout.header === "bottom" && (
+            <>
+              <div>{footerBlock}<div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} /></div>
+              <div>{headerBlock}<div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
+            </>
+          )}
+          {layout.header === "overlay" && (
+            <>
+              <div style={{ flex: 1 }} />
+              <div>{headerBlock}<div style={{ marginTop: 6 * posterScale }}>{footerBlock}</div><div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Controls — floating bottom center */}
+      <div style={{
+        position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
+        display: "flex", gap: 12, alignItems: "center",
+        background: `${layout.theme === "dark" ? "rgba(239,237,232,0.08)" : "rgba(42,40,38,0.06)"}`,
+        backdropFilter: "blur(12px)",
+        borderRadius: "var(--radius-full)", padding: "6px 16px",
+        border: `1px solid ${divColor}`,
+      }}>
+        {["top", "bottom", "overlay"].map(v => (
+          <button key={v} onClick={() => setLayout(p => ({ ...p, header: v }))} style={pill(layout.header === v)}>{v}</button>
+        ))}
+        <div style={{ width: 1, height: 14, background: divColor }} />
+        {["left", "center", "right"].map(v => (
+          <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pill(layout.align === v)}>{v}</button>
+        ))}
+        <div style={{ width: 1, height: 14, background: divColor }} />
+        <button onClick={() => setLayout(p => ({ ...p, theme: p.theme === "dark" ? "light" : "dark" }))} style={pill(false)}>
+          {layout.theme === "dark" ? "light" : "dark"}
         </button>
-
-        {/* Poster canvas */}
-        <div style={{ flexShrink: 0 }}>
-          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginBottom: 4, textAlign: "center" }}>
-            11 {"\u00d7"} 17 in
-          </div>
-          <div style={{
-            width: W, height: H, background: bg, borderRadius: 4,
-            position: "relative", overflow: "hidden",
-            boxShadow: "0 8px 24px rgba(42,40,38,0.18), 0 2px 6px rgba(42,40,38,0.08)",
-          }}>
-            <svg width={W} height={H} style={{ position: "absolute", top: 0, left: 0 }}>
-              {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
-            </svg>
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-              display: "flex", flexDirection: "column", padding: m, justifyContent: "space-between",
-            }}>
-              {layout.header === "top" && (
-                <>{headerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /><div style={{ flex: 1 }} />{footerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></>
-              )}
-              {layout.header === "bottom" && (
-                <>{footerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /><div style={{ flex: 1 }} />{headerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></>
-              )}
-              {layout.header === "overlay" && (
-                <><div style={{ flex: 1 }} />{headerBlock}<div style={{ marginTop: 6 }}>{footerBlock}</div><div style={{ marginTop: 10 }}>{watermark}</div></>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div style={{ flex: 1, minWidth: 180, paddingTop: 20 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 12 }}>Layout</div>
-          <div style={cRow}>
-            <span style={cLabel}>Header</span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {["top", "bottom", "overlay"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, header: v }))} style={pill(layout.header === v)}>{v}</button>)}
-            </div>
-          </div>
-          <div style={cRow}>
-            <span style={cLabel}>Align</span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {["left", "center", "right"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pill(layout.align === v)}>{v}</button>)}
-            </div>
-          </div>
-          <div style={cRow}>
-            <span style={cLabel}>Theme</span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {["dark", "light"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, theme: v }))} style={pill(layout.theme === v)}>{v}</button>)}
-            </div>
-          </div>
-          <div style={cRow}>
-            <span style={cLabel}>Margin</span>
-            <input type="range" min={20} max={60} value={layout.margin} onChange={(e) => setLayout(p => ({ ...p, margin: Number(e.target.value) }))} style={{ flex: 1, accentColor: "#2A2826" }} />
-            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 20, textAlign: "right" }}>{layout.margin}</span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -2306,11 +2305,6 @@ export default function FabricPage() {
                 <button onClick={() => setVisualizing(true)} title="Fullscreen visualizer" style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
                   <Maximize2 size={12} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
-                {currentTrack && (
-                  <button onClick={() => setPosterOpen(true)} title="Poster" style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
-                    <Frame size={12} strokeWidth={2.2} color="var(--color-text-muted)" />
-                  </button>
-                )}
               </div>
 
             </div>
@@ -2478,7 +2472,21 @@ export default function FabricPage() {
                   }}
                 >
                   <span>{currentTrack?.duration ? formatTime(progress * currentTrack.duration) : "0:00"}</span>
-                  <span>{currentTrack?.duration ? formatTime(currentTrack.duration) : "0:00"}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {currentTrack?.duration ? formatTime(currentTrack.duration) : "0:00"}
+                    {currentTrack && (
+                      <button
+                        onClick={() => setPosterOpen(true)}
+                        title="Poster"
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          padding: 0, display: "flex", alignItems: "center",
+                        }}
+                      >
+                        <Frame size={10} strokeWidth={2} color="var(--color-text-dim)" />
+                      </button>
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -2569,21 +2577,6 @@ export default function FabricPage() {
                   <Maximize2 size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
 
-                {/* Poster — circled */}
-                {currentTrack && (
-                  <button
-                    onClick={() => setPosterOpen(true)}
-                    title="Poster"
-                    style={{
-                      width: 32, height: 32, borderRadius: "var(--radius-full)",
-                      background: "transparent", border: "1px solid var(--color-border)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer", padding: 0, outline: "none",
-                    }}
-                  >
-                    <Frame size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
-                  </button>
-                )}
 
               </div>
             </div>
