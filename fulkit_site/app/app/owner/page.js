@@ -6705,7 +6705,7 @@ function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
   );
 
   const watermark = (
-    <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
+    <div style={{ textAlign: layout.align, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
       Fülkit Fabric
     </div>
   );

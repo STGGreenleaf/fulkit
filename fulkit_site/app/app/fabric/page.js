@@ -148,8 +148,8 @@ function PosterModal({ track, features, timestamp, onClose }) {
     // Watermark
     ctx.fillStyle = fgMuted;
     ctx.font = `400 ${7 * s}px D-DIN, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.fillText("F\u00dcLKIT FABRIC", printW / 2, printH - pm);
+    ctx.textAlign = ta;
+    ctx.fillText("F\u00dcLKIT FABRIC", tx, printH - pm);
 
     // Download
     canvas.toBlob((blob) => {
@@ -230,7 +230,7 @@ function PosterModal({ track, features, timestamp, onClose }) {
                   </div>
                 );
                 const wm = (
-                  <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
+                  <div style={{ textAlign: align, fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 }}>
                     F{"\u00fc"}lkit Fabric
                   </div>
                 );
