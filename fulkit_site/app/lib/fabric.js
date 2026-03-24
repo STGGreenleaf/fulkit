@@ -930,19 +930,23 @@ export function FabricProvider({ children }) {
   }, [apiFetch]);
 
   const reorderFlagged = useCallback((fromIndex, toIndex, setId, displayedTracks) => {
+    console.log("[reorder]", { fromIndex, toIndex, setId, displayedLen: displayedTracks?.length });
     setSetsData((prev) => {
       const targetId = setId || prev.activeId;
       const next = { ...prev, sets: prev.sets.map(s => {
         if (s.id !== targetId) return s;
+        console.log("[reorder] Found set:", s.name, "stored tracks:", s.tracks.length, "displayed:", displayedTracks?.length);
         // Use displayed track order (may be arc-sorted) to find the right tracks by ID
         if (displayedTracks) {
           const fromTrackId = displayedTracks[fromIndex]?.id;
           const toTrackId = displayedTracks[toIndex]?.id;
-          if (!fromTrackId) return s;
+          console.log("[reorder] fromTrackId:", fromTrackId, "toTrackId:", toTrackId);
+          if (!fromTrackId) { console.log("[reorder] ABORT: no fromTrackId"); return s; }
           const tracks = [...s.tracks];
           const fromStoredIdx = tracks.findIndex(t => t.id === fromTrackId);
           const toStoredIdx = toTrackId ? tracks.findIndex(t => t.id === toTrackId) : toIndex;
-          if (fromStoredIdx < 0) return s;
+          console.log("[reorder] fromStoredIdx:", fromStoredIdx, "toStoredIdx:", toStoredIdx);
+          if (fromStoredIdx < 0) { console.log("[reorder] ABORT: fromStoredIdx < 0"); return s; }
           const [moved] = tracks.splice(fromStoredIdx, 1);
           const insertAt = toStoredIdx >= 0 ? Math.min(toStoredIdx, tracks.length) : toIndex;
           tracks.splice(insertAt, 0, moved);
