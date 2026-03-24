@@ -1989,10 +1989,13 @@ export default function FabricPage() {
     if (dragNode.current) dragNode.current.style.opacity = "1";
   }, [dragIdx, reorderFlagged]);
 
+  const justDragged = useRef(false);
   const handleDragEnd = useCallback(() => {
     setDragIdx(null);
     setDragOverIdx(null);
     if (dragNode.current) dragNode.current.style.opacity = "1";
+    justDragged.current = true;
+    setTimeout(() => { justDragged.current = false; }, 200);
   }, []);
 
   return (
@@ -4663,7 +4666,7 @@ export default function FabricPage() {
                                 onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
                                 onDrop={isExpanded ? (e) => handleDrop(e, i, set.id, set.tracks) : undefined}
                                 onDragEnd={() => { handleDragEnd(); crossDragTrack.current = null; }}
-                                onClick={() => { switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
+                                onClick={() => { if (justDragged.current) return; switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: "var(--space-2)",
                                   padding: "var(--space-2) var(--space-2)",
