@@ -4392,19 +4392,39 @@ export default function FabricPage() {
                   <Label>Sets</Label>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <button
-                    onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer", padding: 2,
-                      display: "flex", alignItems: "center",
-                      color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-muted)",
-                      opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.6,
-                      transition: "opacity 150ms, color 150ms",
-                    }}
-                    title="Arrange for flow"
-                  >
-                    <AudioLines size={11} strokeWidth={2} />
-                  </button>
+                  {(() => {
+                    const activeArc = allSets.find(s => s.id === activeSetId)?.arcActive;
+                    return (
+                      <div style={{ position: "relative", display: "inline-flex" }}
+                        onMouseEnter={(e) => { const tip = e.currentTarget.querySelector("[data-tip]"); if (tip) tip.style.opacity = "1"; }}
+                        onMouseLeave={(e) => { const tip = e.currentTarget.querySelector("[data-tip]"); if (tip) tip.style.opacity = "0"; }}
+                      >
+                        <button
+                          onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer", padding: 2,
+                            display: "flex", alignItems: "center",
+                            color: activeArc ? "var(--color-text)" : "var(--color-text-muted)",
+                            opacity: activeArc ? 1 : 0.6,
+                            transition: "opacity 150ms, color 150ms",
+                          }}
+                        >
+                          <AudioLines size={11} strokeWidth={2} />
+                        </button>
+                        <div data-tip style={{
+                          position: "absolute", top: "calc(100% + 6px)", right: 0,
+                          padding: "6px 10px", background: "#ffffff", color: "#2A2826",
+                          fontSize: 10, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+                          lineHeight: 1.4, borderRadius: "var(--radius-sm)",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.12)", border: "1px solid var(--color-border-light)",
+                          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 50,
+                          opacity: 0, transition: "opacity 150ms",
+                        }}>
+                          {activeArc ? "B-Side flow active — click to restore manual order" : "B-Side: rearrange by energy, BPM, and key"}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <button
                     onClick={() => createSet()}
                     style={{
