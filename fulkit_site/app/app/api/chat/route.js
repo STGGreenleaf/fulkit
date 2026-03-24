@@ -470,30 +470,40 @@ const TG_TOOL_ACTION_MAP = {
 // Write actions that need POST method
 const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", "undo"]);
 
-// In-memory preview store for Square write ops (5min TTL)
-const squarePreviewStore = new Map();
-const SQ_PREVIEW_TTL = 5 * 60 * 1000;
+// Supabase-backed preview store for Square write ops (5min TTL)
+// Survives cold starts, deploys, and serverless eviction.
+const SQ_PREVIEW_TTL_SEC = 300; // 5 minutes
 
-function sqStorePreview(userId, data) {
+async function sqStorePreview(userId, data) {
   const id = `sq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  squarePreviewStore.set(id, { userId, data, createdAt: Date.now() });
-  // Lazy cleanup of expired entries
-  for (const [k, v] of squarePreviewStore) {
-    if (Date.now() - v.createdAt > SQ_PREVIEW_TTL) squarePreviewStore.delete(k);
-  }
+  const admin = getSupabaseAdmin();
+  const expiresAt = new Date(Date.now() + SQ_PREVIEW_TTL_SEC * 1000).toISOString();
+  await admin.from("square_previews").insert({
+    id, user_id: userId, data, expires_at: expiresAt,
+  }).then(() => {}).catch(() => {});
+  // Lazy cleanup of expired entries (fire-and-forget)
+  admin.from("square_previews").delete().lt("expires_at", new Date().toISOString()).then(() => {}).catch(() => {});
   return id;
 }
 
-function sqGetPreview(previewId, userId) {
-  const entry = squarePreviewStore.get(previewId);
-  if (!entry) return null;
-  if (Date.now() - entry.createdAt > SQ_PREVIEW_TTL) { squarePreviewStore.delete(previewId); return null; }
-  if (entry.userId !== userId) return null;
-  return entry.data;
+async function sqGetPreview(previewId, userId) {
+  const admin = getSupabaseAdmin();
+  const { data: row } = await admin.from("square_previews")
+    .select("data, expires_at")
+    .eq("id", previewId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!row) return null;
+  if (new Date(row.expires_at) < new Date()) {
+    admin.from("square_previews").delete().eq("id", previewId).then(() => {}).catch(() => {});
+    return null;
+  }
+  return row.data;
 }
 
-function sqConsumePreview(previewId) {
-  squarePreviewStore.delete(previewId);
+async function sqConsumePreview(previewId) {
+  const admin = getSupabaseAdmin();
+  await admin.from("square_previews").delete().eq("id", previewId).then(() => {}).catch(() => {});
 }
 
 // Square tool schemas — POS, orders, inventory, customers, invoices, team
@@ -876,7 +886,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
     case "square_inventory_update": {
       // ── Confirm mode ──
       if (input.preview_id) {
-        const preview = sqGetPreview(input.preview_id, userId);
+        const preview = await sqGetPreview(input.preview_id, userId);
         if (!preview) return { error: "Preview expired or not found. Please preview again." };
 
         const changes = preview.changes.map(ch => ({
@@ -901,7 +911,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
         if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
 
         // Only consume preview after confirmed success — allows retry on failure
-        sqConsumePreview(input.preview_id);
+        await sqConsumePreview(input.preview_id);
 
         return {
           status: "confirmed",
@@ -980,7 +990,7 @@ async function executeSquareTool(toolName, input, userId, userToday) {
         };
       }
 
-      const previewId = sqStorePreview(userId, { changes: previewChanges, location_id: locationId });
+      const previewId = await sqStorePreview(userId, { changes: previewChanges, location_id: locationId });
 
       return { status: "preview", preview_id: previewId, location_id: locationId, changes: previewChanges };
     }
