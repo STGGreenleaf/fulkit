@@ -576,38 +576,41 @@ export function FabricProvider({ children }) {
     return () => clearInterval(pollRef.current);
   }, [hasSpotify, accessToken, apiFetch, onFabricPage, isPlaying]);
 
-  // YouTube progress poll — read iframe state for time/duration
+  // YouTube progress poll — read iframe state for time/duration + detect track end
+  // Runs whenever we have a YouTube track (not gated on isPlaying — needs to detect end)
   useEffect(() => {
-    if (!isPlaying) return;
-    const isYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
-    if (!isYT || !window.__ytEngine) return;
+    const isYT = currentTrack?.provider === "youtube" || (currentTrack && !connectedProvidersRef.current?.spotify);
+    if (!isYT || !window.__ytEngine || !currentTrack) return;
 
     let ended = false;
     const interval = setInterval(() => {
       const state = window.__ytEngine.getState?.();
       if (!state) return;
       const { currentTime, duration, isPlaying: ytPlaying } = state;
+
+      // Sync isPlaying state with YouTube iframe
+      if (ytPlaying && !isPlaying) setIsPlaying(true);
+
       if (duration > 0) {
         const pct = currentTime / duration;
-        setProgress(pct);
+        if (ytPlaying) setProgress(pct);
         // Update duration on currentTrack if missing
         if (!currentTrack?.duration || currentTrack.duration < 10) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
         }
         // Detect track end → auto-advance to next in context
-        if (!ytPlaying && pct > 0.95 && !ended) {
+        if (!ytPlaying && pct > 0.9 && !ended) {
           ended = true;
           clearInterval(interval);
+          setIsPlaying(false);
           if (autoAdvanceRef.current && playbackContextRef.current) {
-            autoAdvanceRef.current();
-          } else {
-            setIsPlaying(false);
+            setTimeout(() => autoAdvanceRef.current(), 300);
           }
         }
       }
     }, 500);
     return () => clearInterval(interval);
-  }, [isPlaying, currentTrack?.provider]);
+  }, [currentTrack?.id, currentTrack?.provider]);
 
   // Smooth progress interpolation between Spotify polls
   useEffect(() => {
