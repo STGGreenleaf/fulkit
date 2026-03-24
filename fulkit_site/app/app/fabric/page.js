@@ -4392,20 +4392,19 @@ export default function FabricPage() {
                   <Label>Sets</Label>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <Tooltip label="Arrange for flow">
-                    <button
-                      onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
-                      style={{
-                        background: "none", border: "none", cursor: "pointer", padding: 2,
-                        display: "flex", alignItems: "center",
-                        color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-muted)",
-                        opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.6,
-                        transition: "opacity 150ms, color 150ms",
-                      }}
-                    >
-                      <AudioLines size={11} strokeWidth={2} />
-                    </button>
-                  </Tooltip>
+                  <button
+                    onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 2,
+                      display: "flex", alignItems: "center",
+                      color: allSets.find(s => s.id === activeSetId)?.arcActive ? "var(--color-text)" : "var(--color-text-muted)",
+                      opacity: allSets.find(s => s.id === activeSetId)?.arcActive ? 1 : 0.6,
+                      transition: "opacity 150ms, color 150ms",
+                    }}
+                    title="Arrange for flow"
+                  >
+                    <AudioLines size={11} strokeWidth={2} />
+                  </button>
                   <button
                     onClick={() => createSet()}
                     style={{
