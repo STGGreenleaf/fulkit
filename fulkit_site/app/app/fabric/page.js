@@ -3921,6 +3921,19 @@ export default function FabricPage() {
                               </div>
                             </div>
                             <button
+                              onClick={(e) => { e.stopPropagation(); thumbsDownTrack(track); }}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
+                                color: "var(--color-text-dim)", transition: "color 120ms",
+                                marginRight: "var(--space-2)",
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
+                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
+                              title="Never suggest again"
+                            >
+                              <ThumbsDown size={11} strokeWidth={1.8} />
+                            </button>
+                            <button
                               onClick={(e) => { e.stopPropagation(); flag(track); }}
                               style={{
                                 background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
@@ -3944,18 +3957,6 @@ export default function FabricPage() {
                               title="Remove"
                             >
                               <MessageCircleX size={12} strokeWidth={1.5} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); thumbsDownTrack(track); }}
-                              style={{
-                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: "var(--color-text-dim)", transition: "color 120ms",
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
-                              title="Never suggest again"
-                            >
-                              <ThumbsDown size={11} strokeWidth={1.8} />
                             </button>
                           </div>
                         );
