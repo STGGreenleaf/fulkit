@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown, Bold } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown, Bold, Frame } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -37,6 +37,168 @@ function MeterBar({ value = 0, label }) {
       {label && <Label style={{ marginBottom: 2 }}>{label}</Label>}
       <div style={{ width: "100%", height: 3, background: "var(--color-border)", borderRadius: 1.5, overflow: "hidden" }}>
         <div style={{ width: `${value}%`, height: "100%", background: "var(--color-text-muted)", borderRadius: 1.5, transition: "width 0.3s" }} />
+      </div>
+    </div>
+  );
+}
+
+// ═══ Poster terrain generation ═══
+
+function posterSeed(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return function () { h = (h * 16807 + 0) % 2147483647; return (h & 0x7fffffff) / 2147483647; };
+}
+
+function posterTerrain(seed, w, h, layers, yOff) {
+  const rng = posterSeed(seed);
+  const paths = [];
+  for (let l = 0; l < layers; l++) {
+    const baseY = yOff + (l / layers) * (h - yOff);
+    const amp = 12 + rng() * 24;
+    const freq = 2 + rng() * 4;
+    const phase = rng() * Math.PI * 2;
+    const pts = [];
+    for (let x = 0; x <= w; x += 2) {
+      const nx = x / w;
+      const y = baseY
+        + Math.sin(nx * freq * Math.PI + phase) * amp
+        + Math.sin(nx * freq * 2.3 * Math.PI + phase * 1.7) * (amp * 0.4)
+        + Math.sin(nx * freq * 5.1 * Math.PI + phase * 0.3) * (amp * 0.15);
+      pts.push(`${x},${y.toFixed(1)}`);
+    }
+    paths.push({ d: `M0,${h} L${pts.join(" L")} L${w},${h} Z`, opacity: 0.08 + (l / layers) * 0.12 });
+  }
+  return paths;
+}
+
+function PosterModal({ track, features, onClose }) {
+  const [layout, setLayout] = useState({ header: "top", align: "left", theme: "dark", margin: 40 });
+  const W = 380, H = Math.round(W * (17 / 11)), m = layout.margin, innerW = W - m * 2;
+  const bg = layout.theme === "dark" ? "#2A2826" : "#EFEDE8";
+  const fg = layout.theme === "dark" ? "#F0EEEB" : "#2A2826";
+  const fgDim = layout.theme === "dark" ? "#8A8784" : "#8A8784";
+  const fgMuted = layout.theme === "dark" ? "#5C5955" : "#B0ADA8";
+  const divColor = layout.theme === "dark" ? "#3D3A37" : "#D4D1CC";
+
+  const terrain = useMemo(() => posterTerrain(
+    (track.title || "") + (track.artist || ""), W, H, 18, H * 0.22
+  ), [track.title, track.artist, W, H]);
+
+  const dur = track.duration ? `${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, "0")}` : "";
+  const meta = [dur, features?.bpm ? `${features.bpm} BPM` : null, features?.key || null].filter(Boolean).join("  \u00b7  ");
+
+  const headerBlock = (
+    <div style={{ textAlign: layout.align }}>
+      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
+        {track.title || "Untitled"}
+      </div>
+      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+        {track.artist || "Unknown"}
+      </div>
+    </div>
+  );
+  const footerBlock = (
+    <div style={{ textAlign: layout.align }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
+    </div>
+  );
+  const watermark = (
+    <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
+      F\u00fclkit Fabric
+    </div>
+  );
+
+  const pill = (active) => ({
+    padding: "2px 8px", borderRadius: "var(--radius-full)",
+    border: `1px solid ${active ? "var(--color-text)" : "var(--color-border)"}`,
+    background: active ? "var(--color-text)" : "transparent",
+    color: active ? "var(--color-bg)" : "var(--color-text-dim)",
+    fontSize: 9, fontFamily: "var(--font-primary)", cursor: "pointer", fontWeight: 500,
+  });
+  const cLabel = { fontSize: 9, color: "var(--color-text-dim)", width: 48, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 };
+  const cRow = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(42,40,38,0.85)", backdropFilter: "blur(8px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: "flex", gap: "var(--space-6)", padding: "var(--space-6)",
+          background: "var(--color-bg-elevated)", borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-xl)", maxWidth: 760, width: "100%",
+          position: "relative",
+        }}
+      >
+        {/* Close */}
+        <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+          <X size={16} strokeWidth={2} color="var(--color-text-muted)" />
+        </button>
+
+        {/* Poster canvas */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginBottom: 4, textAlign: "center" }}>
+            11 {"\u00d7"} 17 in
+          </div>
+          <div style={{
+            width: W, height: H, background: bg, borderRadius: 4,
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 8px 24px rgba(42,40,38,0.18), 0 2px 6px rgba(42,40,38,0.08)",
+          }}>
+            <svg width={W} height={H} style={{ position: "absolute", top: 0, left: 0 }}>
+              {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
+            </svg>
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+              display: "flex", flexDirection: "column", padding: m, justifyContent: "space-between",
+            }}>
+              {layout.header === "top" && (
+                <>{headerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /><div style={{ flex: 1 }} />{footerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></>
+              )}
+              {layout.header === "bottom" && (
+                <>{footerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /><div style={{ flex: 1 }} />{headerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></>
+              )}
+              {layout.header === "overlay" && (
+                <><div style={{ flex: 1 }} />{headerBlock}<div style={{ marginTop: 6 }}>{footerBlock}</div><div style={{ marginTop: 10 }}>{watermark}</div></>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div style={{ flex: 1, minWidth: 180, paddingTop: 20 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: 12 }}>Layout</div>
+          <div style={cRow}>
+            <span style={cLabel}>Header</span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {["top", "bottom", "overlay"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, header: v }))} style={pill(layout.header === v)}>{v}</button>)}
+            </div>
+          </div>
+          <div style={cRow}>
+            <span style={cLabel}>Align</span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {["left", "center", "right"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pill(layout.align === v)}>{v}</button>)}
+            </div>
+          </div>
+          <div style={cRow}>
+            <span style={cLabel}>Theme</span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {["dark", "light"].map(v => <button key={v} onClick={() => setLayout(p => ({ ...p, theme: v }))} style={pill(layout.theme === v)}>{v}</button>)}
+            </div>
+          </div>
+          <div style={cRow}>
+            <span style={cLabel}>Margin</span>
+            <input type="range" min={20} max={60} value={layout.margin} onChange={(e) => setLayout(p => ({ ...p, margin: Number(e.target.value) }))} style={{ flex: 1, accentColor: "#2A2826" }} />
+            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 20, textAlign: "right" }}>{layout.margin}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1562,6 +1724,7 @@ export default function FabricPage() {
   const [mixTracks, setMixTracks] = useState([]);
   const [mixLoading, setMixLoading] = useState(false);
   const [visualizing, setVisualizing] = useState(false);
+  const [posterOpen, setPosterOpen] = useState(false);
   const [showSpotifyBrowser, setShowSpotifyBrowser] = useState(false);
   const [importing, setImporting] = useState(null); // playlist id being imported
   const [showSetMenu, setShowSetMenu] = useState(false);
@@ -2022,6 +2185,13 @@ export default function FabricPage() {
           prev={prev}
         />
       )}
+      {posterOpen && currentTrack && (
+        <PosterModal
+          track={currentTrack}
+          features={features}
+          onClose={() => setPosterOpen(false)}
+        />
+      )}
           {/* Content area */}
           <div style={{ flex: 1, height: 0, position: "relative", overflow: deckExpanded ? "auto" : "hidden", display: "flex", flexDirection: "column" }}>
           {/* Deck toggle — persistent top-right */}
@@ -2136,6 +2306,11 @@ export default function FabricPage() {
                 <button onClick={() => setVisualizing(true)} title="Fullscreen visualizer" style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
                   <Maximize2 size={12} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
+                {currentTrack && (
+                  <button onClick={() => setPosterOpen(true)} title="Poster" style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+                    <Frame size={12} strokeWidth={2.2} color="var(--color-text-muted)" />
+                  </button>
+                )}
               </div>
 
             </div>
