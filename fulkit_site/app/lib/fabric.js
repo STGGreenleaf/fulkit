@@ -847,6 +847,18 @@ export function FabricProvider({ children }) {
         setTimelineResolution(data.resolution_ms || 500);
       } else {
         setTimeline(null);
+        // No timeline exists — queue for server-side analysis (fire-and-forget)
+        if (currentTrack.title && currentTrack.artist) {
+          apiFetch("/api/fabric/queue", {
+            method: "POST",
+            body: JSON.stringify({
+              trackId: currentTrack.id,
+              artist: currentTrack.artist,
+              title: currentTrack.title,
+              duration: currentTrack.duration || null,
+            }),
+          }).catch(() => {});
+        }
       }
     }).catch(() => setTimeline(null));
   }, [currentTrack?.id, connected, accessToken, apiFetch]);
