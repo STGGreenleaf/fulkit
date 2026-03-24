@@ -781,6 +781,11 @@ function SignalTerrain({
       const curProgress = progressRef.current;
       const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
+      // Debug: log Fabric status once per second
+      if (Math.floor(timestamp / 1000) !== Math.floor((timestamp - frameInterval) / 1000)) {
+        if (hasFabric) console.log("[SignalTerrain] FABRIC mode — loudness:", snap.loudness?.toFixed(3), "flux:", snap.flux?.toFixed(3));
+        else if (isPlaying) console.log("[SignalTerrain] PROCEDURAL — gsFn:", !!gsFn, "progress:", curProgress.toFixed(3));
+      }
       const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
       const points = [];
 
