@@ -31,6 +31,7 @@ import {
   RadioTower,
   Smartphone,
   Monitor,
+  Frame,
   Megaphone,
   Eye,
   EyeOff,
@@ -6342,6 +6343,9 @@ function PlaygroundTab() {
         )}
       </div>
 
+      {/* ═══ POSTER PREVIEW ═══ */}
+      <PosterPreview openSections={openSections} toggle={toggle} FOLD={FOLD} FOLD_BTN={FOLD_BTN} FOLD_LABEL={FOLD_LABEL} />
+
       {/* ═══ QUICK PREVIEWS ═══ */}
       <div style={FOLD}>
         <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
@@ -6617,6 +6621,242 @@ const inputStyle = {
   fontFamily: "var(--font-primary)",
   outline: "none",
 };
+
+// ═══ POSTER PREVIEW COMPONENT ═══
+
+function seededRandom(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) { h = ((h << 5) - h + seed.charCodeAt(i)) | 0; }
+  return function () { h = (h * 16807 + 0) % 2147483647; return (h & 0x7fffffff) / 2147483647; };
+}
+
+function generateTerrain(seed, width, height, layers, yOffset) {
+  const rng = seededRandom(seed);
+  const paths = [];
+  for (let l = 0; l < layers; l++) {
+    const baseY = yOffset + (l / layers) * (height - yOffset);
+    const amp = 12 + rng() * 24;
+    const freq = 2 + rng() * 4;
+    const phase = rng() * Math.PI * 2;
+    const points = [];
+    for (let x = 0; x <= width; x += 2) {
+      const nx = x / width;
+      const y = baseY
+        + Math.sin(nx * freq * Math.PI + phase) * amp
+        + Math.sin(nx * freq * 2.3 * Math.PI + phase * 1.7) * (amp * 0.4)
+        + Math.sin(nx * freq * 5.1 * Math.PI + phase * 0.3) * (amp * 0.15);
+      points.push(`${x},${y.toFixed(1)}`);
+    }
+    const opacity = 0.08 + (l / layers) * 0.12;
+    paths.push({ d: `M0,${height} L${points.join(" L")} L${width},${height} Z`, opacity });
+  }
+  return paths;
+}
+
+function PosterPreview({ openSections, toggle, FOLD, FOLD_BTN, FOLD_LABEL }) {
+  const [track, setTrack] = useState({ title: "Midnight Architecture", artist: "Rival Consoles", bpm: "128", key: "Am", duration: "4:37" });
+  const [layout, setLayout] = useState({ header: "top", align: "left", theme: "dark", margin: 40 });
+  const posterRef = useRef(null);
+
+  const W = 340;
+  const H = Math.round(W * (17 / 11));
+  const m = layout.margin;
+  const innerW = W - m * 2;
+
+  const bg = layout.theme === "dark" ? "#2A2826" : "#EFEDE8";
+  const fg = layout.theme === "dark" ? "#F0EEEB" : "#2A2826";
+  const fgDim = layout.theme === "dark" ? "#8A8784" : "#8A8784";
+  const fgMuted = layout.theme === "dark" ? "#5C5955" : "#B0ADA8";
+  const divColor = layout.theme === "dark" ? "#3D3A37" : "#D4D1CC";
+
+  const terrain = useMemo(() => generateTerrain(
+    track.title + track.artist, W, H, 18, H * 0.22
+  ), [track.title, track.artist, W, H]);
+
+  const metaLine = [track.duration, track.bpm ? `${track.bpm} BPM` : null, track.key].filter(Boolean).join("  ·  ");
+
+  const headerBlock = (
+    <div style={{ textAlign: layout.align }}>
+      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 22, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
+        {track.title || "Track Title"}
+      </div>
+      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+        {track.artist || "Artist"}
+      </div>
+    </div>
+  );
+
+  const footerBlock = (
+    <div style={{ textAlign: layout.align }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>
+        {metaLine}
+      </div>
+    </div>
+  );
+
+  const watermark = (
+    <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
+      Fülkit Fabric
+    </div>
+  );
+
+  const controlRow = { display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" };
+  const controlLabel = { fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", width: 52, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 };
+  const pillBtn = (active) => ({
+    padding: "2px 8px", borderRadius: "var(--radius-full)", border: `1px solid ${active ? "var(--color-text)" : "var(--color-border)"}`,
+    background: active ? "var(--color-text)" : "transparent", color: active ? "var(--color-bg)" : "var(--color-text-dim)",
+    fontSize: 9, fontFamily: "var(--font-primary)", cursor: "pointer", fontWeight: 500,
+  });
+  const fieldInput = {
+    flex: 1, padding: "3px 8px", background: "var(--color-bg)", border: "1px solid var(--color-border-light)",
+    borderRadius: "var(--radius-xs)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text)", outline: "none",
+  };
+
+  return (
+    <div style={FOLD}>
+      <button onClick={() => toggle("poster")} style={FOLD_BTN}>
+        <Frame size={13} strokeWidth={2} color="var(--color-text-muted)" />
+        <span style={FOLD_LABEL}>Poster Preview</span>
+        {openSections.poster ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+      </button>
+      {openSections.poster && (
+        <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)" }}>
+          <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap" }}>
+
+            {/* ── Poster canvas ── */}
+            <div style={{ flexShrink: 0 }}>
+              <div style={{ fontSize: 8, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginBottom: 4, textAlign: "center" }}>
+                11 × 17 in · 3300 × 5100 px @ 300 DPI
+              </div>
+              <div
+                ref={posterRef}
+                style={{
+                  width: W, height: H, background: bg, borderRadius: 4,
+                  position: "relative", overflow: "hidden",
+                  boxShadow: "0 8px 24px rgba(42,40,38,0.18), 0 2px 6px rgba(42,40,38,0.08)",
+                }}
+              >
+                {/* Terrain SVG */}
+                <svg width={W} height={H} style={{ position: "absolute", top: 0, left: 0 }}>
+                  {terrain.map((p, i) => (
+                    <path key={i} d={p.d} fill={fg} opacity={p.opacity} />
+                  ))}
+                  {/* Horizon line */}
+                  <line x1={m} y1={H * 0.42} x2={W - m} y2={H * 0.42} stroke={divColor} strokeWidth={0.5} opacity={0.5} />
+                </svg>
+
+                {/* Content overlay */}
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  display: "flex", flexDirection: "column",
+                  padding: m, justifyContent: "space-between",
+                }}>
+                  {layout.header === "top" && (
+                    <>
+                      <div>{headerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /></div>
+                      <div>{footerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></div>
+                    </>
+                  )}
+                  {layout.header === "bottom" && (
+                    <>
+                      <div>{footerBlock}<div style={{ width: innerW, height: 0.5, background: divColor, marginTop: 10, opacity: 0.6 }} /></div>
+                      <div>{headerBlock}<div style={{ marginTop: 10 }}>{watermark}</div></div>
+                    </>
+                  )}
+                  {layout.header === "overlay" && (
+                    <>
+                      <div style={{ flex: 1 }} />
+                      <div>
+                        {headerBlock}
+                        <div style={{ marginTop: 6 }}>{footerBlock}</div>
+                        <div style={{ marginTop: 10 }}>{watermark}</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Controls ── */}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                Track
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Title</span>
+                <input value={track.title} onChange={(e) => setTrack(p => ({ ...p, title: e.target.value }))} style={fieldInput} />
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Artist</span>
+                <input value={track.artist} onChange={(e) => setTrack(p => ({ ...p, artist: e.target.value }))} style={fieldInput} />
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+                <div style={{ ...controlRow, flex: 1, marginBottom: 0 }}>
+                  <span style={controlLabel}>BPM</span>
+                  <input value={track.bpm} onChange={(e) => setTrack(p => ({ ...p, bpm: e.target.value }))} style={{ ...fieldInput, width: 48 }} />
+                </div>
+                <div style={{ ...controlRow, flex: 1, marginBottom: 0 }}>
+                  <span style={controlLabel}>Key</span>
+                  <input value={track.key} onChange={(e) => setTrack(p => ({ ...p, key: e.target.value }))} style={{ ...fieldInput, width: 48 }} />
+                </div>
+                <div style={{ ...controlRow, flex: 1, marginBottom: 0 }}>
+                  <span style={controlLabel}>Time</span>
+                  <input value={track.duration} onChange={(e) => setTrack(p => ({ ...p, duration: e.target.value }))} style={{ ...fieldInput, width: 48 }} />
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: "var(--color-border-light)", margin: "var(--space-3) 0" }} />
+
+              <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                Layout
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Header</span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["top", "bottom", "overlay"].map(v => (
+                    <button key={v} onClick={() => setLayout(p => ({ ...p, header: v }))} style={pillBtn(layout.header === v)}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Align</span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["left", "center", "right"].map(v => (
+                    <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pillBtn(layout.align === v)}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Theme</span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["dark", "light"].map(v => (
+                    <button key={v} onClick={() => setLayout(p => ({ ...p, theme: v }))} style={pillBtn(layout.theme === v)}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={controlRow}>
+                <span style={controlLabel}>Margin</span>
+                <input
+                  type="range" min={20} max={60} value={layout.margin}
+                  onChange={(e) => setLayout(p => ({ ...p, margin: Number(e.target.value) }))}
+                  style={{ flex: 1, accentColor: "#2A2826" }}
+                />
+                <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", width: 24, textAlign: "right" }}>{layout.margin}</span>
+              </div>
+
+              <div style={{ height: 1, background: "var(--color-border-light)", margin: "var(--space-3) 0" }} />
+
+              <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: 1.5 }}>
+                Terrain is deterministic — same title + artist always renders the same poster. Final version will use Essentia.js timeline data (energy, BPM, spectral centroid) for the actual terrain contours.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const btnSmall = {
   display: "inline-flex",
