@@ -53,13 +53,21 @@ export async function POST(request) {
       if (audioFeatures.valence != null) parts.push(`valence ${audioFeatures.valence}/100`);
       if (parts.length) contextParts.push(`Audio: ${parts.join(", ")}`);
     }
+    // Build "do NOT re-recommend" list from all sources
+    const doNotRecommend = new Set();
     if (setTracks?.length) {
       const setList = setTracks.slice(0, 10).map(t => `${t.artist} - ${t.title}`).join(", ");
       contextParts.push(`User's active set (${setTracks.length} tracks): ${setList}${setTracks.length > 10 ? "..." : ""}`);
+      setTracks.forEach(t => doNotRecommend.add(`${t.artist} - ${t.title}`));
     }
     if (bsidesTracks?.length) {
-      const bList = bsidesTracks.slice(0, 15).map(t => `${t.artist} - ${t.title}`).join(", ");
-      contextParts.push(`B-Sides (current crate — do NOT re-recommend): ${bList}${bsidesTracks.length > 15 ? "..." : ""}`);
+      bsidesTracks.forEach(t => doNotRecommend.add(`${t.artist} - ${t.title}`));
+    }
+    if (tasteSummary?.setContents?.length) {
+      tasteSummary.setContents.forEach(s => s.tracks?.forEach(t => doNotRecommend.add(t)));
+    }
+    if (doNotRecommend.size > 0) {
+      contextParts.push(`ALREADY IN LIBRARY — do NOT re-recommend these (${doNotRecommend.size} tracks): ${[...doNotRecommend].slice(0, 40).join(", ")}${doNotRecommend.size > 40 ? "..." : ""}`);
     }
     // Taste profile — engagement signals from recommendation history
     if (tasteSummary) {
@@ -84,6 +92,21 @@ export async function POST(request) {
           .map(([set, tracks]) => `${set} \u2190 ${tracks.join(", ")}`)
           .join("; ");
         tp.push(`Adopted to sets: ${adopted}`);
+      }
+      if (tasteSummary.thumbedDown?.length) {
+        tp.push(`Permanently rejected (NEVER suggest): ${tasteSummary.thumbedDown.join(", ")}`);
+      }
+      if (tasteSummary.featureProfile) {
+        const fp = tasteSummary.featureProfile;
+        const parts = [];
+        if (fp.bpmRange) parts.push(`BPM range: ${fp.bpmRange[0]}–${fp.bpmRange[1]}`);
+        if (fp.avgEnergy != null) parts.push(`avg energy: ${fp.avgEnergy}/100`);
+        if (fp.avgValence != null) parts.push(`avg valence: ${fp.avgValence}/100`);
+        if (fp.topKeys?.length) parts.push(`top keys: ${fp.topKeys.join(", ")}`);
+        if (parts.length) tp.push(`Audio preferences: ${parts.join(", ")}`);
+      }
+      if (tasteSummary.recentlyPlayed?.length) {
+        tp.push(`Recently played: ${tasteSummary.recentlyPlayed.join(", ")}`);
       }
       if (tp.length) contextParts.push(`TASTE PROFILE:\n${tp.join("\n")}`);
     }

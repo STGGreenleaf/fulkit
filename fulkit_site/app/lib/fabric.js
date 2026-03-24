@@ -511,15 +511,27 @@ export function FabricProvider({ children }) {
     const isYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (!isYT || !window.__ytEngine) return;
 
+    let ended = false;
     const interval = setInterval(() => {
       const state = window.__ytEngine.getState?.();
       if (!state) return;
-      const { currentTime, duration } = state;
+      const { currentTime, duration, isPlaying: ytPlaying } = state;
       if (duration > 0) {
-        setProgress(currentTime / duration);
+        const pct = currentTime / duration;
+        setProgress(pct);
         // Update duration on currentTrack if missing
         if (!currentTrack?.duration || currentTrack.duration < 10) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
+        }
+        // Detect track end → auto-advance to next in context
+        if (!ytPlaying && pct > 0.95 && !ended) {
+          ended = true;
+          clearInterval(interval);
+          if (autoAdvanceRef.current && playbackContextRef.current) {
+            autoAdvanceRef.current();
+          } else {
+            setIsPlaying(false);
+          }
         }
       }
     }, 500);
