@@ -834,7 +834,7 @@ export function FabricProvider({ children }) {
   // Fetch Fabric timeline when track changes
   const prevTimelineTrack = useRef(null);
   useEffect(() => {
-    if (!connected || !accessToken || !currentTrack?.id) return;
+    if (!accessToken || !currentTrack?.id) return;
     if (prevTimelineTrack.current === currentTrack.id) return;
     prevTimelineTrack.current = currentTrack.id;
     setTimeline(null); // clear old data first
@@ -861,7 +861,7 @@ export function FabricProvider({ children }) {
         }
       }
     }).catch(() => setTimeline(null));
-  }, [currentTrack?.id, connected, accessToken, apiFetch]);
+  }, [currentTrack?.id, accessToken, apiFetch]);
 
   // Snapshot interpolator: progress → current snapshot data
   const getSnapshot = useCallback((progressFraction) => {
