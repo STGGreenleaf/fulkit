@@ -620,7 +620,15 @@ export function FabricProvider({ children }) {
     // YouTube or no Spotify: control via iframe engine
     const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (useYT && window.__ytEngine) {
-      if (action === "play") window.__ytEngine.resume();
+      if (action === "play") {
+        // If no video is loaded (e.g. after resume from refresh), load it via playTrack
+        const state = window.__ytEngine.getState?.();
+        if (!state?.duration && currentTrack) {
+          playTrackRef.current?.(currentTrack);
+        } else {
+          window.__ytEngine.resume();
+        }
+      }
       else if (action === "pause") window.__ytEngine.pause();
       return;
     }
@@ -735,6 +743,13 @@ export function FabricProvider({ children }) {
     const ms = Math.round(fraction * currentTrack.duration * 1000);
     setProgress(fraction);
     pollSuppressedUntil.current = Date.now() + 3000;
+    // YouTube: seek via iframe engine
+    const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    if (useYT && window.__ytEngine) {
+      window.__ytEngine.seek(ms);
+      return;
+    }
+    // Spotify: seek via API
     apiFetch("/api/fabric/controls", {
       method: "POST",
       body: JSON.stringify({ action: "seek", value: ms }),
