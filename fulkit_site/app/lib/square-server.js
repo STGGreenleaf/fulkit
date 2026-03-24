@@ -79,6 +79,7 @@ export async function squareFetch(userId, endpoint, options = {}) {
 
   const res = await fetch(`${SQUARE_API}${endpoint}`, {
     ...options,
+    signal: options.signal || AbortSignal.timeout(8000),
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -93,6 +94,7 @@ export async function squareFetch(userId, endpoint, options = {}) {
     if (!token) return { error: "Token expired", status: 401 };
     const retry = await fetch(`${SQUARE_API}${endpoint}`, {
       ...options,
+      signal: options.signal || AbortSignal.timeout(8000),
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
