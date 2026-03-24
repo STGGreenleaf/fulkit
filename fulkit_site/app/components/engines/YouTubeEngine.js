@@ -103,6 +103,14 @@ export default function YouTubeEngine() {
           pendingVideoRef.current = videoId;
         }
       },
+      cue: (videoId, startSeconds) => {
+        console.log("[YouTubeEngine] Cue requested:", videoId, "at", startSeconds || 0);
+        if (readyRef.current && playerRef.current?.cueVideoById) {
+          playerRef.current.cueVideoById({ videoId, startSeconds: startSeconds || 0 });
+        } else {
+          pendingVideoRef.current = videoId;
+        }
+      },
       pause: () => playerRef.current?.pauseVideo?.(),
       resume: () => playerRef.current?.playVideo?.(),
       seek: (ms) => playerRef.current?.seekTo?.(ms / 1000, true),

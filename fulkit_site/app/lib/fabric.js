@@ -465,19 +465,13 @@ export function FabricProvider({ children }) {
       setProgress(saved.progress || 0);
       setIsPlaying(false);
 
-      // Preload the YouTube video so it's ready when user hits play
+      // Cue the YouTube video (load without playing) so play works immediately
       const videoId = saved.ytId || saved.trackId;
       if (videoId && saved.provider !== "spotify") {
+        const startSeconds = (saved.progress > 0.01 && saved.duration) ? saved.progress * saved.duration : 0;
         const preload = () => {
           if (window.__ytEngine?.isReady()) {
-            window.__ytEngine.play(videoId);
-            // Seek to saved position then pause — video is loaded and ready
-            setTimeout(() => {
-              if (saved.progress > 0.01 && saved.duration) {
-                window.__ytEngine.seek(saved.progress * saved.duration * 1000);
-              }
-              window.__ytEngine.pause();
-            }, 800);
+            window.__ytEngine.cue(videoId, startSeconds);
           } else {
             setTimeout(preload, 300);
           }
