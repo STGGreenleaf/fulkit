@@ -4413,15 +4413,18 @@ export default function FabricPage() {
                           <AudioLines size={11} strokeWidth={2} />
                         </button>
                         <div data-tip style={{
-                          position: "absolute", top: "calc(100% + 6px)", right: 0,
-                          padding: "6px 10px", background: "#ffffff", color: "#2A2826",
+                          position: "absolute", top: "calc(100% + 8px)", right: 0,
+                          padding: "8px 12px", background: "#ffffff", color: "#2A2826",
                           fontSize: 10, fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
-                          lineHeight: 1.4, borderRadius: "var(--radius-sm)",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.12)", border: "1px solid var(--color-border-light)",
-                          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 50,
+                          lineHeight: 1.5, borderRadius: 6,
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.15)", border: "1px solid var(--color-border-light)",
+                          width: 160, whiteSpace: "normal", pointerEvents: "none", zIndex: 9999,
                           opacity: 0, transition: "opacity 150ms",
                         }}>
-                          {activeArc ? "B-Side flow active — click to restore manual order" : "B-Side: rearrange by energy, BPM, and key"}
+                          {activeArc
+                            ? <><strong>Flow active.</strong><br />Click to restore manual order.</>
+                            : <><strong>Arrange for flow.</strong><br />B-Side reorders by energy, BPM, and key.</>
+                          }
                         </div>
                       </div>
                     );
