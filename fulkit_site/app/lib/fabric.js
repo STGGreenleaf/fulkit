@@ -925,6 +925,23 @@ export function FabricProvider({ children }) {
   // Resolve YouTube video ID for a track — one search, stored forever.
   // Tracks with real YT IDs (11-char) skip resolution. Slug IDs (btc-*, search-*) get resolved.
   // Uses a ref-based pattern to avoid circular hook dependencies with flag/addToGuyCrate.
+  // Persist album art back to track in localStorage — fetch once, show forever
+  const persistArt = useCallback((trackId, art) => {
+    if (!trackId || !art) return;
+    setSetsData((prev) => {
+      let changed = false;
+      const next = { ...prev, sets: prev.sets.map(s => ({
+        ...s,
+        tracks: s.tracks.map(t => {
+          if (t.id === trackId && !t.art) { changed = true; return { ...t, art }; }
+          return t;
+        }),
+      }))};
+      if (changed) persistSets(next);
+      return changed ? next : prev;
+    });
+  }, [persistSets]);
+
   const resolveYouTubeIdRef = useRef(null);
   const resolveYouTubeId = useCallback((trackId) => {
     resolveYouTubeIdRef.current?.(trackId);
@@ -1307,11 +1324,9 @@ export function FabricProvider({ children }) {
         window.__ytEngine.play(track.ytId);
         if (!track.art) {
           fetchAlbumArt(track.artist, track.title).then((art) => {
-            if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
-            else {
-              const fallback = `https://img.youtube.com/vi/${track.ytId}/mqdefault.jpg`;
-              setCurrentTrack((cur) => cur ? { ...cur, art: fallback } : cur);
-            }
+            const resolved = art || `https://img.youtube.com/vi/${track.ytId}/mqdefault.jpg`;
+            setCurrentTrack((cur) => cur ? { ...cur, art: resolved } : cur);
+            persistArt(track.id, resolved);
           });
         }
         return true;
@@ -1322,11 +1337,9 @@ export function FabricProvider({ children }) {
         window.__ytEngine.play(rawId);
         if (!track.art) {
           fetchAlbumArt(track.artist, track.title).then((art) => {
-            if (art) setCurrentTrack((cur) => cur ? { ...cur, art } : cur);
-            else {
-              const fallback = `https://img.youtube.com/vi/${rawId}/mqdefault.jpg`;
-              setCurrentTrack((cur) => cur ? { ...cur, art: fallback } : cur);
-            }
+            const resolved = art || `https://img.youtube.com/vi/${rawId}/mqdefault.jpg`;
+            setCurrentTrack((cur) => cur ? { ...cur, art: resolved } : cur);
+            persistArt(track.id, resolved);
           });
         }
         return true;
@@ -1343,11 +1356,9 @@ export function FabricProvider({ children }) {
           window.__ytEngine.play(ytMatch.source_id);
           if (!track.art) {
             fetchAlbumArt(track.artist, track.title).then((art) => {
-              if (art) setCurrentTrack((cur) => cur ? { ...cur, art, provider: "youtube" } : cur);
-              else {
-                const fallback = `https://img.youtube.com/vi/${ytMatch.source_id}/mqdefault.jpg`;
-                setCurrentTrack((cur) => cur ? { ...cur, art: fallback, provider: "youtube" } : cur);
-              }
+              const resolved = art || `https://img.youtube.com/vi/${ytMatch.source_id}/mqdefault.jpg`;
+              setCurrentTrack((cur) => cur ? { ...cur, art: resolved, provider: "youtube" } : cur);
+              persistArt(track.id, resolved);
             });
           } else {
             setCurrentTrack((cur) => cur ? { ...cur, provider: "youtube" } : cur);
