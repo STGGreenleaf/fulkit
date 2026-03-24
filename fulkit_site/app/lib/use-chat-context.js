@@ -158,11 +158,15 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     setContextDropped(false);
 
     // Vault context — pass last 3 user messages for conversational awareness
+    // 3s timeout so vault stalls don't block the entire send path
     if (isReady && getContextWithMeta) {
       try {
         const recentUserTexts = (apiMessages || []).filter(m => m.role === "user").slice(-3).map(m => m.content);
         const contextQuery = recentUserTexts.length > 0 ? recentUserTexts : text;
-        const result = await getContextWithMeta(contextQuery);
+        const result = await Promise.race([
+          getContextWithMeta(contextQuery),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Vault context timeout")), 3000)),
+        ]);
         if (result?.selected) {
           context = result.selected;
           setContextMeta(result.metadata);
