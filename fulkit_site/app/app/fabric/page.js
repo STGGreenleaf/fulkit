@@ -3943,6 +3943,15 @@ export default function FabricPage() {
                   </div>
                 )}
               </div>{/* end playlists wrapper */}
+
+              {/* Connect music hint — bottom of browse column */}
+              {!connected && (
+                <div style={{ padding: "var(--space-3) var(--space-2)", borderTop: "1px solid var(--color-border-light)" }}>
+                  <a href="/settings/sources" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)" }}>
+                    Connect music in Settings {"\u2192"} Sources
+                  </a>
+                </div>
+              )}
               </div>{/* end scroll container */}
             </div>
 
@@ -4085,7 +4094,7 @@ export default function FabricPage() {
               )}
 
               {/* Empty state — no crates yet */}
-              {crates.filter(c => c.source !== "set").length === 0 && !cratesLoading && !showSpotifyBrowser && (
+              {crates.filter(c => c.source !== "set").length === 0 && !cratesLoading && !showSpotifyBrowser && playlists.length > 0 && (
                 <div style={{
                   padding: "var(--space-4) var(--space-2)",
                   textAlign: "center",
@@ -4094,10 +4103,7 @@ export default function FabricPage() {
                 }}>
                   <Package size={20} strokeWidth={1.2} style={{ color: "var(--color-text-dim)", marginBottom: "var(--space-2)" }} />
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
-                    {playlists.length > 0
-                      ? "Import a playlist to get started"
-                      : "Connect music in Settings \u2192 Sources"
-                    }
+                    Import a playlist to get started
                   </div>
                   {playlists.length > 0 && (
                     <button
