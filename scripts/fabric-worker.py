@@ -171,19 +171,19 @@ def extract_features(pcm_data: bytes) -> list[dict]:
 
         snapshot = {
             "t": round(i * RESOLUTION_MS / 1000, 2),
-            "loudness": round(loudness, 4),
-            "bands": {k: round(v, 4) for k, v in bands.items()},
-            "spectral_centroid": round(centroid, 4),
-            "spectral_spread": round(min(1.0, spread), 4),
-            "spectral_rolloff": round(rolloff, 4),
-            "spectral_flux": round(min(1.0, flux), 4),
-            "zero_crossing_rate": round(zcr, 4),
-            "dynamic_range": round(min(1.0, dynamic_range), 4),
-            "flux": round(min(1.0, flux), 4),
-            "onset": onset,
-            "onset_strength": round(onset_strength, 4),
-            "beat": False,       # filled in by beat detection pass
-            "beat_strength": 0,
+            "loudness": round(float(loudness), 4),
+            "bands": {k: round(float(v), 4) for k, v in bands.items()},
+            "spectral_centroid": round(float(centroid), 4),
+            "spectral_spread": round(float(min(1.0, spread)), 4),
+            "spectral_rolloff": round(float(rolloff), 4),
+            "spectral_flux": round(float(min(1.0, flux)), 4),
+            "zero_crossing_rate": round(float(zcr), 4),
+            "dynamic_range": round(float(min(1.0, dynamic_range)), 4),
+            "flux": round(float(min(1.0, flux)), 4),
+            "onset": bool(onset),
+            "onset_strength": round(float(onset_strength), 4),
+            "beat": False,
+            "beat_strength": 0.0,
         }
         timeline.append(snapshot)
 
@@ -207,7 +207,7 @@ def extract_features(pcm_data: bytes) -> list[dict]:
                 # Mark beats at detected peaks that are close to the dominant interval
                 for j, p in enumerate(peaks):
                     timeline[p]["beat"] = True
-                    timeline[p]["beat_strength"] = round(min(1.0, onset_arr[p]), 4)
+                    timeline[p]["beat_strength"] = round(float(min(1.0, onset_arr[p])), 4)
 
     return timeline
 
@@ -374,14 +374,39 @@ def process_job(sb, job: dict) -> bool:
 
     log.info(f"Storing timeline: {len(timeline)} snapshots, {size_bytes / 1024:.1f} KB")
 
+    # Look up or create fabric_tracks row (track_id here is a source_id like Spotify ID)
+    duration_ms = int(len(timeline) * RESOLUTION_MS)
+    result = sb.table("fabric_tracks").select("id").eq("source_id", track_id).limit(1).execute()
+    if result.data:
+        fabric_track_uuid = result.data[0]["id"]
+    else:
+        # Create minimal track entry
+        parts = query.split(" - ", 1)
+        insert_result = sb.table("fabric_tracks").insert({
+            "source_id": track_id,
+            "title": parts[1] if len(parts) > 1 else query,
+            "artist": parts[0] if len(parts) > 1 else "",
+            "duration_ms": duration_ms,
+            "provider": "spotify",
+            "status": "complete",
+            "analysis_version": 3,
+        }).execute()
+        fabric_track_uuid = insert_result.data[0]["id"]
+
     sb.table("fabric_timelines").upsert({
-        "track_id": track_id,
+        "track_id": fabric_track_uuid,
         "resolution_ms": RESOLUTION_MS,
         "timeline": timeline,
         "size_bytes": size_bytes,
     }).execute()
 
-    # Mark complete
+    # Mark fabric_tracks as complete
+    sb.table("fabric_tracks").update({
+        "status": "complete",
+        "analysis_version": 3,
+    }).eq("id", fabric_track_uuid).execute()
+
+    # Mark job complete
     sb.table("fabric_jobs").update({
         "status": "complete",
         "updated_at": "now()",
