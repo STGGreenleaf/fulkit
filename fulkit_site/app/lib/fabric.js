@@ -460,10 +460,30 @@ export function FabricProvider({ children }) {
         }
       }
 
-      // Restore track info visually (paused) — user hits play to resume
+      // Restore track info visually (paused) — preload video so play works immediately
       setCurrentTrack(track);
       setProgress(saved.progress || 0);
       setIsPlaying(false);
+
+      // Preload the YouTube video so it's ready when user hits play
+      const videoId = saved.ytId || saved.trackId;
+      if (videoId && saved.provider !== "spotify") {
+        const preload = () => {
+          if (window.__ytEngine?.isReady()) {
+            window.__ytEngine.play(videoId);
+            // Seek to saved position then pause — video is loaded and ready
+            setTimeout(() => {
+              if (saved.progress > 0.01 && saved.duration) {
+                window.__ytEngine.seek(saved.progress * saved.duration * 1000);
+              }
+              window.__ytEngine.pause();
+            }, 800);
+          } else {
+            setTimeout(preload, 300);
+          }
+        };
+        setTimeout(preload, 500);
+      }
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -582,7 +602,21 @@ export function FabricProvider({ children }) {
 
       if (duration > 0) {
         const pct = currentTime / duration;
-        if (ytPlaying && Date.now() > pollSuppressedUntil.current) setProgress(pct);
+        // During seek: hold the target position until iframe catches up
+        const seekTarget = seekTargetRef.current;
+        if (seekTarget && Date.now() < seekTarget.until) {
+          // Check if iframe has caught up to near the seek target
+          if (Math.abs(pct - seekTarget.fraction) < 0.03) {
+            seekTargetRef.current = null; // caught up — resume normal polling
+            pollSuppressedUntil.current = 0;
+            setProgress(pct);
+          } else {
+            setProgress(seekTarget.fraction); // hold seek position
+          }
+        } else {
+          if (seekTarget) seekTargetRef.current = null; // expired
+          if (ytPlaying) setProgress(pct);
+        }
         // Update duration on currentTrack if missing
         if (!currentTrack?.duration || currentTrack.duration < 10) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
@@ -738,20 +772,21 @@ export function FabricProvider({ children }) {
   }, [apiFetch]);
 
   // Seek to position (fraction 0-1)
+  const seekTargetRef = useRef(null); // { fraction, until } — poller holds position until iframe catches up
   const seekTo = useCallback((fraction) => {
     if (!currentTrack) return;
     setProgress(fraction);
-    pollSuppressedUntil.current = Date.now() + 1500;
+    // Hold this position in the poller until iframe catches up (up to 5s)
+    seekTargetRef.current = { fraction, until: Date.now() + 5000 };
+    pollSuppressedUntil.current = Date.now() + 5000;
     // YouTube: seek via iframe engine
     const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (useYT && window.__ytEngine) {
-      // Get duration directly from iframe (more reliable than currentTrack.duration)
       const state = window.__ytEngine.getState?.();
       const durationMs = state?.duration || (currentTrack.duration ? currentTrack.duration * 1000 : 0);
       if (durationMs > 0) {
         const seekMs = Math.round(fraction * durationMs);
         window.__ytEngine.seek(seekMs);
-        // Ensure playing after seek
         if (!state?.isPlaying) window.__ytEngine.resume();
       }
       return;
