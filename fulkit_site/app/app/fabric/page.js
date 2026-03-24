@@ -73,64 +73,110 @@ function posterTerrain(seed, w, h, layers, yOff) {
 }
 
 function PosterModal({ track, features, onClose }) {
-  const [layout, setLayout] = useState({ header: "top", align: "left", theme: "dark", margin: 40 });
-  const W = 380, H = Math.round(W * (17 / 11)), m = layout.margin, innerW = W - m * 2;
-  const bg = layout.theme === "dark" ? "#2A2826" : "#EFEDE8";
-  const fg = layout.theme === "dark" ? "#F0EEEB" : "#2A2826";
-  const fgDim = layout.theme === "dark" ? "#8A8784" : "#8A8784";
-  const fgMuted = layout.theme === "dark" ? "#5C5955" : "#B0ADA8";
-  const divColor = layout.theme === "dark" ? "#3D3A37" : "#D4D1CC";
+  const [theme, setTheme] = useState("dark");
+  const [showInfo, setShowInfo] = useState(false);
+  const W = 380, H = Math.round(W * (17 / 11)), m = 40;
+  const bg = theme === "dark" ? "#2A2826" : "#EFEDE8";
+  const fg = theme === "dark" ? "#F0EEEB" : "#2A2826";
+  const fgDim = theme === "dark" ? "#8A8784" : "#8A8784";
+  const fgMuted = theme === "dark" ? "#5C5955" : "#B0ADA8";
+  const divColor = theme === "dark" ? "#3D3A37" : "#D4D1CC";
 
-  const terrain = useMemo(() => posterTerrain(
-    (track.title || "") + (track.artist || ""), W, H, 18, H * 0.22
-  ), [track.title, track.artist, W, H]);
+  const seed = (track.title || "") + (track.artist || "");
+  const terrain = useMemo(() => posterTerrain(seed, W, H, 18, H * 0.22), [seed, W, H]);
 
   const dur = track.duration ? `${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, "0")}` : "";
   const meta = [dur, features?.bpm ? `${features.bpm} BPM` : null, features?.key || null].filter(Boolean).join("  \u00b7  ");
 
-  const headerBlock = (
-    <div style={{ textAlign: layout.align }}>
-      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 }}>
-        {track.title || "Untitled"}
-      </div>
-      <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-        {track.artist || "Unknown"}
-      </div>
-    </div>
-  );
-  const footerBlock = (
-    <div style={{ textAlign: layout.align }}>
-      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
-    </div>
-  );
-  const watermark = (
-    <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase" }}>
-      F\u00fclkit Fabric
-    </div>
-  );
-
-  const pill = (active) => ({
-    padding: "2px 8px", borderRadius: "var(--radius-full)",
-    border: `1px solid ${active ? "var(--color-text)" : "var(--color-border)"}`,
-    background: active ? "var(--color-text)" : "transparent",
-    color: active ? "var(--color-bg)" : "var(--color-text-dim)",
-    fontSize: 9, fontFamily: "var(--font-primary)", cursor: "pointer", fontWeight: 500,
-  });
-  const cLabel = { fontSize: 9, color: "var(--color-text-dim)", width: 48, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 };
-  const cRow = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 };
-
-  // Scale poster to fill viewport height with padding
   const posterScale = typeof window !== "undefined" ? Math.min(1, (window.innerHeight - 80) / H) : 1;
   const scaledW = Math.round(W * posterScale);
   const scaledH = Math.round(H * posterScale);
+
+  // Export: render to canvas at print resolution then download
+  const exportPoster = useCallback(() => {
+    const DPI = 300, printW = 11 * DPI, printH = 17 * DPI;
+    const canvas = document.createElement("canvas");
+    canvas.width = printW; canvas.height = printH;
+    const ctx = canvas.getContext("2d");
+    const s = printW / W; // scale factor from design coords to print
+
+    // Background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, printW, printH);
+
+    // Terrain paths
+    terrain.forEach(({ d, opacity }) => {
+      ctx.globalAlpha = opacity;
+      ctx.fillStyle = fg;
+      const p = new Path2D();
+      const cmds = d.match(/[ML]\s*[\d.,]+/g) || [];
+      cmds.forEach(cmd => {
+        const [x, y] = cmd.slice(1).trim().split(",").map(Number);
+        if (cmd[0] === "M") p.moveTo(x * s, y * s);
+        else p.lineTo(x * s, y * s);
+      });
+      p.closePath();
+      ctx.fill(p);
+    });
+    ctx.globalAlpha = 1;
+
+    // Header
+    const pm = m * s;
+    ctx.fillStyle = fg;
+    ctx.font = `700 ${24 * s}px D-DIN, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.fillText(track.title || "Untitled", pm, pm + 24 * s);
+    ctx.fillStyle = fgDim;
+    ctx.font = `400 ${11 * s}px D-DIN, sans-serif`;
+    ctx.fillText((track.artist || "Unknown").toUpperCase(), pm, pm + 40 * s);
+
+    // Divider
+    ctx.strokeStyle = divColor;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 0.5 * s;
+    ctx.beginPath(); ctx.moveTo(pm, pm + 50 * s); ctx.lineTo(printW - pm, pm + 50 * s); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Footer metadata
+    ctx.fillStyle = fgDim;
+    ctx.font = `400 ${9 * s}px JetBrains Mono, monospace`;
+    ctx.textAlign = "left";
+    ctx.fillText(meta, pm, printH - pm - 18 * s);
+
+    // Watermark
+    ctx.fillStyle = fgMuted;
+    ctx.font = `400 ${7 * s}px D-DIN, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText("F\u00dcLKIT FABRIC", printW / 2, printH - pm);
+
+    // Download
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(track.title || "poster").replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-poster.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }, [terrain, bg, fg, fgDim, fgMuted, divColor, track, meta, W, m]);
+
+  const pill = (active) => ({
+    padding: "3px 10px", borderRadius: "var(--radius-full)",
+    border: `1px solid ${active ? fg : divColor}`,
+    background: active ? fg : "transparent",
+    color: active ? bg : fgDim,
+    fontSize: 9, fontFamily: "'D-DIN', sans-serif", cursor: "pointer", fontWeight: 500,
+    letterSpacing: "0.3px",
+  });
 
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
       background: bg,
       display: "flex", alignItems: "center", justifyContent: "center",
+      transition: "background 300ms",
     }}>
-      {/* Close — top right */}
+      {/* Close */}
       <button
         onClick={onClose}
         style={{
@@ -144,11 +190,8 @@ function PosterModal({ track, features, onClose }) {
         <X size={16} strokeWidth={2} color={fgDim} />
       </button>
 
-      {/* Poster — centered, scaled to fill */}
-      <div style={{
-        width: scaledW, height: scaledH,
-        position: "relative", overflow: "hidden",
-      }}>
+      {/* Poster */}
+      <div style={{ width: scaledW, height: scaledH, position: "relative", overflow: "hidden" }}>
         <svg width={scaledW} height={scaledH} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", top: 0, left: 0 }}>
           {terrain.map((p, i) => <path key={i} d={p.d} fill={fg} opacity={p.opacity} />)}
         </svg>
@@ -157,46 +200,68 @@ function PosterModal({ track, features, onClose }) {
           display: "flex", flexDirection: "column",
           padding: `${m * posterScale}px`, justifyContent: "space-between",
         }}>
-          {layout.header === "top" && (
-            <>
-              <div>{headerBlock}<div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} /></div>
-              <div>{footerBlock}<div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
-            </>
-          )}
-          {layout.header === "bottom" && (
-            <>
-              <div>{footerBlock}<div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} /></div>
-              <div>{headerBlock}<div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
-            </>
-          )}
-          {layout.header === "overlay" && (
-            <>
-              <div style={{ flex: 1 }} />
-              <div>{headerBlock}<div style={{ marginTop: 6 * posterScale }}>{footerBlock}</div><div style={{ marginTop: 10 * posterScale }}>{watermark}</div></div>
-            </>
-          )}
+          <div>
+            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 24 * posterScale, fontWeight: 700, color: fg, lineHeight: 1.15, letterSpacing: "-0.3px", marginBottom: 4 * posterScale }}>
+              {track.title || "Untitled"}
+            </div>
+            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11 * posterScale, fontWeight: 400, color: fgDim, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+              {track.artist || "Unknown"}
+            </div>
+            <div style={{ height: 0.5, background: divColor, marginTop: 10 * posterScale, opacity: 0.6 }} />
+          </div>
+          <div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9 * posterScale, color: fgDim, letterSpacing: "0.8px" }}>{meta}</div>
+            <div style={{ textAlign: "center", fontFamily: "'D-DIN', sans-serif", fontSize: 7 * posterScale, color: fgMuted, letterSpacing: "1.2px", textTransform: "uppercase", marginTop: 10 * posterScale }}>
+              F{"\u00fc"}lkit Fabric
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Controls — floating bottom center */}
+      {/* Info overlay */}
+      {showInfo && (
+        <div
+          onClick={() => setShowInfo(false)}
+          style={{
+            position: "absolute", inset: 0, zIndex: 5,
+            background: `${bg}ee`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ maxWidth: 400, padding: "0 24px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 16, fontWeight: 700, color: fg, marginBottom: 12, letterSpacing: "-0.2px" }}>
+              Procedural Fingerprint
+            </div>
+            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 13, color: fgDim, lineHeight: 1.6 }}>
+              This terrain is generated deterministically from the track's identity. The title and artist seed a unique landscape of layered contours — same song, same poster, every time. No two recordings produce the same image.
+            </div>
+            <div style={{ fontFamily: "'D-DIN', sans-serif", fontSize: 11, color: fgMuted, marginTop: 16, lineHeight: 1.5 }}>
+              Formatted for 11{"\u00d7"}17 in print at 300 DPI.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom bar: dark/light · info · export */}
       <div style={{
         position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
-        display: "flex", gap: 12, alignItems: "center",
-        background: `${layout.theme === "dark" ? "rgba(239,237,232,0.08)" : "rgba(42,40,38,0.06)"}`,
+        display: "flex", gap: 8, alignItems: "center",
+        background: `${theme === "dark" ? "rgba(239,237,232,0.06)" : "rgba(42,40,38,0.04)"}`,
         backdropFilter: "blur(12px)",
-        borderRadius: "var(--radius-full)", padding: "6px 16px",
+        borderRadius: "var(--radius-full)", padding: "5px 12px",
         border: `1px solid ${divColor}`,
       }}>
-        {["top", "bottom", "overlay"].map(v => (
-          <button key={v} onClick={() => setLayout(p => ({ ...p, header: v }))} style={pill(layout.header === v)}>{v}</button>
-        ))}
+        <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} style={pill(false)}>
+          {theme === "dark" ? "light" : "dark"}
+        </button>
         <div style={{ width: 1, height: 14, background: divColor }} />
-        {["left", "center", "right"].map(v => (
-          <button key={v} onClick={() => setLayout(p => ({ ...p, align: v }))} style={pill(layout.align === v)}>{v}</button>
-        ))}
+        <button onClick={() => setShowInfo(true)} style={pill(false)}>
+          info
+        </button>
         <div style={{ width: 1, height: 14, background: divColor }} />
-        <button onClick={() => setLayout(p => ({ ...p, theme: p.theme === "dark" ? "light" : "dark" }))} style={pill(false)}>
-          {layout.theme === "dark" ? "light" : "dark"}
+        <button onClick={exportPoster} style={pill(true)}>
+          export
         </button>
       </div>
     </div>
