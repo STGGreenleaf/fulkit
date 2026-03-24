@@ -112,6 +112,31 @@
 
 ---
 
+## Fabric Signal Pipeline — Next Steps
+
+> Pipeline built. Worker running locally. 10/11 tracks analyzed. Real spectral data flowing.
+
+### Infrastructure
+- [ ] **Provision DigitalOcean droplet** — $12/mo, 2GB RAM, Basic/Regular SSD. Run `scripts/setup-vps.sh`, copy worker, create `.env`, enable systemd. Runs 24/7 for all users.
+- [ ] **Clean up /recover and /api/recover-sets** — temporary recovery tools, remove when sets are stable
+
+### Visualization Refinement
+- [ ] **Tune Signal Terrain for real data** — current rendering is heavy. With real timelines flowing, tune amplitude scaling, noise blend, layer rendering to be lighter/snappier. Data does the work, reduce the noise.
+- [ ] **Tune OrbVisualizer (Deep Amoeba)** — same tuning pass for fullscreen viz
+- [ ] **Poster terrain from real data** — currently procedural seed. Could use actual spectral contours from fabric_timelines.
+
+### Pipeline Hardening
+- [ ] **Batch-queue user library** — on Spotify connect, queue all saved/playlist tracks silently
+- [ ] **YouTube match validation** — add title fuzzy match scoring, reject covers/live versions more aggressively
+- [ ] **Worker monitoring** — heartbeat check, alert on stuck jobs, track processing rate
+- [ ] **Album art cache verification** — old service worker may still be cached, needs manual unregister
+
+### Future
+- [ ] **Spectral similarity engine** — use timeline data for texture-matching recommendations (B-Side upgrade)
+- [ ] **Essentia.js client-side** — optional browser analysis for tracks that can't be matched on YouTube
+
+---
+
 ## From Signals (2026-03-19)
 
 - [x] **Chat LCP slow (4-6s)** — ✅ Session 22: AuthGuard now preloads children under splash overlay. Fetches fire during 2800ms wink. Signal thresholds raised to 6s.
