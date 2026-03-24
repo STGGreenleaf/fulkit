@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown, AudioLines } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Plus, Check, X, Disc, Disc3, Ear, ExternalLink, Maximize2, Package, PackageOpen, Download, ListMusic, ListX, ChevronDown, ChevronUp, Crown, Trophy, MessageCircleQuestion, MessageCircleX, Save, Send, Box, Turntable, Trash2, ArrowUpFromLine, ArrowDownFromLine, CornerDownRight, Search, ThumbsUp, ThumbsDown, Bold } from "lucide-react";
 import { createNoise2D } from "simplex-noise";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -4410,7 +4410,7 @@ export default function FabricPage() {
                             transition: "opacity 150ms, color 150ms",
                           }}
                         >
-                          <AudioLines size={11} strokeWidth={2} />
+                          <Bold size={11} strokeWidth={2.5} />
                         </button>
                         <div data-tip style={{
                           position: "absolute", top: "calc(100% + 8px)", right: 0,
@@ -4422,8 +4422,8 @@ export default function FabricPage() {
                           opacity: 0, transition: "opacity 150ms",
                         }}>
                           {activeArc
-                            ? <><strong>Flow active.</strong><br />Click to restore manual order.</>
-                            : <><strong>Arrange for flow.</strong><br />B-Side reorders by energy, BPM, and key.</>
+                            ? <><strong>Flow is on.</strong><br />Your set is arranged. Click to go back to manual.</>
+                            : <><strong>Arrange for flow.</strong><br />B-Side sequences your set — energy arc, smooth transitions, no dead spots.</>
                           }
                         </div>
                       </div>
