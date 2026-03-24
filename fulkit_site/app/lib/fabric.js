@@ -904,6 +904,19 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets, autoSyncCrowned]);
 
+  // Remove track from a specific set (for set track row remove buttons)
+  const removeTrackFromSet = useCallback((trackId, setId) => {
+    setSetsData((prev) => {
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id !== setId) return s;
+        return { ...s, tracks: s.tracks.filter(t => t.id !== trackId) };
+      })};
+      persistSets(next);
+      autoSyncCrowned(setId, next.sets);
+      return next;
+    });
+  }, [persistSets, autoSyncCrowned]);
+
   const isFlagged = useCallback(
     (trackId) => flagged.some((t) => t.id === trackId),
     [flagged]
@@ -1944,6 +1957,7 @@ export function FabricProvider({ children }) {
         isFlagged,
         reorderFlagged,
         addTrackToSet,
+        removeTrackFromSet,
         allSets,
         trophiedSets,
         trophySet,

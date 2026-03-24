@@ -1507,6 +1507,7 @@ export default function FabricPage() {
     isFlagged,
     reorderFlagged,
     addTrackToSet,
+    removeTrackFromSet,
     allSets,
     trophiedSets,
     trophySet,
@@ -4697,7 +4698,7 @@ export default function FabricPage() {
                                   </div>
                                 )}
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); flag(track); }}
+                                  onClick={(e) => { e.stopPropagation(); removeTrackFromSet(track.id, set.id); }}
                                   style={{
                                     background: "none", border: "none", cursor: "pointer", padding: 2,
                                     color: "var(--color-text-secondary)", display: "flex", flexShrink: 0, opacity: 0.6,
