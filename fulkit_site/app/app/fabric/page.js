@@ -346,7 +346,7 @@ function MarqueeText({ children, style }) {
 // Layer 3: Live audio (mic via getUserMedia)
 // ═══════════════════════════════════════════════════════
 
-const T_LAYERS = 25;
+// T_LAYERS removed — Fabric mode uses time-scrolling, procedural uses single frame
 const T_POINTS = 80;
 
 // ═══════════════════════════════════════════════════════
@@ -781,57 +781,97 @@ function SignalTerrain({
       const curProgress = progressRef.current;
       const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
-      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-      const points = [];
+      const kGate = k.amplitude / 0.55;
 
-      // Band groups for multi-layer Fabric rendering
-      const bandGroupLow = [];
-      const bandGroupMid = [];
-      const bandGroupHigh = [];
+      // ── Render setup ──
+      const style = getComputedStyle(canvas);
+      const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [232, 230, 227];
 
-      for (let i = 0; i < T_POINTS; i++) {
-        const t = i / T_POINTS;
-        const envelope = Math.sin(t * Math.PI);
+      ctx.clearRect(0, 0, w, h);
+      const centerY = h * 0.62;
+      const maxUp = centerY - 6;
+      const maxDown = (h - centerY) - 6;
 
-        let amp;
-        if (hasFabric && !live.active) {
-          // ── FABRIC MODE: real audio drives distinct band groups ──
-          const rawLoud = snap.loudness;
-          // Loudness floor: preserve quiet-section dynamics
-          // A piano strike in silence is 100% of energy in that moment
-          const realLoud = 0.15 + rawLoud * 0.85; // floor at 0.15, never crushes to zero
-          const onsetSpike = snap.onset ? snap.onset_strength * 0.35 : 0; // stronger onset visibility
-          const kGate = k.amplitude / 0.55;
-          const fluxMul = 1 + snap.flux * 0.4;
-          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.3 : 1;
-          const tex = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.02;
+      if (hasFabric && !live.active) {
+        // ═══ FABRIC MODE: time-scrolling multi-depth waveform ═══
+        // Each point = one moment in the last 8 seconds, scrolling left
+        const trackDur = duration || 300;
+        const nowSec = curProgress * trackDur;
+        const stepSec = 0.1; // 100ms per point
+        const bgPts = [], mgPts = [], fgPts = [];
 
-          // Low band group (sub + bass) — thick, heavy
-          const lowVal = (snap.bands.sub + snap.bands.bass) / 2;
-          let lowAmp = (lowVal * 0.5 + rawLoud * 0.2 + onsetSpike) * realLoud;
-          lowAmp *= fluxMul * beatMul * envelope * kGate * exhaleMultiplier;
-          lowAmp += tex;
-          bandGroupLow.push(Math.max(0, Math.min(0.95, lowAmp)));
+        for (let i = 0; i < T_POINTS; i++) {
+          const timeSec = nowSec - (T_POINTS - 1 - i) * stepSec;
+          const frac = timeSec / trackDur;
+          if (frac < 0 || frac > 1) { bgPts[i] = mgPts[i] = fgPts[i] = 0; continue; }
+          const s = gsFn(frac);
+          if (!s) { bgPts[i] = mgPts[i] = fgPts[i] = 0; continue; }
 
-          // Mid band group (low_mid + mid) — medium body
-          const midVal = (snap.bands.low_mid + snap.bands.mid) / 2;
-          let midAmp = (midVal * 0.5 + rawLoud * 0.15 + onsetSpike * 0.5) * realLoud;
-          midAmp *= fluxMul * beatMul * envelope * kGate * exhaleMultiplier;
-          midAmp += noise2D(t * 7 + keyOffset + 50, phase * 0.4) * 0.015;
-          bandGroupMid.push(Math.max(0, Math.min(0.85, midAmp)));
+          const loud = 0.15 + s.loudness * 0.85;
 
-          // High band group (high_mid + high + air) — thin, wispy
-          const highVal = (snap.bands.high_mid + snap.bands.high + snap.bands.air) / 3;
-          let highAmp = (highVal * 0.5 + rawLoud * 0.1 + onsetSpike * 0.3) * realLoud;
-          highAmp *= fluxMul * envelope * kGate * exhaleMultiplier;
-          highAmp += noise2D(t * 11 + keyOffset + 100, phase * 0.6) * 0.015;
-          bandGroupHigh.push(Math.max(0, Math.min(0.7, highAmp)));
+          // Background: loudness contour — the energy shape
+          bgPts[i] = Math.min(0.9, s.loudness * 0.8) * kGate * exhaleMultiplier;
 
-          // Combined for history
-          amp = (lowAmp * 0.5 + midAmp * 0.3 + highAmp * 0.2);
-          amp = Math.max(0, Math.min(0.95, amp));
-        } else {
-          // ── PROCEDURAL / MIC MODE ──
+          // Middleground: bass + mids, beat-responsive
+          const bass = (s.bands.sub + s.bands.bass) / 2;
+          const mids = (s.bands.low_mid + s.bands.mid) / 2;
+          mgPts[i] = Math.min(0.85, (bass * 0.5 + mids * 0.4 + s.loudness * 0.1) * loud * (s.beat ? 1.4 : 1.0)) * kGate * exhaleMultiplier;
+
+          // Foreground: transients + high frequency detail
+          const highs = (s.bands.high_mid + s.bands.high + s.bands.air) / 3;
+          const onsetPeak = s.onset ? s.onset_strength * 0.7 : 0;
+          fgPts[i] = Math.min(0.8, (onsetPeak + s.flux * 0.4 + highs * 0.3) * loud) * kGate * exhaleMultiplier;
+        }
+
+        // Helper: draw a wave + reflection
+        const drawWave = (pts, alpha, lw, scale, reflScale, smooth) => {
+          // Wave above centerY
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          for (let i = 0; i < pts.length; i++) {
+            const x = (i / (pts.length - 1)) * w;
+            const a = pts[i] * maxUp * scale;
+            const y = centerY - a;
+            if (i === 0) { ctx.moveTo(x, y); continue; }
+            if (smooth) {
+              const px = ((i - 1) / (pts.length - 1)) * w;
+              const pa = pts[i - 1] * maxUp * scale;
+              const py = centerY - pa;
+              ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+          // Reflection below centerY
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.3})`;
+          ctx.lineWidth = lw * 0.4;
+          ctx.beginPath();
+          for (let i = 0; i < pts.length; i++) {
+            const x = (i / (pts.length - 1)) * w;
+            const a = pts[i] * maxDown * reflScale;
+            const y = centerY + a + 1;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        };
+
+        // Draw back to front: background → middleground → foreground
+        drawWave(bgPts, 0.07, 2.0, 0.9, 0.4, true);   // broad, smooth, slow
+        drawWave(mgPts, 0.14, 1.2, 0.75, 0.3, true);   // rhythmic body
+        drawWave(fgPts, 0.25, 0.6, 0.6, 0.15, false);  // sharp transients
+
+      } else {
+        // ═══ PROCEDURAL / MIC MODE (no thumbprint) ═══
+        const points = [];
+        for (let i = 0; i < T_POINTS; i++) {
+          const t = i / T_POINTS;
+          const envelope = Math.sin(t * Math.PI);
+
           const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
           const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
           const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
@@ -840,6 +880,7 @@ function SignalTerrain({
           raw = Math.abs(raw) * envelope;
 
           const beatBoost = 1 + beatPulse * danceability * 0.4;
+          let amp;
 
           if (live.active && (liveBass + liveMids) > 0.01) {
             const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
@@ -854,111 +895,37 @@ function SignalTerrain({
           amp = Math.min(amp, amplitudeCeiling);
           amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
           amp *= 1 + (Math.random() - 0.5) * 0.1;
+          points.push(Math.max(0, Math.min(1, amp)));
         }
 
-        points.push(Math.max(0, Math.min(1, amp)));
-      }
-
-      historyRef.current.push(points);
-      if (historyRef.current.length > T_LAYERS) historyRef.current.shift();
-
-      // ── Render ──
-      const style = getComputedStyle(canvas);
-      const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
-      const tc = textColor.startsWith("#")
-        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
-        : [232, 230, 227];
-
-      ctx.clearRect(0, 0, w, h);
-      const layers = historyRef.current;
-      const centerY = h * 0.65;
-      const maxUp = centerY - 6;
-      const maxDown = (h - centerY) - 6;
-
-      for (let l = 0; l < layers.length; l++) {
-        const age = l / Math.max(1, layers.length - 1);
-        const data = layers[l];
-
-        const alpha = 0.012 + age * age * 0.16;
-        const baseLw = 0.3 + age * 1.0;
-        const lw = baseLw * (0.7 + acousticness * 0.6); // acousticness → line thickness
-        const yShift = (layers.length - 1 - l) * 1.1;
-
-        // Mountains
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
-        ctx.lineWidth = lw;
+        // Procedural: single wave + reflection (no history stack)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.18)`;
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / (data.length - 1)) * w;
-          const a = data[i] * Math.max(0, maxUp - yShift);
-          const y = centerY - a - yShift;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            const prevX = ((i - 1) / (data.length - 1)) * w;
-            const prevA = data[i - 1] * Math.max(0, maxUp - yShift);
-            const prevY = centerY - prevA - yShift;
-            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
-          }
-        }
-        const lastA = data[data.length - 1] * Math.max(0, maxUp - yShift);
-        ctx.lineTo(w, centerY - lastA - yShift);
-        ctx.stroke();
-
-        // Reflection (shadow/mirror in descending area)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
-        ctx.lineWidth = lw * 0.5;
-        ctx.beginPath();
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / (data.length - 1)) * w;
-          const reflShift = (layers.length - 1 - l) * 0.3;
-          const a = data[i] * Math.max(0, maxDown - reflShift - 1) * 0.45;
-          const y = centerY + a + reflShift + 1;
+        for (let i = 0; i < points.length; i++) {
+          const x = (i / (points.length - 1)) * w;
+          const a = points[i] * maxUp;
+          const y = centerY - a;
           if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+          else {
+            const px = ((i - 1) / (points.length - 1)) * w;
+            const pa = points[i - 1] * maxUp;
+            const py = centerY - pa;
+            ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+          }
         }
         ctx.stroke();
-      }
-
-      // ── Multi-band overlay (Fabric mode only, newest frame) ──
-      if (hasFabric && bandGroupLow.length > 0) {
-        const bandGroups = [
-          { data: bandGroupLow, alpha: 0.22, lw: 1.4, scale: 1.0, reflScale: 0.5 },
-          { data: bandGroupMid, alpha: 0.15, lw: 0.9, scale: 0.75, reflScale: 0.35 },
-          { data: bandGroupHigh, alpha: 0.10, lw: 0.5, scale: 0.5, reflScale: 0.2 },
-        ];
-        for (const bg of bandGroups) {
-          // Wave
-          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha})`;
-          ctx.lineWidth = bg.lw;
-          ctx.beginPath();
-          for (let i = 0; i < bg.data.length; i++) {
-            const x = (i / (bg.data.length - 1)) * w;
-            const a = bg.data[i] * maxUp * bg.scale;
-            const y = centerY - a;
-            if (i === 0) ctx.moveTo(x, y);
-            else {
-              const px = ((i - 1) / (bg.data.length - 1)) * w;
-              const pa = bg.data[i - 1] * maxUp * bg.scale;
-              const py = centerY - pa;
-              ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
-            }
-          }
-          ctx.stroke();
-          // Reflection
-          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha * 0.3})`;
-          ctx.lineWidth = bg.lw * 0.4;
-          ctx.beginPath();
-          for (let i = 0; i < bg.data.length; i++) {
-            const x = (i / (bg.data.length - 1)) * w;
-            const a = bg.data[i] * maxDown * bg.reflScale;
-            const y = centerY + a + 1;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
+        // Reflection
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, 0.06)`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        for (let i = 0; i < points.length; i++) {
+          const x = (i / (points.length - 1)) * w;
+          const a = points[i] * maxDown * 0.35;
+          const y = centerY + a + 1;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
+        ctx.stroke();
       }
     };
 
