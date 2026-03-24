@@ -2537,21 +2537,7 @@ export default function FabricPage() {
                   }}
                 >
                   <span>{currentTrack?.duration ? formatTime(progress * currentTrack.duration) : "0:00"}</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {currentTrack?.duration ? formatTime(currentTrack.duration) : "0:00"}
-                    {currentTrack && (
-                      <button
-                        onClick={() => setPosterOpen(true)}
-                        title="Poster"
-                        style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          padding: 0, display: "flex", alignItems: "center",
-                        }}
-                      >
-                        <Frame size={10} strokeWidth={2} color="var(--color-text-dim)" />
-                      </button>
-                    )}
-                  </span>
+                  <span>{currentTrack?.duration ? formatTime(currentTrack.duration) : "0:00"}</span>
                 </div>
               </div>
 
@@ -2642,6 +2628,24 @@ export default function FabricPage() {
                   <Maximize2 size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
 
+                {/* Spacer */}
+                <div style={{ flex: 1 }} />
+
+                {/* Poster — far right */}
+                {currentTrack && (
+                  <button
+                    onClick={() => setPosterOpen(true)}
+                    title="Poster"
+                    style={{
+                      width: 32, height: 32, borderRadius: "var(--radius-full)",
+                      background: "transparent", border: "1px solid var(--color-border)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", padding: 0, outline: "none",
+                    }}
+                  >
+                    <Frame size={14} strokeWidth={2.2} color="var(--color-text-muted)" />
+                  </button>
+                )}
 
               </div>
             </div>
