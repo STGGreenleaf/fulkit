@@ -72,14 +72,14 @@ function InteractiveTable({ children, onFormSubmit }) {
         if (td && !isBlankCell(td.textContent)) allBlank = false;
       });
       if (allBlank) {
-        const rowLabels = [];
+        const rowData = [];
         trs.forEach(tr => {
-          const firstTd = tr.querySelector("td:nth-child(2)") || tr.querySelector("td");
-          rowLabels.push(firstTd?.textContent?.trim() || "");
+          const tds = tr.querySelectorAll("td");
+          rowData.push(Array.from(tds).map(td => td.textContent?.trim() || ""));
         });
         setFillableCol(col);
         setHeaders(hdrs);
-        setRows(rowLabels);
+        setRows(rowData);
         if (formStore) formStore.register(tableId.current);
         return;
       }
@@ -90,7 +90,10 @@ function InteractiveTable({ children, onFormSubmit }) {
   useEffect(() => {
     if (!formStore || fillableCol === -1) return;
     const entries = rows
-      .map((label, i) => ({ label, value: formData[i] }))
+      .map((cells, i) => {
+        const label = cells.find((c, col) => col !== fillableCol && c && !/^[—–\-_]+$/.test(c)) || cells[0] || "";
+        return { label, value: formData[i] };
+      })
       .filter(e => e.value !== undefined && e.value !== "");
     formStore.update(tableId.current, entries);
   }, [formData, rows, fillableCol, formStore]);
@@ -137,12 +140,9 @@ function InteractiveTable({ children, onFormSubmit }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((label, i) => (
+          {rows.map((cells, i) => (
             <tr key={i}>
               {headers.map((_, col) => {
-                if (col === 0) {
-                  return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{label}</td>;
-                }
                 if (col === fillableCol) {
                   const isPriceCol = headers[col]?.toLowerCase().match(/price|cost|amount|rate|total/);
                   return (
@@ -176,7 +176,7 @@ function InteractiveTable({ children, onFormSubmit }) {
                     </td>
                   );
                 }
-                return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{label}</td>;
+                return <td key={col} style={{ padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{cells[col] || ""}</td>;
               })}
             </tr>
           ))}
