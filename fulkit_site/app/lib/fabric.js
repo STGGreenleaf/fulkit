@@ -998,6 +998,25 @@ export function FabricProvider({ children }) {
     });
   }, [persistSets, autoSyncCrowned]);
 
+  // Move track between sets atomically (remove from source + add to target in one update)
+  const moveTrackToSet = useCallback((track, fromSetId, toSetId) => {
+    setSetsData((prev) => {
+      const targetSet = prev.sets.find(s => s.id === toSetId);
+      if (!targetSet) return prev;
+      if (targetSet.tracks.some(t => t.id === track.id)) return prev; // already in target
+      const next = { ...prev, sets: prev.sets.map(s => {
+        if (s.id === toSetId) return { ...s, tracks: [...s.tracks, track] };
+        if (s.id === fromSetId) return { ...s, tracks: s.tracks.filter(t => t.id !== track.id) };
+        return s;
+      })};
+      persistSets(next);
+      autoSyncCrowned(toSetId, next.sets);
+      autoSyncCrowned(fromSetId, next.sets);
+      resolveYouTubeId(track.id);
+      return next;
+    });
+  }, [persistSets, autoSyncCrowned]);
+
   // Remove track from a specific set (for set track row remove buttons)
   const removeTrackFromSet = useCallback((trackId, setId) => {
     setSetsData((prev) => {
@@ -2016,6 +2035,7 @@ export function FabricProvider({ children }) {
         isFlagged,
         reorderFlagged,
         addTrackToSet,
+        moveTrackToSet,
         removeTrackFromSet,
         allSets,
         trophiedSets,

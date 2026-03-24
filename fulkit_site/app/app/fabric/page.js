@@ -1744,6 +1744,7 @@ export default function FabricPage() {
     isFlagged,
     reorderFlagged,
     addTrackToSet,
+    moveTrackToSet,
     removeTrackFromSet,
     allSets,
     trophiedSets,
@@ -4647,9 +4648,6 @@ export default function FabricPage() {
                 if (crossDragTrack.current) {
                   const t = crossDragTrack.current;
                   flag(t);
-                  // Remove from source (move, not copy)
-                  if (t._fromSet) removeTrackFromSet(t.id, t._fromSet);
-                  else if (t._fromSource === "guy-crate") removeFromGuyCrate(t.id);
                   crossDragTrack.current = null;
                 }
                 setDragOverCol(null);
@@ -4759,13 +4757,16 @@ export default function FabricPage() {
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          // Cross-set track drag: MOVE track to this set
+                          // Cross-set track drag: MOVE track to this set (atomic)
                           if (crossDragTrack.current && crossDragTrack.current._fromSet !== set.id) {
                             const t = crossDragTrack.current;
-                            addTrackToSet({ id: t.id, title: t.title, artist: t.artist, provider: t.provider, ytId: t.ytId, duration: t.duration, art: t.art }, set.id);
-                            // Remove from source (move, not copy)
-                            if (t._fromSet) removeTrackFromSet(t.id, t._fromSet);
-                            else if (t._fromSource === "guy-crate") removeFromGuyCrate(t.id);
+                            const trackData = { id: t.id, title: t.title, artist: t.artist, provider: t.provider, ytId: t.ytId, duration: t.duration, art: t.art };
+                            const fromId = t._fromSet || (t._fromSource === "guy-crate" ? "guy-crate" : null);
+                            if (fromId) {
+                              moveTrackToSet(trackData, fromId, set.id);
+                            } else {
+                              addTrackToSet(trackData, set.id);
+                            }
                             crossDragTrack.current = null;
                           }
                           // Set header reorder
