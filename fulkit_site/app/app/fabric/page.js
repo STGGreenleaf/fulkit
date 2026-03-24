@@ -1794,7 +1794,6 @@ export default function FabricPage() {
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const dragNode = useRef(null);
-  const dragTrackIdRef = useRef(null);
   const [expandedMix, setExpandedMix] = useState(null);
   const [mixTracks, setMixTracks] = useState([]);
   const [mixLoading, setMixLoading] = useState(false);
@@ -2206,9 +2205,8 @@ export default function FabricPage() {
   }, []);
 
   // Drag handlers for the setlist
-  const handleDragStart = useCallback((e, idx, trackId) => {
+  const handleDragStart = useCallback((e, idx) => {
     setDragIdx(idx);
-    dragTrackIdRef.current = trackId;
     dragNode.current = e.target;
     e.dataTransfer.effectAllowed = "move";
     setTimeout(() => { if (dragNode.current) dragNode.current.style.opacity = "0.4"; }, 0);
@@ -2222,13 +2220,11 @@ export default function FabricPage() {
 
   const handleDrop = useCallback((e, toIdx, setId, tracks) => {
     e.preventDefault();
-    const fromId = dragTrackIdRef.current;
-    if (fromId != null && dragIdx !== toIdx) {
-      reorderFlagged(fromId, toIdx, setId, tracks);
+    if (dragIdx != null && dragIdx !== toIdx) {
+      reorderFlagged(dragIdx, toIdx, setId, tracks);
     }
     setDragIdx(null);
     setDragOverIdx(null);
-    dragTrackIdRef.current = null;
     if (dragNode.current) dragNode.current.style.opacity = "1";
   }, [dragIdx, reorderFlagged]);
 
@@ -2236,7 +2232,6 @@ export default function FabricPage() {
   const handleDragEnd = useCallback(() => {
     setDragIdx(null);
     setDragOverIdx(null);
-    dragTrackIdRef.current = null;
     if (dragNode.current) dragNode.current.style.opacity = "1";
     justDragged.current = true;
     setTimeout(() => { justDragged.current = false; }, 200);
@@ -4933,7 +4928,7 @@ export default function FabricPage() {
                               <div
                                 key={track.id}
                                 draggable={isExpanded}
-                                onDragStart={isExpanded ? (e) => { handleDragStart(e, i, track.id); crossDragTrack.current = { ...track, _fromSet: set.id }; } : undefined}
+                                onDragStart={isExpanded ? (e) => { handleDragStart(e, i); crossDragTrack.current = { ...track, _fromSet: set.id }; } : undefined}
                                 onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
                                 onDrop={isExpanded ? (e) => handleDrop(e, i, set.id, set.tracks) : undefined}
                                 onDragEnd={() => { handleDragEnd(); crossDragTrack.current = null; }}

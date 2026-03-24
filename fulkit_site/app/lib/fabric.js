@@ -929,23 +929,29 @@ export function FabricProvider({ children }) {
     }).catch(() => {});
   }, [apiFetch]);
 
-  const reorderFlagged = useCallback((fromTrackId, toIndex, setId, displayedTracks) => {
+  const reorderFlagged = useCallback((fromIndex, toIndex, setId, displayedTracks) => {
     setSetsData((prev) => {
       const targetId = setId || prev.activeId;
-      const toTrackId = displayedTracks?.[toIndex]?.id;
       const next = { ...prev, sets: prev.sets.map(s => {
         if (s.id !== targetId) return s;
-        const tracks = [...s.tracks];
-        const fromStoredIdx = tracks.findIndex(t => t.id === fromTrackId);
-        if (fromStoredIdx < 0) return s;
-        const [moved] = tracks.splice(fromStoredIdx, 1);
-        // Find target AFTER splice so index accounts for the removal
-        if (toTrackId && toTrackId !== fromTrackId) {
-          const toStoredIdx = tracks.findIndex(t => t.id === toTrackId);
-          tracks.splice(toStoredIdx >= 0 ? toStoredIdx : tracks.length, 0, moved);
-        } else {
-          tracks.splice(Math.min(toIndex, tracks.length), 0, moved);
+        // Use displayed track order (may be arc-sorted) to find the right tracks by ID
+        if (displayedTracks) {
+          const fromTrackId = displayedTracks[fromIndex]?.id;
+          const toTrackId = displayedTracks[toIndex]?.id;
+          if (!fromTrackId) return s;
+          const tracks = [...s.tracks];
+          const fromStoredIdx = tracks.findIndex(t => t.id === fromTrackId);
+          const toStoredIdx = toTrackId ? tracks.findIndex(t => t.id === toTrackId) : toIndex;
+          if (fromStoredIdx < 0) return s;
+          const [moved] = tracks.splice(fromStoredIdx, 1);
+          const insertAt = toStoredIdx >= 0 ? Math.min(toStoredIdx, tracks.length) : toIndex;
+          tracks.splice(insertAt, 0, moved);
+          return { ...s, tracks };
         }
+        // Fallback: direct index reorder
+        const tracks = [...s.tracks];
+        const [moved] = tracks.splice(fromIndex, 1);
+        tracks.splice(toIndex, 0, moved);
         return { ...s, tracks };
       })};
       persistSets(next);
