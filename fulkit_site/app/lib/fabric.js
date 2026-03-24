@@ -407,6 +407,77 @@ export function FabricProvider({ children }) {
     });
   }, [accessToken, onFabricPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Playback resume after refresh ──
+  // Save state on beforeunload, restore on mount
+  useEffect(() => {
+    const save = () => {
+      const track = currentTrack;
+      if (!track || track.provider === "spotify") return; // Spotify app handles its own resume
+      try {
+        localStorage.setItem("fulkit-playback-resume", JSON.stringify({
+          trackId: track.id, ytId: track.ytId, title: track.title, artist: track.artist,
+          provider: track.provider, art: track.art, duration: track.duration,
+          progress, timestamp: Date.now(),
+          context: playbackContextRef.current ? {
+            type: playbackContextRef.current.type,
+            id: playbackContextRef.current.id,
+            currentIndex: playbackContextRef.current.currentIndex,
+          } : null,
+        }));
+      } catch {}
+    };
+    window.addEventListener("beforeunload", save);
+    return () => window.removeEventListener("beforeunload", save);
+  }, [currentTrack, progress]);
+
+  // Restore on mount
+  const resumeAttempted = useRef(false);
+  useEffect(() => {
+    if (resumeAttempted.current || typeof window === "undefined") return;
+    resumeAttempted.current = true;
+    try {
+      const raw = localStorage.getItem("fulkit-playback-resume");
+      if (!raw) return;
+      localStorage.removeItem("fulkit-playback-resume");
+      const saved = JSON.parse(raw);
+      if (Date.now() - saved.timestamp > 30000) return; // stale (>30s)
+      if (saved.provider === "spotify") return;
+
+      const track = {
+        id: saved.trackId, ytId: saved.ytId, title: saved.title,
+        artist: saved.artist, provider: saved.provider || "youtube",
+        art: saved.art, duration: saved.duration,
+      };
+
+      // Restore context if available
+      if (saved.context) {
+        const setData = setsData.sets.find(s => s.id === saved.context.id);
+        if (setData) {
+          playbackContextRef.current = {
+            type: saved.context.type, id: saved.context.id,
+            tracks: setData.tracks, currentIndex: saved.context.currentIndex,
+          };
+        }
+      }
+
+      // Wait for ytEngine to be ready, then play and seek
+      const waitAndPlay = () => {
+        if (window.__ytEngine?.isReady()) {
+          playTrack(track);
+          if (saved.progress > 0.01 && saved.duration) {
+            setTimeout(() => {
+              window.__ytEngine?.seek(saved.progress * saved.duration * 1000);
+              setProgress(saved.progress);
+            }, 1500); // give iframe time to load video
+          }
+        } else {
+          setTimeout(waitAndPlay, 200);
+        }
+      };
+      setTimeout(waitAndPlay, 500);
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
   // YouTube tracks don't need polling — state is managed client-side
   const hasSpotify = connectedProvidersRef.current?.spotify;
