@@ -1,4 +1,4 @@
-const CACHE_NAME = "fulkit-v1";
+const CACHE_NAME = "fulkit-v2";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -23,8 +23,9 @@ self.addEventListener("fetch", (event) => {
   // Never intercept JS/CSS — let browser handle naturally
   if (url.pathname.endsWith(".js") || url.pathname.endsWith(".css")) return;
 
-  // Cache-first for static assets only (images + fonts)
-  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/)) {
+  // Cache-first for same-origin static assets only (images + fonts)
+  // External images (album art, YouTube thumbnails) pass through directly — no interception
+  if (url.origin === self.location.origin && url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/)) {
     event.respondWith(
       caches.match(event.request).then((cached) =>
         cached || fetch(event.request).then((response) => {

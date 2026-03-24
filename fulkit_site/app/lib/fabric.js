@@ -38,6 +38,26 @@ async function fetchAlbumArt(artist, title) {
   return null;
 }
 
+// ═══ Album Art Cache — independent of player state ═══
+const ART_CACHE_KEY = "fulkit-art-cache";
+function getCachedArt(artist, title) {
+  if (!artist || !title) return null;
+  try {
+    const cache = JSON.parse(localStorage.getItem(ART_CACHE_KEY) || "{}");
+    return cache[`${artist.toLowerCase()}|${title.toLowerCase()}`] || null;
+  } catch { return null; }
+}
+function setCachedArt(artist, title, url) {
+  if (!artist || !title || !url) return;
+  try {
+    const cache = JSON.parse(localStorage.getItem(ART_CACHE_KEY) || "{}");
+    cache[`${artist.toLowerCase()}|${title.toLowerCase()}`] = url;
+    const keys = Object.keys(cache);
+    if (keys.length > 200) delete cache[keys[0]];
+    localStorage.setItem(ART_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
 // --- Taste Signal Utilities ---
 function normalizeForMatch(str) {
   if (!str) return "";
@@ -596,21 +616,8 @@ export function FabricProvider({ children }) {
 
       if (duration > 0) {
         const pct = currentTime / duration;
-        // During seek: hold the target position until iframe catches up
-        const seekTarget = seekTargetRef.current;
-        if (seekTarget && Date.now() < seekTarget.until) {
-          // Check if iframe has caught up to near the seek target
-          if (Math.abs(pct - seekTarget.fraction) < 0.03) {
-            seekTargetRef.current = null; // caught up — resume normal polling
-            pollSuppressedUntil.current = 0;
-            setProgress(pct);
-          } else {
-            setProgress(seekTarget.fraction); // hold seek position
-          }
-        } else {
-          if (seekTarget) seekTargetRef.current = null; // expired
-          if (ytPlaying) setProgress(pct);
-        }
+        // Suppress progress updates during seek (2s window)
+        if (ytPlaying && Date.now() > pollSuppressedUntil.current) setProgress(pct);
         // Update duration on currentTrack if missing
         if (!currentTrack?.duration || currentTrack.duration < 10) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
@@ -628,6 +635,30 @@ export function FabricProvider({ children }) {
     }, 500);
     return () => clearInterval(interval);
   }, [currentTrack?.id, currentTrack?.provider]);
+
+  // ── Album art resolution — single source of truth ──
+  // Check cache first, fetch on miss, cache forever. Independent of playback paths.
+  useEffect(() => {
+    if (!currentTrack?.artist || !currentTrack?.title) return;
+    if (currentTrack.art) {
+      // Art exists — make sure it's cached
+      setCachedArt(currentTrack.artist, currentTrack.title, currentTrack.art);
+      return;
+    }
+    // Check cache
+    const cached = getCachedArt(currentTrack.artist, currentTrack.title);
+    if (cached) {
+      setCurrentTrack(cur => cur?.id === currentTrack.id ? { ...cur, art: cached } : cur);
+      return;
+    }
+    // Fetch and cache
+    const trackId = currentTrack.id;
+    fetchAlbumArt(currentTrack.artist, currentTrack.title).then(art => {
+      const resolved = art || `https://img.youtube.com/vi/${currentTrack.ytId || currentTrack.id}/mqdefault.jpg`;
+      setCachedArt(currentTrack.artist, currentTrack.title, resolved);
+      setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art: resolved } : cur);
+    });
+  }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Smooth progress interpolation between Spotify polls
   useEffect(() => {
@@ -766,13 +797,10 @@ export function FabricProvider({ children }) {
   }, [apiFetch]);
 
   // Seek to position (fraction 0-1)
-  const seekTargetRef = useRef(null); // { fraction, until } — poller holds position until iframe catches up
   const seekTo = useCallback((fraction) => {
     if (!currentTrack) return;
     setProgress(fraction);
-    // Hold this position in the poller until iframe catches up (up to 5s)
-    seekTargetRef.current = { fraction, until: Date.now() + 5000 };
-    pollSuppressedUntil.current = Date.now() + 5000;
+    pollSuppressedUntil.current = Date.now() + 2000;
     // YouTube: seek via iframe engine
     const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
     if (useYT && window.__ytEngine) {
@@ -964,23 +992,6 @@ export function FabricProvider({ children }) {
   // Resolve YouTube video ID for a track — one search, stored forever.
   // Tracks with real YT IDs (11-char) skip resolution. Slug IDs (btc-*, search-*) get resolved.
   // Uses a ref-based pattern to avoid circular hook dependencies with flag/addToGuyCrate.
-  // Persist album art back to track in localStorage — fetch once, show forever
-  const persistArt = useCallback((trackId, art) => {
-    if (!trackId || !art) return;
-    setSetsData((prev) => {
-      let changed = false;
-      const next = { ...prev, sets: prev.sets.map(s => ({
-        ...s,
-        tracks: s.tracks.map(t => {
-          if (t.id === trackId && !t.art) { changed = true; return { ...t, art }; }
-          return t;
-        }),
-      }))};
-      if (changed) persistSets(next);
-      return changed ? next : prev;
-    });
-  }, [persistSets]);
-
   const resolveYouTubeIdRef = useRef(null);
   const resolveYouTubeId = useCallback((trackId) => {
     resolveYouTubeIdRef.current?.(trackId);
@@ -1359,28 +1370,15 @@ export function FabricProvider({ children }) {
         return false;
       }
       // If track has a precached YouTube video ID, play directly — zero quota
+      // Art is handled by the single art resolution effect — not here
       if (track.ytId) {
         window.__ytEngine.play(track.ytId);
-        if (!track.art) {
-          fetchAlbumArt(track.artist, track.title).then((art) => {
-            const resolved = art || `https://img.youtube.com/vi/${track.ytId}/mqdefault.jpg`;
-            setCurrentTrack((cur) => cur ? { ...cur, art: resolved } : cur);
-            persistArt(track.id, resolved);
-          });
-        }
         return true;
       }
       // If track ID is already a real YouTube video ID, play directly
       const rawId = track.id || track.uri?.replace("youtube:video:", "");
       if (rawId && /^[A-Za-z0-9_-]{10,12}$/.test(rawId)) {
         window.__ytEngine.play(rawId);
-        if (!track.art) {
-          fetchAlbumArt(track.artist, track.title).then((art) => {
-            const resolved = art || `https://img.youtube.com/vi/${rawId}/mqdefault.jpg`;
-            setCurrentTrack((cur) => cur ? { ...cur, art: resolved } : cur);
-            persistArt(track.id, resolved);
-          });
-        }
         return true;
       }
       // Search YouTube for the real video
@@ -1393,15 +1391,8 @@ export function FabricProvider({ children }) {
         if (ytMatch) {
           console.log("[playTrack] YouTube match:", ytMatch.source_id);
           window.__ytEngine.play(ytMatch.source_id);
-          if (!track.art) {
-            fetchAlbumArt(track.artist, track.title).then((art) => {
-              const resolved = art || `https://img.youtube.com/vi/${ytMatch.source_id}/mqdefault.jpg`;
-              setCurrentTrack((cur) => cur ? { ...cur, art: resolved, provider: "youtube" } : cur);
-              persistArt(track.id, resolved);
-            });
-          } else {
-            setCurrentTrack((cur) => cur ? { ...cur, provider: "youtube" } : cur);
-          }
+          // Art handled by single art resolution effect
+          setCurrentTrack((cur) => cur ? { ...cur, provider: "youtube" } : cur);
           return true;
         }
         console.warn("[playTrack] YouTube search returned no results for:", q, data);
