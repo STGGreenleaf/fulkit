@@ -18,7 +18,7 @@ export default function RecoverPage() {
   }, [recovered]);
 
   const recover = async () => {
-    setStatus("Fetching backup...");
+    setStatus("Fetching backups...");
     try {
       const res = await fetch("/api/recover-sets");
       const backup = await res.json();
@@ -26,21 +26,31 @@ export default function RecoverPage() {
       const raw = localStorage.getItem("fulkit-sets");
       const current = raw ? JSON.parse(raw) : { activeId: "set-1", sets: [] };
 
-      const existing = current.sets.find((s) => s.name === backup.name);
-      if (existing) {
-        existing.tracks = backup.tracks;
-      } else {
-        current.sets.unshift({
-          id: "set-electro-static",
-          name: backup.name,
-          tracks: backup.tracks,
-        });
+      let restoredCount = 0;
+      for (const backupSet of backup.sets) {
+        const existing = current.sets.find((s) => s.name === backupSet.name);
+        if (existing) {
+          existing.tracks = backupSet.tracks;
+        } else {
+          current.sets.unshift({
+            id: `set-${Date.now()}-${restoredCount}`,
+            name: backupSet.name,
+            tracks: backupSet.tracks,
+          });
+        }
+        restoredCount++;
+      }
+
+      if (!current.activeId || !current.sets.some((s) => s.id === current.activeId)) {
+        current.activeId = current.sets[0]?.id || "set-1";
       }
 
       localStorage.setItem("fulkit-sets", JSON.stringify(current));
       setRecovered(true);
       setStatus(
-        "Restored " + backup.name + " with " + backup.tracks.length + " tracks. Refresh Fabric to see them."
+        backup.sets
+          .map((s) => s.name + ": " + s.tracks.length + " tracks")
+          .join(", ") + ". Refresh Fabric to see them."
       );
     } catch (e) {
       setStatus("Error: " + e.message);
@@ -97,7 +107,7 @@ export default function RecoverPage() {
           marginBottom: 16,
         }}
       >
-        {recovered ? "Restored" : "Restore Electro Static (10 tracks from backup)"}
+        {recovered ? "Restored" : "Restore All Sets from Backup"}
       </button>
 
       {status && (
