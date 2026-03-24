@@ -460,21 +460,10 @@ export function FabricProvider({ children }) {
         }
       }
 
-      // Wait for ytEngine to be ready, then play and seek
-      const waitAndPlay = () => {
-        if (window.__ytEngine?.isReady()) {
-          playTrack(track);
-          if (saved.progress > 0.01 && saved.duration) {
-            setTimeout(() => {
-              window.__ytEngine?.seek(saved.progress * saved.duration * 1000);
-              setProgress(saved.progress);
-            }, 1500); // give iframe time to load video
-          }
-        } else {
-          setTimeout(waitAndPlay, 200);
-        }
-      };
-      setTimeout(waitAndPlay, 500);
+      // Restore track info visually (paused) — user hits play to resume
+      setCurrentTrack(track);
+      setProgress(saved.progress || 0);
+      setIsPlaying(false);
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
