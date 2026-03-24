@@ -1633,6 +1633,8 @@ export default function FabricPage() {
   }, [activeSetId, toggleSetExpanded]);
 
   // Guy's Crate collapse state
+  const [thumbedDownIds, setThumbedDownIds] = useState(new Set()); // "confirmed" state
+  const [thumbFadingIds, setThumbFadingIds] = useState(new Set()); // "fading" state (after 300ms)
   const [guyCrateCollapsed, setGuyCrateCollapsed] = useState(() => {
     if (typeof window === "undefined") return true;
     try { return localStorage.getItem("fulkit-guy-crate-collapsed") !== "false"; } catch { return true; }
@@ -3925,17 +3927,28 @@ export default function FabricPage() {
                               </div>
                             </div>
                             <button
-                              onClick={(e) => { e.stopPropagation(); thumbsDownTrack(track); }}
-                              style={{
-                                background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0,
-                                color: "var(--color-text-dim)", transition: "color 120ms",
-                                marginRight: "var(--space-2)",
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (thumbedDownIds.has(track.id)) return;
+                                thumbsDownTrack(track);
+                                setThumbedDownIds(prev => new Set([...prev, track.id]));
+                                // After 400ms (black flash visible), start fade
+                                setTimeout(() => setThumbFadingIds(prev => new Set([...prev, track.id])), 400);
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
+                              style={{
+                                background: "none", border: "none",
+                                cursor: thumbedDownIds.has(track.id) ? "default" : "pointer",
+                                padding: 2, flexShrink: 0,
+                                marginRight: "var(--space-2)",
+                                color: thumbedDownIds.has(track.id) ? "var(--color-text)" : "var(--color-text-dim)",
+                                opacity: thumbFadingIds.has(track.id) ? 0 : 1,
+                                transition: thumbFadingIds.has(track.id) ? "opacity 2s ease-out" : "color 120ms",
+                              }}
+                              onMouseEnter={(e) => { if (!thumbedDownIds.has(track.id)) e.currentTarget.style.color = "var(--color-text)"; }}
+                              onMouseLeave={(e) => { if (!thumbedDownIds.has(track.id)) e.currentTarget.style.color = "var(--color-text-dim)"; }}
                               title="Never suggest again"
                             >
-                              <ThumbsDown size={11} strokeWidth={1.8} />
+                              <ThumbsDown size={11} strokeWidth={1.8} fill={thumbedDownIds.has(track.id) ? "var(--color-text)" : "none"} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); flag(track); }}
