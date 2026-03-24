@@ -4392,7 +4392,7 @@ export default function FabricPage() {
                   <Label>Sets</Label>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <Tooltip text="Arrange for flow">
+                  <Tooltip label="Arrange for flow">
                     <button
                       onClick={() => { const active = allSets.find(s => s.id === activeSetId); if (active) toggleArc(active.id); }}
                       style={{
