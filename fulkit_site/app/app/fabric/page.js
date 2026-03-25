@@ -451,14 +451,23 @@ function SignalTerrainV4({
       // ── Kinetic state machine ──
       const now = timestamp;
       const elapsed = now - k.stateStart;
-      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 0.55; }
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 0.15; }
       else if (!isPlaying && k.prevPlaying) { k.state = "wind-down"; k.stateStart = now; k.target = 0.08; }
       k.prevPlaying = isPlaying;
-      if (k.state === "spool-up" && elapsed > 600) k.state = "active";
+      if (k.state === "spool-up") {
+        // Ease in: ramp target from 0.15 → 0.55 over 1.5s, letting the song data lead
+        const ramp = Math.min(1, elapsed / 1500);
+        k.target = 0.15 + ramp * 0.4;
+        if (elapsed > 1500) k.state = "active";
+      }
       else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
       else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
-      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.55; }
-      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
+      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.15; }
+      else if (k.state === "skip-spool") {
+        const ramp = Math.min(1, elapsed / 1200);
+        k.target = 0.15 + ramp * 0.4;
+        if (elapsed > 1200) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
+      }
       k.amplitude += (k.target - k.amplitude) * (k.state === "skip-cut" ? 0.2 : 0.06);
 
       // Phase + features
