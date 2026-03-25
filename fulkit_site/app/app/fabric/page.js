@@ -5211,7 +5211,7 @@ export default function FabricPage() {
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOverCol("crates"); }}
               onDragLeave={() => setDragOverCol(null)}
-              onDrop={() => { setDragOverCol(null); }}
+              onDrop={(e) => { e.stopPropagation(); clearDragIntent(); setDragOverCol(null); }}
               style={{
                 flex: showCrates ? 5 : 0,
                 minWidth: showCrates ? 200 : 0,
