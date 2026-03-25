@@ -830,12 +830,13 @@ function SignalTerrain({
           if (snap.beat) rawEnergy *= (1 + snap.beat_strength * 0.15);
           // Kinetic gate (play/pause transitions) — only multiplicative gate
           rawEnergy *= (k.amplitude / 0.55) * exhaleMultiplier;
-          rawEnergy = Math.max(0.02, Math.min(1.0, rawEnergy));
+          // Playing floor — ribbons stay contiguous, peaks ride on top
+          rawEnergy = Math.max(0.15, Math.min(1.0, rawEnergy));
         } else if (live.active && (liveBass + liveMids) > 0.01) {
           // Mic mode
           const liveMap = [liveBass, liveBass, (liveBass + liveMids) / 2, liveMids, (liveMids + livePresence) / 2, livePresence, liveAir];
           rawEnergy = Math.pow(liveMap[b], 0.6) * 1.2 * (1 + liveFlux * 0.5);
-          rawEnergy = Math.max(0.02, Math.min(1.0, rawEnergy));
+          rawEnergy = Math.max(0.15, Math.min(1.0, rawEnergy));
         } else {
           // Procedural fallback
           const synthBase = noise2D(phase * 0.08 + b * 7.3, b * 4.1 + 50) * 0.5 + 0.5;
@@ -853,7 +854,7 @@ function SignalTerrain({
         if (rawEnergy > prev) {
           bandSmoothRef.current[b] = prev * 0.3 + rawEnergy * 0.7;   // attack ~2 frames
         } else {
-          bandSmoothRef.current[b] = prev * 0.92 + rawEnergy * 0.08;  // decay ~400ms
+          bandSmoothRef.current[b] = prev * 0.95 + rawEnergy * 0.05;  // decay ~650ms
         }
         const smoothed = bandSmoothRef.current[b];
 
