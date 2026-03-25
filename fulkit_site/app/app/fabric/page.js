@@ -2768,6 +2768,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         if (historyRef.current.length > 3) historyRef.current.shift();
         if (historyRef.current.length > 3) historyRef.current.shift();
       } else if (k.state === "idle") {
+        // Replace wiggly history with clean flat circles — no deformation at rest
+        const flatFrame = Array.from({ length: N }, () => 0.003);
+        historyRef.current.push(flatFrame);
+        if (historyRef.current.length > 3) historyRef.current.shift();
         if (historyRef.current.length > 3) historyRef.current.shift();
       }
 
