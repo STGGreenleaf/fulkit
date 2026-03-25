@@ -491,6 +491,569 @@ function generateSongEnvelope(trackId, durationMs, bpm, energy, danceability) {
 }
 
 // ═════════════════════════════════════════════════════════
+// SIGNAL TERRAIN OG — Original stacked mountain visualization
+// The classic smoky layered rendering with mountain + reflection.
+// ═════════════════════════════════════════════════════════
+
+const OG_LAYERS = 25;
+
+function SignalTerrainOG({
+  height = 220,
+  isPlaying = false,
+  trackId = null,
+  progress = 0,
+  onVisualize,
+  duration = 0,
+  features = null,
+  getSnapshot = null,
+}) {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const containerRef = useRef(null);
+  const historyRef = useRef([]);
+  const phaseRef = useRef(0);
+  const noiseRef = useRef(createNoise2D());
+  const [canvasWidth, setCanvasWidth] = useState(600);
+  // Keep latest props in refs for the render loop
+  const getSnapshotRef = useRef(getSnapshot);
+  getSnapshotRef.current = getSnapshot;
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+
+  // Layer 1: kinetic state machine
+  const kineticRef = useRef({
+    amplitude: 0.08, // current smoothed amplitude (0–1)
+    target: 0.08,    // target amplitude
+    state: "idle",   // idle | spool-up | active | wind-down | skip-cut | skip-silence | skip-spool
+    stateStart: 0,
+    prevPlaying: false,
+    prevTrackId: null,
+  });
+
+  // Procedural song envelope — cached per track
+  const envelopeRef = useRef({ trackId: null, envelope: null });
+
+  useEffect(() => {
+    if (!trackId) return;
+    if (envelopeRef.current.trackId === trackId) return;
+    const bpm = features?.bpm || 100;
+    const energy = features?.energy || 50;
+    const dance = features?.danceability || 50;
+    const dur = duration > 0 ? duration * 1000 : 210000;
+    envelopeRef.current = {
+      trackId,
+      envelope: generateSongEnvelope(trackId, dur, bpm, energy, dance),
+    };
+  }, [trackId, features, duration]);
+
+  // Layer 3: live audio (multi-band)
+  const liveRef = useRef({
+    active: false,
+    stream: null,
+    audioCtx: null,
+    analyser: null,
+    bands: { bass: 0, mids: 0, presence: 0, air: 0 },
+    smoothBands: { bass: 0, mids: 0, presence: 0, air: 0 },
+    flux: 0,
+    smoothFlux: 0,
+    prevFrame: null, // allocated on mic activation (Uint8Array(1024))
+  });
+  const [liveActive, setLiveActive] = useState(false);
+
+  // Responsive width
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setCanvasWidth(Math.floor(entry.contentRect.width));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // New noise seed on track change
+  useEffect(() => {
+    noiseRef.current = createNoise2D();
+    historyRef.current = [];
+    const k = kineticRef.current;
+    // If track changed while playing → skip signature
+    if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
+      k.state = "skip-cut";
+      k.stateStart = performance.now();
+      k.target = 0;
+    }
+    k.prevTrackId = trackId;
+  }, [trackId]);
+
+  // Layer 3: mic activation
+  const activateMic = useCallback(async () => {
+    const live = liveRef.current;
+    if (live.active) {
+      // Disconnect
+      if (live.stream) live.stream.getTracks().forEach((t) => t.stop());
+      if (live.audioCtx) live.audioCtx.close();
+      live.active = false;
+      live.stream = null;
+      live.audioCtx = null;
+      live.analyser = null;
+      live.bands = { bass: 0, mids: 0, presence: 0, air: 0 };
+      live.smoothBands = { bass: 0, mids: 0, presence: 0, air: 0 };
+      live.flux = 0;
+      live.smoothFlux = 0;
+      live.prevFrame = null;
+      setLiveActive(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.3;
+      source.connect(analyser);
+      live.stream = stream;
+      live.audioCtx = ctx;
+      live.analyser = analyser;
+      live.prevFrame = new Uint8Array(1024);
+      live.active = true;
+      setLiveActive(true);
+      try { localStorage.setItem("fulkit-live-audio-opted-in", "true"); } catch {}
+    } catch {
+      // Permission denied or no mic
+    }
+  }, []);
+
+  // Cleanup mic on unmount
+  useEffect(() => {
+    return () => {
+      const live = liveRef.current;
+      if (live.stream) live.stream.getTracks().forEach((t) => t.stop());
+      if (live.audioCtx) live.audioCtx.close();
+    };
+  }, []);
+
+  // Render loop
+  useEffect(() => {
+    let running = true;
+    let lastFrame = 0;
+    const frameInterval = 1000 / 30;
+    const freqData = new Uint8Array(1024);
+
+    const render = (timestamp) => {
+      if (!running) return;
+      animRef.current = requestAnimationFrame(render);
+      if (timestamp - lastFrame < frameInterval) return;
+      lastFrame = timestamp;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      const noise2D = noiseRef.current;
+      const k = kineticRef.current;
+      const live = liveRef.current;
+
+      // ── Layer 1: Kinetic state machine ──
+      const now = timestamp;
+      const elapsed = now - k.stateStart;
+
+      // Detect play/pause transitions
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") {
+        k.state = "spool-up";
+        k.stateStart = now;
+        k.target = 0.55;
+      } else if (!isPlaying && k.prevPlaying) {
+        k.state = "wind-down";
+        k.stateStart = now;
+        k.target = 0.08;
+      }
+      k.prevPlaying = isPlaying;
+
+      // State transitions
+      if (k.state === "spool-up" && elapsed > 600) {
+        k.state = "active";
+      } else if (k.state === "wind-down" && elapsed > 800) {
+        k.state = "idle";
+      } else if (k.state === "skip-cut" && elapsed > 200) {
+        k.state = "skip-silence";
+        k.stateStart = now;
+        k.target = 0.02;
+      } else if (k.state === "skip-silence" && elapsed > 200) {
+        k.state = "skip-spool";
+        k.stateStart = now;
+        k.target = 0.55;
+      } else if (k.state === "skip-spool" && elapsed > 400) {
+        k.state = isPlaying ? "active" : "idle";
+        k.target = isPlaying ? 0.55 : 0.08;
+      }
+
+      // Smooth amplitude toward target
+      const smoothRate = k.state === "skip-cut" ? 0.2 : 0.06;
+      k.amplitude += (k.target - k.amplitude) * smoothRate;
+
+      // Track end exhale (Layer 1)
+      let exhaleMultiplier = 1;
+      if (isPlaying && duration > 0 && progress > 0) {
+        const remaining = duration * (1 - progress);
+        const EXHALE_WINDOW = 6;
+        if (remaining < EXHALE_WINDOW && remaining > 0) {
+          const exhaustion = 1 - (remaining / EXHALE_WINDOW);
+          exhaleMultiplier = 1 - (exhaustion * 0.7);
+        }
+      }
+
+      // ── Procedural architecture: envelope lookup ──
+      const env = envelopeRef.current.envelope;
+      let envelopeValue = 1;
+      if (env && env.length > 0 && isPlaying && progress > 0) {
+        const barIndex = Math.min(env.length - 1, Math.floor(progress * env.length));
+        envelopeValue = env[barIndex];
+      }
+
+      // ── Layer 2: Audio features ──
+      const bpm = features?.bpm || 100;
+      const energy = (features?.energy || 50) / 100;
+      const valence = (features?.valence || 50) / 100;
+      const danceability = (features?.danceability || 50) / 100;
+      const loudness = features?.loudness || -15;
+      const acousticness = (features?.acousticness || 30) / 100;
+      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
+
+      // BPM beat grid
+      const progressMs = progress * duration * 1000;
+      const msPerBeat = 60000 / bpm;
+      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
+      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
+
+      // Energy → amplitude ceiling
+      // When envelope is active, it drives the ceiling directly (avoids double-attenuation)
+      const hasEnvelope = env && env.length > 0 && isPlaying && progress > 0;
+      const amplitudeCeiling = hasEnvelope
+        ? 0.2 + envelopeValue * 0.6   // envelope replaces static energy ceiling
+        : 0.2 + energy * 0.6;          // fallback: static energy from ReccoBeats
+      const normalizedLoudness = Math.max(0, (loudness + 35) / 35);
+      const amplitudeFloor = 0.05 + normalizedLoudness * 0.15;
+
+      // Valence → shape sharpness
+      const sharpness = 1 - valence;
+
+      // Phase advance — BPM-synced when playing
+      const beatsPerSec = bpm / 60;
+      const phaseStep = isPlaying ? (beatsPerSec / 30) * 0.15 : 0.004;
+      phaseRef.current += phaseStep;
+      const phase = phaseRef.current;
+
+      // ── Layer 3: Multi-band live audio analysis ──
+      let liveBass = 0, liveMids = 0, livePresence = 0, liveAir = 0, liveFlux = 0;
+      if (live.active && live.analyser) {
+        live.analyser.getByteFrequencyData(freqData);
+        const N = freqData.length; // 1024 bins
+
+        // Band energy (sum bins, normalize to 0-1)
+        const bandSum = (lo, hi) => {
+          let s = 0;
+          for (let i = lo; i <= hi; i++) s += freqData[i];
+          return s / ((hi - lo + 1) * 255);
+        };
+        live.bands.bass = bandSum(0, 11);
+        live.bands.mids = bandSum(12, 93);
+        live.bands.presence = bandSum(94, 279);
+        live.bands.air = bandSum(280, N - 1);
+
+        // Silence gates — clamp room noise to zero
+        if (live.bands.bass < 0.05) live.bands.bass = 0;
+        if (live.bands.mids < 0.06) live.bands.mids = 0;
+        if (live.bands.presence < 0.07) live.bands.presence = 0;
+        if (live.bands.air < 0.08) live.bands.air = 0;
+
+        // Asymmetric per-band smoothing
+        const aSmooth = (raw, prev, attack, decay) =>
+          raw > prev ? prev * attack + raw * (1 - attack) : prev * decay + raw * (1 - decay);
+        live.smoothBands.bass = aSmooth(live.bands.bass, live.smoothBands.bass, 0.4, 0.85);
+        live.smoothBands.mids = live.smoothBands.mids * 0.7 + live.bands.mids * 0.3;
+        live.smoothBands.presence = aSmooth(live.bands.presence, live.smoothBands.presence, 0.3, 0.8);
+        live.smoothBands.air = aSmooth(live.bands.air, live.smoothBands.air, 0.3, 0.8);
+
+        // Spectral flux (half-wave rectified frame diff)
+        let fluxSum = 0;
+        if (live.prevFrame) {
+          for (let i = 0; i < N; i++) {
+            const diff = freqData[i] - live.prevFrame[i];
+            if (diff > 0) fluxSum += diff;
+          }
+          live.flux = fluxSum / (N * 255);
+          live.smoothFlux = aSmooth(live.flux, live.smoothFlux, 0.5, 0.92);
+          live.prevFrame.set(freqData);
+        }
+
+        liveBass = live.smoothBands.bass;
+        liveMids = live.smoothBands.mids;
+        livePresence = live.smoothBands.presence;
+        liveAir = live.smoothBands.air;
+        liveFlux = live.smoothFlux;
+      }
+
+      // ── Generate terrain points ──
+      const gsFn = getSnapshotRef.current;
+      const curProgress = progressRef.current;
+      const snap = gsFn ? gsFn(curProgress) : null;
+      const hasFabric = !!snap;
+      // Debug: log Fabric status once per second
+      if (Math.floor(timestamp / 1000) !== Math.floor((timestamp - frameInterval) / 1000)) {
+        if (hasFabric) console.log("[SignalTerrain] FABRIC mode — loudness:", snap.loudness?.toFixed(3), "flux:", snap.flux?.toFixed(3));
+        else if (isPlaying) console.log("[SignalTerrain] PROCEDURAL — gsFn:", !!gsFn, "progress:", curProgress.toFixed(3));
+      }
+      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+      const points = [];
+
+      // Band groups for multi-layer Fabric rendering
+      const bandGroupLow = [];
+      const bandGroupMid = [];
+      const bandGroupHigh = [];
+
+      for (let i = 0; i < T_POINTS; i++) {
+        const t = i / T_POINTS;
+        // Soft edge taper — only fades the first/last 8% instead of shaping a bell
+        const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
+        const envelope = edge; // alias for procedural path compatibility
+
+        let amp;
+        if (hasFabric && !live.active) {
+          // ── FABRIC MODE: orchestra view — each point = different frequency ──
+          // Left = sub/bass, center = mids, right = air/highs
+          const bandPos = t * bandNames.length;
+          const bandIdx = Math.min(Math.floor(bandPos), bandNames.length - 1);
+          const bandNext = Math.min(bandIdx + 1, bandNames.length - 1);
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
+                          snap.bands[bandNames[bandNext]] * bandFrac;
+
+          const rawLoud = snap.loudness;
+          const realLoud = 0.15 + rawLoud * 0.85;
+          const onsetSpike = snap.onset ? snap.onset_strength * 0.4 : 0;
+          const kGate = k.amplitude / 0.55;
+          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.35 : 1;
+
+          // Per-point noise adds texture unique to each frequency zone
+          const tex = noise2D(t * 8 + keyOffset, phase * 0.4) * 0.08;
+
+          amp = (bandVal * 0.6 + realLoud * 0.2 + onsetSpike + tex) * realLoud;
+          amp *= (1 + snap.flux * 0.5) * beatMul * edge * kGate * exhaleMultiplier;
+          amp = Math.max(0, Math.min(0.95, amp));
+
+          // Band groups for the overlay layers
+          const lowVal = (snap.bands.sub + snap.bands.bass) / 2;
+          bandGroupLow.push(Math.max(0, Math.min(0.9, (lowVal * 0.6 + rawLoud * 0.15 + onsetSpike) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
+          const midVal = (snap.bands.low_mid + snap.bands.mid) / 2;
+          bandGroupMid.push(Math.max(0, Math.min(0.8, (midVal * 0.5 + rawLoud * 0.1) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
+          const highVal = (snap.bands.high_mid + snap.bands.high + snap.bands.air) / 3;
+          bandGroupHigh.push(Math.max(0, Math.min(0.7, (highVal * 0.5 + snap.flux * 0.3) * realLoud * edge * kGate * exhaleMultiplier)));
+        } else {
+          // ── PROCEDURAL / MIC MODE ──
+          const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
+          const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
+          const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
+          let raw = n1 + n2 + n3;
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+          raw = Math.abs(raw) * envelope;
+
+          const beatBoost = 1 + beatPulse * danceability * 0.4;
+
+          if (live.active && (liveBass + liveMids) > 0.01) {
+            const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
+            const puppeted = raw * k.amplitude * exhaleMultiplier * beatBoost;
+            const liveRaw = raw * (1 + livePresence * 0.5);
+            const liveDisp = Math.abs(liveRaw) * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
+            const jitter = (Math.random() - 0.5) * liveAir * 0.15;
+            amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
+          } else {
+            amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
+          }
+          amp = Math.min(amp, amplitudeCeiling);
+          amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
+          amp *= 1 + (Math.random() - 0.5) * 0.1;
+        }
+
+        points.push(Math.max(0, Math.min(1, amp)));
+      }
+
+      historyRef.current.push(points);
+      if (historyRef.current.length > OG_LAYERS) historyRef.current.shift();
+
+      // ── Render ──
+      const style = getComputedStyle(canvas);
+      const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [232, 230, 227];
+
+      ctx.clearRect(0, 0, w, h);
+      const layers = historyRef.current;
+      const centerY = h * 0.65;
+      const maxUp = centerY - 6;
+      const maxDown = (h - centerY) - 6;
+
+      for (let l = 0; l < layers.length; l++) {
+        const age = l / Math.max(1, layers.length - 1);
+        const data = layers[l];
+
+        const alpha = 0.012 + age * age * 0.16;
+        const baseLw = 0.3 + age * 1.0;
+        const lw = baseLw * (0.7 + acousticness * 0.6); // acousticness → line thickness
+        const yShift = (layers.length - 1 - l) * 1.1;
+
+        // Mountains
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const a = data[i] * Math.max(0, maxUp - yShift);
+          const y = centerY - a - yShift;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            const prevX = ((i - 1) / (data.length - 1)) * w;
+            const prevA = data[i - 1] * Math.max(0, maxUp - yShift);
+            const prevY = centerY - prevA - yShift;
+            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
+          }
+        }
+        const lastA = data[data.length - 1] * Math.max(0, maxUp - yShift);
+        ctx.lineTo(w, centerY - lastA - yShift);
+        ctx.stroke();
+
+        // Reflection (shadow/mirror in descending area)
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
+        ctx.lineWidth = lw * 0.5;
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const reflShift = (layers.length - 1 - l) * 0.3;
+          const a = data[i] * Math.max(0, maxDown - reflShift - 1) * 0.45;
+          const y = centerY + a + reflShift + 1;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // ── Multi-band overlay (Fabric mode only, newest frame) ──
+      if (hasFabric && bandGroupLow.length > 0) {
+        const bandGroups = [
+          { data: bandGroupLow, alpha: 0.22, lw: 1.4, scale: 1.0, reflScale: 0.5 },
+          { data: bandGroupMid, alpha: 0.15, lw: 0.9, scale: 0.75, reflScale: 0.35 },
+          { data: bandGroupHigh, alpha: 0.10, lw: 0.5, scale: 0.5, reflScale: 0.2 },
+        ];
+        for (const bg of bandGroups) {
+          // Wave
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha})`;
+          ctx.lineWidth = bg.lw;
+          ctx.beginPath();
+          for (let i = 0; i < bg.data.length; i++) {
+            const x = (i / (bg.data.length - 1)) * w;
+            const a = bg.data[i] * maxUp * bg.scale;
+            const y = centerY - a;
+            if (i === 0) ctx.moveTo(x, y);
+            else {
+              const px = ((i - 1) / (bg.data.length - 1)) * w;
+              const pa = bg.data[i - 1] * maxUp * bg.scale;
+              const py = centerY - pa;
+              ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+            }
+          }
+          ctx.stroke();
+          // Reflection
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha * 0.3})`;
+          ctx.lineWidth = bg.lw * 0.4;
+          ctx.beginPath();
+          for (let i = 0; i < bg.data.length; i++) {
+            const x = (i / (bg.data.length - 1)) * w;
+            const a = bg.data[i] * maxDown * bg.reflScale;
+            const y = centerY + a + 1;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+    };
+
+    animRef.current = requestAnimationFrame(render);
+    return () => {
+      running = false;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [canvasWidth, isPlaying, progress, duration, features, liveActive]);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", position: "relative", overflow: "hidden" }}>
+      <canvas
+        ref={canvasRef}
+        width={canvasWidth}
+        height={height}
+        style={{ width: "100%", height, display: "block" }}
+      />
+      {/* Visualize — enter fullscreen orb */}
+      {onVisualize && (
+        <button
+          onClick={onVisualize}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 10,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            opacity: 0.15,
+            transition: "opacity 300ms",
+            color: "var(--color-text-muted)",
+            display: "flex",
+            alignItems: "center",
+          }}
+          title="Visualize"
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.5)}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.15)}
+        >
+          <ExternalLink size={12} strokeWidth={1.5} />
+        </button>
+      )}
+      {/* Layer 3: "ears" affordance */}
+      <button
+        onClick={activateMic}
+        style={{
+          position: "absolute",
+          bottom: 8,
+          right: 10,
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 4,
+          opacity: liveActive ? 0.6 : 0.15,
+          transition: "opacity 300ms",
+          color: "var(--color-text-muted)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+        title={liveActive ? "Live audio active — click to disable" : "Enable live audio (microphone)"}
+      >
+        <Ear size={12} strokeWidth={1.5} />
+        {liveActive && (
+          <span style={{ fontSize: 8, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>
+            live
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════
 // SIGNAL TERRAIN V2 — Data-driven terrain visualization
 // "A deaf person should feel the music."
 // No synthetic carriers. The data IS the visual.
@@ -2060,7 +2623,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n <= 2 ? "pointer" : "default",
+              cursor: n <= 3 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
@@ -3091,7 +3654,7 @@ export default function FabricPage() {
 
           {/* ═══ VISUALIZATION STRIP ═══ */}
           <div style={{ flexShrink: 0 }}>
-            {vizMode === 2 && (
+            {vizMode === 3 && (
               <SignalTerrain
                 height={120}
                 isPlaying={isPlaying}
@@ -3104,6 +3667,18 @@ export default function FabricPage() {
               />
             )}
             {vizMode === 1 && (
+              <SignalTerrainOG
+                height={120}
+                isPlaying={isPlaying}
+                trackId={currentTrack?.id}
+                progress={progress}
+                duration={currentTrack?.duration || 0}
+                features={features}
+                getSnapshot={getSnapshot}
+                onVisualize={() => setVisualizing(true)}
+              />
+            )}
+            {vizMode === 2 && (
               <SignalTerrainV2
                 height={120}
                 isPlaying={isPlaying}
@@ -3179,7 +3754,7 @@ export default function FabricPage() {
                 <button
                   key={n}
                   onClick={() => {
-                    if (n <= 2) {
+                    if (n <= 3) {
                       setVizMode(n);
                       try { localStorage.setItem("fulkit-viz-mode", String(n)); } catch {}
                     }
@@ -3192,10 +3767,10 @@ export default function FabricPage() {
                     fontSize: "var(--font-size-xs)",
                     fontWeight: vizMode === n ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                     fontFamily: "var(--font-mono)",
-                    cursor: n <= 2 ? "pointer" : "default",
+                    cursor: n <= 3 ? "pointer" : "default",
                     padding: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: n <= 2 ? (vizMode === n ? 1 : 0.5) : 0.2,
+                    opacity: n <= 3 ? (vizMode === n ? 1 : 0.5) : 0.2,
                     transition: `all var(--duration-fast) var(--ease-default)`,
                   }}
                 >
