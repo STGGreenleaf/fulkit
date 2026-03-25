@@ -367,8 +367,8 @@ const V4_BANDS = [
   { name: "high",     w: 0.5, amp: 0.65, decay: 0.78 },
   { name: "air",      w: 0.35, amp: 0.55, decay: 0.75 },
 ];
-// Per-band temporal lag: sub lingers (reads 8 frames back), air is instant
-const V4_BAND_LAG = [8, 6, 5, 3, 2, 1, 0];
+// Per-band temporal lag: sub reacts fast but sustains, air is instant
+const V4_BAND_LAG = [4, 3, 2, 2, 1, 1, 0];
 
 function SignalTerrainV4({
   height = 220,
@@ -395,6 +395,7 @@ function SignalTerrainV4({
   // Per-band smoothed values + temporal history buffers (12 frames per band)
   const smoothRef = useRef(new Float32Array(7));
   const bandHistRef = useRef(null);
+  const trackChangeTimeRef = useRef(0); // suppress procedural fallback during timeline load
 
   // Kinetic state machine
   const kRef = useRef({
@@ -418,6 +419,7 @@ function SignalTerrainV4({
     historyRef.current = [];
     smoothRef.current.fill(0);
     if (bandHistRef.current) { for (const buf of bandHistRef.current) buf.fill(0); }
+    trackChangeTimeRef.current = performance.now();
     const k = kRef.current;
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
       k.state = "skip-cut"; k.stateStart = performance.now(); k.target = 0;
@@ -555,13 +557,13 @@ function SignalTerrainV4({
           // Band-dominant formula — loudness as range scaler, not multiplier
           const realLoud = snap.loudness || 0;
           const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
-          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.4 : 0;
+          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.7 : 0;
           const expanded = Math.pow(bandVal, 0.55) * bandAmp;
-          const loud_scale = 0.55 + realLoud * 0.45;
+          const loud_scale = 0.3 + realLoud * 0.7;
 
           amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
           amp *= (1 + (snap.flux || 0) * 0.6);
-          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.5);
+          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.9);
           amp *= edge;
           amp *= k.amplitude / 0.55;
           amp *= exhaleMultiplier;
@@ -571,18 +573,24 @@ function SignalTerrainV4({
           amp = Math.max(amp, isPlaying ? 0.005 : 0);
           amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
-          // Procedural fallback (identical to OG)
-          const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
-          const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
-          const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
-          let raw = n1 + n2 + n3;
-          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-          raw = Math.abs(raw) * edge;
-          const beatBoost = 1 + beatPulse * danceability * 0.4;
-          amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
-          amp = Math.min(amp, 0.2 + energy * 0.6);
-          amp = Math.max(amp, isPlaying ? 0.005 : 0);
-          amp *= 1 + (Math.random() - 0.5) * 0.1;
+          // Suppress fallback for 2s after track change — wait for timeline to load
+          const sinceTrackChange = timestamp - trackChangeTimeRef.current;
+          if (isPlaying && sinceTrackChange < 2000) {
+            amp = 0;
+          } else {
+            // Procedural fallback (for tracks with no timeline data)
+            const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
+            const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
+            const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
+            let raw = n1 + n2 + n3;
+            raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+            raw = Math.abs(raw) * edge;
+            const beatBoost = 1 + beatPulse * danceability * 0.4;
+            amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
+            amp = Math.min(amp, 0.2 + energy * 0.6);
+            amp = Math.max(amp, isPlaying ? 0.005 : 0);
+            amp *= 1 + (Math.random() - 0.5) * 0.1;
+          }
         }
 
         points.push(Math.max(0, Math.min(1, amp)));
