@@ -736,8 +736,8 @@ function SignalTerrainV2({
         for (let l = 0; l < numLines; l++) {
           const age = l / Math.max(1, numLines - 1);
           const tOff = Math.floor(age * 14);
-          const alpha = 0.015 + age * 0.2;
-          let lw = 0.2 + age * 0.5;
+          const alpha = 0.045 + age * 0.16;
+          let lw = 0.35 + age * 0.4;
           if (age > 0.9 && s.beatFlash > 0.4) lw += 0.4;
           const dispScale = 0.35 + age * 0.65;
           const seed = s.lineSeeds[dir === 1 ? l : V2_BOT + l];
@@ -760,7 +760,8 @@ function SignalTerrainV2({
             for (let b = 3; b < 7; b++) trebD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.45;
             const combined = bassD * bassW + trebD * trebleW;
 
-            const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * 1.5 * edge;
+            const noiseAmt = 1.5 + (1 - age) * 2.0; // outer lines wiggle more
+            const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * noiseAmt * edge;
             let streak = 0;
             if (age > 0.85 && i > V2_PTS - 5) streak = flux[i] * 8 * (i - (V2_PTS - 5)) / 4;
 
