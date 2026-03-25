@@ -2783,22 +2783,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // ── Wisps: ambient atmosphere drifting outward ──
       const wisps = wispsRef.current;
       const isActive = k.state === "active" || k.state === "spool-up" || k.state === "skip-spool";
-      // Spawn wisps — more at higher loudness
-      if (isActive && activity > 0.2) {
-        const spawnRate = Math.floor(1 + realLoud * 2.5); // 1–3 per frame
+      // Spawn wisps — scale with loudness, reach far out
+      if (isActive && activity > 0.15) {
+        const spawnRate = Math.floor(2 + realLoud * 4); // 2–6 per frame
         for (let s = 0; s < spawnRate; s++) {
-          if (wisps.length >= 80) break;
+          if (wisps.length >= 150) break;
           const angle = Math.random() * Math.PI * 2;
           const cosA = Math.cos(angle), sinA = Math.sin(angle);
-          const surfaceR = baseR * (1 + (realLoud * 0.3));
-          const speed = baseR * (0.008 + realLoud * 0.018);
-          const tangent = (Math.random() - 0.5) * 0.4;
+          const surfaceR = baseR * (1 + realLoud * 0.4);
+          const speed = baseR * (0.012 + realLoud * 0.028);
+          const tangent = (Math.random() - 0.5) * 0.5;
           wisps.push({
             x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
             vx: cosA * speed + sinA * tangent * speed,
             vy: sinA * speed - cosA * tangent * speed,
-            life: 0, maxLife: 40 + Math.random() * 60,
-            alpha: 0.04 + realLoud * 0.08, size: 2 + Math.random() * 3,
+            life: 0, maxLife: 50 + Math.random() * 80,
+            alpha: 0.08 + realLoud * 0.14, size: 3 + Math.random() * 5,
           });
         }
       }
@@ -2806,18 +2806,40 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       for (let i = wisps.length - 1; i >= 0; i--) {
         const wp = wisps[i];
         wp.x += wp.vx; wp.y += wp.vy;
-        wp.vx += (Math.random() - 0.5) * 0.15; // wander
-        wp.vy += (Math.random() - 0.5) * 0.15;
+        wp.vx += (Math.random() - 0.5) * 0.2;
+        wp.vy += (Math.random() - 0.5) * 0.2;
         wp.life++;
         const lifeFrac = wp.life / wp.maxLife;
-        const fadeAlpha = wp.alpha * (1 - lifeFrac * lifeFrac); // quadratic fade
-        if (fadeAlpha < 0.005 || wp.life > wp.maxLife) { wisps.splice(i, 1); continue; }
+        const fadeAlpha = wp.alpha * (1 - lifeFrac * lifeFrac);
+        if (fadeAlpha < 0.004 || wp.life > wp.maxLife) { wisps.splice(i, 1); continue; }
         ctx.beginPath();
         ctx.moveTo(wp.x, wp.y);
         ctx.lineTo(wp.x - wp.vx * wp.size, wp.y - wp.vy * wp.size);
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
-        ctx.lineWidth = 0.5 + (1 - lifeFrac) * 0.5;
+        ctx.lineWidth = 0.6 + (1 - lifeFrac) * 0.8;
         ctx.stroke();
+      }
+
+      // ── Interior tendrils: frequency-driven lines inside the orb ──
+      if (isActive && hasFabric && activity > 0.3) {
+        const innerCol = col;
+        const innerAlpha = activity * 0.06 * (0.5 + realLoud * 0.5);
+        for (let i = 0; i < N; i += 4) {
+          const th1 = (i / N) * Math.PI * 2 + rot;
+          const opp = (i + Math.floor(N / 2) + Math.floor(Math.random() * 8 - 4) + N) % N;
+          const th2 = (opp / N) * Math.PI * 2 + rot;
+          const r1 = baseR * (0.3 + points[i] * 0.5);
+          const r2 = baseR * (0.3 + points[opp] * 0.5);
+          const x1 = cx + Math.cos(th1) * r1, y1 = cy + Math.sin(th1) * r1;
+          const x2 = cx + Math.cos(th2) * r2, y2 = cy + Math.sin(th2) * r2;
+          const cpOff = noise2D(i * 0.3, phase * 0.2) * baseR * 0.25 * activity;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, x2, y2);
+          ctx.strokeStyle = `rgba(${innerCol[0]},${innerCol[1]},${innerCol[2]},${innerAlpha * (0.3 + points[i] * 0.7)})`;
+          ctx.lineWidth = 0.3 + activity * 0.4;
+          ctx.stroke();
+        }
       }
 
       // ── Orb layers (same depth system) ──
@@ -2878,22 +2900,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // ── Sparks: burst on beats/onsets (in front of orb) ──
       const sparks = sparksRef.current;
       if (hasFabric && isActive) {
-        const shouldBurst = (snap.onset && (snap.onset_strength || 0) > 0.4) || (snap.beat && (snap.beat_strength || 0) > 0.5);
+        const shouldBurst = (snap.onset && (snap.onset_strength || 0) > 0.3) || (snap.beat && (snap.beat_strength || 0) > 0.35);
         if (shouldBurst) {
           const strength = Math.max(snap.onset_strength || 0, snap.beat_strength || 0);
-          const count = Math.floor(4 + strength * 10); // 4–14 sparks
+          const count = Math.floor(8 + strength * 16); // 8–24 sparks
           for (let s = 0; s < count; s++) {
-            if (sparks.length >= 40) break;
+            if (sparks.length >= 80) break;
             const angle = Math.random() * Math.PI * 2;
             const cosA = Math.cos(angle), sinA = Math.sin(angle);
-            const surfaceR = baseR * (1.1 + realLoud * 0.4);
-            const speed = baseR * (0.015 + strength * 0.03);
+            const surfaceR = baseR * (1.1 + realLoud * 0.5);
+            const speed = baseR * (0.02 + strength * 0.04);
             sparks.push({
               x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
-              vx: cosA * speed * (0.7 + Math.random() * 0.6),
-              vy: sinA * speed * (0.7 + Math.random() * 0.6),
-              life: 0, maxLife: 15 + Math.random() * 20,
-              alpha: 0.12 + strength * 0.2,
+              vx: cosA * speed * (0.6 + Math.random() * 0.8),
+              vy: sinA * speed * (0.6 + Math.random() * 0.8),
+              life: 0, maxLife: 20 + Math.random() * 30,
+              alpha: 0.18 + strength * 0.25,
             });
           }
         }
@@ -2902,13 +2924,13 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       for (let i = sparks.length - 1; i >= 0; i--) {
         const sp = sparks[i];
         sp.x += sp.vx; sp.y += sp.vy;
-        sp.vx *= 0.96; sp.vy *= 0.96; // decelerate
+        sp.vx *= 0.97; sp.vy *= 0.97; // slower deceleration = travel further
         sp.life++;
         const lifeFrac = sp.life / sp.maxLife;
         const fadeAlpha = sp.alpha * (1 - lifeFrac);
-        if (fadeAlpha < 0.008 || sp.life > sp.maxLife) { sparks.splice(i, 1); continue; }
+        if (fadeAlpha < 0.006 || sp.life > sp.maxLife) { sparks.splice(i, 1); continue; }
         ctx.beginPath();
-        ctx.arc(sp.x, sp.y, 0.8 + (1 - lifeFrac) * 0.8, 0, Math.PI * 2);
+        ctx.arc(sp.x, sp.y, 1.0 + (1 - lifeFrac) * 1.2, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
         ctx.fill();
       }
