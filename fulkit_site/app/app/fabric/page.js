@@ -798,6 +798,7 @@ function SignalTerrain({
         const t = i / T_POINTS;
         // Soft edge taper — only fades the first/last 8% instead of shaping a bell
         const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
+        const envelope = edge; // alias for procedural path compatibility
 
         let amp;
         if (hasFabric && !live.active) {

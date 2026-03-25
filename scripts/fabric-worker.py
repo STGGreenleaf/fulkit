@@ -124,9 +124,9 @@ def extract_features(pcm_data: bytes) -> list[dict]:
             else:
                 bands[name] = float(np.mean(fft_mag[lo:hi]) / fft_max)
 
-        # Loudness (RMS of time domain)
+        # Loudness (RMS of time domain) — store raw, normalize after
         rms = float(np.sqrt(np.mean(window ** 2)))
-        loudness = min(1.0, rms * 5)  # scale up, cap at 1
+        loudness = rms  # raw RMS, normalized in post-pass
 
         # Spectral centroid (weighted average frequency)
         freqs = np.fft.rfftfreq(SAMPLES_PER_WINDOW, 1.0 / SAMPLE_RATE)
@@ -176,16 +176,28 @@ def extract_features(pcm_data: bytes) -> list[dict]:
             "spectral_centroid": round(float(centroid), 4),
             "spectral_spread": round(float(min(1.0, spread)), 4),
             "spectral_rolloff": round(float(rolloff), 4),
-            "spectral_flux": round(float(min(1.0, flux)), 4),
+            "spectral_flux": round(float(flux), 4),  # raw, normalized in post-pass
             "zero_crossing_rate": round(float(zcr), 4),
-            "dynamic_range": round(float(min(1.0, dynamic_range)), 4),
-            "flux": round(float(min(1.0, flux)), 4),
+            "dynamic_range": round(float(dynamic_range), 4),
+            "flux": round(float(flux), 4),  # raw, normalized in post-pass
             "onset": bool(onset),
             "onset_strength": round(float(onset_strength), 4),
             "beat": False,
             "beat_strength": 0.0,
         }
         timeline.append(snapshot)
+
+    # ── Normalization pass — scale to 0–1 relative to track's own range ──
+    if timeline:
+        max_loud = max(s["loudness"] for s in timeline) or 1.0
+        max_flux = max(s["flux"] for s in timeline) or 1.0
+        max_dr = max(s["dynamic_range"] for s in timeline) or 1.0
+        max_sf = max(s["spectral_flux"] for s in timeline) or 1.0
+        for s in timeline:
+            s["loudness"] = round(s["loudness"] / max_loud, 4)
+            s["flux"] = round(s["flux"] / max_flux, 4)
+            s["spectral_flux"] = round(s["spectral_flux"] / max_sf, 4)
+            s["dynamic_range"] = round(min(1.0, s["dynamic_range"] / max_dr), 4)
 
     # ── Beat detection pass ──
     if len(timeline) > 10:
