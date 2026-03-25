@@ -3189,8 +3189,14 @@ export default function FabricPage() {
   const [showCrates, setShowCrates] = useState(true);
   const [showSets, setShowSets] = useState(true);
 
-  // Cross-column drag (tracks → sets)
-  const crossDragTrack = useRef(null);
+  // ═══ Centralized Drag Intent ═══
+  // Single ref tracks what's being dragged and why. Every drop handler checks
+  // intent.type before acting, calls e.stopPropagation(), then clears intent.
+  // Types: "set-track" (within/cross set), "crate-track" (from Guy's Crate),
+  //        "external-track" (B-Side/discovery/search/crate-browse),
+  //        "set-header" (reorder sets), "crate-header" (reorder crates)
+  const dragIntent = useRef(null);
+  const clearDragIntent = useCallback(() => { dragIntent.current = null; }, []);
   const [dragOverCol, setDragOverCol] = useState(null);
 
   const PANELS = [
@@ -3422,6 +3428,7 @@ export default function FabricPage() {
 
   const handleCrateDrop = useCallback((e, toIdx) => {
     e.preventDefault();
+    e.stopPropagation();
     if (crateDragIdx != null && crateDragIdx !== toIdx) {
       setCrates(prev => {
         const next = [...prev];
@@ -3458,13 +3465,26 @@ export default function FabricPage() {
 
   const handleDrop = useCallback((e, toIdx, setId, tracks) => {
     e.preventDefault();
-    if (dragIdx != null && dragIdx !== toIdx) {
+    e.stopPropagation();
+    const intent = dragIntent.current;
+    clearDragIntent();
+    // Within-set reorder: only act if this is a set-track drag from the SAME set
+    if (intent?.type === "set-track" && intent.fromSetId === setId && dragIdx != null && dragIdx !== toIdx) {
       reorderFlagged(dragIdx, toIdx, setId, tracks);
+    }
+    // Cross-set track drop onto a track row — add to this set at position
+    else if (intent && (intent.type === "set-track" || intent.type === "crate-track" || intent.type === "external-track") && intent.fromSetId !== setId) {
+      const t = intent.track;
+      if (intent.fromSetId) {
+        moveTrackToSet(t, intent.fromSetId, setId);
+      } else {
+        addTrackToSet(t, setId);
+      }
     }
     setDragIdx(null);
     setDragOverIdx(null);
     if (dragNode.current) dragNode.current.style.opacity = "1";
-  }, [dragIdx, reorderFlagged]);
+  }, [dragIdx, reorderFlagged, moveTrackToSet, addTrackToSet, clearDragIntent]);
 
   const justDragged = useRef(false);
   const handleDragEnd = useCallback(() => {
@@ -4166,8 +4186,8 @@ export default function FabricPage() {
                                       return (
                                       <div key={si}
                                         draggable
-                                        onDragStart={() => { crossDragTrack.current = { id: s.trackId, title: s.title, artist: s.artist }; }}
-                                        onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                                        onDragStart={() => { dragIntent.current = { type: "external-track", track: { id: s.trackId, title: s.title, artist: s.artist } }; }}
+                                        onDragEnd={() => { clearDragIntent(); setDragOverCol(null); }}
                                         style={{
                                         fontFamily: "var(--font-primary)",
                                         fontSize: "var(--font-size-xs)",
@@ -4837,8 +4857,8 @@ export default function FabricPage() {
                           <div
                             key={track.source_id || i}
                             draggable
-                            onDragStart={() => { crossDragTrack.current = { id: track.source_id, title: track.title, artist: track.artist, album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null, duration: Math.round((track.duration_ms || 0) / 1000) }; }}
-                            onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                            onDragStart={() => { dragIntent.current = { type: "external-track", track: { id: track.source_id, title: track.title, artist: track.artist, album: discoveryAlbum?.name || "", art: discoveryAlbum?.image || null, duration: Math.round((track.duration_ms || 0) / 1000) } }; }}
+                            onDragEnd={() => { clearDragIntent(); setDragOverCol(null); }}
                             onClick={() => playTrackInContext({
                               id: track.source_id,
                               title: track.title,
@@ -5457,8 +5477,8 @@ export default function FabricPage() {
                         return (
                           <div key={track.id}
                             draggable={!isDowned}
-                            onDragStart={!isDowned ? () => { crossDragTrack.current = { ...track, _fromSource: "guy-crate" }; } : undefined}
-                            onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                            onDragStart={!isDowned ? () => { dragIntent.current = { type: "crate-track", track: { id: track.id, title: track.title, artist: track.artist, provider: track.provider, ytId: track.ytId, duration: track.duration, art: track.art }, fromSetId: "guy-crate" }; } : undefined}
+                            onDragEnd={() => { clearDragIntent(); setDragOverCol(null); }}
                             onClick={!isDowned ? () => playTrackInContext(track, "bsides", "guy-crate", guyCrate.tracks, i) : undefined}
                             style={{
                               display: "flex", alignItems: "center", gap: "var(--space-2)",
@@ -5721,8 +5741,8 @@ export default function FabricPage() {
                         <div
                           key={track.id}
                           draggable
-                          onDragStart={() => { crossDragTrack.current = trackObj; }}
-                          onDragEnd={() => { crossDragTrack.current = null; setDragOverCol(null); }}
+                          onDragStart={() => { dragIntent.current = { type: "external-track", track: trackObj }; }}
+                          onDragEnd={() => { clearDragIntent(); setDragOverCol(null); }}
                           onClick={() => playTrackInContext(trackObj, "crate", expandedCrate, crateTracks.map(t => ({
                             id: t.source_id, title: t.title, artist: t.artist,
                             duration: Math.round((t.duration_ms || 0) / 1000),
@@ -5950,11 +5970,18 @@ export default function FabricPage() {
               onDragOver={(e) => { e.preventDefault(); setDragOverCol("sets"); }}
               onDragLeave={() => setDragOverCol(null)}
               onDrop={() => {
-                if (crossDragTrack.current) {
-                  const t = crossDragTrack.current;
-                  flag(t);
-                  crossDragTrack.current = null;
+                // Column-level fallback: ADD-ONLY to active set. Never toggle, never remove.
+                // Only fires if inner handlers didn't stopPropagation (i.e. drop on column background).
+                const intent = dragIntent.current;
+                clearDragIntent();
+                if (intent && (intent.type === "external-track" || intent.type === "crate-track")) {
+                  // External/crate tracks → add to active set (not toggle)
+                  addTrackToSet(intent.track, activeSetId);
+                } else if (intent?.type === "set-track" && intent.fromSetId) {
+                  // Track from another set dropped on column bg → add to active set
+                  addTrackToSet(intent.track, activeSetId);
                 }
+                // set-header, reorder, or same-set track drops that somehow reach here → ignored
                 setDragOverCol(null);
               }}
               style={{
@@ -6052,6 +6079,7 @@ export default function FabricPage() {
                       <div
                         draggable
                         onDragStart={(e) => {
+                          dragIntent.current = { type: "set-header", setIdx };
                           setHeaderDragIdx(setIdx);
                           setDragNode.current = e.currentTarget;
                           setTimeout(() => { if (setDragNode.current) setDragNode.current.style.opacity = "0.4"; }, 0);
@@ -6062,27 +6090,30 @@ export default function FabricPage() {
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          // Cross-set track drag: MOVE track to this set (atomic)
-                          if (crossDragTrack.current && crossDragTrack.current._fromSet !== set.id) {
-                            const t = crossDragTrack.current;
-                            const trackData = { id: t.id, title: t.title, artist: t.artist, provider: t.provider, ytId: t.ytId, duration: t.duration, art: t.art };
-                            const fromId = t._fromSet || (t._fromSource === "guy-crate" ? "guy-crate" : null);
-                            if (fromId) {
-                              moveTrackToSet(trackData, fromId, set.id);
+                          e.stopPropagation();
+                          const intent = dragIntent.current;
+                          clearDragIntent();
+                          if (!intent) { /* no-op */ }
+                          // Track drag from a different source → MOVE/ADD to this set
+                          else if ((intent.type === "set-track" || intent.type === "crate-track" || intent.type === "external-track") && intent.fromSetId !== set.id) {
+                            const t = intent.track;
+                            if (intent.fromSetId) {
+                              moveTrackToSet(t, intent.fromSetId, set.id);
                             } else {
-                              addTrackToSet(trackData, set.id);
+                              addTrackToSet(t, set.id);
                             }
-                            crossDragTrack.current = null;
                           }
                           // Set header reorder
-                          else if (headerDragIdx !== null && headerDragIdx !== setIdx) {
-                            reorderSets(headerDragIdx, setIdx);
+                          else if (intent.type === "set-header" && intent.setIdx !== setIdx) {
+                            reorderSets(intent.setIdx, setIdx);
                           }
+                          // Any other intent (e.g. track dropped on own set header) — ignored safely
                           setHeaderDragIdx(null);
                           setHeaderDragOverIdx(null);
                           if (setDragNode.current) setDragNode.current.style.opacity = "1";
                         }}
                         onDragEnd={() => {
+                          clearDragIntent();
                           setHeaderDragIdx(null);
                           setHeaderDragOverIdx(null);
                           if (setDragNode.current) setDragNode.current.style.opacity = "1";
@@ -6241,10 +6272,10 @@ export default function FabricPage() {
                               <div
                                 key={track.id}
                                 draggable={isExpanded}
-                                onDragStart={isExpanded ? (e) => { handleDragStart(e, i); crossDragTrack.current = { ...track, _fromSet: set.id }; } : undefined}
+                                onDragStart={isExpanded ? (e) => { handleDragStart(e, i); dragIntent.current = { type: "set-track", track: { id: track.id, title: track.title, artist: track.artist, provider: track.provider, ytId: track.ytId, duration: track.duration, art: track.art }, fromSetId: set.id, fromIndex: i }; } : undefined}
                                 onDragOver={isExpanded ? (e) => handleDragOver(e, i) : undefined}
                                 onDrop={isExpanded ? (e) => handleDrop(e, i, set.id, set.tracks) : undefined}
-                                onDragEnd={() => { handleDragEnd(); crossDragTrack.current = null; }}
+                                onDragEnd={() => { handleDragEnd(); clearDragIntent(); }}
                                 onClick={() => { if (justDragged.current) return; switchSet(set.id); playTrackInContext(track, "set", set.id, set.tracks, i); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: "var(--space-2)",
