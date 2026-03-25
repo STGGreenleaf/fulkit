@@ -346,6 +346,300 @@ function MarqueeText({ children, style }) {
 // Layer 3: Live audio (mic via getUserMedia)
 // ═══════════════════════════════════════════════════════
 
+// ═════════════════════════════════════════════════════════
+// SIGNAL TERRAIN V4 — OG mountains + thumbprint data
+// Same visual rendering as OG (40 layers, centerY 78%, mountains
+// + reflection, quadratic curves). But driven by temporal buffers
+// from the thumbprint. The music shapes the mountains.
+// ═════════════════════════════════════════════════════════
+
+const V4_BUF_LEN = 120;
+const V4_RENDER_PTS = 80;
+const V4_HISTORY = 40;
+
+const V4_BANDS = [
+  { name: "sub",      w: 1.8, amp: 1.0,  decay: 0.92 },
+  { name: "bass",     w: 1.5, amp: 0.85, decay: 0.90 },
+  { name: "low_mid",  w: 1.2, amp: 0.70, decay: 0.88 },
+  { name: "mid",      w: 1.0, amp: 0.55, decay: 0.85 },
+  { name: "high_mid", w: 0.7, amp: 0.40, decay: 0.82 },
+  { name: "high",     w: 0.5, amp: 0.30, decay: 0.78 },
+  { name: "air",      w: 0.35, amp: 0.20, decay: 0.75 },
+];
+
+const V4_TOTAL_W = V4_BANDS.reduce((s, b) => s + b.w, 0);
+
+function SignalTerrainV4({
+  height = 220,
+  isPlaying = false,
+  trackId = null,
+  progress = 0,
+  duration = 0,
+  features = null,
+  getSnapshot = null,
+  onVisualize,
+}) {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const containerRef = useRef(null);
+  const [canvasWidth, setCanvasWidth] = useState(600);
+  const getSnapshotRef = useRef(getSnapshot);
+  getSnapshotRef.current = getSnapshot;
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const noiseRef = useRef(createNoise2D());
+  const historyRef = useRef([]);
+  const phaseRef = useRef(0);
+
+  // Per-band temporal buffers
+  const bufsRef = useRef(null);
+  const smoothRef = useRef(new Float32Array(7));
+
+  // Kinetic state machine
+  const kRef = useRef({
+    amplitude: 0.08, target: 0.08, state: "idle",
+    stateStart: 0, prevPlaying: false, prevTrackId: null,
+  });
+
+  // Procedural envelope
+  const envelopeRef = useRef({ trackId: null, envelope: null });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setCanvasWidth(Math.floor(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Track change
+  useEffect(() => {
+    noiseRef.current = createNoise2D();
+    historyRef.current = [];
+    if (bufsRef.current) { for (const buf of bufsRef.current) buf.fill(0); smoothRef.current.fill(0); }
+    const k = kRef.current;
+    if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
+      k.state = "skip-cut"; k.stateStart = performance.now(); k.target = 0;
+    }
+    k.prevTrackId = trackId;
+  }, [trackId]);
+
+  // Envelope
+  useEffect(() => {
+    if (!trackId || envelopeRef.current.trackId === trackId) return;
+    const bpm = features?.bpm || 100;
+    const energy = features?.energy || 50;
+    const dance = features?.danceability || 50;
+    const dur = duration > 0 ? duration * 1000 : 210000;
+    envelopeRef.current = { trackId, envelope: generateSongEnvelope(trackId, dur, bpm, energy, dance) };
+  }, [trackId, features, duration]);
+
+  useEffect(() => {
+    let running = true;
+    let lastFrame = 0;
+
+    const render = (timestamp) => {
+      if (!running) return;
+      animRef.current = requestAnimationFrame(render);
+      if (timestamp - lastFrame < 32) return;
+      lastFrame = timestamp;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      const noise2D = noiseRef.current;
+      const k = kRef.current;
+
+      if (!bufsRef.current) bufsRef.current = V4_BANDS.map(() => new Float32Array(V4_BUF_LEN));
+
+      // ── Kinetic state machine (same as OG) ──
+      const now = timestamp;
+      const elapsed = now - k.stateStart;
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 0.55; }
+      else if (!isPlaying && k.prevPlaying) { k.state = "wind-down"; k.stateStart = now; k.target = 0.08; }
+      k.prevPlaying = isPlaying;
+      if (k.state === "spool-up" && elapsed > 600) k.state = "active";
+      else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
+      else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
+      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.55; }
+      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
+      k.amplitude += (k.target - k.amplitude) * (k.state === "skip-cut" ? 0.2 : 0.06);
+
+      // Phase advance (BPM-synced)
+      const bpm = features?.bpm || 100;
+      const beatsPerSec = bpm / 60;
+      phaseRef.current += isPlaying ? (beatsPerSec / 30) * 0.15 : 0.004;
+      const phase = phaseRef.current;
+
+      // Audio features
+      const energy = (features?.energy || 50) / 100;
+      const acousticness = (features?.acousticness || 30) / 100;
+      const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
+
+      // Exhale
+      let exhaleMultiplier = 1;
+      if (isPlaying && duration > 0 && progress > 0) {
+        const remaining = duration * (1 - progress);
+        if (remaining < 6 && remaining > 0) exhaleMultiplier = 1 - ((1 - remaining / 6) * 0.7);
+      }
+
+      // Envelope
+      const env = envelopeRef.current.envelope;
+      let envelopeValue = 1;
+      if (env && env.length > 0 && isPlaying && progress > 0) {
+        envelopeValue = env[Math.min(env.length - 1, Math.floor(progress * env.length))];
+      }
+
+      // ── Read snapshot ──
+      const gsFn = getSnapshotRef.current;
+      const snap = gsFn ? gsFn(progressRef.current) : null;
+      const hasFabric = !!snap;
+
+      // ── Update band buffers ──
+      for (let b = 0; b < V4_BANDS.length; b++) {
+        const band = V4_BANDS[b];
+        const buf = bufsRef.current[b];
+        let raw;
+
+        if (hasFabric) {
+          raw = Math.pow(snap.bands?.[band.name] || 0, 0.6);
+          raw *= (0.6 + (snap.loudness || 0) * 0.4);
+          if (snap.onset) raw = Math.min(1, raw + (snap.onset_strength || 0) * 0.3);
+          if (snap.beat) raw *= (1 + (snap.beat_strength || 0) * 0.2);
+          raw *= k.amplitude / 0.55;
+          raw *= exhaleMultiplier;
+          raw = Math.max(0.02, Math.min(1.0, raw));
+        } else {
+          // Procedural fallback (same noise shape as OG)
+          const t_norm = b / 7;
+          const n1 = noise2D(t_norm * 4 + keyOffset, phase * 0.3) * 0.5;
+          const n2 = noise2D(t_norm * 8 + 100, phase * 0.5) * 0.25;
+          raw = Math.abs(n1 + n2) * k.amplitude * envelopeValue * exhaleMultiplier;
+          raw = Math.max(0, Math.min(1.0, raw));
+        }
+
+        // Asymmetric smoothing
+        const prev = smoothRef.current[b];
+        smoothRef.current[b] = raw > prev
+          ? prev + (raw - prev) * 0.88
+          : prev * band.decay + raw * (1 - band.decay);
+        const sm = smoothRef.current[b];
+
+        buf.copyWithin(0, 1);
+        buf[V4_BUF_LEN - 1] = sm;
+
+        // Onset flash
+        if (hasFabric && snap.onset && (snap.onset_strength || 0) > 0.3) {
+          for (let fi = V4_BUF_LEN - 3; fi < V4_BUF_LEN; fi++) buf[fi] = Math.min(1.0, buf[fi] * 1.4 + 0.12);
+        }
+      }
+
+      // ── Generate render points from temporal buffers ──
+      const points = [];
+      for (let i = 0; i < V4_RENDER_PTS; i++) {
+        const t = i / (V4_RENDER_PTS - 1);
+        const bufIdx = Math.min(V4_BUF_LEN - 1, Math.floor(t * V4_BUF_LEN));
+        const edge = Math.min(1, t / 0.06, (1 - t) / 0.06);
+
+        // Weighted sum of all band energies at this time position
+        let amp = 0;
+        for (let b = 0; b < V4_BANDS.length; b++) {
+          amp += bufsRef.current[b][bufIdx] * V4_BANDS[b].amp * V4_BANDS[b].w;
+        }
+        amp /= V4_TOTAL_W; // normalize to 0–1
+        amp *= edge;
+
+        // Slight noise texture (much less than OG — data does the work)
+        amp += noise2D(t * 6 + keyOffset, phase * 0.3) * 0.015;
+
+        points.push(Math.max(0, Math.min(1, amp)));
+      }
+
+      historyRef.current.push(points);
+      if (historyRef.current.length > V4_HISTORY) historyRef.current.shift();
+
+      // ── Render (exact OG mountain rendering) ──
+      const style = getComputedStyle(canvas);
+      const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [232, 230, 227];
+
+      ctx.clearRect(0, 0, w, h);
+      const layers = historyRef.current;
+      const centerY = h * 0.78;
+
+      for (let l = 0; l < layers.length; l++) {
+        const age = l / Math.max(1, layers.length - 1);
+        const data = layers[l];
+        const alpha = 0.012 + age * age * 0.16;
+        const baseLw = 0.3 + age * 1.0;
+        const lw = baseLw * (0.7 + acousticness * 0.6);
+        const yShift = (layers.length - 1 - l) * 1.1;
+        const maxUp = centerY - 4;
+        const maxDown = (h - centerY) - 4;
+
+        // Mountains
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const a = Math.min(data[i] * centerY * 1.6, maxUp - yShift);
+          const y = centerY - a - yShift;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            const prevX = ((i - 1) / (data.length - 1)) * w;
+            const prevA = Math.min(data[i - 1] * centerY * 1.4, maxUp - yShift);
+            const prevY = centerY - prevA - yShift;
+            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
+          }
+        }
+        const lastA = Math.min(data[data.length - 1] * centerY * 1.4, maxUp - yShift);
+        ctx.lineTo(w, centerY - lastA - yShift);
+        ctx.stroke();
+
+        // Reflection
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.35})`;
+        ctx.lineWidth = lw * 0.6;
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const a = Math.min(data[i] * centerY * 0.38, maxDown - (layers.length - 1 - l) * 0.4 - 1);
+          const y = centerY + a + (layers.length - 1 - l) * 0.4 + 1;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    };
+
+    animRef.current = requestAnimationFrame(render);
+    return () => { running = false; if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [canvasWidth, isPlaying, progress, duration, features]);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", position: "relative", overflow: "hidden" }}>
+      <canvas ref={canvasRef} width={canvasWidth} height={height} style={{ width: "100%", height, display: "block" }} />
+      {onVisualize && (
+        <button
+          onClick={onVisualize}
+          style={{ position: "absolute", top: 8, right: 10, background: "transparent", border: "none", cursor: "pointer", padding: 4, opacity: 0.15, transition: "opacity 300ms", color: "var(--color-text-muted)", display: "flex", alignItems: "center" }}
+          title="Visualize"
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.5)}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.15)}
+        >
+          <ExternalLink size={12} strokeWidth={1.5} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 const T_LAYERS = 35;
 const T_POINTS = 80;
 
@@ -2565,7 +2859,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n <= 3 ? "pointer" : "default",
+              cursor: n <= 4 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
@@ -3632,6 +3926,18 @@ export default function FabricPage() {
                 onVisualize={() => setVisualizing(true)}
               />
             )}
+            {vizMode === 4 && (
+              <SignalTerrainV4
+                height={120}
+                isPlaying={isPlaying}
+                trackId={currentTrack?.id}
+                progress={progress}
+                duration={currentTrack?.duration || 0}
+                features={features}
+                getSnapshot={getSnapshot}
+                onVisualize={() => setVisualizing(true)}
+              />
+            )}
           </div>
           </>}
 
@@ -3690,13 +3996,13 @@ export default function FabricPage() {
                 </button>
               </Tooltip>
             ))}
-            {/* Viz mode selector — right justified */}
-            <div style={{ marginLeft: "auto", display: "flex", gap: 2, alignItems: "center" }}>
+            {/* Viz mode selector — owner only, hidden when collapsed */}
+            {deckExpanded && isOwner && <div style={{ marginLeft: "auto", display: "flex", gap: 2, alignItems: "center" }}>
               {[1, 2, 3, 4].map((n) => (
                 <button
                   key={n}
                   onClick={() => {
-                    if (n <= 3) {
+                    if (n <= 4) {
                       setVizMode(n);
                       try { localStorage.setItem("fulkit-viz-mode", String(n)); } catch {}
                     }
@@ -3709,17 +4015,17 @@ export default function FabricPage() {
                     fontSize: "var(--font-size-xs)",
                     fontWeight: vizMode === n ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
                     fontFamily: "var(--font-mono)",
-                    cursor: n <= 3 ? "pointer" : "default",
+                    cursor: n <= 4 ? "pointer" : "default",
                     padding: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: n <= 3 ? (vizMode === n ? 1 : 0.5) : 0.2,
+                    opacity: n <= 4 ? (vizMode === n ? 1 : 0.5) : 0.2,
                     transition: `all var(--duration-fast) var(--ease-default)`,
                   }}
                 >
                   {n}
                 </button>
               ))}
-            </div>
+            </div>}
           </div>
 
           {/* ═══ 3-COLUMN WORKSPACE ═══ */}
