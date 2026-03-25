@@ -1849,6 +1849,10 @@ export default function FabricPage() {
   const [mixTracks, setMixTracks] = useState([]);
   const [mixLoading, setMixLoading] = useState(false);
   const [visualizing, setVisualizing] = useState(false);
+  const [vizMode, setVizMode] = useState(() => {
+    if (typeof window === "undefined") return 2;
+    try { return parseInt(localStorage.getItem("fulkit-viz-mode")) || 2; } catch { return 2; }
+  });
   const [posterOpen, setPosterOpen] = useState(false);
   const [posterTimestamp, setPosterTimestamp] = useState(0);
   const [showSpotifyBrowser, setShowSpotifyBrowser] = useState(false);
@@ -2703,18 +2707,23 @@ export default function FabricPage() {
             </div>
           </div>
 
-          {/* ═══ SIGNAL TERRAIN — full-width live visualizer ═══ */}
+          {/* ═══ VISUALIZATION STRIP ═══ */}
           <div style={{ flexShrink: 0 }}>
-            <SignalTerrain
-              height={120}
-              isPlaying={isPlaying}
-              trackId={currentTrack?.id}
-              progress={progress}
-              duration={currentTrack?.duration || 0}
-              features={features}
-              getSnapshot={getSnapshot}
-              onVisualize={() => setVisualizing(true)}
-            />
+            {vizMode === 2 && (
+              <SignalTerrain
+                height={120}
+                isPlaying={isPlaying}
+                trackId={currentTrack?.id}
+                progress={progress}
+                duration={currentTrack?.duration || 0}
+                features={features}
+                getSnapshot={getSnapshot}
+                onVisualize={() => setVisualizing(true)}
+              />
+            )}
+            {vizMode === 1 && (
+              <div style={{ height: 120, width: "100%" }} />
+            )}
           </div>
           </>}
 
@@ -2773,6 +2782,36 @@ export default function FabricPage() {
                 </button>
               </Tooltip>
             ))}
+            {/* Viz mode selector — right justified */}
+            <div style={{ marginLeft: "auto", display: "flex", gap: 2, alignItems: "center" }}>
+              {[1, 2, 3, 4].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => {
+                    if (n <= 2) {
+                      setVizMode(n);
+                      try { localStorage.setItem("fulkit-viz-mode", String(n)); } catch {}
+                    }
+                  }}
+                  style={{
+                    width: 24, height: 24,
+                    background: "transparent",
+                    border: "none",
+                    color: vizMode === n ? "var(--color-text)" : "var(--color-text-muted)",
+                    fontSize: "var(--font-size-xs)",
+                    fontWeight: vizMode === n ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
+                    fontFamily: "var(--font-mono)",
+                    cursor: n <= 2 ? "pointer" : "default",
+                    padding: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    opacity: n <= 2 ? (vizMode === n ? 1 : 0.5) : 0.2,
+                    transition: `all var(--duration-fast) var(--ease-default)`,
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* ═══ 3-COLUMN WORKSPACE ═══ */}
