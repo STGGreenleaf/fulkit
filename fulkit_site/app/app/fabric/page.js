@@ -490,6 +490,385 @@ function generateSongEnvelope(trackId, durationMs, bpm, energy, danceability) {
   return envelope;
 }
 
+// ═════════════════════════════════════════════════════════
+// SIGNAL TERRAIN V2 — Data-driven terrain visualization
+// "A deaf person should feel the music."
+// No synthetic carriers. The data IS the visual.
+// ═════════════════════════════════════════════════════════
+
+const V2_PTS = 120;
+const V2_TOP = 27;
+const V2_BOT = 38;
+const V2_MAX_GHOSTS = 4;
+const V2_MAX_RUNGS = 16;
+const V2_MAX_PARTICLES = 30;
+
+const V2_BANDS = [
+  { name: "sub",      w: 1.8, amp: 1.0,  decay: 0.92 },
+  { name: "bass",     w: 1.5, amp: 0.85, decay: 0.90 },
+  { name: "low_mid",  w: 1.2, amp: 0.70, decay: 0.88 },
+  { name: "mid",      w: 1.0, amp: 0.55, decay: 0.85 },
+  { name: "high_mid", w: 0.7, amp: 0.40, decay: 0.82 },
+  { name: "high",     w: 0.5, amp: 0.30, decay: 0.78 },
+  { name: "air",      w: 0.35, amp: 0.20, decay: 0.75 },
+];
+
+const V2_TOTAL_W = V2_BANDS.reduce((s, b) => s + b.w, 0);
+
+function SignalTerrainV2({
+  height = 220,
+  isPlaying = false,
+  trackId = null,
+  progress = 0,
+  duration = 0,
+  features = null,
+  getSnapshot = null,
+  onVisualize,
+}) {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const containerRef = useRef(null);
+  const [canvasWidth, setCanvasWidth] = useState(600);
+  const getSnapshotRef = useRef(getSnapshot);
+  getSnapshotRef.current = getSnapshot;
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const noiseRef = useRef(createNoise2D());
+
+  // Per-band temporal buffers
+  const bufsRef = useRef(null);
+  const smoothRef = useRef(new Float32Array(7));
+  const spineRef = useRef(new Float32Array(V2_PTS));
+  const fluxRef = useRef(new Float32Array(V2_PTS));
+  const prevSpineRef = useRef(0);
+
+  // Beat + particle state
+  const sRef = useRef({
+    ghosts: [], rungs: [], particles: [],
+    beatFlash: 0, time: 0, centerWander: 0,
+    lineSeeds: Array.from({ length: V2_TOP + V2_BOT }, (_, i) => i * 7.31 + 3.14),
+  });
+
+  // Kinetic state machine
+  const kRef = useRef({
+    amplitude: 0.08, target: 0.08, state: "idle",
+    stateStart: 0, prevPlaying: false, prevTrackId: null,
+  });
+
+  // Responsive width
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setCanvasWidth(Math.floor(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Track change
+  useEffect(() => {
+    noiseRef.current = createNoise2D();
+    if (bufsRef.current) { for (const buf of bufsRef.current) buf.fill(0); smoothRef.current.fill(0); }
+    spineRef.current.fill(0); fluxRef.current.fill(0); prevSpineRef.current = 0;
+    const s = sRef.current;
+    s.ghosts = []; s.rungs = []; s.particles = []; s.beatFlash = 0;
+    s.lineSeeds = Array.from({ length: V2_TOP + V2_BOT }, (_, i) => i * 7.31 + 3.14 + (trackId?.charCodeAt(0) || 0) * 0.1);
+    const k = kRef.current;
+    if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
+      k.state = "skip-cut"; k.stateStart = performance.now(); k.target = 0;
+    }
+    k.prevTrackId = trackId;
+  }, [trackId]);
+
+  // Render loop
+  useEffect(() => {
+    let running = true;
+    let lastFrame = 0;
+
+    const render = (timestamp) => {
+      if (!running) return;
+      animRef.current = requestAnimationFrame(render);
+      if (timestamp - lastFrame < 32) return;
+      const dt = Math.min(0.05, (timestamp - lastFrame) / 1000);
+      lastFrame = timestamp;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      const noise2D = noiseRef.current;
+      const k = kRef.current;
+      const s = sRef.current;
+
+      if (!bufsRef.current) bufsRef.current = V2_BANDS.map(() => new Float32Array(V2_PTS));
+      s.time += dt;
+
+      // ── Kinetic state machine ──
+      const now = timestamp;
+      const elapsed = now - k.stateStart;
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 1.0; }
+      else if (!isPlaying && k.prevPlaying) { k.state = "wind-down"; k.stateStart = now; k.target = 0.08; }
+      k.prevPlaying = isPlaying;
+      if (k.state === "spool-up" && elapsed > 600) k.state = "active";
+      else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
+      else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
+      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 1.0; }
+      else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 1.0 : 0.08; }
+      k.amplitude += (k.target - k.amplitude) * (k.state === "skip-cut" ? 0.2 : 0.06);
+
+      // ── Read snapshot ──
+      const gsFn = getSnapshotRef.current;
+      const snap = gsFn ? gsFn(progressRef.current) : null;
+      const hasFabric = !!snap;
+
+      // ── Update band buffers ──
+      let totalEnergy = 0;
+      for (let b = 0; b < V2_BANDS.length; b++) {
+        const band = V2_BANDS[b];
+        const buf = bufsRef.current[b];
+        let raw;
+
+        if (hasFabric) {
+          raw = Math.pow(snap.bands?.[band.name] || 0, 0.6);
+          raw *= (0.6 + (snap.loudness || 0) * 0.4);
+          if (snap.onset) raw = Math.min(1, raw + (snap.onset_strength || 0) * 0.25);
+          if (snap.beat) raw *= (1 + (snap.beat_strength || 0) * 0.15);
+          raw *= k.amplitude;
+          raw = Math.max(0.02, Math.min(1.0, raw));
+        } else if (k.state === "idle") {
+          const breath = Math.sin(s.time * 0.35) * 0.5 + 0.5;
+          raw = 0.015 + breath * 0.025;
+        } else {
+          raw = (noise2D(s.time * 0.08 + b * 7.3, b * 4.1 + 50) * 0.5 + 0.5) * k.amplitude * 0.3;
+          raw = Math.max(0.02, Math.min(1.0, raw));
+        }
+
+        // Asymmetric smoothing: near-instant attack, per-band decay
+        const prev = smoothRef.current[b];
+        smoothRef.current[b] = raw > prev
+          ? prev + (raw - prev) * 0.88
+          : prev * band.decay + raw * (1 - band.decay);
+        const sm = smoothRef.current[b];
+
+        buf.copyWithin(0, 1);
+        buf[V2_PTS - 1] = sm;
+
+        // Onset flash
+        if (hasFabric && snap.onset && (snap.onset_strength || 0) > 0.3) {
+          for (let fi = V2_PTS - 3; fi < V2_PTS; fi++) buf[fi] = Math.min(1.0, buf[fi] * 1.4 + 0.12);
+        }
+
+        totalEnergy += sm * band.w;
+      }
+
+      // ── Spine + flux ──
+      const spine = spineRef.current;
+      const flux = fluxRef.current;
+      const spineVal = totalEnergy / V2_TOTAL_W;
+      const fluxVal = Math.abs(spineVal - prevSpineRef.current);
+      prevSpineRef.current = spineVal;
+      spine.copyWithin(0, 1); spine[V2_PTS - 1] = spineVal;
+      flux.copyWithin(0, 1); flux[V2_PTS - 1] = fluxVal;
+
+      // ── Beat / onset events ──
+      if (hasFabric && snap.beat && spineVal > 0.15) {
+        if (s.ghosts.length < V2_MAX_GHOSTS) s.ghosts.push({ profile: Float32Array.from(spine), life: 1.0 });
+        s.beatFlash = 1.0;
+      }
+
+      if (hasFabric && snap.onset && spineVal > 0.1 && s.particles.length < V2_MAX_PARTICLES) {
+        const count = 2 + Math.floor(Math.random() * 4);
+        const maxD = h * 0.48;
+        for (let p = 0; p < count; p++) {
+          const side = Math.random() > 0.5 ? 1 : -1;
+          s.particles.push({
+            x: w * 0.95, y: h / 2 + side * spineVal * maxD * (0.3 + Math.random() * 0.7),
+            vx: (Math.random() - 0.5) * 0.4, vy: (0.4 + Math.random() * 1.4) * side,
+            life: 1.0, size: 0.3 + Math.random() * 1.0, decay: 0.012 + Math.random() * 0.021,
+          });
+        }
+      }
+
+      // Update particles
+      for (let i = s.particles.length - 1; i >= 0; i--) {
+        const p = s.particles[i];
+        p.x += p.vx; p.y += p.vy; p.vx *= 0.97; p.vy *= 0.97; p.life -= p.decay;
+        if (p.life <= 0) s.particles.splice(i, 1);
+      }
+      // Update ghosts
+      for (let i = s.ghosts.length - 1; i >= 0; i--) { s.ghosts[i].life -= 0.01; if (s.ghosts[i].life <= 0) s.ghosts.splice(i, 1); }
+      // Update rungs
+      for (let i = s.rungs.length - 1; i >= 0; i--) { s.rungs[i].x -= 0.8; s.rungs[i].life -= 0.015; if (s.rungs[i].life <= 0 || s.rungs[i].x < 0) s.rungs.splice(i, 1); }
+      // Beat flash decay
+      s.beatFlash *= 0.85;
+      // Center wander
+      s.centerWander = noise2D(s.time * 0.1, 42) * 3;
+
+      // ══════ DRAW ══════
+      const textColor = getComputedStyle(canvas).getPropertyValue("--color-text").trim() || "#e8e6e3";
+      const tc = textColor.startsWith("#")
+        ? [parseInt(textColor.slice(1, 3), 16), parseInt(textColor.slice(3, 5), 16), parseInt(textColor.slice(5, 7), 16)]
+        : [232, 230, 227];
+
+      ctx.clearRect(0, 0, w, h);
+      const centerY = h * 0.5 + s.centerWander;
+      const maxDisp = h * 0.48;
+      const edgeTaper = (t) => Math.min(1, t / 0.08, (1 - t) / 0.08);
+
+      // ── Layer 1: Ghost echoes ──
+      for (const ghost of s.ghosts) {
+        const alpha = ghost.life * ghost.life * 0.06;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = 0.35;
+        for (const dir of [-1, 1]) {
+          ctx.beginPath();
+          for (let i = 0; i < ghost.profile.length; i++) {
+            const x = (i / (ghost.profile.length - 1)) * w;
+            const y = centerY + dir * ghost.profile[i] * maxDisp * 0.6 * edgeTaper(i / (ghost.profile.length - 1));
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      // ── Layer 2: Terrain (65 lines) ──
+      const drawSide = (numLines, dir, bassW, trebleW) => {
+        for (let l = 0; l < numLines; l++) {
+          const age = l / Math.max(1, numLines - 1);
+          const tOff = Math.floor(age * 14);
+          const alpha = 0.015 + age * 0.2;
+          let lw = 0.2 + age * 0.5;
+          if (age > 0.9 && s.beatFlash > 0.4) lw += 0.4;
+          const dispScale = 0.2 + age * 0.8;
+          const seed = s.lineSeeds[dir === 1 ? l : V2_BOT + l];
+          const ampVar = 0.82 + (noise2D(seed, s.time * 0.2) * 0.5 + 0.5) * 0.22;
+
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          for (let i = 0; i < V2_PTS; i++) {
+            const x = (i / (V2_PTS - 1)) * w;
+            const t = i / (V2_PTS - 1);
+            const edge = edgeTaper(t);
+            const bIdx = Math.max(0, i - tOff);
+
+            // Bass displacement (sub + bass + low_mid)
+            let bassD = 0;
+            for (let b = 0; b < 3; b++) bassD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.22;
+            // Treble displacement (mid + high_mid + high + air)
+            let trebD = 0;
+            for (let b = 3; b < 7; b++) trebD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.22;
+            const combined = bassD * bassW + trebD * trebleW;
+
+            const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * 1.5 * edge;
+            let streak = 0;
+            if (age > 0.85 && i > V2_PTS - 5) streak = flux[i] * 8 * (i - (V2_PTS - 5)) / 4;
+
+            const y = centerY + dir * (combined * dispScale * maxDisp * ampVar * edge) + n + dir * streak;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      };
+      drawSide(V2_BOT, 1, 1.0, 0.4);
+      drawSide(V2_TOP, -1, 0.3, 1.0);
+
+      // ── Layer 3: DNA Helix ──
+      for (let strand = 0; strand < 3; strand++) {
+        const sPhase = (strand * 2 * Math.PI) / 3;
+        const aMul = [0.85, 1.0, 1.15][strand];
+        for (let trail = 0; trail < 2; trail++) {
+          ctx.beginPath();
+          for (let i = 0; i < V2_PTS; i++) {
+            const t = i / (V2_PTS - 1);
+            const x = t * w;
+            const edge = edgeTaper(t);
+            const twist = Math.sin(i * 0.15 - s.time * 4.2 + sPhase);
+            const openAmt = 5 + spine[i] * 14 + flux[i] * 8;
+            const hNoise = noise2D(t * 7.2 + strand * 50, s.time * 0.8) * 1.5 * edge;
+            const y = centerY + twist * openAmt * aMul * edge + hNoise + trail * 0.5;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          const depth = Math.cos(60 * 0.15 - s.time * 4.2 + sPhase) * 0.5 + 0.5;
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${depth * 0.22 * (trail === 0 ? 1 : 0.4)})`;
+          ctx.lineWidth = 0.3 + depth * 0.4;
+          ctx.stroke();
+        }
+      }
+
+      // Spawn beat rungs (after helix so we have positions)
+      if (hasFabric && snap.beat && s.rungs.length < V2_MAX_RUNGS) {
+        const xi = V2_PTS - 1;
+        const twist0 = Math.sin(xi * 0.15 - s.time * 4.2);
+        const twist1 = Math.sin(xi * 0.15 - s.time * 4.2 + 2 * Math.PI / 3);
+        const openAmt = 5 + spineVal * 14 + fluxVal * 8;
+        s.rungs.push({ x: xi, twist0, twist1, openAmt, life: 1.0, energy: spineVal });
+      }
+
+      // ── Layer 4: Beat rungs ──
+      for (const rung of s.rungs) {
+        const ri = Math.max(0, Math.floor(rung.x));
+        const rx = (rung.x / V2_PTS) * w;
+        const edge = edgeTaper(rung.x / V2_PTS);
+        if (edge < 0.01) continue;
+        const twist0 = Math.sin(ri * 0.15 - s.time * 4.2);
+        const twist1 = Math.sin(ri * 0.15 - s.time * 4.2 + 2 * Math.PI / 3);
+        const spE = spine[ri] || 0;
+        const flE = flux[ri] || 0;
+        const openAmt = 5 + spE * 14 + flE * 8;
+        const y0 = centerY + twist0 * openAmt * 0.85;
+        const y1 = centerY + twist1 * openAmt * 1.0;
+        const alpha = rung.life * 0.1 * edge;
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.lineWidth = 0.3 + rung.energy * 0.5;
+        ctx.beginPath(); ctx.moveTo(rx, y0); ctx.lineTo(rx, y1); ctx.stroke();
+      }
+
+      // ── Layer 5: Particles ──
+      for (const p of s.particles) {
+        const alpha = p.life * p.life * 0.5;
+        if (alpha < 0.005) continue;
+        ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // ── Layer 6: Beat flash spine ──
+      if (s.beatFlash > 0.4) {
+        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${s.beatFlash * 0.05})`;
+        ctx.lineWidth = s.beatFlash * 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < V2_PTS; i++) {
+          const x = (i / (V2_PTS - 1)) * w;
+          const y = centerY + Math.sin(i * 0.1 - s.time * 2) * 2;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    };
+
+    animRef.current = requestAnimationFrame(render);
+    return () => { running = false; if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [canvasWidth, isPlaying, duration, features]);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", position: "relative", overflow: "hidden" }}>
+      <canvas ref={canvasRef} width={canvasWidth} height={height} style={{ width: "100%", height, display: "block" }} />
+      {onVisualize && (
+        <button
+          onClick={onVisualize}
+          style={{ position: "absolute", top: 8, right: 10, background: "transparent", border: "none", cursor: "pointer", padding: 4, opacity: 0.15, transition: "opacity 300ms", color: "var(--color-text-muted)", display: "flex", alignItems: "center" }}
+          title="Visualize"
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.5)}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.15)}
+        >
+          <ExternalLink size={12} strokeWidth={1.5} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 function SignalTerrain({
   height = 220,
   isPlaying = false,
@@ -1851,7 +2230,7 @@ export default function FabricPage() {
   const [visualizing, setVisualizing] = useState(false);
   const [vizMode, setVizMode] = useState(() => {
     if (typeof window === "undefined") return 2;
-    try { return parseInt(localStorage.getItem("fulkit-viz-mode")) || 2; } catch { return 2; }
+    try { return parseInt(localStorage.getItem("fulkit-viz-mode")) || 1; } catch { return 1; }
   });
   const [posterOpen, setPosterOpen] = useState(false);
   const [posterTimestamp, setPosterTimestamp] = useState(0);
@@ -2722,7 +3101,16 @@ export default function FabricPage() {
               />
             )}
             {vizMode === 1 && (
-              <div style={{ height: 120, width: "100%" }} />
+              <SignalTerrainV2
+                height={120}
+                isPlaying={isPlaying}
+                trackId={currentTrack?.id}
+                progress={progress}
+                duration={currentTrack?.duration || 0}
+                features={features}
+                getSnapshot={getSnapshot}
+                onVisualize={() => setVisualizing(true)}
+              />
             )}
           </div>
           </>}
