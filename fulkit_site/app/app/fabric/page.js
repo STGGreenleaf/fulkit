@@ -2824,48 +2824,56 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.stroke();
       }
 
-      // ── Interior tendrils: frequency-driven radiation inside the orb ──
+      // ── Interior radiation: rotating, evolving, frequency-driven ──
       if (isActive && activity > 0.2) {
-        const innerAlpha = activity * 0.12 * (0.4 + realLoud * 0.6);
-        // Every 2nd point — dense web of connections
+        const innerAlpha = activity * 0.15 * (0.4 + realLoud * 0.6);
+        // Rotating inner web — offset from outer rotation so shapes diverge
+        const innerRot = rot * 1.7 + phase * 0.15;
+        // Cross connections — not just opposite, varying angles for visual diversity
         for (let i = 0; i < N; i += 2) {
-          const th1 = (i / N) * Math.PI * 2 + rot;
-          const opp = (i + Math.floor(N / 2) + Math.floor(Math.random() * 10 - 5) + N) % N;
-          const th2 = (opp / N) * Math.PI * 2 + rot;
-          const r1 = baseR * (0.15 + points[i] * 0.7);
-          const r2 = baseR * (0.15 + points[opp] * 0.7);
+          const th1 = (i / N) * Math.PI * 2 + innerRot;
+          // Connect to points at varying distances around the circle, not just opposite
+          const spread = Math.floor(N * 0.3 + N * 0.4 * noise2D(i * 0.5, phase * 0.1));
+          const opp = (i + spread + N) % N;
+          const th2 = (opp / N) * Math.PI * 2 + innerRot;
+          const r1 = baseR * (0.08 + points[i] * 0.85);
+          const r2 = baseR * (0.08 + points[opp] * 0.85);
           const x1 = cx + Math.cos(th1) * r1, y1 = cy + Math.sin(th1) * r1;
           const x2 = cx + Math.cos(th2) * r2, y2 = cy + Math.sin(th2) * r2;
-          const cpOff = noise2D(i * 0.3, phase * 0.2) * baseR * 0.4 * activity;
+          // Control point wanders with noise — curves evolve over time
+          const cpAngle = (th1 + th2) / 2 + noise2D(i * 0.4, phase * 0.3) * 1.2;
+          const cpDist = baseR * (0.1 + noise2D(i * 0.2, phase * 0.15) * 0.35) * activity;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
-          ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, x2, y2);
+          ctx.quadraticCurveTo(cx + Math.cos(cpAngle) * cpDist, cy + Math.sin(cpAngle) * cpDist, x2, y2);
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * (0.2 + points[i] * 0.8)})`;
-          ctx.lineWidth = 0.4 + activity * 0.6;
+          ctx.lineWidth = 0.4 + activity * 0.7;
           ctx.stroke();
         }
-        // Radial spokes from center to surface — driven by band amplitudes
-        for (let i = 0; i < N; i += 5) {
-          const th = (i / N) * Math.PI * 2 + rot;
-          const spokeLen = baseR * (0.2 + points[i] * 0.8);
-          const x1 = cx + Math.cos(th) * baseR * 0.05;
-          const y1 = cy + Math.sin(th) * baseR * 0.05;
+        // Radial spokes — longer, from near-center to past surface
+        for (let i = 0; i < N; i += 4) {
+          const th = (i / N) * Math.PI * 2 + innerRot;
+          const spokeLen = baseR * (0.3 + points[i] * 1.0);
+          const x1 = cx + Math.cos(th) * baseR * 0.03;
+          const y1 = cy + Math.sin(th) * baseR * 0.03;
           const x2 = cx + Math.cos(th) * spokeLen;
           const y2 = cy + Math.sin(th) * spokeLen;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 0.6})`;
-          ctx.lineWidth = 0.3 + points[i] * 0.5;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 0.8})`;
+          ctx.lineWidth = 0.3 + points[i] * 0.6;
           ctx.stroke();
         }
       }
 
-      // ── Orb layers — wider spacing, bigger displacement ──
+      // ── Orb layers — wider spacing, per-layer rotation, bigger displacement ──
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
         const age = l / Math.max(1, layerCount - 1);
-        const outShift = (layerCount - 1 - l) * 6.0; // wider spacing between rings
+        const outShift = (layerCount - 1 - l) * 6.0;
+        // Per-layer rotation — older layers rotate slightly, shape evolves over time
+        const layerRot = rot + (1 - age) * 0.15 * activity;
         const alpha = age < 0.33
           ? 0.02 + age * 0.08
           : age < 0.66
@@ -2875,10 +2883,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const lw = baseLw * (0.7 + acousticness * 0.5);
         const ageMorph = (1 - age) * 0.3;
         const outPts = [];
-        // Peak push — loud moments push orb way outward
         const peakPush = 2.0 + (realLoud > 0.5 ? (realLoud - 0.5) * 4.0 : 0);
         for (let i = 0; i < N; i++) {
-          const th = (i / N) * Math.PI * 2 + rot;
+          const th = (i / N) * Math.PI * 2 + layerRot;
           const aR = baseR * (1 + beatPulse * 0.08) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
           let displacement = data[i] * baseR * peakPush;
           if (ageMorph > 0.01) {
@@ -2895,23 +2902,23 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        if (l >= layerCount - 8) {
+        if (l >= layerCount - 15) {
           const inPts = [];
           for (let i = 0; i < N; i++) {
-            const th = (i / N) * Math.PI * 2 + rot;
+            const th = (i / N) * Math.PI * 2 + layerRot;
             const cnTh = Math.cos(th), snTh = Math.sin(th);
             const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
-            let inDisp = data[i] * baseR * 0.5;
-            inDisp *= (1 + beatPulse * 0.15);
-            const inShift = (layerCount - 1 - l) * 0.8;
-            const r = Math.max(baseR * 0.08, aR - inDisp - inShift);
+            let inDisp = data[i] * baseR * 1.2; // much deeper inward reach (was 0.5)
+            inDisp *= (1 + beatPulse * 0.3);
+            const inShift = (layerCount - 1 - l) * 1.5; // wider inner spacing
+            const r = Math.max(baseR * 0.03, aR - inDisp - inShift);
             inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
           }
           drawOrbSmooth(ctx, inPts);
-          const inAlpha = 0.01 + age * age * 0.22;
-          const inLw = (0.2 + age * 0.7) * (0.7 + acousticness * 0.5);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.2) : inAlpha})`;
-          ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.15) : inLw;
+          const inAlpha = 0.015 + age * age * 0.28;
+          const inLw = (0.25 + age * 0.8) * (0.7 + acousticness * 0.5);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.3) : inAlpha})`;
+          ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.25) : inLw;
           ctx.stroke();
         }
       }
