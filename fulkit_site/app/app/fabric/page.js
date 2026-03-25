@@ -2756,7 +2756,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.2 : 0.015);
           amp *= 1 + (Math.random() - 0.5) * 0.06;
         }
-        points.push(Math.max(0, Math.min(0.82, amp)));
+        points.push(Math.max(0, Math.min(1.0, amp))); // orb has no canvas overflow risk — full range
       }
 
       const isWindingDown = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
@@ -2824,33 +2824,48 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.stroke();
       }
 
-      // ── Interior tendrils: frequency-driven lines inside the orb ──
-      if (isActive && hasFabric && activity > 0.3) {
-        const innerCol = col;
-        const innerAlpha = activity * 0.06 * (0.5 + realLoud * 0.5);
-        for (let i = 0; i < N; i += 4) {
+      // ── Interior tendrils: frequency-driven radiation inside the orb ──
+      if (isActive && activity > 0.2) {
+        const innerAlpha = activity * 0.12 * (0.4 + realLoud * 0.6);
+        // Every 2nd point — dense web of connections
+        for (let i = 0; i < N; i += 2) {
           const th1 = (i / N) * Math.PI * 2 + rot;
-          const opp = (i + Math.floor(N / 2) + Math.floor(Math.random() * 8 - 4) + N) % N;
+          const opp = (i + Math.floor(N / 2) + Math.floor(Math.random() * 10 - 5) + N) % N;
           const th2 = (opp / N) * Math.PI * 2 + rot;
-          const r1 = baseR * (0.3 + points[i] * 0.5);
-          const r2 = baseR * (0.3 + points[opp] * 0.5);
+          const r1 = baseR * (0.15 + points[i] * 0.7);
+          const r2 = baseR * (0.15 + points[opp] * 0.7);
           const x1 = cx + Math.cos(th1) * r1, y1 = cy + Math.sin(th1) * r1;
           const x2 = cx + Math.cos(th2) * r2, y2 = cy + Math.sin(th2) * r2;
-          const cpOff = noise2D(i * 0.3, phase * 0.2) * baseR * 0.25 * activity;
+          const cpOff = noise2D(i * 0.3, phase * 0.2) * baseR * 0.4 * activity;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, x2, y2);
-          ctx.strokeStyle = `rgba(${innerCol[0]},${innerCol[1]},${innerCol[2]},${innerAlpha * (0.3 + points[i] * 0.7)})`;
-          ctx.lineWidth = 0.3 + activity * 0.4;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * (0.2 + points[i] * 0.8)})`;
+          ctx.lineWidth = 0.4 + activity * 0.6;
+          ctx.stroke();
+        }
+        // Radial spokes from center to surface — driven by band amplitudes
+        for (let i = 0; i < N; i += 5) {
+          const th = (i / N) * Math.PI * 2 + rot;
+          const spokeLen = baseR * (0.2 + points[i] * 0.8);
+          const x1 = cx + Math.cos(th) * baseR * 0.05;
+          const y1 = cy + Math.sin(th) * baseR * 0.05;
+          const x2 = cx + Math.cos(th) * spokeLen;
+          const y2 = cy + Math.sin(th) * spokeLen;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 0.6})`;
+          ctx.lineWidth = 0.3 + points[i] * 0.5;
           ctx.stroke();
         }
       }
 
-      // ── Orb layers (same depth system) ──
+      // ── Orb layers — wider spacing, bigger displacement ──
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
         const age = l / Math.max(1, layerCount - 1);
-        const outShift = (layerCount - 1 - l) * 3.0;
+        const outShift = (layerCount - 1 - l) * 6.0; // wider spacing between rings
         const alpha = age < 0.33
           ? 0.02 + age * 0.08
           : age < 0.66
@@ -2858,13 +2873,13 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           : 0.17 + (age - 0.66) * 1.0;
         const baseLw = 0.25 + age * 1.1;
         const lw = baseLw * (0.7 + acousticness * 0.5);
-        const ageMorph = (1 - age) * 0.25;
+        const ageMorph = (1 - age) * 0.3;
         const outPts = [];
-        // Peak push — loud moments push orb further out toward edges
-        const peakPush = 1.3 + (realLoud > 0.7 ? (realLoud - 0.7) * 3.0 : 0);
+        // Peak push — loud moments push orb way outward
+        const peakPush = 2.0 + (realLoud > 0.5 ? (realLoud - 0.5) * 4.0 : 0);
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
-          const aR = baseR * (1 + beatPulse * 0.04) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const aR = baseR * (1 + beatPulse * 0.08) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
           let displacement = data[i] * baseR * peakPush;
           if (ageMorph > 0.01) {
             displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
@@ -2874,8 +2889,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }
         drawOrbSmooth(ctx, outPts);
         const isNewest = l === layerCount - 1;
-        const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.4) : alpha;
-        const drawLw = isNewest ? lw * (1 + beatPulse * 0.3) : lw;
+        const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.5) : alpha;
+        const drawLw = isNewest ? lw * (1 + beatPulse * 0.4) : lw;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${drawAlpha})`;
         ctx.lineWidth = drawLw;
         ctx.stroke();
