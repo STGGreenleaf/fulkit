@@ -2298,6 +2298,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const phaseRef = useRef(0);
   const noiseRef = useRef(createNoise2D());
   const envelopeRef = useRef({ trackId: null, envelope: null });
+  const wispsRef = useRef([]);
+  const sparksRef = useRef([]);
   const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0, time: 0, amp: 0, ampVel: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
@@ -2343,6 +2345,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   // New noise on track change — history fades naturally via kinetic wind-down
   useEffect(() => {
     noiseRef.current = createNoise2D();
+    wispsRef.current = [];
+    sparksRef.current = [];
     // Reset style 2 state on track change
     const s2 = style2Ref.current;
     s2.noise2 = createNoise2D();
@@ -2702,9 +2706,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 1: Light Radial Terrain — frequency-aware, airy
+      // STYLE 1: Atmospheric Radial Terrain — wisps, sparks, breathing orb
       // ══════════════════════════════════════════
       if (curVizStyle !== 3) {
+      const activity = Math.min(1, k.amplitude / 0.55); // 0=idle, 1=active
+      const realLoud = hasFabric ? (snap.loudness || 0) : 0;
       const points = [];
       const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
       const orbBandAmps = [1.0, 0.95, 0.85, 0.75, 0.55, 0.45, 0.35];
@@ -2712,7 +2718,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       for (let i = 0; i < N; i++) {
         const th = (i / N) * Math.PI * 2;
         const cnx = Math.cos(th), sny = Math.sin(th);
-
         let amp;
         if (hasFabric) {
           const bandPos = (i / N) * bandNames.length;
@@ -2724,14 +2729,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandVal = Math.pow(bandValRaw, 1.8);
           const bandAmp = orbBandAmps[bandIdx] * (1 - bandFrac) + orbBandAmps[bandNext] * bandFrac;
           const bandRatio = bandIdx / bandNames.length;
-
-          const realLoud = snap.loudness || 0;
-          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.08;
+          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.08 * activity;
           const onsetWeight = 1 - bandRatio * 0.85;
           const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.6 * onsetWeight : 0;
           const expanded = Math.pow(bandVal, 0.78) * bandAmp;
           const loud_scale = 0.4 + realLoud * 0.6;
-
           amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
           const fluxWeight = 0.4 + bandRatio * 0.6;
           amp *= (1 + (snap.flux || 0) * 0.5 * fluxWeight);
@@ -2749,8 +2751,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
           let raw = n1 + n2 + n3;
           raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-          const beatBoost = 1 + beatPulse * 0.6;
-          amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
+          amp = Math.abs(raw) * k.amplitude * exhale * (1 + beatPulse * 0.6);
           amp = Math.min(amp, amplitudeCeiling);
           amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.2 : 0.015);
           amp *= 1 + (Math.random() - 0.5) * 0.06;
@@ -2773,38 +2774,78 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3;
-      const amoebaMag = 0.03 + acousticness * 0.05;
-      const col = [120, 116, 108]; // warm grey — light tones, touch more saturation
+      // Amoeba deformation gated by activity — idle = smooth circle
+      const amoebaMag = activity * (0.03 + acousticness * 0.06);
+      const col = [120, 116, 108];
       const layers = historyRef.current;
       const layerCount = layers.length;
 
+      // ── Wisps: ambient atmosphere drifting outward ──
+      const wisps = wispsRef.current;
+      const isActive = k.state === "active" || k.state === "spool-up" || k.state === "skip-spool";
+      // Spawn wisps — more at higher loudness
+      if (isActive && activity > 0.2) {
+        const spawnRate = Math.floor(1 + realLoud * 2.5); // 1–3 per frame
+        for (let s = 0; s < spawnRate; s++) {
+          if (wisps.length >= 80) break;
+          const angle = Math.random() * Math.PI * 2;
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
+          const surfaceR = baseR * (1 + (realLoud * 0.3));
+          const speed = baseR * (0.008 + realLoud * 0.018);
+          const tangent = (Math.random() - 0.5) * 0.4;
+          wisps.push({
+            x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
+            vx: cosA * speed + sinA * tangent * speed,
+            vy: sinA * speed - cosA * tangent * speed,
+            life: 0, maxLife: 40 + Math.random() * 60,
+            alpha: 0.04 + realLoud * 0.08, size: 2 + Math.random() * 3,
+          });
+        }
+      }
+      // Update + render wisps (behind orb layers)
+      for (let i = wisps.length - 1; i >= 0; i--) {
+        const wp = wisps[i];
+        wp.x += wp.vx; wp.y += wp.vy;
+        wp.vx += (Math.random() - 0.5) * 0.15; // wander
+        wp.vy += (Math.random() - 0.5) * 0.15;
+        wp.life++;
+        const lifeFrac = wp.life / wp.maxLife;
+        const fadeAlpha = wp.alpha * (1 - lifeFrac * lifeFrac); // quadratic fade
+        if (fadeAlpha < 0.005 || wp.life > wp.maxLife) { wisps.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.moveTo(wp.x, wp.y);
+        ctx.lineTo(wp.x - wp.vx * wp.size, wp.y - wp.vy * wp.size);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
+        ctx.lineWidth = 0.5 + (1 - lifeFrac) * 0.5;
+        ctx.stroke();
+      }
+
+      // ── Orb layers (same depth system) ──
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
-        const age = l / Math.max(1, layerCount - 1); // 0=oldest(bg), 1=newest(fg)
+        const age = l / Math.max(1, layerCount - 1);
         const outShift = (layerCount - 1 - l) * 3.0;
-
-        // Three-plane depth: bg (faint), midground (medium), fg (bold)
         const alpha = age < 0.33
-          ? 0.02 + age * 0.08       // background: 0.02–0.05
+          ? 0.02 + age * 0.08
           : age < 0.66
-          ? 0.05 + (age - 0.33) * 0.35  // midground: 0.05–0.17
-          : 0.17 + (age - 0.66) * 1.0;  // foreground: 0.17–0.51
+          ? 0.05 + (age - 0.33) * 0.35
+          : 0.17 + (age - 0.66) * 1.0;
         const baseLw = 0.25 + age * 1.1;
         const lw = baseLw * (0.7 + acousticness * 0.5);
-
         const ageMorph = (1 - age) * 0.25;
         const outPts = [];
+        // Peak push — loud moments push orb further out toward edges
+        const peakPush = 1.3 + (realLoud > 0.7 ? (realLoud - 0.7) * 3.0 : 0);
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
           const aR = baseR * (1 + beatPulse * 0.04) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
-          let displacement = data[i] * baseR * 1.3; // gentler: was 1.8
+          let displacement = data[i] * baseR * peakPush;
           if (ageMorph > 0.01) {
             displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
           }
           const r = aR + displacement + outShift;
           outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
         }
-
         drawOrbSmooth(ctx, outPts);
         const isNewest = l === layerCount - 1;
         const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.4) : alpha;
@@ -2813,7 +2854,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        // Inward reflection — only newest 8 layers (saves ~73% of inner draw calls)
         if (l >= layerCount - 8) {
           const inPts = [];
           for (let i = 0; i < N; i++) {
@@ -2833,6 +2873,44 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.15) : inLw;
           ctx.stroke();
         }
+      }
+
+      // ── Sparks: burst on beats/onsets (in front of orb) ──
+      const sparks = sparksRef.current;
+      if (hasFabric && isActive) {
+        const shouldBurst = (snap.onset && (snap.onset_strength || 0) > 0.4) || (snap.beat && (snap.beat_strength || 0) > 0.5);
+        if (shouldBurst) {
+          const strength = Math.max(snap.onset_strength || 0, snap.beat_strength || 0);
+          const count = Math.floor(4 + strength * 10); // 4–14 sparks
+          for (let s = 0; s < count; s++) {
+            if (sparks.length >= 40) break;
+            const angle = Math.random() * Math.PI * 2;
+            const cosA = Math.cos(angle), sinA = Math.sin(angle);
+            const surfaceR = baseR * (1.1 + realLoud * 0.4);
+            const speed = baseR * (0.015 + strength * 0.03);
+            sparks.push({
+              x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
+              vx: cosA * speed * (0.7 + Math.random() * 0.6),
+              vy: sinA * speed * (0.7 + Math.random() * 0.6),
+              life: 0, maxLife: 15 + Math.random() * 20,
+              alpha: 0.12 + strength * 0.2,
+            });
+          }
+        }
+      }
+      // Update + render sparks
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const sp = sparks[i];
+        sp.x += sp.vx; sp.y += sp.vy;
+        sp.vx *= 0.96; sp.vy *= 0.96; // decelerate
+        sp.life++;
+        const lifeFrac = sp.life / sp.maxLife;
+        const fadeAlpha = sp.alpha * (1 - lifeFrac);
+        if (fadeAlpha < 0.008 || sp.life > sp.maxLife) { sparks.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 0.8 + (1 - lifeFrac) * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
+        ctx.fill();
       }
       } else {
       // ══════════════════════════════════════════
