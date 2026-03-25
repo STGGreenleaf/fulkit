@@ -2726,7 +2726,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandFrac = bandPos - Math.floor(bandPos);
           const bandValRaw = (snap.bands[bandNames[bandIdx]] || 0) * (1 - bandFrac) +
                           (snap.bands[bandNames[bandNext]] || 0) * bandFrac;
-          const bandVal = Math.pow(bandValRaw, 1.8);
+          const bandVal = Math.pow(bandValRaw, 1.2); // softer than terrain — liquid, not jagged
           const bandAmp = orbBandAmps[bandIdx] * (1 - bandFrac) + orbBandAmps[bandNext] * bandFrac;
           const bandRatio = bandIdx / bandNames.length;
           const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.08 * activity;
@@ -2779,7 +2779,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3;
       // Amoeba deformation gated by activity — idle = smooth circle
-      const amoebaMag = activity * (0.03 + acousticness * 0.06);
+      const amoebaMag = activity * (0.06 + acousticness * 0.10);
+      const morphT = phase * 0.8; // visible morphing speed
       const col = [120, 116, 108];
       const layers = historyRef.current;
       const layerCount = layers.length;
@@ -2886,13 +2887,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const peakPush = 2.0 + (realLoud > 0.5 ? (realLoud - 0.5) * 4.0 : 0);
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + layerRot;
-          const aR = baseR * (1 + beatPulse * 0.08) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          const cTh = Math.cos(th), sTh = Math.sin(th);
+          // Multi-octave morphing — shape evolves like liquid
+          const m1 = noise2D(cTh * 1.2, sTh * 1.2 + morphT) * 0.5;
+          const m2 = noise2D(cTh * 2.5 + 50, sTh * 2.5 + morphT * 1.4) * 0.25;
+          const m3 = noise2D(cTh * 5 + 100, sTh * 5 + morphT * 2.0) * 0.12;
+          const morphDisp = (m1 + m2 + m3) * amoebaMag;
+          const aR = baseR * (1 + beatPulse * 0.08 + morphDisp);
           let displacement = data[i] * baseR * peakPush;
           if (ageMorph > 0.01) {
-            displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
+            displacement += noise2D(cTh * 3 + l * 0.7, sTh * 3 + morphT * 0.5 + l * 0.7) * baseR * ageMorph;
           }
           const r = aR + displacement + outShift;
-          outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
+          outPts.push({ x: cx + cTh * r, y: cy + sTh * r });
         }
         drawOrbSmooth(ctx, outPts);
         const isNewest = l === layerCount - 1;
@@ -2904,13 +2911,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         if (l >= layerCount - 15) {
           const inPts = [];
+          // Independent inner morphing — counter-rotates, different noise seed, breathes
+          const innerMorphT = phase * 1.1;
+          const innerRot = layerRot * -0.6 + phase * 0.2; // counter-rotate
+          const breathe = Math.sin(phase * 0.5) * 0.15 * activity;
+          const innerBase = baseR * (0.85 + breathe);
           for (let i = 0; i < N; i++) {
-            const th = (i / N) * Math.PI * 2 + layerRot;
+            const th = (i / N) * Math.PI * 2 + innerRot;
             const cnTh = Math.cos(th), snTh = Math.sin(th);
-            const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
-            let inDisp = data[i] * baseR * 1.2; // much deeper inward reach (was 0.5)
+            // Own multi-octave morphing (offset +200 = different shape)
+            const im1 = noise2D(cnTh * 1.8 + 200, snTh * 1.8 + innerMorphT) * 0.45;
+            const im2 = noise2D(cnTh * 3.5 + 250, snTh * 3.5 + innerMorphT * 1.6) * 0.2;
+            const innerMorphDisp = (im1 + im2) * amoebaMag;
+            const aR = innerBase * (1 + innerMorphDisp);
+            let inDisp = data[i] * baseR * 1.2;
             inDisp *= (1 + beatPulse * 0.3);
-            const inShift = (layerCount - 1 - l) * 1.5; // wider inner spacing
+            const inShift = (layerCount - 1 - l) * 1.5;
             const r = Math.max(baseR * 0.03, aR - inDisp - inShift);
             inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
           }
