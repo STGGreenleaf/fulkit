@@ -3988,7 +3988,7 @@ export default function FabricPage() {
               />
             )}
             {vizMode === 1 && (
-              <SignalTerrainOG
+              <SignalTerrainV4
                 height={120}
                 isPlaying={isPlaying}
                 trackId={currentTrack?.id}
@@ -4012,7 +4012,7 @@ export default function FabricPage() {
               />
             )}
             {vizMode === 4 && (
-              <SignalTerrainV4
+              <SignalTerrainOG
                 height={120}
                 isPlaying={isPlaying}
                 trackId={currentTrack?.id}
