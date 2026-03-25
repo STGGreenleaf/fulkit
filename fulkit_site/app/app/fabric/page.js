@@ -2702,122 +2702,97 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 1: Radial Terrain — stacked mountain rings
+      // STYLE 1: Light Radial Terrain — frequency-aware, airy
       // ══════════════════════════════════════════
+      if (curVizStyle !== 3) {
       const points = [];
-
-      // Band names mapped to angular zones (7 bands distributed around circle)
       const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+      const orbBandAmps = [1.0, 0.95, 0.85, 0.75, 0.55, 0.45, 0.35];
 
       for (let i = 0; i < N; i++) {
         const th = (i / N) * Math.PI * 2;
         const cnx = Math.cos(th), sny = Math.sin(th);
 
-        let raw;
         let amp;
         if (hasFabric) {
-          // ── FABRIC MODE: real audio drives everything ──
           const bandPos = (i / N) * bandNames.length;
           const bandIdx = Math.floor(bandPos) % bandNames.length;
           const bandNext = (bandIdx + 1) % bandNames.length;
           const bandFrac = bandPos - Math.floor(bandPos);
-          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
-                          snap.bands[bandNames[bandNext]] * bandFrac;
+          const bandValRaw = (snap.bands[bandNames[bandIdx]] || 0) * (1 - bandFrac) +
+                          (snap.bands[bandNames[bandNext]] || 0) * bandFrac;
+          const bandVal = Math.pow(bandValRaw, 1.8);
+          const bandAmp = orbBandAmps[bandIdx] * (1 - bandFrac) + orbBandAmps[bandNext] * bandFrac;
+          const bandRatio = bandIdx / bandNames.length;
 
-          // Real loudness IS the amplitude — no procedural ceiling
-          const realLoud = snap.loudness;
+          const realLoud = snap.loudness || 0;
+          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.08;
+          const onsetWeight = 1 - bandRatio * 0.85;
+          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.6 * onsetWeight : 0;
+          const expanded = Math.pow(bandVal, 0.78) * bandAmp;
+          const loud_scale = 0.4 + realLoud * 0.6;
 
-          // Band shape: different frequencies push different parts of the form
-          // Noise adds organic texture so it doesn't look robotic
-          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.12;
-
-          // Onset spikes — piano hits, kicks, transients
-          const onsetSpike = snap.onset ? snap.onset_strength * 0.5 : 0;
-
-          // Base shape from frequency content + loudness envelope
-          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
-
-          // Flux excitement — spectral change makes the form wilder
-          amp *= (1 + snap.flux * 0.8);
-
-          // Beat pulse from actual beat positions
-          if (snap.beat) amp *= (1 + snap.beat_strength * 0.6);
-
-          // Kinetic gate — spool up / wind down still applies
-          amp *= k.amplitude / 0.55; // normalize so active state = 1.0
+          amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
+          const fluxWeight = 0.4 + bandRatio * 0.6;
+          amp *= (1 + (snap.flux || 0) * 0.5 * fluxWeight);
+          const beatWeight = 1 - bandRatio * 0.8;
+          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.7 * beatWeight);
+          amp *= k.amplitude / 0.55;
           amp *= exhale;
-
-          // Hard floor so it doesn't vanish in quiet passages
-          amp = Math.max(amp, isPlaying ? 0.01 : 0.005);
-          amp *= 1 + (Math.random() - 0.5) * 0.06;
+          const baseCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+          amp = Math.min(amp, baseCeiling * bandAmp);
+          amp = Math.max(amp, isPlaying ? 0.008 : 0.003);
+          amp *= 1 + (Math.random() - 0.5) * 0.05;
         } else {
-          // ── PROCEDURAL MODE: noise-based (fallback) ──
           const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
           const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
           const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
           let raw = n1 + n2 + n3;
           raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-
-          const beatBoost = 1 + beatPulse * 0.8;
+          const beatBoost = 1 + beatPulse * 0.6;
           amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
           amp = Math.min(amp, amplitudeCeiling);
-          amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.3 : 0.02);
-          amp *= 1 + (Math.random() - 0.5) * 0.08;
+          amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.2 : 0.015);
+          amp *= 1 + (Math.random() - 0.5) * 0.06;
         }
-
-        points.push(Math.max(0, Math.min(1, amp)));
+        points.push(Math.max(0, Math.min(0.82, amp)));
       }
 
-      // Wind-down: keep pushing frames (shrinking amplitude) + drain old layers
-      // Idle: drain remaining layers until only a thin resting ring remains
       const isWindingDown = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
       if (k.state === "active" || k.state === "spool-up" || k.state === "skip-spool") {
-        // Active: normal layer management
         historyRef.current.push(points);
         if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
       } else if (isWindingDown) {
-        // Wind-down: push quieting frames + drain 2 old layers per frame for fade
         historyRef.current.push(points);
         if (historyRef.current.length > 3) historyRef.current.shift();
         if (historyRef.current.length > 3) historyRef.current.shift();
       } else if (k.state === "idle") {
-        // Idle: drain down to 3 layers — keep a gentle resting ring visible
-        if (historyRef.current.length > 3) {
-          historyRef.current.shift();
-        }
+        if (historyRef.current.length > 3) historyRef.current.shift();
       }
 
-      // ── Render ──
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2, cy = h / 2;
-      const rot = phase * 0.3; // slow rotation, BPM-linked
-
-      // Amoeba base deformation — acousticness drives organic shape
-      const amoebaMag = 0.03 + acousticness * 0.06;
-      const col = [78, 75, 68]; // warm grey
+      const rot = phase * 0.3;
+      const amoebaMag = 0.03 + acousticness * 0.05;
+      const col = [160, 155, 145]; // lighter warm grey — airy, not heavy
       const layers = historyRef.current;
       const layerCount = layers.length;
 
-      // Draw back to front (oldest first → newest on top, darkest)
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
-        const age = l / Math.max(1, layerCount - 1); // 0=oldest, 1=newest
-        const outShift = (layerCount - 1 - l) * 4.5; // older → pushed way outward
+        const age = l / Math.max(1, layerCount - 1);
+        const outShift = (layerCount - 1 - l) * 3.0; // tighter stacking
 
-        // Alpha/width — bold newest, visible oldest
-        const alpha = 0.03 + age * age * 0.55;
-        const baseLw = 0.4 + age * 1.4;
-        const lw = baseLw * (0.7 + acousticness * 0.6);
+        const alpha = 0.02 + age * age * 0.35; // lighter: max 0.37 (was 0.58)
+        const baseLw = 0.3 + age * 1.0; // thinner: max 1.3 (was 1.8)
+        const lw = baseLw * (0.7 + acousticness * 0.5);
 
-        // ── Outward mountains ──
-        // Older layers morph: noise distortion grows with age so shape evolves
-        const ageMorph = (1 - age) * 0.3; // oldest get most distortion
+        const ageMorph = (1 - age) * 0.25;
         const outPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
-          const aR = baseR * (1 + beatPulse * 0.06) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
-          let displacement = data[i] * baseR * 1.8;
-          // Shape evolution — older layers warp via noise offset by layer index
+          const aR = baseR * (1 + beatPulse * 0.04) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          let displacement = data[i] * baseR * 1.3; // gentler: was 1.8
           if (ageMorph > 0.01) {
             displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
           }
@@ -2827,40 +2802,139 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         drawOrbSmooth(ctx, outPts);
         const isNewest = l === layerCount - 1;
-        const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.5) : alpha;
-        const drawLw = isNewest ? lw * (1 + beatPulse * 0.4) : lw;
+        const drawAlpha = isNewest ? alpha * (1 + beatPulse * 0.4) : alpha;
+        const drawLw = isNewest ? lw * (1 + beatPulse * 0.3) : lw;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${drawAlpha})`;
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        // ── Inward reflection — gentle flame toward center ──
-        const inMorph = (1 - age) * 0.12;
+        // Inward reflection — whisper-light
         const inPts = [];
         for (let i = 0; i < N; i++) {
           const th = (i / N) * Math.PI * 2 + rot;
           const cnTh = Math.cos(th), snTh = Math.sin(th);
           const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
+          let inDisp = data[i] * baseR * 0.5; // lighter: was 0.85
+          inDisp *= (1 + beatPulse * 0.15);
+          const inShift = (layerCount - 1 - l) * 0.8;
+          const r = Math.max(baseR * 0.08, aR - inDisp - inShift);
+          inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
+        }
+        drawOrbSmooth(ctx, inPts);
+        const inAlpha = 0.008 + age * age * 0.18; // much lighter: was 0.32
+        const inLw = (0.15 + age * 0.6) * (0.7 + acousticness * 0.5);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.2) : inAlpha})`;
+        ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.15) : inLw;
+        ctx.stroke();
+      }
+      } else {
+      // ══════════════════════════════════════════
+      // STYLE 3 (archive): Original Radial Terrain — heavy, pre-V4 formula
+      // ══════════════════════════════════════════
+      const points = [];
+      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
+      for (let i = 0; i < N; i++) {
+        const th = (i / N) * Math.PI * 2;
+        const cnx = Math.cos(th), sny = Math.sin(th);
+
+        let amp;
+        if (hasFabric) {
+          const bandPos = (i / N) * bandNames.length;
+          const bandIdx = Math.floor(bandPos) % bandNames.length;
+          const bandNext = (bandIdx + 1) % bandNames.length;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = (snap.bands[bandNames[bandIdx]] || 0) * (1 - bandFrac) +
+                          (snap.bands[bandNames[bandNext]] || 0) * bandFrac;
+          const realLoud = snap.loudness || 0;
+          const texture = noise2D(cnx * 3 + keyOffset, sny * 3 + phase * 0.3) * 0.12;
+          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.5 : 0;
+          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
+          amp *= (1 + (snap.flux || 0) * 0.8);
+          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.6);
+          amp *= k.amplitude / 0.55;
+          amp *= exhale;
+          amp = Math.max(amp, isPlaying ? 0.01 : 0.005);
+          amp *= 1 + (Math.random() - 0.5) * 0.06;
+        } else {
+          const n1 = noise2D(cnx * 2 + keyOffset, sny * 2 + phase * 0.3) * 0.5;
+          const n2 = noise2D(cnx * 4 + 100, sny * 4 + phase * 0.5) * 0.25;
+          const n3 = noise2D(cnx * 8 + 200, sny * 8 + phase * 0.8) * 0.125;
+          let raw = n1 + n2 + n3;
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+          const beatBoost = 1 + beatPulse * 0.8;
+          amp = Math.abs(raw) * k.amplitude * exhale * beatBoost;
+          amp = Math.min(amp, amplitudeCeiling);
+          amp = Math.max(amp, isPlaying ? amplitudeFloor * 0.3 : 0.02);
+          amp *= 1 + (Math.random() - 0.5) * 0.08;
+        }
+        points.push(Math.max(0, Math.min(1, amp)));
+      }
+
+      const isWindingDown = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
+      if (k.state === "active" || k.state === "spool-up" || k.state === "skip-spool") {
+        historyRef.current.push(points);
+        if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
+      } else if (isWindingDown) {
+        historyRef.current.push(points);
+        if (historyRef.current.length > 3) historyRef.current.shift();
+        if (historyRef.current.length > 3) historyRef.current.shift();
+      } else if (k.state === "idle") {
+        if (historyRef.current.length > 3) historyRef.current.shift();
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const rot = phase * 0.3;
+      const amoebaMag = 0.03 + acousticness * 0.06;
+      const col = [78, 75, 68];
+      const layers = historyRef.current;
+      const layerCount = layers.length;
+
+      for (let l = 0; l < layerCount; l++) {
+        const data = layers[l];
+        const age = l / Math.max(1, layerCount - 1);
+        const outShift = (layerCount - 1 - l) * 4.5;
+        const alpha = 0.03 + age * age * 0.55;
+        const baseLw = 0.4 + age * 1.4;
+        const lw = baseLw * (0.7 + acousticness * 0.6);
+        const ageMorph = (1 - age) * 0.3;
+        const outPts = [];
+        for (let i = 0; i < N; i++) {
+          const th = (i / N) * Math.PI * 2 + rot;
+          const aR = baseR * (1 + beatPulse * 0.06) * (1 + noise2D(Math.cos(th) * 1.5, Math.sin(th) * 1.5 + phase * 0.05) * amoebaMag);
+          let displacement = data[i] * baseR * 1.8;
+          if (ageMorph > 0.01) {
+            displacement += noise2D(Math.cos(th) * 3 + l * 0.7, Math.sin(th) * 3 + l * 0.7) * baseR * ageMorph;
+          }
+          const r = aR + displacement + outShift;
+          outPts.push({ x: cx + Math.cos(th) * r, y: cy + Math.sin(th) * r });
+        }
+        drawOrbSmooth(ctx, outPts);
+        const isNewest = l === layerCount - 1;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? alpha * (1 + beatPulse * 0.5) : alpha})`;
+        ctx.lineWidth = isNewest ? lw * (1 + beatPulse * 0.4) : lw;
+        ctx.stroke();
+
+        const inPts = [];
+        for (let i = 0; i < N; i++) {
+          const th = (i / N) * Math.PI * 2 + rot;
+          const cnTh = Math.cos(th), snTh = Math.sin(th);
+          const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
           let inDisp = data[i] * baseR * 0.85;
           inDisp *= (1 + beatPulse * 0.25);
-
-          if (inMorph > 0.01) {
-            inDisp += noise2D(cnTh * 3 + l * 0.7 + 500, snTh * 3 + l * 0.7 + 500) * baseR * inMorph;
-          }
-
           const inShift = (layerCount - 1 - l) * 1.2;
           const r = Math.max(baseR * 0.06, aR - inDisp - inShift);
           inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
         }
-
         drawOrbSmooth(ctx, inPts);
-        // Fade to invisible toward center
         const inAlpha = 0.01 + age * age * 0.32;
         const inLw = (0.2 + age * 0.9) * (0.7 + acousticness * 0.6);
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.3) : inAlpha})`;
         ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.2) : inLw;
         ctx.stroke();
       }
+      } // end style 1/3 branch
     }
 
     animRef.current = requestAnimationFrame(draw);
@@ -2913,7 +2987,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 2) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
+            onClick={() => { if (n <= 3) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
@@ -2924,7 +2998,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n <= 2 ? (vizStyle === n ? 1 : 0.5) : 0.25,
+              opacity: n <= 3 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
