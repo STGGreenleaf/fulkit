@@ -363,9 +363,9 @@ const V4_BANDS = [
   { name: "bass",     w: 1.5, amp: 0.95, decay: 0.90 },
   { name: "low_mid",  w: 1.2, amp: 0.85, decay: 0.88 },
   { name: "mid",      w: 1.0, amp: 0.75, decay: 0.85 },
-  { name: "high_mid", w: 0.7, amp: 0.70, decay: 0.82 },
-  { name: "high",     w: 0.5, amp: 0.65, decay: 0.78 },
-  { name: "air",      w: 0.35, amp: 0.55, decay: 0.75 },
+  { name: "high_mid", w: 0.7, amp: 0.55, decay: 0.82 },
+  { name: "high",     w: 0.5, amp: 0.45, decay: 0.78 },
+  { name: "air",      w: 0.35, amp: 0.35, decay: 0.75 },
 ];
 // Per-band temporal lag: sub reacts fast but sustains, air is instant
 const V4_BAND_LAG = [4, 3, 2, 2, 1, 1, 0];
@@ -549,7 +549,9 @@ function SignalTerrainV4({
           const histR = bandHistRef.current[bandNext];
           const valL = histL[Math.max(0, histL.length - 1 - V4_BAND_LAG[bandIdx])];
           const valR = histR[Math.max(0, histR.length - 1 - V4_BAND_LAG[bandNext])];
-          const bandVal = valL * (1 - bandFrac) + valR * bandFrac;
+          const bandValRaw = valL * (1 - bandFrac) + valR * bandFrac;
+          // Sharpen interpolated value — suppresses mid-range, keeps peaks tall
+          const bandVal = Math.pow(bandValRaw, 1.4);
 
           // Per-band amplitude emphasis (interpolated)
           const bandAmp = V4_BANDS[bandIdx].amp * (1 - bandFrac) + V4_BANDS[bandNext].amp * bandFrac;
@@ -558,7 +560,7 @@ function SignalTerrainV4({
           const realLoud = snap.loudness || 0;
           const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
           const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.7 : 0;
-          const expanded = Math.pow(bandVal, 0.55) * bandAmp;
+          const expanded = Math.pow(bandVal, 0.78) * bandAmp;
           const loud_scale = 0.3 + realLoud * 0.7;
 
           amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
