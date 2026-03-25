@@ -1351,6 +1351,17 @@ export function FabricProvider({ children }) {
 
   const deleteSet = useCallback((setId) => {
     setSetsData((prev) => {
+      const deletedSet = prev.sets.find(s => s.id === setId);
+      // Remember deleted set names so auto-restore doesn't recreate them
+      if (deletedSet?.name) {
+        try {
+          const dismissed = JSON.parse(localStorage.getItem("fulkit-dismissed-sets") || "[]");
+          if (!dismissed.includes(deletedSet.name)) {
+            dismissed.push(deletedSet.name);
+            localStorage.setItem("fulkit-dismissed-sets", JSON.stringify(dismissed));
+          }
+        } catch {}
+      }
       const remaining = prev.sets.filter(s => s.id !== setId);
       if (remaining.length === 0) {
         const fallback = { activeId: "set-1", sets: [{ id: "set-1", name: "Set 1", tracks: [] }] };
@@ -1740,10 +1751,14 @@ export function FabricProvider({ children }) {
       setPublishedSets(map);
 
       // Auto-restore: if a crowned set exists in Supabase but not in personal sets, recreate it
+      // Skip sets the user explicitly deleted (dismissed)
       const currentSetNames = new Set(setsData.sets.map(s => s.name));
+      let dismissed = [];
+      try { dismissed = JSON.parse(localStorage.getItem("fulkit-dismissed-sets") || "[]"); } catch {}
+      const dismissedNames = new Set(dismissed);
       let restored = false;
       for (const c of data.crates) {
-        if (c.source === "set" && !currentSetNames.has(c.name) && c.tracks?.length > 0) {
+        if (c.source === "set" && !currentSetNames.has(c.name) && !dismissedNames.has(c.name) && c.tracks?.length > 0) {
           const restoredSet = {
             id: `restored-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             name: c.name,
