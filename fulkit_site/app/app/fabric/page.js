@@ -749,7 +749,8 @@ function SignalTerrainV2({
           for (let i = 0; i < V2_PTS; i++) {
             const x = (i / (V2_PTS - 1)) * w;
             const t = i / (V2_PTS - 1);
-            const edge = edgeTaper(t);
+            // Amplitude taper — gentle, only kills big swings at edges
+            const ampTaper = Math.min(1, i / 5, (V2_PTS - 1 - i) / 5);
             const bIdx = Math.max(0, i - tOff);
 
             // Bass displacement (sub + bass + low_mid)
@@ -760,12 +761,13 @@ function SignalTerrainV2({
             for (let b = 3; b < 7; b++) trebD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.45;
             const combined = bassD * bassW + trebD * trebleW;
 
-            const noiseAmt = 1.5 + (1 - age) * 2.0; // outer lines wiggle more
-            const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * noiseAmt * edge;
+            // Noise runs full width — edges stay alive
+            const noiseAmt = 1.5 + (1 - age) * 2.0;
+            const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * noiseAmt;
             let streak = 0;
             if (age > 0.85 && i > V2_PTS - 5) streak = flux[i] * 8 * (i - (V2_PTS - 5)) / 4;
 
-            const y = centerY + dir * (combined * dispScale * maxDisp * ampVar * edge) + n + dir * streak;
+            const y = centerY + dir * (combined * dispScale * maxDisp * ampVar * ampTaper) + n + dir * streak;
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           }
           ctx.stroke();
