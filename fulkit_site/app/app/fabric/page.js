@@ -739,7 +739,7 @@ function SignalTerrainV2({
           const alpha = 0.015 + age * 0.2;
           let lw = 0.2 + age * 0.5;
           if (age > 0.9 && s.beatFlash > 0.4) lw += 0.4;
-          const dispScale = 0.2 + age * 0.8;
+          const dispScale = 0.35 + age * 0.65;
           const seed = s.lineSeeds[dir === 1 ? l : V2_BOT + l];
           const ampVar = 0.82 + (noise2D(seed, s.time * 0.2) * 0.5 + 0.5) * 0.22;
 
@@ -754,10 +754,10 @@ function SignalTerrainV2({
 
             // Bass displacement (sub + bass + low_mid)
             let bassD = 0;
-            for (let b = 0; b < 3; b++) bassD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.22;
+            for (let b = 0; b < 3; b++) bassD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.45;
             // Treble displacement (mid + high_mid + high + air)
             let trebD = 0;
-            for (let b = 3; b < 7; b++) trebD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.22;
+            for (let b = 3; b < 7; b++) trebD += bufsRef.current[b][bIdx] * V2_BANDS[b].amp * V2_BANDS[b].w * 0.45;
             const combined = bassD * bassW + trebD * trebleW;
 
             const n = noise2D(t * 9.6 + seed, s.time * 0.6 + seed * 0.1) * 1.5 * edge;
