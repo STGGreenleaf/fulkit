@@ -2779,8 +2779,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3;
       // Amoeba deformation gated by activity — idle = smooth circle
-      const amoebaMag = activity * (0.06 + acousticness * 0.10);
-      const morphT = phase * 0.8; // visible morphing speed
+      const amoebaMag = activity * (0.08 + acousticness * 0.12);
+      const morphT = phase * 3.0; // liquid speed — constantly shifting
       const col = [120, 116, 108];
       const layers = historyRef.current;
       const layerCount = layers.length;
@@ -2912,9 +2912,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         if (l >= layerCount - 15) {
           const inPts = [];
           // Independent inner morphing — counter-rotates, different noise seed, breathes
-          const innerMorphT = phase * 1.1;
+          const innerMorphT = phase * 4.0; // faster than outer — liquid independence
           const innerRot = layerRot * -0.6 + phase * 0.2; // counter-rotate
-          const breathe = Math.sin(phase * 0.5) * 0.15 * activity;
+          const breathe = Math.sin(phase * 1.5) * 0.2 * activity;
           const innerBase = baseR * (0.85 + breathe);
           for (let i = 0; i < N; i++) {
             const th = (i / N) * Math.PI * 2 + innerRot;
