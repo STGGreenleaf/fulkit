@@ -5440,10 +5440,10 @@ export default function FabricPage() {
                         onClick={() => saveGuyCrateAsSet()}
                         style={{
                           background: "none", border: "none", cursor: "pointer", padding: 2,
-                          color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
+                          color: "var(--color-text-dim)", transition: "color 120ms", display: "flex",
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
                         title="Save as set"
                       >
                         <Save size={10} strokeWidth={1.8} />
@@ -5452,10 +5452,10 @@ export default function FabricPage() {
                         onClick={clearGuyCrate}
                         style={{
                           background: "none", border: "none", cursor: "pointer", padding: 2,
-                          color: "var(--color-text-muted)", transition: "color 120ms", display: "flex",
+                          color: "var(--color-text-dim)", transition: "color 120ms", display: "flex",
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
                         title="Clear B-Sides"
                       >
                         <Trash2 size={10} strokeWidth={1.8} />
@@ -5711,10 +5711,10 @@ export default function FabricPage() {
                         onClick={() => deleteCrate(expandedCrate)}
                         style={{
                           background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex",
-                          color: "var(--color-text-muted)", transition: "color 120ms",
+                          color: "var(--color-text-dim)", transition: "color 120ms",
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
                         title="Delete crate"
                       >
                         <Trash2 size={10} strokeWidth={1.8} />
@@ -5726,10 +5726,10 @@ export default function FabricPage() {
                         }}
                         style={{
                           background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex",
-                          color: "var(--color-text-muted)", transition: "color 120ms",
+                          color: "var(--color-text-dim)", transition: "color 120ms",
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text)"}
-                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}
                         title="Play crate"
                       >
                         <Play size={10} strokeWidth={2} />
