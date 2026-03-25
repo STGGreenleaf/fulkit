@@ -536,6 +536,10 @@ function SignalTerrainV4({
           amp *= edge;
           amp *= k.amplitude / 0.55;
           amp *= exhaleMultiplier;
+          // Envelope ceiling — shapes amplitude arc over the track (matches OG/Orb)
+          const hasEnvelope = envelopeValue < 1;
+          const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+          amp = Math.min(amp, amplitudeCeiling);
           amp = Math.max(amp, isPlaying ? 0.005 : 0);
           amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
