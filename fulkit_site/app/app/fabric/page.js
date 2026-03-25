@@ -2277,8 +2277,8 @@ function SignalTerrain({
 // same stacked-mountain aesthetic.
 // ═══════════════════════════════════════════════════════
 
-const ORB_R_POINTS = 100;
-const ORB_R_LAYERS = 55;
+const ORB_R_POINTS = 64;
+const ORB_R_LAYERS = 30;
 
 function drawOrbSmooth(ctx, pts) {
   if (pts.length < 3) return;
@@ -2774,17 +2774,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3;
       const amoebaMag = 0.03 + acousticness * 0.05;
-      const col = [160, 155, 145]; // lighter warm grey — airy, not heavy
+      const col = [95, 92, 84]; // warm grey — darker than before, depth via alpha
       const layers = historyRef.current;
       const layerCount = layers.length;
 
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
-        const age = l / Math.max(1, layerCount - 1);
-        const outShift = (layerCount - 1 - l) * 3.0; // tighter stacking
+        const age = l / Math.max(1, layerCount - 1); // 0=oldest(bg), 1=newest(fg)
+        const outShift = (layerCount - 1 - l) * 3.0;
 
-        const alpha = 0.02 + age * age * 0.35; // lighter: max 0.37 (was 0.58)
-        const baseLw = 0.3 + age * 1.0; // thinner: max 1.3 (was 1.8)
+        // Three-plane depth: bg (faint), midground (medium), fg (bold)
+        const alpha = age < 0.33
+          ? 0.02 + age * 0.08       // background: 0.02–0.05
+          : age < 0.66
+          ? 0.05 + (age - 0.33) * 0.35  // midground: 0.05–0.17
+          : 0.17 + (age - 0.66) * 1.0;  // foreground: 0.17–0.51
+        const baseLw = 0.25 + age * 1.1;
         const lw = baseLw * (0.7 + acousticness * 0.5);
 
         const ageMorph = (1 - age) * 0.25;
@@ -2808,24 +2813,26 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        // Inward reflection — whisper-light
-        const inPts = [];
-        for (let i = 0; i < N; i++) {
-          const th = (i / N) * Math.PI * 2 + rot;
-          const cnTh = Math.cos(th), snTh = Math.sin(th);
-          const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
-          let inDisp = data[i] * baseR * 0.5; // lighter: was 0.85
-          inDisp *= (1 + beatPulse * 0.15);
-          const inShift = (layerCount - 1 - l) * 0.8;
-          const r = Math.max(baseR * 0.08, aR - inDisp - inShift);
-          inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
+        // Inward reflection — only newest 8 layers (saves ~73% of inner draw calls)
+        if (l >= layerCount - 8) {
+          const inPts = [];
+          for (let i = 0; i < N; i++) {
+            const th = (i / N) * Math.PI * 2 + rot;
+            const cnTh = Math.cos(th), snTh = Math.sin(th);
+            const aR = baseR * (1 + noise2D(cnTh * 1.5, snTh * 1.5 + phase * 0.05) * amoebaMag);
+            let inDisp = data[i] * baseR * 0.5;
+            inDisp *= (1 + beatPulse * 0.15);
+            const inShift = (layerCount - 1 - l) * 0.8;
+            const r = Math.max(baseR * 0.08, aR - inDisp - inShift);
+            inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
+          }
+          drawOrbSmooth(ctx, inPts);
+          const inAlpha = 0.01 + age * age * 0.22;
+          const inLw = (0.2 + age * 0.7) * (0.7 + acousticness * 0.5);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.2) : inAlpha})`;
+          ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.15) : inLw;
+          ctx.stroke();
         }
-        drawOrbSmooth(ctx, inPts);
-        const inAlpha = 0.008 + age * age * 0.18; // much lighter: was 0.32
-        const inLw = (0.15 + age * 0.6) * (0.7 + acousticness * 0.5);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.2) : inAlpha})`;
-        ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.15) : inLw;
-        ctx.stroke();
       }
       } else {
       // ══════════════════════════════════════════
