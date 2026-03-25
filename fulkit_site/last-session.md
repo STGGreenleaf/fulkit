@@ -1,24 +1,31 @@
 # Last Session
 
-**Date**: 2026-03-24 (marathon session)
-**Scope**: Set reorder fix, Poster feature, drag-and-drop overhaul, Fabric Signal Pipeline
+**Date**: 2026-03-24 (marathon session #2)
+**Scope**: Signal pipeline, visualization tuning, Spotify independence
 
 **Shipped**:
-- Poster: Fabric Procedural Fingerprint (popup modal, timestamp-seeded terrain, dark/light, export PNG, info blurb, owner layout controls)
-- Set reorder: defensive rewrite with count guards (filter+find, three validation gates)
-- Cross-set drag: atomic moveTrackToSet (single state update, count-balanced)
-- Thumbs down: full row fade + collapse + remove from Guy's Crate (1.5s animation)
-- Fabric Signal Pipeline: auto-queue on play, /api/fabric/queue, fabric_jobs table
-- Worker script (fabric-worker.py): yt-dlp → ffmpeg → FFT → 45-field spectral timelines
-- 10/11 Electro Static tracks analyzed with real spectral data in fabric_timelines
-- Set recovery page (/recover) with per-set Import buttons
+- Fabric Signal Pipeline: worker analyzes audio → 100ms spectral timelines
+- 21 tracks queued, 12+ analyzed with real FFT data
+- Spotify gates removed from timeline fetch + audio features
+- "Spotify disconnected" messages removed from Fabric UI
+- Signal Terrain: orchestra view (per-point frequency mapping, soft edge taper)
+- Fixed `envelope is not defined` render crash
+- Worker normalization: per-track relative scaling (loudness/flux 0–1 with real dynamic range)
+- Poster: Fabric Procedural Fingerprint with timestamp seed
+- Set reorder: defensive guards, atomic moves, thumbs down blocks re-entry
+- Thumbs down: full row fade + collapse + remove
+- Layout timeout on Supabase metadata (prevents build hangs)
+- Recovery page at /recover
 
-**Known bugs (carry forward)**:
-None confirmed. Sets, reorder, cross-set moves all verified working.
+**Known issues**:
+- Viz needs more tuning (speed, organic feel, responsiveness)
+- OrbVisualizer (fullscreen) bogs down browser — needs investigation
+- Worker needs connection throttling for Supabase (caused 522 outage)
+- LoadingMark splash should be animated, not static logo
 
 **Next session priorities**:
-1. Provision DigitalOcean droplet ($12/mo) for 24/7 worker
-2. Tune Signal Terrain rendering for real data (lighter, snappier)
-3. Tune OrbVisualizer for real data
-4. Batch-queue user library on Spotify connect
-5. Clean up /recover (temporary tool)
+1. Tune Signal Terrain rendering with real data (organic, faster, orchestra depth)
+2. Fix OrbVisualizer performance (kills browser window)
+3. Worker throttling (prevent Supabase connection exhaustion)
+4. Remove debug logging from Signal Terrain
+5. Clean up /recover page (temporary tool)
