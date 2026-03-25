@@ -349,6 +349,18 @@ function MarqueeText({ children, style }) {
 const T_LAYERS = 25;
 const T_POINTS = 80;
 
+// 7 frequency bands — each renders as an independent sinusoidal ribbon.
+// Bass = slow wide waves, Air = fast tight oscillations. They interweave.
+const BAND_CONFIGS = [
+  { name: 'sub',      freq: 0.35, ampMax: 1.0,  phaseOff: 0,    phaseSpeed: 0.12, lw: 1.6, noiseScale: 2   },
+  { name: 'bass',     freq: 0.6,  ampMax: 0.88, phaseOff: 0.7,  phaseSpeed: 0.17, lw: 1.4, noiseScale: 3   },
+  { name: 'low_mid',  freq: 1.1,  ampMax: 0.72, phaseOff: 1.4,  phaseSpeed: 0.23, lw: 1.1, noiseScale: 5   },
+  { name: 'mid',      freq: 1.9,  ampMax: 0.56, phaseOff: 2.1,  phaseSpeed: 0.30, lw: 0.9, noiseScale: 7   },
+  { name: 'high_mid', freq: 3.2,  ampMax: 0.40, phaseOff: 2.8,  phaseSpeed: 0.38, lw: 0.7, noiseScale: 10  },
+  { name: 'high',     freq: 5.5,  ampMax: 0.26, phaseOff: 3.5,  phaseSpeed: 0.48, lw: 0.5, noiseScale: 14  },
+  { name: 'air',      freq: 9.0,  ampMax: 0.16, phaseOff: 4.2,  phaseSpeed: 0.58, lw: 0.35, noiseScale: 20 },
+];
+
 // ═══════════════════════════════════════════════════════
 // PROCEDURAL SONG ARCHITECTURE — deterministic per-bar
 // energy envelope from track ID + audio features.
@@ -776,94 +788,74 @@ function SignalTerrain({
         liveFlux = live.smoothFlux;
       }
 
-      // ── Generate terrain points ──
+      // ── Generate 7 frequency ribbons ──
       const gsFn = getSnapshotRef.current;
       const curProgress = progressRef.current;
       const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
-      // Debug: log Fabric status once per second
       if (Math.floor(timestamp / 1000) !== Math.floor((timestamp - frameInterval) / 1000)) {
         if (hasFabric) console.log("[SignalTerrain] FABRIC mode — loudness:", snap.loudness?.toFixed(3), "flux:", snap.flux?.toFixed(3));
         else if (isPlaying) console.log("[SignalTerrain] PROCEDURAL — gsFn:", !!gsFn, "progress:", curProgress.toFixed(3));
       }
-      const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-      const points = [];
 
-      // Band groups for multi-layer Fabric rendering
-      const bandGroupLow = [];
-      const bandGroupMid = [];
-      const bandGroupHigh = [];
+      const frameBands = []; // 7 arrays, one per frequency band
 
-      for (let i = 0; i < T_POINTS; i++) {
-        const t = i / T_POINTS;
-        // Soft edge taper — only fades the first/last 8% instead of shaping a bell
-        const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
-        const envelope = edge; // alias for procedural path compatibility
+      for (let b = 0; b < BAND_CONFIGS.length; b++) {
+        const band = BAND_CONFIGS[b];
+        const bandPoints = [];
 
-        let amp;
+        // Derive band energy from data source
+        let bandEnergy;
         if (hasFabric && !live.active) {
-          // ── FABRIC MODE: orchestra view — each point = different frequency ──
-          // Left = sub/bass, center = mids, right = air/highs
-          const bandPos = t * bandNames.length;
-          const bandIdx = Math.min(Math.floor(bandPos), bandNames.length - 1);
-          const bandNext = Math.min(bandIdx + 1, bandNames.length - 1);
-          const bandFrac = bandPos - Math.floor(bandPos);
-          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
-                          snap.bands[bandNames[bandNext]] * bandFrac;
-
-          const rawLoud = snap.loudness;
+          // Fabric mode — real frequency data from thumbprint
+          const rawBand = snap.bands?.[band.name] || 0;
+          const rawLoud = snap.loudness || 0;
           const realLoud = 0.15 + rawLoud * 0.85;
-          const onsetSpike = snap.onset ? snap.onset_strength * 0.4 : 0;
+          const onsetSpike = snap.onset ? snap.onset_strength * 0.3 : 0;
           const kGate = k.amplitude / 0.55;
-          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.35 : 1;
-
-          // Per-point noise adds texture unique to each frequency zone
-          const tex = noise2D(t * 8 + keyOffset, phase * 0.4) * 0.08;
-
-          amp = (bandVal * 0.6 + realLoud * 0.2 + onsetSpike + tex) * realLoud;
-          amp *= (1 + snap.flux * 0.5) * beatMul * edge * kGate * exhaleMultiplier;
-          amp = Math.max(0, Math.min(0.95, amp));
-
-          // Band groups for the overlay layers
-          const lowVal = (snap.bands.sub + snap.bands.bass) / 2;
-          bandGroupLow.push(Math.max(0, Math.min(0.9, (lowVal * 0.6 + rawLoud * 0.15 + onsetSpike) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
-          const midVal = (snap.bands.low_mid + snap.bands.mid) / 2;
-          bandGroupMid.push(Math.max(0, Math.min(0.8, (midVal * 0.5 + rawLoud * 0.1) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
-          const highVal = (snap.bands.high_mid + snap.bands.high + snap.bands.air) / 3;
-          bandGroupHigh.push(Math.max(0, Math.min(0.7, (highVal * 0.5 + snap.flux * 0.3) * realLoud * edge * kGate * exhaleMultiplier)));
+          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.25 : 1;
+          bandEnergy = (rawBand * 0.65 + realLoud * 0.15 + onsetSpike) * realLoud * beatMul * kGate * exhaleMultiplier;
+          bandEnergy = Math.max(0.03, Math.min(0.95, bandEnergy));
         } else {
-          // ── PROCEDURAL / MIC MODE ──
-          const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
-          const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
-          const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
-          let raw = n1 + n2 + n3;
-          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
-          raw = Math.abs(raw) * envelope;
-
-          const beatBoost = 1 + beatPulse * danceability * 0.4;
+          // Procedural / mic mode — synthesize per-band energy
+          const synthBase = noise2D(phase * 0.08 + b * 7.3, b * 4.1 + 50) * 0.5 + 0.5;
+          const envMod = hasEnvelope ? envelopeValue : energy;
+          const beatMod = 1 + beatPulse * danceability * 0.3;
 
           if (live.active && (liveBass + liveMids) > 0.01) {
-            const liveBlend = Math.min(1, (liveBass + liveMids * 0.5) * 3);
-            const puppeted = raw * k.amplitude * exhaleMultiplier * beatBoost;
-            const liveRaw = raw * (1 + livePresence * 0.5);
-            const liveDisp = Math.abs(liveRaw) * Math.min(1.0, liveBass * 2.5 + liveMids * 0.8) * (1 + liveFlux * 2.5);
-            const jitter = (Math.random() - 0.5) * liveAir * 0.15;
-            amp = puppeted * (1 - liveBlend * 0.7) + (liveDisp + jitter) * liveBlend * 0.7;
+            const liveMap = [liveBass, liveBass, (liveBass + liveMids) / 2, liveMids, (liveMids + livePresence) / 2, livePresence, liveAir];
+            bandEnergy = liveMap[b] * 1.5 * (1 + liveFlux * 2) * beatMod;
           } else {
-            amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
+            bandEnergy = synthBase * k.amplitude * envMod * beatMod * exhaleMultiplier;
           }
-          amp = Math.min(amp, amplitudeCeiling);
-          amp = Math.max(amp, isPlaying ? amplitudeFloor * envelope * 0.3 : 0);
-          amp *= 1 + (Math.random() - 0.5) * 0.1;
+          bandEnergy = Math.min(bandEnergy, amplitudeCeiling);
+          bandEnergy = Math.max(bandEnergy, isPlaying ? amplitudeFloor * 0.3 : 0);
+          bandEnergy = Math.max(0, Math.min(0.95, bandEnergy));
         }
 
-        points.push(Math.max(0, Math.min(1, amp)));
+        // Generate sinusoidal ribbon path
+        for (let i = 0; i < T_POINTS; i++) {
+          const t = i / (T_POINTS - 1);
+          const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
+
+          // Primary wave — frequency defines band character
+          const wave = Math.sin(2 * Math.PI * band.freq * t + phase * band.phaseSpeed + band.phaseOff);
+          // Harmonic overtone (golden ratio) for organic shape
+          const harmonic = Math.sin(2 * Math.PI * band.freq * 1.618 * t + phase * band.phaseSpeed * 0.7 + band.phaseOff * 1.3) * 0.25;
+          // Noise layer for breath and irregularity
+          const tex = noise2D(t * band.noiseScale + keyOffset, phase * 0.2 + b * 10) * 0.2;
+
+          const displacement = (wave * 0.55 + harmonic + tex) * bandEnergy * band.ampMax * edge;
+          bandPoints.push(displacement);
+        }
+
+        frameBands.push(bandPoints);
       }
 
-      historyRef.current.push(points);
+      historyRef.current.push(frameBands);
       if (historyRef.current.length > T_LAYERS) historyRef.current.shift();
 
-      // ── Render ──
+      // ── Render frequency ribbons ──
       const style = getComputedStyle(canvas);
       const textColor = style.getPropertyValue("--color-text").trim() || "#e8e6e3";
       const tc = textColor.startsWith("#")
@@ -872,91 +864,36 @@ function SignalTerrain({
 
       ctx.clearRect(0, 0, w, h);
       const layers = historyRef.current;
-      const centerY = h * 0.65;
-      const maxUp = centerY - 6;
-      const maxDown = (h - centerY) - 6;
+      const centerY = h * 0.5;
+      const maxDisp = h * 0.38;
 
+      // Draw from oldest layer to newest — each layer contains all 7 bands
       for (let l = 0; l < layers.length; l++) {
         const age = l / Math.max(1, layers.length - 1);
-        const data = layers[l];
+        const frame = layers[l];
 
-        const alpha = 0.012 + age * age * 0.16;
-        const baseLw = 0.3 + age * 1.0;
-        const lw = baseLw * (0.7 + acousticness * 0.6); // acousticness → line thickness
-        const yShift = (layers.length - 1 - l) * 1.1;
+        for (let b = 0; b < BAND_CONFIGS.length; b++) {
+          const band = BAND_CONFIGS[b];
+          const data = frame[b];
+          if (!data) continue;
 
-        // Mountains
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
-        ctx.lineWidth = lw;
-        ctx.beginPath();
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / (data.length - 1)) * w;
-          const a = data[i] * Math.max(0, maxUp - yShift);
-          const y = centerY - a - yShift;
+          const alpha = 0.01 + age * age * 0.12;
+          const baseLw = band.lw * (0.3 + age * 0.7);
+          const lw = baseLw * (0.7 + acousticness * 0.6);
 
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            const prevX = ((i - 1) / (data.length - 1)) * w;
-            const prevA = data[i - 1] * Math.max(0, maxUp - yShift);
-            const prevY = centerY - prevA - yShift;
-            ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
-          }
-        }
-        const lastA = data[data.length - 1] * Math.max(0, maxUp - yShift);
-        ctx.lineTo(w, centerY - lastA - yShift);
-        ctx.stroke();
-
-        // Reflection (shadow/mirror in descending area)
-        ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha * 0.25})`;
-        ctx.lineWidth = lw * 0.5;
-        ctx.beginPath();
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / (data.length - 1)) * w;
-          const reflShift = (layers.length - 1 - l) * 0.3;
-          const a = data[i] * Math.max(0, maxDown - reflShift - 1) * 0.45;
-          const y = centerY + a + reflShift + 1;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-
-      // ── Multi-band overlay (Fabric mode only, newest frame) ──
-      if (hasFabric && bandGroupLow.length > 0) {
-        const bandGroups = [
-          { data: bandGroupLow, alpha: 0.22, lw: 1.4, scale: 1.0, reflScale: 0.5 },
-          { data: bandGroupMid, alpha: 0.15, lw: 0.9, scale: 0.75, reflScale: 0.35 },
-          { data: bandGroupHigh, alpha: 0.10, lw: 0.5, scale: 0.5, reflScale: 0.2 },
-        ];
-        for (const bg of bandGroups) {
-          // Wave
-          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha})`;
-          ctx.lineWidth = bg.lw;
+          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
+          ctx.lineWidth = lw;
           ctx.beginPath();
-          for (let i = 0; i < bg.data.length; i++) {
-            const x = (i / (bg.data.length - 1)) * w;
-            const a = bg.data[i] * maxUp * bg.scale;
-            const y = centerY - a;
-            if (i === 0) ctx.moveTo(x, y);
-            else {
-              const px = ((i - 1) / (bg.data.length - 1)) * w;
-              const pa = bg.data[i - 1] * maxUp * bg.scale;
-              const py = centerY - pa;
+          for (let i = 0; i < data.length; i++) {
+            const x = (i / (data.length - 1)) * w;
+            const y = centerY - data[i] * maxDisp;
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              const px = ((i - 1) / (data.length - 1)) * w;
+              const py = centerY - data[i - 1] * maxDisp;
               ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
             }
-          }
-          ctx.stroke();
-          // Reflection
-          ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${bg.alpha * 0.3})`;
-          ctx.lineWidth = bg.lw * 0.4;
-          ctx.beginPath();
-          for (let i = 0; i < bg.data.length; i++) {
-            const x = (i / (bg.data.length - 1)) * w;
-            const a = bg.data[i] * maxDown * bg.reflScale;
-            const y = centerY + a + 1;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
           }
           ctx.stroke();
         }
