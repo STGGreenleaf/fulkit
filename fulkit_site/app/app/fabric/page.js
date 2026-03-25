@@ -360,13 +360,15 @@ const V4_BAND_NAMES = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air
 
 const V4_BANDS = [
   { name: "sub",      w: 1.8, amp: 1.0,  decay: 0.92 },
-  { name: "bass",     w: 1.5, amp: 0.85, decay: 0.90 },
-  { name: "low_mid",  w: 1.2, amp: 0.70, decay: 0.88 },
-  { name: "mid",      w: 1.0, amp: 0.55, decay: 0.85 },
-  { name: "high_mid", w: 0.7, amp: 0.40, decay: 0.82 },
-  { name: "high",     w: 0.5, amp: 0.30, decay: 0.78 },
-  { name: "air",      w: 0.35, amp: 0.20, decay: 0.75 },
+  { name: "bass",     w: 1.5, amp: 0.95, decay: 0.90 },
+  { name: "low_mid",  w: 1.2, amp: 0.85, decay: 0.88 },
+  { name: "mid",      w: 1.0, amp: 0.75, decay: 0.85 },
+  { name: "high_mid", w: 0.7, amp: 0.70, decay: 0.82 },
+  { name: "high",     w: 0.5, amp: 0.65, decay: 0.78 },
+  { name: "air",      w: 0.35, amp: 0.55, decay: 0.75 },
 ];
+// Per-band temporal lag: sub lingers (reads 8 frames back), air is instant
+const V4_BAND_LAG = [8, 6, 5, 3, 2, 1, 0];
 
 function SignalTerrainV4({
   height = 220,
@@ -390,8 +392,9 @@ function SignalTerrainV4({
   const historyRef = useRef([]);
   const phaseRef = useRef(0);
 
-  // Per-band smoothed values (no temporal buffer — just smooth the current frame)
+  // Per-band smoothed values + temporal history buffers (12 frames per band)
   const smoothRef = useRef(new Float32Array(7));
+  const bandHistRef = useRef(null);
 
   // Kinetic state machine
   const kRef = useRef({
@@ -414,6 +417,7 @@ function SignalTerrainV4({
     noiseRef.current = createNoise2D();
     historyRef.current = [];
     smoothRef.current.fill(0);
+    if (bandHistRef.current) { for (const buf of bandHistRef.current) buf.fill(0); }
     const k = kRef.current;
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
       k.state = "skip-cut"; k.stateStart = performance.now(); k.target = 0;
@@ -510,47 +514,57 @@ function SignalTerrainV4({
       const snap = gsFn ? gsFn(progressRef.current) : null;
       const hasFabric = !!snap;
 
-      // ── Smooth band values (asymmetric attack/decay, no scrolling) ──
+      // ── Smooth band values + push to per-band temporal buffers ──
       if (hasFabric) {
+        if (!bandHistRef.current) bandHistRef.current = V4_BANDS.map(() => new Float32Array(12));
         for (let b = 0; b < V4_BANDS.length; b++) {
-          // Raw band value — no pow() expansion, matches OG's amplitude range
           const raw = snap.bands?.[V4_BANDS[b].name] || 0;
           const prev = smoothRef.current[b];
           smoothRef.current[b] = raw > prev
-            ? prev + (raw - prev) * 0.88
-            : prev * V4_BANDS[b].decay + raw * (1 - V4_BANDS[b].decay);
+            ? prev + (raw - prev) * 0.55                                    // fast attack: 45% per frame
+            : prev * V4_BANDS[b].decay + raw * (1 - V4_BANDS[b].decay);    // per-band decay
+          const hist = bandHistRef.current[b];
+          hist.copyWithin(0, 1);
+          hist[hist.length - 1] = smoothRef.current[b];
         }
       }
 
       // ── Generate points: x = frequency zone, amplitude = band energy ──
-      // Formula matches OG exactly, but bandVal comes from smoothed data
       const points = [];
       for (let i = 0; i < V4_RENDER_PTS; i++) {
         const t = i / V4_RENDER_PTS;
         const edge = Math.min(1, t / 0.06, (1 - t) / 0.06);
 
         let amp;
-        if (hasFabric) {
-          // Map x-position to frequency band (interpolated) — same as OG
+        if (hasFabric && bandHistRef.current) {
           const bandPos = t * V4_BAND_NAMES.length;
           const bandIdx = Math.min(Math.floor(bandPos), V4_BAND_NAMES.length - 1);
           const bandNext = Math.min(bandIdx + 1, V4_BAND_NAMES.length - 1);
           const bandFrac = bandPos - Math.floor(bandPos);
-          const bandVal = smoothRef.current[bandIdx] * (1 - bandFrac) +
-                          smoothRef.current[bandNext] * bandFrac;
 
-          // OG's exact formula
+          // Read from temporal buffers with per-band lag (sub lingers, air is instant)
+          const histL = bandHistRef.current[bandIdx];
+          const histR = bandHistRef.current[bandNext];
+          const valL = histL[Math.max(0, histL.length - 1 - V4_BAND_LAG[bandIdx])];
+          const valR = histR[Math.max(0, histR.length - 1 - V4_BAND_LAG[bandNext])];
+          const bandVal = valL * (1 - bandFrac) + valR * bandFrac;
+
+          // Per-band amplitude emphasis (interpolated)
+          const bandAmp = V4_BANDS[bandIdx].amp * (1 - bandFrac) + V4_BANDS[bandNext].amp * bandFrac;
+
+          // Band-dominant formula — loudness as range scaler, not multiplier
           const realLoud = snap.loudness || 0;
           const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
           const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.4 : 0;
+          const expanded = Math.pow(bandVal, 0.55) * bandAmp;
+          const loud_scale = 0.55 + realLoud * 0.45;
 
-          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
+          amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
           amp *= (1 + (snap.flux || 0) * 0.6);
           if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.5);
           amp *= edge;
           amp *= k.amplitude / 0.55;
           amp *= exhaleMultiplier;
-          // Envelope ceiling — shapes amplitude arc over the track (matches OG/Orb)
           const hasEnvelope = envelopeValue < 1;
           const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
           amp = Math.min(amp, amplitudeCeiling);
