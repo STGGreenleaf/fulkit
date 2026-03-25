@@ -5446,7 +5446,7 @@ export default function FabricPage() {
                         onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Save as set"
                       >
-                        <Save size={14} strokeWidth={1.5} />
+                        <Save size={10} strokeWidth={1.8} />
                       </button>
                       <button
                         onClick={clearGuyCrate}
@@ -5458,7 +5458,7 @@ export default function FabricPage() {
                         onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Clear B-Sides"
                       >
-                        <Trash2 size={14} strokeWidth={1.5} />
+                        <Trash2 size={10} strokeWidth={1.8} />
                       </button>
                     </div>
                   </div>
@@ -5717,7 +5717,7 @@ export default function FabricPage() {
                         onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Delete crate"
                       >
-                        <Trash2 size={14} strokeWidth={1.5} />
+                        <Trash2 size={10} strokeWidth={1.8} />
                       </button>
                       <button
                         onClick={() => {
@@ -5732,7 +5732,7 @@ export default function FabricPage() {
                         onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
                         title="Play crate"
                       >
-                        <Play size={14} strokeWidth={2} />
+                        <Play size={10} strokeWidth={2} />
                       </button>
                     </div>
                   </div>
