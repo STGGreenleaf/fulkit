@@ -369,6 +369,9 @@ const V4_BANDS = [
 ];
 // Per-band temporal lag: sub reacts fast but sustains, air is instant
 const V4_BAND_LAG = [4, 3, 2, 2, 1, 1, 0];
+// Weighted canvas mapping: sub/bass own more visual space via cumulative w
+const V4_TOTAL_W = V4_BANDS.reduce((s, b) => s + b.w, 0);
+const V4_CUMULATIVE_W = V4_BANDS.reduce((arr, b) => { arr.push((arr.length ? arr[arr.length - 1] : 0) + b.w / V4_TOTAL_W); return arr; }, []);
 
 function SignalTerrainV4({
   height = 220,
@@ -539,39 +542,50 @@ function SignalTerrainV4({
 
         let amp;
         if (hasFabric && bandHistRef.current) {
-          const bandPos = t * V4_BAND_NAMES.length;
-          const bandIdx = Math.min(Math.floor(bandPos), V4_BAND_NAMES.length - 1);
+          // Weighted band mapping — sub/bass own more canvas space
+          let bandIdx = 0;
+          while (bandIdx < V4_CUMULATIVE_W.length - 1 && t > V4_CUMULATIVE_W[bandIdx]) bandIdx++;
+          const bandStart = bandIdx > 0 ? V4_CUMULATIVE_W[bandIdx - 1] : 0;
+          const bandEnd = V4_CUMULATIVE_W[bandIdx];
+          const bandFrac = bandEnd > bandStart ? Math.min(1, (t - bandStart) / (bandEnd - bandStart)) : 0;
           const bandNext = Math.min(bandIdx + 1, V4_BAND_NAMES.length - 1);
-          const bandFrac = bandPos - Math.floor(bandPos);
 
-          // Read from temporal buffers with per-band lag (sub lingers, air is instant)
+          // Read from temporal buffers with per-band lag
           const histL = bandHistRef.current[bandIdx];
           const histR = bandHistRef.current[bandNext];
           const valL = histL[Math.max(0, histL.length - 1 - V4_BAND_LAG[bandIdx])];
           const valR = histR[Math.max(0, histR.length - 1 - V4_BAND_LAG[bandNext])];
           const bandValRaw = valL * (1 - bandFrac) + valR * bandFrac;
-          // Sharpen interpolated value — suppresses mid-range, keeps peaks tall
-          const bandVal = Math.pow(bandValRaw, 1.4);
+          // Sharpen — suppresses mid-range, keeps peaks tall
+          const bandVal = Math.pow(bandValRaw, 1.8);
 
           // Per-band amplitude emphasis (interpolated)
           const bandAmp = V4_BANDS[bandIdx].amp * (1 - bandFrac) + V4_BANDS[bandNext].amp * bandFrac;
 
-          // Band-dominant formula — loudness as range scaler, not multiplier
+          // Band-dominant formula — frequency-aware boosts
           const realLoud = snap.loudness || 0;
           const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
-          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.7 : 0;
+          const bandRatio = bandIdx / V4_BAND_NAMES.length; // 0=sub, ~1=air
+          // Onset: kick drums hit sub/bass, not air
+          const onsetWeight = 1 - bandRatio * 0.85;
+          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.7 * onsetWeight : 0;
           const expanded = Math.pow(bandVal, 0.78) * bandAmp;
           const loud_scale = 0.3 + realLoud * 0.7;
 
           amp = (expanded * 0.78 + onsetSpike + texture * 0.5) * loud_scale;
-          amp *= (1 + (snap.flux || 0) * 0.6);
-          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.9);
+          // Flux: spectral change is more visible in mids/highs
+          const fluxWeight = 0.4 + bandRatio * 0.6;
+          amp *= (1 + (snap.flux || 0) * 0.6 * fluxWeight);
+          // Beat: felt in the low end
+          const beatWeight = 1 - bandRatio * 0.8;
+          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.9 * beatWeight);
           amp *= edge;
           amp *= k.amplitude / 0.55;
           amp *= exhaleMultiplier;
+          // Per-band ceiling — sub can reach full, air gets lower ceiling
           const hasEnvelope = envelopeValue < 1;
-          const amplitudeCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
-          amp = Math.min(amp, amplitudeCeiling);
+          const baseCeiling = hasEnvelope ? 0.2 + envelopeValue * 0.6 : 0.2 + energy * 0.6;
+          amp = Math.min(amp, baseCeiling * bandAmp);
           amp = Math.max(amp, isPlaying ? 0.005 : 0);
           amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
