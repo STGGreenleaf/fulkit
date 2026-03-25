@@ -451,24 +451,29 @@ function SignalTerrainV4({
       // ── Kinetic state machine ──
       const now = timestamp;
       const elapsed = now - k.stateStart;
-      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 0.15; }
+      if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.amplitude = 0.02; k.target = 0.02; }
       else if (!isPlaying && k.prevPlaying) { k.state = "wind-down"; k.stateStart = now; k.target = 0.08; }
       k.prevPlaying = isPlaying;
+      let lerpRate = 0.06;
       if (k.state === "spool-up") {
-        // Ease in: ramp target from 0.15 → 0.55 over 1.5s, letting the song data lead
-        const ramp = Math.min(1, elapsed / 1500);
-        k.target = 0.15 + ramp * 0.4;
-        if (elapsed > 1500) k.state = "active";
+        // Slow ease in: ramp over 2.5s with gentle lerp — song data leads, kinetics follow
+        const ramp = Math.min(1, elapsed / 2500);
+        const eased = ramp * ramp; // quadratic ease-in: slow start, accelerates
+        k.target = 0.02 + eased * 0.53;
+        lerpRate = 0.02 + ramp * 0.04; // lerp 0.02 → 0.06 over the ramp
+        if (elapsed > 2500) k.state = "active";
       }
       else if (k.state === "wind-down" && elapsed > 800) k.state = "idle";
-      else if (k.state === "skip-cut" && elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; }
-      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.15; }
+      else if (k.state === "skip-cut") { lerpRate = 0.2; if (elapsed > 200) { k.state = "skip-silence"; k.stateStart = now; k.target = 0.02; } }
+      else if (k.state === "skip-silence" && elapsed > 200) { k.state = "skip-spool"; k.stateStart = now; k.target = 0.02; }
       else if (k.state === "skip-spool") {
-        const ramp = Math.min(1, elapsed / 1200);
-        k.target = 0.15 + ramp * 0.4;
-        if (elapsed > 1200) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
+        const ramp = Math.min(1, elapsed / 2000);
+        const eased = ramp * ramp;
+        k.target = 0.02 + eased * 0.53;
+        lerpRate = 0.02 + ramp * 0.04;
+        if (elapsed > 2000) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
       }
-      k.amplitude += (k.target - k.amplitude) * (k.state === "skip-cut" ? 0.2 : 0.06);
+      k.amplitude += (k.target - k.amplitude) * lerpRate;
 
       // Phase + features
       const bpm = features?.bpm || 100;
