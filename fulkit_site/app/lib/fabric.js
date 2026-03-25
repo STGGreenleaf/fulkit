@@ -1814,8 +1814,11 @@ export function FabricProvider({ children }) {
             if (!tracks.length) return;
 
             setSetsData((cur) => {
-              // Double-check it hasn't been restored already
+              // Double-check it hasn't been restored already or dismissed since the outer fetch
               if (cur.sets.some(s => s.name === pl.name)) return cur;
+              let freshDismissed = [];
+              try { freshDismissed = JSON.parse(localStorage.getItem("fulkit-dismissed-sets") || "[]"); } catch {}
+              if (freshDismissed.includes(pl.name)) return cur;
               const restoredSet = {
                 id: pl.id || `trophy-${Date.now()}`,
                 name: pl.name,
