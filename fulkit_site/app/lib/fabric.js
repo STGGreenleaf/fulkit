@@ -1788,14 +1788,18 @@ export function FabricProvider({ children }) {
       const trophiedPlaylists = data.playlists.filter(p => p.source === "set");
       if (!trophiedPlaylists.length) return;
 
+      let dismissed2 = [];
+      try { dismissed2 = JSON.parse(localStorage.getItem("fulkit-dismissed-sets") || "[]"); } catch {}
+      const dismissedNames2 = new Set(dismissed2);
+
       setSetsData((prev) => {
         const currentSetIds = new Set(prev.sets.map(s => s.id));
         const currentSetNames = new Set(prev.sets.map(s => s.name));
         let restored = false;
 
         for (const pl of trophiedPlaylists) {
-          // Skip if set already exists (by ID or name)
-          if (currentSetIds.has(pl.id) || currentSetNames.has(pl.name)) continue;
+          // Skip if set already exists (by ID or name) or was explicitly deleted
+          if (currentSetIds.has(pl.id) || currentSetNames.has(pl.name) || dismissedNames2.has(pl.name)) continue;
 
           // Fetch tracks for this playlist
           apiFetch(`/api/fabric/playlists/${pl._fulkitId}/tracks`).then((trackData) => {
@@ -1839,6 +1843,9 @@ export function FabricProvider({ children }) {
         adoptedSets[e.adoptedTo].push({ id: e.id, title: e.title, artist: e.artist, provider: e.provider || "youtube" });
       }
     }
+    let dismissed3 = [];
+    try { dismissed3 = JSON.parse(localStorage.getItem("fulkit-dismissed-sets") || "[]"); } catch {}
+    const dismissedNames3 = new Set(dismissed3);
     // Only restore sets that are COMPLETELY missing — never merge into existing sets
     // If a set exists, the user owns it. Don't touch it.
     setSetsData((prev) => {
@@ -1846,7 +1853,7 @@ export function FabricProvider({ children }) {
       let changed = false;
       const newSets = [...prev.sets];
       for (const [name, tracks] of Object.entries(adoptedSets)) {
-        if (currentNames.has(name) || !tracks.length) continue;
+        if (currentNames.has(name) || dismissedNames3.has(name) || !tracks.length) continue;
         newSets.push({
           id: `memory-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           name,
