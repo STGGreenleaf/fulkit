@@ -913,6 +913,13 @@ export function FabricProvider({ children }) {
     for (const t of flagged) {
       if (!audioFeatures[t.id] && !featuresRequested.current.has(t.id)) ids.push(t.id);
     }
+    // Also fetch for Guy's Crate tracks so the status dot works
+    const gc = setsData.sets.find(s => s.id === "guy-crate");
+    if (gc) {
+      for (const t of gc.tracks) {
+        if (!audioFeatures[t.id] && !featuresRequested.current.has(t.id)) ids.push(t.id);
+      }
+    }
     if (ids.length === 0) return;
     ids.forEach((id) => featuresRequested.current.add(id));
     apiFetch(`/api/fabric/audio-features?ids=${ids.join(",")}`).then((data) => {

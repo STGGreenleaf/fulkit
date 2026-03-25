@@ -5505,6 +5505,11 @@ export default function FabricPage() {
                                 </div>
                               ) : String(i + 1).padStart(2, "0")}
                             </div>
+                            <div style={{
+                              width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+                              background: audioFeatures[track.id] ? "var(--color-text-muted)" : "transparent",
+                              border: audioFeatures[track.id] ? "none" : "1px solid var(--color-text-dim)",
+                            }} title={audioFeatures[track.id] ? "Fabric analyzed" : "Pending"} />
                             <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-primary)" }}>
                               <div style={{
                                 fontSize: "var(--font-size-xs)",
