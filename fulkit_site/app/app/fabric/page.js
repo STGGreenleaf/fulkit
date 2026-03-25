@@ -352,13 +352,13 @@ const T_POINTS = 80;
 // 7 frequency bands — each renders as an independent sinusoidal ribbon.
 // Bass = slow wide waves, Air = fast tight oscillations. They interweave.
 const BAND_CONFIGS = [
-  { name: 'sub',      freq: 0.35, ampMax: 1.0,  phaseOff: 0,    phaseSpeed: 0.12, lw: 1.6, noiseScale: 2   },
-  { name: 'bass',     freq: 0.6,  ampMax: 0.88, phaseOff: 0.7,  phaseSpeed: 0.17, lw: 1.4, noiseScale: 3   },
-  { name: 'low_mid',  freq: 1.1,  ampMax: 0.72, phaseOff: 1.4,  phaseSpeed: 0.23, lw: 1.1, noiseScale: 5   },
-  { name: 'mid',      freq: 1.9,  ampMax: 0.56, phaseOff: 2.1,  phaseSpeed: 0.30, lw: 0.9, noiseScale: 7   },
-  { name: 'high_mid', freq: 3.2,  ampMax: 0.40, phaseOff: 2.8,  phaseSpeed: 0.38, lw: 0.7, noiseScale: 10  },
-  { name: 'high',     freq: 5.5,  ampMax: 0.26, phaseOff: 3.5,  phaseSpeed: 0.48, lw: 0.5, noiseScale: 14  },
-  { name: 'air',      freq: 9.0,  ampMax: 0.16, phaseOff: 4.2,  phaseSpeed: 0.58, lw: 0.35, noiseScale: 20 },
+  { name: 'sub',      freq: 0.35, ampMax: 1.0,  phaseOff: 0,    phaseSpeed: 0.25, lw: 1.8, noiseScale: 2   },
+  { name: 'bass',     freq: 0.6,  ampMax: 0.90, phaseOff: 0.7,  phaseSpeed: 0.35, lw: 1.5, noiseScale: 3   },
+  { name: 'low_mid',  freq: 1.1,  ampMax: 0.78, phaseOff: 1.4,  phaseSpeed: 0.50, lw: 1.2, noiseScale: 5   },
+  { name: 'mid',      freq: 1.9,  ampMax: 0.65, phaseOff: 2.1,  phaseSpeed: 0.70, lw: 1.0, noiseScale: 7   },
+  { name: 'high_mid', freq: 3.2,  ampMax: 0.52, phaseOff: 2.8,  phaseSpeed: 0.95, lw: 0.8, noiseScale: 10  },
+  { name: 'high',     freq: 5.5,  ampMax: 0.40, phaseOff: 3.5,  phaseSpeed: 1.20, lw: 0.6, noiseScale: 14  },
+  { name: 'air',      freq: 9.0,  ampMax: 0.30, phaseOff: 4.2,  phaseSpeed: 1.50, lw: 0.45, noiseScale: 20 },
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -814,8 +814,9 @@ function SignalTerrain({
           const onsetSpike = snap.onset ? snap.onset_strength * 0.3 : 0;
           const kGate = k.amplitude / 0.55;
           const beatMul = snap.beat ? 1 + snap.beat_strength * 0.25 : 1;
-          bandEnergy = (rawBand * 0.65 + realLoud * 0.15 + onsetSpike) * realLoud * beatMul * kGate * exhaleMultiplier;
-          bandEnergy = Math.max(0.03, Math.min(0.95, bandEnergy));
+          const loudBoost = 0.7 + realLoud * 0.3;
+          bandEnergy = (rawBand * loudBoost + onsetSpike) * (1 + snap.flux * 0.4) * beatMul * kGate * exhaleMultiplier;
+          bandEnergy = Math.max(0.05, Math.min(0.95, bandEnergy));
         } else {
           // Procedural / mic mode — synthesize per-band energy
           const synthBase = noise2D(phase * 0.08 + b * 7.3, b * 4.1 + 50) * 0.5 + 0.5;
@@ -867,7 +868,7 @@ function SignalTerrain({
       ctx.clearRect(0, 0, w, h);
       const layers = historyRef.current;
       const centerY = h * 0.5;
-      const maxDisp = h * 0.38;
+      const maxDisp = h * 0.45;
 
       // Draw from oldest layer to newest — each layer contains all 7 bands
       for (let l = 0; l < layers.length; l++) {
@@ -879,7 +880,7 @@ function SignalTerrain({
           const data = frame[b];
           if (!data) continue;
 
-          const alpha = 0.01 + age * age * 0.12;
+          const alpha = 0.02 + age * age * 0.18;
           const baseLw = band.lw * (0.3 + age * 0.7);
           const lw = baseLw * (0.7 + acousticness * 0.6);
 
