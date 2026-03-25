@@ -346,7 +346,7 @@ function MarqueeText({ children, style }) {
 // Layer 3: Live audio (mic via getUserMedia)
 // ═══════════════════════════════════════════════════════
 
-const T_LAYERS = 25;
+const T_LAYERS = 35;
 const T_POINTS = 80;
 
 // 7 frequency bands — each renders as an independent sinusoidal ribbon.
@@ -513,6 +513,10 @@ function SignalTerrain({
   const progressRef = useRef(progress);
   progressRef.current = progress;
 
+  // Per-band temporal buffers — rolling window of smoothed energy values
+  const bandBuffersRef = useRef(null);
+  const bandSmoothRef = useRef(new Float32Array(7));
+
   // Layer 1: kinetic state machine
   const kineticRef = useRef({
     amplitude: 0.08, // current smoothed amplitude (0–1)
@@ -568,6 +572,11 @@ function SignalTerrain({
   useEffect(() => {
     noiseRef.current = createNoise2D();
     historyRef.current = [];
+    // Clear temporal buffers on track change
+    if (bandBuffersRef.current) {
+      for (const buf of bandBuffersRef.current) buf.fill(0);
+      bandSmoothRef.current.fill(0);
+    }
     const k = kineticRef.current;
     // If track changed while playing → skip signature
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
@@ -788,58 +797,84 @@ function SignalTerrain({
         liveFlux = live.smoothFlux;
       }
 
-      // ── Generate 7 frequency ribbons ──
+      // ── Generate 7 frequency ribbons (temporal buffer architecture) ──
       const gsFn = getSnapshotRef.current;
       const curProgress = progressRef.current;
       const snap = gsFn ? gsFn(curProgress) : null;
       const hasFabric = !!snap;
-      if (Math.floor(timestamp / 1000) !== Math.floor((timestamp - frameInterval) / 1000)) {
-        if (hasFabric) console.log("[SignalTerrain] FABRIC mode — loudness:", snap.loudness?.toFixed(3), "flux:", snap.flux?.toFixed(3));
-        else if (isPlaying) console.log("[SignalTerrain] PROCEDURAL — gsFn:", !!gsFn, "progress:", curProgress.toFixed(3));
+
+      // Lazy-init temporal buffers
+      if (!bandBuffersRef.current) {
+        bandBuffersRef.current = BAND_CONFIGS.map(() => new Float32Array(T_POINTS));
       }
 
-      const frameBands = []; // 7 arrays, one per frequency band
+      const frameBands = [];
 
       for (let b = 0; b < BAND_CONFIGS.length; b++) {
         const band = BAND_CONFIGS[b];
-        const bandPoints = [];
+        const buf = bandBuffersRef.current[b];
 
-        // Derive band energy from data source
-        let bandEnergy;
+        // ── Compute raw energy for this band ──
+        let rawEnergy;
         if (hasFabric && !live.active) {
           // Fabric mode — real frequency data from thumbprint
           const rawBand = snap.bands?.[band.name] || 0;
           const rawLoud = snap.loudness || 0;
-          const realLoud = 0.15 + rawLoud * 0.85;
-          const onsetSpike = snap.onset ? snap.onset_strength * 0.3 : 0;
-          const kGate = k.amplitude / 0.55;
-          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.25 : 1;
-          const loudBoost = 0.7 + realLoud * 0.3;
-          bandEnergy = (rawBand * loudBoost + onsetSpike) * (1 + snap.flux * 0.4) * beatMul * kGate * exhaleMultiplier;
-          bandEnergy = Math.max(0.05, Math.min(0.95, bandEnergy));
+          // Log-scale: expands quiet passages, compresses loud ones
+          rawEnergy = Math.pow(rawBand, 0.6);
+          // Loudness shapes overall level (additive floor, not multiplicative gate)
+          rawEnergy *= (0.6 + rawLoud * 0.4);
+          // Onset: additive spike for transients
+          if (snap.onset) rawEnergy = Math.min(1, rawEnergy + snap.onset_strength * 0.25);
+          // Beat: mild boost
+          if (snap.beat) rawEnergy *= (1 + snap.beat_strength * 0.15);
+          // Kinetic gate (play/pause transitions) — only multiplicative gate
+          rawEnergy *= (k.amplitude / 0.55) * exhaleMultiplier;
+          rawEnergy = Math.max(0.02, Math.min(1.0, rawEnergy));
+        } else if (live.active && (liveBass + liveMids) > 0.01) {
+          // Mic mode
+          const liveMap = [liveBass, liveBass, (liveBass + liveMids) / 2, liveMids, (liveMids + livePresence) / 2, livePresence, liveAir];
+          rawEnergy = Math.pow(liveMap[b], 0.6) * 1.2 * (1 + liveFlux * 0.5);
+          rawEnergy = Math.max(0.02, Math.min(1.0, rawEnergy));
         } else {
-          // Procedural / mic mode — synthesize per-band energy
+          // Procedural fallback
           const synthBase = noise2D(phase * 0.08 + b * 7.3, b * 4.1 + 50) * 0.5 + 0.5;
           const envMod = hasEnvelope ? envelopeValue : energy;
           const beatMod = 1 + beatPulse * danceability * 0.3;
-
-          if (live.active && (liveBass + liveMids) > 0.01) {
-            const liveMap = [liveBass, liveBass, (liveBass + liveMids) / 2, liveMids, (liveMids + livePresence) / 2, livePresence, liveAir];
-            bandEnergy = liveMap[b] * 1.5 * (1 + liveFlux * 2) * beatMod;
-          } else {
-            bandEnergy = synthBase * k.amplitude * envMod * beatMod * exhaleMultiplier;
-          }
-          bandEnergy = Math.min(bandEnergy, amplitudeCeiling);
-          // Idle breathing floor — ribbons stay visible even without music
-          const idleFloor = 0.08 + synthBase * 0.08; // 0.08–0.16, noise-driven per band
-          bandEnergy = Math.max(bandEnergy, isPlaying ? amplitudeFloor * 0.3 : idleFloor);
-          bandEnergy = Math.max(0, Math.min(0.95, bandEnergy));
+          rawEnergy = synthBase * k.amplitude * envMod * beatMod * exhaleMultiplier;
+          rawEnergy = Math.min(rawEnergy, amplitudeCeiling);
+          const idleFloor = 0.08 + synthBase * 0.08;
+          rawEnergy = Math.max(rawEnergy, isPlaying ? amplitudeFloor * 0.3 : idleFloor);
+          rawEnergy = Math.max(0, Math.min(1.0, rawEnergy));
         }
 
-        // Generate sinusoidal ribbon path
+        // ── Asymmetric smoothing: fast attack, slow decay ──
+        const prev = bandSmoothRef.current[b];
+        if (rawEnergy > prev) {
+          bandSmoothRef.current[b] = prev * 0.3 + rawEnergy * 0.7;   // attack ~2 frames
+        } else {
+          bandSmoothRef.current[b] = prev * 0.92 + rawEnergy * 0.08;  // decay ~400ms
+        }
+        const smoothed = bandSmoothRef.current[b];
+
+        // ── Shift buffer left, push new value at right edge ──
+        buf.copyWithin(0, 1);
+        buf[T_POINTS - 1] = smoothed;
+
+        // ── Onset flash: boost rightmost points on transients ──
+        if (hasFabric && snap.onset && snap.onset_strength > 0.3) {
+          const flashBoost = snap.onset_strength * 0.3;
+          for (let fi = T_POINTS - 4; fi < T_POINTS; fi++) {
+            buf[fi] = Math.min(1.0, buf[fi] + flashBoost);
+          }
+        }
+
+        // ── Generate sinusoidal ribbon path from temporal buffer ──
+        const bandPoints = [];
         for (let i = 0; i < T_POINTS; i++) {
           const t = i / (T_POINTS - 1);
           const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
+          const bufVal = buf[i]; // energy at this time position
 
           // Primary wave — frequency defines band character
           const wave = Math.sin(2 * Math.PI * band.freq * t + phase * band.phaseSpeed + band.phaseOff);
@@ -848,7 +883,8 @@ function SignalTerrain({
           // Noise layer for breath and irregularity
           const tex = noise2D(t * band.noiseScale + keyOffset, phase * 0.2 + b * 10) * 0.2;
 
-          const displacement = (wave * 0.55 + harmonic + tex) * bandEnergy * band.ampMax * edge;
+          // bufVal modulates the wave — loud = big displacement, quiet = flat
+          const displacement = (wave * 0.55 + harmonic + tex) * bufVal * band.ampMax * edge;
           bandPoints.push(displacement);
         }
 
@@ -870,10 +906,16 @@ function SignalTerrain({
       const centerY = h * 0.5;
       const maxDisp = h * 0.45;
 
-      // Draw from oldest layer to newest — each layer contains all 7 bands
+      // Beat width pulse for newest layers
+      let beatWidthBoost = 1.0;
+      if (hasFabric && snap && snap.beat) {
+        beatWidthBoost = 1 + snap.beat_strength * 0.3;
+      }
+
       for (let l = 0; l < layers.length; l++) {
         const age = l / Math.max(1, layers.length - 1);
         const frame = layers[l];
+        const isNewest = l >= layers.length - 3;
 
         for (let b = 0; b < BAND_CONFIGS.length; b++) {
           const band = BAND_CONFIGS[b];
@@ -882,7 +924,16 @@ function SignalTerrain({
 
           const alpha = 0.02 + age * age * 0.18;
           const baseLw = band.lw * (0.3 + age * 0.7);
-          const lw = baseLw * (0.7 + acousticness * 0.6);
+          let lw = baseLw * (0.7 + acousticness * 0.6);
+
+          // Dynamic line width on newest layer — thicker at peaks
+          if (l === layers.length - 1 && bandBuffersRef.current) {
+            const bufAvg = bandBuffersRef.current[b].reduce((s, v) => s + v, 0) / T_POINTS;
+            lw *= (0.6 + bufAvg * 0.6);
+          }
+
+          // Beat pulse — briefly widen newest layers on beat
+          if (isNewest) lw *= beatWidthBoost;
 
           ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${alpha})`;
           ctx.lineWidth = lw;
