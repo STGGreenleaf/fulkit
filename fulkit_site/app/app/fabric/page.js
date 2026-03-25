@@ -4975,8 +4975,8 @@ export default function FabricPage() {
                   </div>
                 )}
 
-                {/* ── Bin Picks — crowned sets ── */}
-                {crates.filter(c => c.source === "set").length > 0 && (
+                {/* ── Bin Picks — crowned sets that exist in the Sets panel ── */}
+                {(() => { const setNames = new Set(allSets.map(s => s.name).concat(trophiedSets.map(s => s.name))); return crates.filter(c => c.source === "set" && setNames.has(c.name)); })().length > 0 && (
                   <div style={{ borderBottom: "1px solid var(--color-border-light)", overflow: "hidden", background: "var(--color-bg-elevated)" }}>
                     <div
                       onClick={() => setBinPicksOpen(v => !v)}
@@ -5012,7 +5012,7 @@ export default function FabricPage() {
                     </div>
                     {binPicksOpen && (
                       <div>
-                        {crates.filter(c => c.source === "set").map((mix) => (
+                        {(() => { const setNames = new Set(allSets.map(s => s.name).concat(trophiedSets.map(s => s.name))); return crates.filter(c => c.source === "set" && setNames.has(c.name)); })().map((mix) => (
                           <div
                             key={mix.id}
                             style={{
