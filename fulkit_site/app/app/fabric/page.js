@@ -829,7 +829,9 @@ function SignalTerrain({
             bandEnergy = synthBase * k.amplitude * envMod * beatMod * exhaleMultiplier;
           }
           bandEnergy = Math.min(bandEnergy, amplitudeCeiling);
-          bandEnergy = Math.max(bandEnergy, isPlaying ? amplitudeFloor * 0.3 : 0);
+          // Idle breathing floor — ribbons stay visible even without music
+          const idleFloor = 0.08 + synthBase * 0.08; // 0.08–0.16, noise-driven per band
+          bandEnergy = Math.max(bandEnergy, isPlaying ? amplitudeFloor * 0.3 : idleFloor);
           bandEnergy = Math.max(0, Math.min(0.95, bandEnergy));
         }
 
