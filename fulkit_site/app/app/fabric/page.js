@@ -2327,6 +2327,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     beatAccumulator: 0,
     lastTs: 0,
   });
+  // Adaptive quality — auto-reduce detail if fps drops below threshold
+  const perfRef = useRef({ frameTimes: [], quality: 1.0, checkInterval: 0 });
 
   // Envelope — same as terrain
   useEffect(() => {
@@ -2407,6 +2409,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const k = kineticRef.current;
       const dt = k.lastTs > 0 ? Math.min((ts - k.lastTs) / 1000, 0.05) : 0.016;
       k.lastTs = ts;
+
+      // ── Adaptive quality: monitor fps, scale detail ──
+      const pf = perfRef.current;
+      pf.frameTimes.push(ts);
+      if (pf.frameTimes.length > 30) pf.frameTimes.shift();
+      pf.checkInterval++;
+      if (pf.checkInterval >= 30 && pf.frameTimes.length >= 20) {
+        pf.checkInterval = 0;
+        const elapsed = pf.frameTimes[pf.frameTimes.length - 1] - pf.frameTimes[0];
+        const avgFps = (pf.frameTimes.length - 1) / (elapsed / 1000);
+        if (avgFps < 20) pf.quality = Math.max(0.3, pf.quality - 0.15);
+        else if (avgFps < 28) pf.quality = Math.max(0.5, pf.quality - 0.05);
+        else if (avgFps > 40 && pf.quality < 1) pf.quality = Math.min(1, pf.quality + 0.05);
+      }
+      const Q = pf.quality; // 0.3–1.0
+
       const w = window.innerWidth, h = window.innerHeight;
       const dim = Math.min(w, h);
       const baseR = dim * 0.18;
@@ -2760,9 +2778,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       const isWindingDown = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
+      const maxLayers = Math.max(8, Math.floor(ORB_R_LAYERS * Q)); // adaptive: 8–30
       if (k.state === "active" || k.state === "spool-up" || k.state === "skip-spool") {
         historyRef.current.push(points);
-        if (historyRef.current.length > ORB_R_LAYERS) historyRef.current.shift();
+        if (historyRef.current.length > maxLayers) historyRef.current.shift();
       } else if (isWindingDown) {
         historyRef.current.push(points);
         if (historyRef.current.length > 3) historyRef.current.shift();
@@ -2792,7 +2811,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       if (isActive && activity > 0.15) {
         const spawnRate = Math.floor(2 + realLoud * 4); // 2–6 per frame
         for (let s = 0; s < spawnRate; s++) {
-          if (wisps.length >= 150) break;
+          if (wisps.length >= Math.floor(150 * Q)) break;
           const angle = Math.random() * Math.PI * 2;
           const cosA = Math.cos(angle), sinA = Math.sin(angle);
           const surfaceR = baseR * (1 + realLoud * 0.4);
@@ -2826,12 +2845,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ── Interior radiation: rotating, evolving, frequency-driven ──
+      const tendrilStep = Q > 0.6 ? 2 : Q > 0.4 ? 4 : 6; // adaptive density
+      const spokeStep = Q > 0.6 ? 4 : Q > 0.4 ? 8 : 12;
       if (isActive && activity > 0.2) {
         const innerAlpha = activity * 0.15 * (0.4 + realLoud * 0.6);
-        // Rotating inner web — offset from outer rotation so shapes diverge
         const innerRot = rot * 1.7 + phase * 0.15;
-        // Cross connections — not just opposite, varying angles for visual diversity
-        for (let i = 0; i < N; i += 2) {
+        for (let i = 0; i < N; i += tendrilStep) {
           const th1 = (i / N) * Math.PI * 2 + innerRot;
           // Connect to points at varying distances around the circle, not just opposite
           const spread = Math.floor(N * 0.3 + N * 0.4 * noise2D(i * 0.5, phase * 0.1));
@@ -2851,8 +2870,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.lineWidth = 0.4 + activity * 0.7;
           ctx.stroke();
         }
-        // Radial spokes — longer, from near-center to past surface
-        for (let i = 0; i < N; i += 4) {
+        for (let i = 0; i < N; i += spokeStep) {
           const th = (i / N) * Math.PI * 2 + innerRot;
           const spokeLen = baseR * (0.3 + points[i] * 1.0);
           const x1 = cx + Math.cos(th) * baseR * 0.03;
@@ -2909,7 +2927,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = drawLw;
         ctx.stroke();
 
-        if (l >= layerCount - 15) {
+        const innerLayerCount = Math.max(4, Math.floor(15 * Q)); // adaptive: 4–15
+        if (l >= layerCount - innerLayerCount) {
           const inPts = [];
           // Independent inner morphing — counter-rotates, different noise seed, breathes
           const innerMorphT = phase * 4.0; // faster than outer — liquid independence
@@ -2947,7 +2966,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const strength = Math.max(snap.onset_strength || 0, snap.beat_strength || 0);
           const count = Math.floor(8 + strength * 16); // 8–24 sparks
           for (let s = 0; s < count; s++) {
-            if (sparks.length >= 80) break;
+            if (sparks.length >= Math.floor(80 * Q)) break;
             const angle = Math.random() * Math.PI * 2;
             const cosA = Math.cos(angle), sinA = Math.sin(angle);
             const surfaceR = baseR * (1.1 + realLoud * 0.5);
