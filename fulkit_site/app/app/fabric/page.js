@@ -347,15 +347,16 @@ function MarqueeText({ children, style }) {
 // ═══════════════════════════════════════════════════════
 
 // ═════════════════════════════════════════════════════════
-// SIGNAL TERRAIN V4 — OG mountains + thumbprint data
-// Same visual rendering as OG (40 layers, centerY 78%, mountains
-// + reflection, quadratic curves). But driven by temporal buffers
-// from the thumbprint. The music shapes the mountains.
+// SIGNAL TERRAIN V4 — OG mountains + real math
+// Same look as OG: 40 stacked mountain lines pushing up from 78%
+// center, reflection below. But each x-position maps to a frequency
+// band and the amplitude comes from smoothed thumbprint data.
+// No scrolling. Just pushes up like flame/smoke. Like #1 but real.
 // ═════════════════════════════════════════════════════════
 
-const V4_BUF_LEN = 120;
 const V4_RENDER_PTS = 80;
 const V4_HISTORY = 40;
+const V4_BAND_NAMES = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
 const V4_BANDS = [
   { name: "sub",      w: 1.8, amp: 1.0,  decay: 0.92 },
@@ -366,8 +367,6 @@ const V4_BANDS = [
   { name: "high",     w: 0.5, amp: 0.30, decay: 0.78 },
   { name: "air",      w: 0.35, amp: 0.20, decay: 0.75 },
 ];
-
-const V4_TOTAL_W = V4_BANDS.reduce((s, b) => s + b.w, 0);
 
 function SignalTerrainV4({
   height = 220,
@@ -391,8 +390,7 @@ function SignalTerrainV4({
   const historyRef = useRef([]);
   const phaseRef = useRef(0);
 
-  // Per-band temporal buffers
-  const bufsRef = useRef(null);
+  // Per-band smoothed values (no temporal buffer — just smooth the current frame)
   const smoothRef = useRef(new Float32Array(7));
 
   // Kinetic state machine
@@ -412,11 +410,10 @@ function SignalTerrainV4({
     return () => ro.disconnect();
   }, []);
 
-  // Track change
   useEffect(() => {
     noiseRef.current = createNoise2D();
     historyRef.current = [];
-    if (bufsRef.current) { for (const buf of bufsRef.current) buf.fill(0); smoothRef.current.fill(0); }
+    smoothRef.current.fill(0);
     const k = kRef.current;
     if (k.prevTrackId && k.prevTrackId !== trackId && k.prevPlaying) {
       k.state = "skip-cut"; k.stateStart = performance.now(); k.target = 0;
@@ -424,7 +421,6 @@ function SignalTerrainV4({
     k.prevTrackId = trackId;
   }, [trackId]);
 
-  // Envelope
   useEffect(() => {
     if (!trackId || envelopeRef.current.trackId === trackId) return;
     const bpm = features?.bpm || 100;
@@ -452,9 +448,7 @@ function SignalTerrainV4({
       const noise2D = noiseRef.current;
       const k = kRef.current;
 
-      if (!bufsRef.current) bufsRef.current = V4_BANDS.map(() => new Float32Array(V4_BUF_LEN));
-
-      // ── Kinetic state machine (same as OG) ──
+      // ── Kinetic state machine ──
       const now = timestamp;
       const elapsed = now - k.stateStart;
       if (isPlaying && !k.prevPlaying && k.state !== "skip-spool") { k.state = "spool-up"; k.stateStart = now; k.target = 0.55; }
@@ -467,15 +461,14 @@ function SignalTerrainV4({
       else if (k.state === "skip-spool" && elapsed > 400) { k.state = isPlaying ? "active" : "idle"; k.target = isPlaying ? 0.55 : 0.08; }
       k.amplitude += (k.target - k.amplitude) * (k.state === "skip-cut" ? 0.2 : 0.06);
 
-      // Phase advance (BPM-synced)
+      // Phase + features
       const bpm = features?.bpm || 100;
-      const beatsPerSec = bpm / 60;
-      phaseRef.current += isPlaying ? (beatsPerSec / 30) * 0.15 : 0.004;
+      phaseRef.current += isPlaying ? (bpm / 60 / 30) * 0.15 : 0.004;
       const phase = phaseRef.current;
-
-      // Audio features
       const energy = (features?.energy || 50) / 100;
       const acousticness = (features?.acousticness || 30) / 100;
+      const danceability = (features?.danceability || 50) / 100;
+      const sharpness = 1 - (features?.valence || 50) / 100;
       const keyOffset = (features?.key?.charCodeAt(0) || 0) * 0.1;
 
       // Exhale
@@ -492,67 +485,73 @@ function SignalTerrainV4({
         envelopeValue = env[Math.min(env.length - 1, Math.floor(progress * env.length))];
       }
 
+      // BPM beat grid
+      const progressMs = progress * duration * 1000;
+      const msPerBeat = 60000 / bpm;
+      const beatPhase = (progressMs % msPerBeat) / msPerBeat;
+      const beatPulse = isPlaying ? Math.pow(1 - beatPhase, 3) : 0;
+
       // ── Read snapshot ──
       const gsFn = getSnapshotRef.current;
       const snap = gsFn ? gsFn(progressRef.current) : null;
       const hasFabric = !!snap;
 
-      // ── Update band buffers ──
-      for (let b = 0; b < V4_BANDS.length; b++) {
-        const band = V4_BANDS[b];
-        const buf = bufsRef.current[b];
-        let raw;
-
-        if (hasFabric) {
-          raw = Math.pow(snap.bands?.[band.name] || 0, 0.6);
+      // ── Smooth band values (asymmetric attack/decay, no scrolling) ──
+      if (hasFabric) {
+        for (let b = 0; b < V4_BANDS.length; b++) {
+          let raw = Math.pow(snap.bands?.[V4_BANDS[b].name] || 0, 0.6);
           raw *= (0.6 + (snap.loudness || 0) * 0.4);
           if (snap.onset) raw = Math.min(1, raw + (snap.onset_strength || 0) * 0.3);
           if (snap.beat) raw *= (1 + (snap.beat_strength || 0) * 0.2);
           raw *= k.amplitude / 0.55;
           raw *= exhaleMultiplier;
           raw = Math.max(0.02, Math.min(1.0, raw));
-        } else {
-          // Procedural fallback (same noise shape as OG)
-          const t_norm = b / 7;
-          const n1 = noise2D(t_norm * 4 + keyOffset, phase * 0.3) * 0.5;
-          const n2 = noise2D(t_norm * 8 + 100, phase * 0.5) * 0.25;
-          raw = Math.abs(n1 + n2) * k.amplitude * envelopeValue * exhaleMultiplier;
-          raw = Math.max(0, Math.min(1.0, raw));
-        }
 
-        // Asymmetric smoothing
-        const prev = smoothRef.current[b];
-        smoothRef.current[b] = raw > prev
-          ? prev + (raw - prev) * 0.88
-          : prev * band.decay + raw * (1 - band.decay);
-        const sm = smoothRef.current[b];
-
-        buf.copyWithin(0, 1);
-        buf[V4_BUF_LEN - 1] = sm;
-
-        // Onset flash
-        if (hasFabric && snap.onset && (snap.onset_strength || 0) > 0.3) {
-          for (let fi = V4_BUF_LEN - 3; fi < V4_BUF_LEN; fi++) buf[fi] = Math.min(1.0, buf[fi] * 1.4 + 0.12);
+          const prev = smoothRef.current[b];
+          smoothRef.current[b] = raw > prev
+            ? prev + (raw - prev) * 0.88
+            : prev * V4_BANDS[b].decay + raw * (1 - V4_BANDS[b].decay);
         }
       }
 
-      // ── Generate render points from temporal buffers ──
+      // ── Generate points: x = frequency zone, amplitude = band energy ──
       const points = [];
       for (let i = 0; i < V4_RENDER_PTS; i++) {
-        const t = i / (V4_RENDER_PTS - 1);
-        const bufIdx = Math.min(V4_BUF_LEN - 1, Math.floor(t * V4_BUF_LEN));
+        const t = i / V4_RENDER_PTS;
         const edge = Math.min(1, t / 0.06, (1 - t) / 0.06);
 
-        // Weighted sum of all band energies at this time position
-        let amp = 0;
-        for (let b = 0; b < V4_BANDS.length; b++) {
-          amp += bufsRef.current[b][bufIdx] * V4_BANDS[b].amp * V4_BANDS[b].w;
-        }
-        amp /= V4_TOTAL_W; // normalize to 0–1
-        amp *= edge;
+        let amp;
+        if (hasFabric) {
+          // Map x-position to frequency band (interpolated)
+          const bandPos = t * V4_BAND_NAMES.length;
+          const bandIdx = Math.min(Math.floor(bandPos), V4_BAND_NAMES.length - 1);
+          const bandNext = Math.min(bandIdx + 1, V4_BAND_NAMES.length - 1);
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = smoothRef.current[bandIdx] * (1 - bandFrac) +
+                          smoothRef.current[bandNext] * bandFrac;
 
-        // Slight noise texture (much less than OG — data does the work)
-        amp += noise2D(t * 6 + keyOffset, phase * 0.3) * 0.015;
+          const realLoud = snap.loudness || 0;
+          const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.08;
+          const fluxBoost = 1 + (snap.flux || 0) * 0.5;
+
+          amp = (bandVal * 0.6 + realLoud * 0.25 + texture) * fluxBoost;
+          amp *= edge;
+          amp = Math.max(amp, isPlaying ? 0.005 : 0);
+          amp *= 1 + (Math.random() - 0.5) * 0.04;
+        } else {
+          // Procedural fallback (identical to OG)
+          const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
+          const n2 = noise2D(t * 8 + 100, phase * 0.5) * 0.25;
+          const n3 = noise2D(t * 16 + 200, phase * 0.8) * 0.125;
+          let raw = n1 + n2 + n3;
+          raw = Math.sign(raw) * Math.pow(Math.abs(raw), 1 + sharpness * 0.5);
+          raw = Math.abs(raw) * edge;
+          const beatBoost = 1 + beatPulse * danceability * 0.4;
+          amp = raw * k.amplitude * exhaleMultiplier * beatBoost;
+          amp = Math.min(amp, 0.2 + energy * 0.6);
+          amp = Math.max(amp, isPlaying ? 0.005 : 0);
+          amp *= 1 + (Math.random() - 0.5) * 0.1;
+        }
 
         points.push(Math.max(0, Math.min(1, amp)));
       }
