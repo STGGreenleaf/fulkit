@@ -3031,8 +3031,11 @@ export default function FabricPage() {
   const [mixLoading, setMixLoading] = useState(false);
   const [visualizing, setVisualizing] = useState(false);
   const [vizMode, setVizMode] = useState(() => {
-    if (typeof window === "undefined") return 2;
-    try { return parseInt(localStorage.getItem("fulkit-viz-mode")) || 1; } catch { return 1; }
+    if (typeof window === "undefined") return 1;
+    try {
+      const saved = localStorage.getItem("fulkit-viz-mode");
+      return saved ? parseInt(saved) : 1;
+    } catch { return 1; }
   });
   const [posterOpen, setPosterOpen] = useState(false);
   const [posterTimestamp, setPosterTimestamp] = useState(0);
