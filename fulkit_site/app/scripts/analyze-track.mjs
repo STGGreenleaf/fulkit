@@ -37,9 +37,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // Config
 // ═══════════════════════════════════════════
 const SAMPLE_RATE = 22050; // downsample for analysis (faster, sufficient)
-const WINDOW_MS = 500; // snapshot every 500ms
-const WINDOW_SAMPLES = Math.floor(SAMPLE_RATE * WINDOW_MS / 1000); // 11025
-const FFT_SIZE = 16384; // next power of 2 above window (high freq resolution)
+const WINDOW_MS = 100; // snapshot every 100ms (10 snapshots/sec — high quality)
+const WINDOW_SAMPLES = Math.floor(SAMPLE_RATE * WINDOW_MS / 1000); // 2205
+const FFT_SIZE = 16384; // zero-padded for high freq resolution
 const TMP_DIR = "/tmp/fabric-analysis";
 
 // Frequency band boundaries in Hz → FFT bin indices

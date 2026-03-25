@@ -37,7 +37,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // Config (same as analyze-track.mjs)
 // ═══════════════════════════════════════════
 const SAMPLE_RATE = 22050;
-const WINDOW_MS = 500;
+const WINDOW_MS = 100;
 const WINDOW_SAMPLES = Math.floor(SAMPLE_RATE * WINDOW_MS / 1000);
 const FFT_SIZE = 16384;
 const TMP_DIR = "/tmp/fabric-analysis";
