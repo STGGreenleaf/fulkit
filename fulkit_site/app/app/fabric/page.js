@@ -593,7 +593,7 @@ function SignalTerrainV4({
           }
         }
 
-        points.push(Math.max(0, Math.min(1, amp)));
+        points.push(Math.max(0, Math.min(0.82, amp)));
       }
 
       historyRef.current.push(points);
@@ -626,18 +626,18 @@ function SignalTerrainV4({
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
           const x = (i / (data.length - 1)) * w;
-          const a = Math.min(data[i] * centerY * 1.6, maxUp - yShift);
+          const a = Math.min(data[i] * centerY * 1.2, maxUp - yShift);
           const y = centerY - a - yShift;
           if (i === 0) {
             ctx.moveTo(x, y);
           } else {
             const prevX = ((i - 1) / (data.length - 1)) * w;
-            const prevA = Math.min(data[i - 1] * centerY * 1.4, maxUp - yShift);
+            const prevA = Math.min(data[i - 1] * centerY * 1.1, maxUp - yShift);
             const prevY = centerY - prevA - yShift;
             ctx.quadraticCurveTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2);
           }
         }
-        const lastA = Math.min(data[data.length - 1] * centerY * 1.4, maxUp - yShift);
+        const lastA = Math.min(data[data.length - 1] * centerY * 1.1, maxUp - yShift);
         ctx.lineTo(w, centerY - lastA - yShift);
         ctx.stroke();
 
