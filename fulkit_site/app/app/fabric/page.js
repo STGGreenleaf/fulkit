@@ -796,45 +796,40 @@ function SignalTerrain({
 
       for (let i = 0; i < T_POINTS; i++) {
         const t = i / T_POINTS;
-        const envelope = Math.sin(t * Math.PI);
+        // Soft edge taper — only fades the first/last 8% instead of shaping a bell
+        const edge = Math.min(1, t / 0.08, (1 - t) / 0.08);
 
         let amp;
         if (hasFabric && !live.active) {
-          // ── FABRIC MODE: real audio drives distinct band groups ──
+          // ── FABRIC MODE: orchestra view — each point = different frequency ──
+          // Left = sub/bass, center = mids, right = air/highs
+          const bandPos = t * bandNames.length;
+          const bandIdx = Math.min(Math.floor(bandPos), bandNames.length - 1);
+          const bandNext = Math.min(bandIdx + 1, bandNames.length - 1);
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = snap.bands[bandNames[bandIdx]] * (1 - bandFrac) +
+                          snap.bands[bandNames[bandNext]] * bandFrac;
+
           const rawLoud = snap.loudness;
-          // Loudness floor: preserve quiet-section dynamics
-          // A piano strike in silence is 100% of energy in that moment
-          const realLoud = 0.15 + rawLoud * 0.85; // floor at 0.15, never crushes to zero
-          const onsetSpike = snap.onset ? snap.onset_strength * 0.35 : 0; // stronger onset visibility
+          const realLoud = 0.15 + rawLoud * 0.85;
+          const onsetSpike = snap.onset ? snap.onset_strength * 0.4 : 0;
           const kGate = k.amplitude / 0.55;
-          const fluxMul = 1 + snap.flux * 0.4;
-          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.3 : 1;
-          const tex = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.02;
+          const beatMul = snap.beat ? 1 + snap.beat_strength * 0.35 : 1;
 
-          // Low band group (sub + bass) — thick, heavy
-          const lowVal = (snap.bands.sub + snap.bands.bass) / 2;
-          let lowAmp = (lowVal * 0.5 + rawLoud * 0.2 + onsetSpike) * realLoud;
-          lowAmp *= fluxMul * beatMul * envelope * kGate * exhaleMultiplier;
-          lowAmp += tex;
-          bandGroupLow.push(Math.max(0, Math.min(0.95, lowAmp)));
+          // Per-point noise adds texture unique to each frequency zone
+          const tex = noise2D(t * 8 + keyOffset, phase * 0.4) * 0.08;
 
-          // Mid band group (low_mid + mid) — medium body
-          const midVal = (snap.bands.low_mid + snap.bands.mid) / 2;
-          let midAmp = (midVal * 0.5 + rawLoud * 0.15 + onsetSpike * 0.5) * realLoud;
-          midAmp *= fluxMul * beatMul * envelope * kGate * exhaleMultiplier;
-          midAmp += noise2D(t * 7 + keyOffset + 50, phase * 0.4) * 0.015;
-          bandGroupMid.push(Math.max(0, Math.min(0.85, midAmp)));
-
-          // High band group (high_mid + high + air) — thin, wispy
-          const highVal = (snap.bands.high_mid + snap.bands.high + snap.bands.air) / 3;
-          let highAmp = (highVal * 0.5 + rawLoud * 0.1 + onsetSpike * 0.3) * realLoud;
-          highAmp *= fluxMul * envelope * kGate * exhaleMultiplier;
-          highAmp += noise2D(t * 11 + keyOffset + 100, phase * 0.6) * 0.015;
-          bandGroupHigh.push(Math.max(0, Math.min(0.7, highAmp)));
-
-          // Combined for history
-          amp = (lowAmp * 0.5 + midAmp * 0.3 + highAmp * 0.2);
+          amp = (bandVal * 0.6 + realLoud * 0.2 + onsetSpike + tex) * realLoud;
+          amp *= (1 + snap.flux * 0.5) * beatMul * edge * kGate * exhaleMultiplier;
           amp = Math.max(0, Math.min(0.95, amp));
+
+          // Band groups for the overlay layers
+          const lowVal = (snap.bands.sub + snap.bands.bass) / 2;
+          bandGroupLow.push(Math.max(0, Math.min(0.9, (lowVal * 0.6 + rawLoud * 0.15 + onsetSpike) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
+          const midVal = (snap.bands.low_mid + snap.bands.mid) / 2;
+          bandGroupMid.push(Math.max(0, Math.min(0.8, (midVal * 0.5 + rawLoud * 0.1) * realLoud * beatMul * edge * kGate * exhaleMultiplier)));
+          const highVal = (snap.bands.high_mid + snap.bands.high + snap.bands.air) / 3;
+          bandGroupHigh.push(Math.max(0, Math.min(0.7, (highVal * 0.5 + snap.flux * 0.3) * realLoud * edge * kGate * exhaleMultiplier)));
         } else {
           // ── PROCEDURAL / MIC MODE ──
           const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
