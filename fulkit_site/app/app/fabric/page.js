@@ -2519,10 +2519,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
         const noise2B = s2.noise2;
-        const S2_N = 72;
-        const MAX_TRACE = 24;
-        const MAX_HITS = 6;
-        const CAP_INTERVAL = 3;
+        const S2_N = Q > 0.6 ? 72 : Q > 0.4 ? 48 : 32; // adaptive point count
+        const MAX_TRACE = Math.max(6, Math.floor(24 * Q)); // 6–24 tracers
+        const MAX_HITS = Math.max(2, Math.floor(6 * Q)); // 2–6 hits
+        const CAP_INTERVAL = Q > 0.6 ? 3 : Q > 0.4 ? 4 : 6; // capture less often at low Q
 
         // Own time counter for noise evolution (~1.0/sec)
         if (k.state !== "idle") s2.time += dt;
@@ -2646,9 +2646,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }
 
         // Interior tendrils
+        const s2TendrilStep = Q > 0.6 ? 7 : Q > 0.4 ? 12 : 18;
         if (s2amp > 0.05) {
           const interiorAlpha = s2amp * 0.12;
-          for (let i = 0; i < S2_N; i += 7) {
+          for (let i = 0; i < S2_N; i += s2TendrilStep) {
             const opp = (i + Math.floor(S2_N / 2)) % S2_N;
             const a1 = (i / S2_N) * Math.PI * 2 + rot;
             const a2 = (opp / S2_N) * Math.PI * 2 + rot;
@@ -2687,15 +2688,17 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
           }
 
-          // Clip-based inner bleed
+          // Clip-based inner bleed — skip at low quality (save/clip/restore is expensive)
           const edgeAlpha = alpha * 0.8 * (0.4 + s2amp * 0.6);
-          drawOrbSmooth(ctx, pts);
-          ctx.save();
-          ctx.clip();
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
-          ctx.lineWidth = thisLw * 4;
-          ctx.stroke();
-          ctx.restore();
+          if (Q > 0.5) {
+            drawOrbSmooth(ctx, pts);
+            ctx.save();
+            ctx.clip();
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
+            ctx.lineWidth = thisLw * 4;
+            ctx.stroke();
+            ctx.restore();
+          }
 
           // Sharp contour
           drawOrbSmooth(ctx, pts);
@@ -2704,8 +2707,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s2amp * 0.5 : 0.7));
           ctx.stroke();
 
-          // Inward reflection
-          if (alpha > 0.06) {
+          // Inward reflection — skip at low quality
+          if (alpha > 0.06 && Q > 0.4) {
             const iPts = [];
             for (let i = 0; i < S2_N; i++) {
               const a = (i / S2_N) * Math.PI * 2 + rot;
