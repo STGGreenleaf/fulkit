@@ -1112,6 +1112,26 @@ export function FabricProvider({ children }) {
   // Guy's Crate — auto-populated by BTC recommendations
   const guyCrate = setsData.sets.find(s => s.id === "guy-crate") || null;
 
+  // Fabric analysis status — tracks confirmed to have timelines (cross-referenced by title for btc-* IDs)
+  const [fabricAnalyzed, setFabricAnalyzed] = useState({});
+  const fabricCheckedRef = useRef(new Set());
+  useEffect(() => {
+    if (!accessToken) return;
+    // Collect all tracks across all sets that haven't been checked yet
+    const toCheck = [];
+    for (const s of setsData.sets) {
+      for (const t of s.tracks) {
+        if (!fabricAnalyzed[t.id] && !fabricCheckedRef.current.has(t.id)) {
+          toCheck.push({ id: t.id, title: t.title, artist: t.artist });
+          fabricCheckedRef.current.add(t.id);
+        }
+      }
+    }
+    if (toCheck.length === 0) return;
+    apiFetch("/api/fabric/analyzed", { method: "POST", body: JSON.stringify({ tracks: toCheck }) })
+      .then((data) => { if (data?.analyzed) setFabricAnalyzed((prev) => ({ ...prev, ...data.analyzed })); })
+      .catch(() => {});
+  }, [setsData.sets, accessToken, apiFetch, fabricAnalyzed]);
 
   // Shadow history — every track Guy ever recommended, with taste signals
   const [guyHistory, setGuyHistory] = useState(() => {
@@ -2060,6 +2080,7 @@ export function FabricProvider({ children }) {
         progress,
         allTracks: [],
         audioFeatures,
+        fabricAnalyzed,
         play,
         pause,
         toggle,
