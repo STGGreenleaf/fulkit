@@ -499,14 +499,8 @@ function SignalTerrainV4({
       // ── Smooth band values (asymmetric attack/decay, no scrolling) ──
       if (hasFabric) {
         for (let b = 0; b < V4_BANDS.length; b++) {
-          let raw = Math.pow(snap.bands?.[V4_BANDS[b].name] || 0, 0.6);
-          raw *= (0.6 + (snap.loudness || 0) * 0.4);
-          if (snap.onset) raw = Math.min(1, raw + (snap.onset_strength || 0) * 0.3);
-          if (snap.beat) raw *= (1 + (snap.beat_strength || 0) * 0.2);
-          raw *= k.amplitude / 0.55;
-          raw *= exhaleMultiplier;
-          raw = Math.max(0.02, Math.min(1.0, raw));
-
+          // Raw band value — no pow() expansion, matches OG's amplitude range
+          const raw = snap.bands?.[V4_BANDS[b].name] || 0;
           const prev = smoothRef.current[b];
           smoothRef.current[b] = raw > prev
             ? prev + (raw - prev) * 0.88
@@ -515,6 +509,7 @@ function SignalTerrainV4({
       }
 
       // ── Generate points: x = frequency zone, amplitude = band energy ──
+      // Formula matches OG exactly, but bandVal comes from smoothed data
       const points = [];
       for (let i = 0; i < V4_RENDER_PTS; i++) {
         const t = i / V4_RENDER_PTS;
@@ -522,7 +517,7 @@ function SignalTerrainV4({
 
         let amp;
         if (hasFabric) {
-          // Map x-position to frequency band (interpolated)
+          // Map x-position to frequency band (interpolated) — same as OG
           const bandPos = t * V4_BAND_NAMES.length;
           const bandIdx = Math.min(Math.floor(bandPos), V4_BAND_NAMES.length - 1);
           const bandNext = Math.min(bandIdx + 1, V4_BAND_NAMES.length - 1);
@@ -530,14 +525,19 @@ function SignalTerrainV4({
           const bandVal = smoothRef.current[bandIdx] * (1 - bandFrac) +
                           smoothRef.current[bandNext] * bandFrac;
 
+          // OG's exact formula
           const realLoud = snap.loudness || 0;
-          const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.08;
-          const fluxBoost = 1 + (snap.flux || 0) * 0.5;
+          const texture = noise2D(t * 5 + keyOffset, phase * 0.3) * 0.1;
+          const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.4 : 0;
 
-          amp = (bandVal * 0.6 + realLoud * 0.25 + texture) * fluxBoost;
+          amp = (bandVal * 0.5 + realLoud * 0.35 + onsetSpike + texture) * realLoud;
+          amp *= (1 + (snap.flux || 0) * 0.6);
+          if (snap.beat) amp *= (1 + (snap.beat_strength || 0) * 0.5);
           amp *= edge;
+          amp *= k.amplitude / 0.55;
+          amp *= exhaleMultiplier;
           amp = Math.max(amp, isPlaying ? 0.005 : 0);
-          amp *= 1 + (Math.random() - 0.5) * 0.04;
+          amp *= 1 + (Math.random() - 0.5) * 0.06;
         } else {
           // Procedural fallback (identical to OG)
           const n1 = noise2D(t * 4 + keyOffset, phase * 0.3) * 0.5;
