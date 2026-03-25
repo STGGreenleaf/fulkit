@@ -607,6 +607,11 @@ function SignalTerrainV4({
         : [232, 230, 227];
 
       ctx.clearRect(0, 0, w, h);
+      // Hard clip — bezier curves can overshoot, nothing renders outside canvas
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      ctx.clip();
       const layers = historyRef.current;
       const centerY = h * 0.78;
 
@@ -654,6 +659,7 @@ function SignalTerrainV4({
         }
         ctx.stroke();
       }
+      ctx.restore(); // release clip
     };
 
     animRef.current = requestAnimationFrame(render);
