@@ -2774,7 +2774,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const cx = w / 2, cy = h / 2;
       const rot = phase * 0.3;
       const amoebaMag = 0.03 + acousticness * 0.05;
-      const col = [95, 92, 84]; // warm grey — darker than before, depth via alpha
+      const col = [120, 116, 108]; // warm grey — light tones, touch more saturation
       const layers = historyRef.current;
       const layerCount = layers.length;
 
