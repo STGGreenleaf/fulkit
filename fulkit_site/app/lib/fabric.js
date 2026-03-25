@@ -839,7 +839,10 @@ export function FabricProvider({ children }) {
     prevTimelineTrack.current = currentTrack.id;
     setTimeline(null); // clear old data first
 
-    apiFetch(`/api/fabric/timeline?id=${currentTrack.id}`).then((data) => {
+    const tlParams = new URLSearchParams({ id: currentTrack.id });
+    if (currentTrack.title) tlParams.set("title", currentTrack.title);
+    if (currentTrack.artist) tlParams.set("artist", currentTrack.artist);
+    apiFetch(`/api/fabric/timeline?${tlParams}`).then((data) => {
       // Only set if still the same track
       if (prevTimelineTrack.current !== currentTrack.id) return;
       if (data?.status === "complete" && data.timeline) {
