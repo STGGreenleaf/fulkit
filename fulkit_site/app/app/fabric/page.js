@@ -2631,8 +2631,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 4: Veil — 3D wireframe cloth draped over invisible audio form
-      // Perspective-projected mesh, depth-based alpha, audio-driven displacement.
+      // STYLE 4: Terrain — 3D grid mountain, audio lifts peaks
+      // Perspective-projected wireframe, depth-based alpha, no dots.
       // ══════════════════════════════════════════
       if (curVizStyle === 4) {
         const s4 = style4Ref.current;
@@ -2671,59 +2671,50 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
         }
 
-        // Build sphere mesh — UV sphere displaced by audio
-        const rings = 24, segs = 32;
+        // Build terrain grid — height from noise + audio bands
+        const gridW = 28, gridH = 28;
         const vertices = [];
         const edges = [];
         const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-        const baseRadius = 1.0;
 
-        for (let ring = 0; ring <= rings; ring++) {
-          const phi = (ring / rings) * Math.PI; // 0 (top) to PI (bottom)
-          const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+        for (let gz = 0; gz < gridH; gz++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const nx = (gx / (gridW - 1) - 0.5) * 2;
+            const nz = (gz / (gridH - 1) - 0.5) * 2;
 
-          for (let seg = 0; seg < segs; seg++) {
-            const theta = (seg / segs) * Math.PI * 2;
-            const sinTh = Math.sin(theta), cosTh = Math.cos(theta);
+            // Multi-octave noise terrain
+            const h1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * en;
+            const h2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * en * 0.4;
+            const h3 = n3(nx * 8 + s4.time * 0.35, nz * 8) * en * 0.15 * (1 - val);
 
-            // Base sphere point
-            const sx = sinPhi * cosTh;
-            const sy = cosPhi;
-            const sz = sinPhi * sinTh;
+            // Center peak bias — mountains rise from the center
+            const centerDist = Math.sqrt(nx * nx + nz * nz);
+            const peak = Math.max(0, 1 - centerDist * 1.2);
 
-            // Audio displacement — bands map around the equator (theta), loudness globally
-            let disp = 0;
+            // Audio band displacement — map grid X position to bands
+            let bandLift = 0;
             if (hasFabric) {
-              const bandPos = (seg / segs) * 7;
+              const bandPos = ((nx + 1) / 2) * 7; // left edge = sub, right = air
               const bandIdx = Math.floor(bandPos) % 7;
               const bandNext = (bandIdx + 1) % 7;
               const bandFrac = bandPos - Math.floor(bandPos);
               const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
                               (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              disp = bandVal * 0.4 + loud * 0.15;
-              disp *= sinPhi; // stronger at equator, zero at poles
-              disp += realFlux * n4(sx * 4 + s4.time * 0.3, sz * 4) * 0.06;
-              if (snap.beat) disp += (snap.beat_strength || 0) * 0.08 * sinPhi;
+              bandLift = bandVal * 0.5 * peak;
+              bandLift += loud * 0.15 * peak;
+              if (snap.beat) bandLift += (snap.beat_strength || 0) * 0.12 * peak;
             }
 
-            // Noise surface texture
-            const tex = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * en * 0.15;
+            const height = ((h1 + h2 + h3) * peak + bandLift) * activity * (1 + beatPulse * 0.3) * exhale;
+            // Flux adds surface shimmer
+            const shimmer = realFlux * n4(nx * 6 + s4.time * 0.4, nz * 6) * 0.04 * activity;
 
-            const r = baseRadius + (disp + tex) * activity;
-            vertices.push({ x3: sx * r, y3: sy * r, z3: sz * r });
+            vertices.push({ x3: nx, y3: -(height + shimmer), z3: nz });
 
-            const idx = ring * segs + seg;
-            // Horizontal edge (around ring)
-            if (seg < segs - 1) edges.push([idx, idx + 1]);
-            else edges.push([idx, idx - segs + 1]); // close ring
-            // Vertical edge (between rings)
-            if (ring < rings) edges.push([idx, idx + segs]);
+            const idx = gz * gridW + gx;
+            if (gx < gridW - 1) edges.push([idx, idx + 1]);
+            if (gz < gridH - 1) edges.push([idx, idx + gridW]);
           }
-        }
-
-        // Apply exhale
-        if (exhale < 1) {
-          for (const v of vertices) { v.x3 *= exhale; v.y3 *= exhale; v.z3 *= exhale; }
         }
 
         // Project all vertices
