@@ -262,6 +262,11 @@ const ALL_SOURCES = [
   { id: "readwise", name: "Readwise", cat: "Reading" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
+  { id: "whoop", name: "Whoop", cat: "Health" },
+  { id: "fitbit", name: "Fitbit", cat: "Health" },
+  { id: "oura", name: "Oura", cat: "Health" },
+  { id: "strava", name: "Strava", cat: "Health" },
+  { id: "garmin", name: "Garmin", cat: "Health" },
 ];
 
 

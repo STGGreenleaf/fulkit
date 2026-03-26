@@ -184,7 +184,12 @@
 ### Tier 1: Everyone
 - [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
 - [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
-- [ ] **Terra (Health)** — single API, 200+ devices (Whoop, Fitbit, Garmin, Oura, iFit, Peloton, Apple Health, Google Fit). Keywords: health, sleep, workout, steps, heart rate. No other AI chat has this.
+- [ ] **Health — direct integrations** (Terra/Vital too expensive pre-launch, going direct):
+  - [ ] Whoop — sleep, recovery, strain, heart rate. Free OAuth2.
+  - [ ] Fitbit — activity, sleep, heart rate, weight. Free OAuth2 (Google-owned).
+  - [ ] Oura — sleep, readiness, heart rate. Free OAuth2.
+  - [ ] Strava — runs, rides, workouts. Free OAuth2.
+  - [ ] Garmin — activity, sleep, heart rate, stress. OAuth 1.0a (harder).
 
 ### Tier 2: Extends Fabric
 - [ ] **Sonos** — play Fabric through home speakers. Sonos Control API (OAuth2). Speaker selection/grouping in player UI.
