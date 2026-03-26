@@ -11,6 +11,7 @@ import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
 import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { getGoogleToken, googleFetch } from "../../../lib/google-server";
+import { getFitbitToken, fitbitFetch } from "../../../lib/fitbit-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -202,6 +203,7 @@ const ECOSYSTEM_KEYWORDS = {
   google_calendar: ["calendar", "calander", "calender", "meeting", "schedule", "event", "appointment", "availability", "gcal", "busy", "free time"],
   gmail: ["email", "inbox", "gmail", "mail", "message from", "reply", "sent", "unread"],
   google_drive: ["drive", "document", "spreadsheet", "google doc", "google sheet", "slides", "file on drive", "shared with me"],
+  fitbit: ["fitbit", "steps", "sleep", "heart rate", "activity", "workout", "calories", "weight", "health", "recovery", "resting heart"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -1929,6 +1931,137 @@ async function executeDriveTool(name, input, userId) {
   throw new Error(`Unknown drive tool: ${name}`);
 }
 
+// Fitbit tools — daily summary, sleep, heart rate, activity
+const FITBIT_TOOLS = [
+  {
+    name: "fitbit_daily_summary",
+    description: "Get the user's Fitbit daily activity summary — steps, calories, distance, active minutes, resting heart rate.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "fitbit_sleep",
+    description: "Get the user's sleep data — duration, stages (deep, light, REM, awake), efficiency, start/end times.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today (shows last night's sleep)." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "fitbit_heart_rate",
+    description: "Get the user's heart rate data — resting heart rate, heart rate zones (fat burn, cardio, peak), and time in each zone.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "fitbit_weight",
+    description: "Get the user's recent weight and body fat entries.",
+    input_schema: {
+      type: "object",
+      properties: {
+        period: { type: "string", enum: ["7d", "30d", "90d"], description: "Time period. Default 30d." },
+      },
+      required: [],
+    },
+  },
+];
+
+// Execute a Fitbit tool call
+async function executeFitbitTool(name, input, userId) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (name === "fitbit_daily_summary") {
+    const date = input.date || today;
+    const res = await fitbitFetch(userId, `/1/user/-/activities/date/${date}.json`);
+    if (res.error) return res;
+    const data = await res.json();
+    const s = data.summary || {};
+    return {
+      date,
+      steps: s.steps,
+      caloriesOut: s.caloriesOut,
+      distance: s.distances?.find(d => d.activity === "total")?.distance,
+      activeMinutes: (s.fairlyActiveMinutes || 0) + (s.veryActiveMinutes || 0),
+      sedentaryMinutes: s.sedentaryMinutes,
+      restingHeartRate: s.restingHeartRate,
+      floors: s.floors,
+    };
+  }
+
+  if (name === "fitbit_sleep") {
+    const date = input.date || today;
+    const res = await fitbitFetch(userId, `/1.2/user/-/sleep/date/${date}.json`);
+    if (res.error) return res;
+    const data = await res.json();
+    const logs = data.sleep || [];
+    if (logs.length === 0) return { date, message: "No sleep data for this date." };
+    const main = logs.find(l => l.isMainSleep) || logs[0];
+    return {
+      date,
+      duration: main.duration ? Math.round(main.duration / 60000) : null,
+      durationHours: main.duration ? (main.duration / 3600000).toFixed(1) : null,
+      efficiency: main.efficiency,
+      startTime: main.startTime,
+      endTime: main.endTime,
+      stages: main.levels?.summary ? {
+        deep: main.levels.summary.deep?.minutes,
+        light: main.levels.summary.light?.minutes,
+        rem: main.levels.summary.rem?.minutes,
+        awake: main.levels.summary.wake?.minutes,
+      } : null,
+    };
+  }
+
+  if (name === "fitbit_heart_rate") {
+    const date = input.date || today;
+    const res = await fitbitFetch(userId, `/1/user/-/activities/heart/date/${date}/1d.json`);
+    if (res.error) return res;
+    const data = await res.json();
+    const hr = data["activities-heart"]?.[0]?.value || {};
+    return {
+      date,
+      restingHeartRate: hr.restingHeartRate,
+      zones: (hr.heartRateZones || []).map(z => ({
+        name: z.name,
+        min: z.min,
+        max: z.max,
+        minutes: z.minutes,
+        caloriesOut: z.caloriesOut ? Math.round(z.caloriesOut) : null,
+      })),
+    };
+  }
+
+  if (name === "fitbit_weight") {
+    const period = input.period || "30d";
+    const res = await fitbitFetch(userId, `/1/user/-/body/log/weight/date/${today}/${period}.json`);
+    if (res.error) return res;
+    const data = await res.json();
+    return {
+      entries: (data.weight || []).map(w => ({
+        date: w.date,
+        weight: w.weight,
+        bmi: w.bmi,
+        fat: w.fat,
+      })),
+    };
+  }
+
+  throw new Error(`Unknown fitbit tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2667,7 +2800,8 @@ export async function POST(request) {
         safeGet(() => getGoogleToken(userId, "google_calendar"), "google_calendar"),
         safeGet(() => getGoogleToken(userId, "gmail"), "gmail"),
         safeGet(() => getGoogleToken(userId, "google_drive"), "google_drive"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getFitbitToken, "fitbit"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -2716,7 +2850,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -2729,6 +2863,7 @@ export async function POST(request) {
         { ref: "trelloToken", val: trelloToken }, { ref: "ghToken", val: ghToken },
         { ref: "gcalToken", val: gcalToken },
         { ref: "gmailToken", val: gmailToken }, { ref: "gdriveToken", val: gdriveToken },
+        { ref: "fitbitToken", val: fitbitToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -2747,6 +2882,7 @@ export async function POST(request) {
             else if (s.ref === "gcalToken") gcalToken = null;
             else if (s.ref === "gmailToken") gmailToken = null;
             else if (s.ref === "gdriveToken") gdriveToken = null;
+            else if (s.ref === "fitbitToken") fitbitToken = null;
           }
         }
       }
@@ -3030,7 +3166,7 @@ Never skip the preview step. The user must see and approve changes before they g
       nblKey && "Numbrly", tgKey && "TrueGauge", sqToken && "Square",
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
-      gmailToken && "Gmail", gdriveToken && "Google Drive",
+      gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3107,6 +3243,7 @@ Never skip the preview step. The user must see and approve changes before they g
       google_calendar: () => gcalToken ? CALENDAR_TOOLS : [],
       gmail: () => gmailToken ? GMAIL_TOOLS : [],
       google_drive: () => gdriveToken ? DRIVE_TOOLS : [],
+      fitbit: () => fitbitToken ? FITBIT_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3163,7 +3300,7 @@ Never skip the preview step. The user must see and approve changes before they g
         numbrly: !!nblKey, truegauge: !!tgKey, square: !!sqToken,
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
-        gmail: !!gmailToken, google_drive: !!gdriveToken,
+        gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3454,6 +3591,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Fitbit tools
+              if (block.name.startsWith("fitbit_") && fitbitToken) {
+                try {
+                  const result = await withTimeout(() => executeFitbitTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

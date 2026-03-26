@@ -186,7 +186,7 @@
 - [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
 - [ ] **Health — direct integrations** (Terra/Vital too expensive pre-launch, going direct):
   - [ ] Whoop — sleep, recovery, strain, heart rate. Free OAuth2.
-  - [ ] Fitbit — activity, sleep, heart rate, weight. Free OAuth2 (Google-owned).
+  - [x] Fitbit — ✅ OAuth + 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
   - [ ] Oura — sleep, readiness, heart rate. Free OAuth2.
   - [ ] Strava — runs, rides, workouts. Free OAuth2.
   - [ ] Garmin — activity, sleep, heart rate, stress. OAuth 1.0a (harder).

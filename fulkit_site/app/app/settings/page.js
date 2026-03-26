@@ -179,7 +179,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -237,6 +237,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s on my board right now?",
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
+  },
+  fitbit: {
+    subtitle: "Your body, in context.",
+    description: "Fitbit tracks your activity, sleep, heart rate, and weight every day. Connecting it means F\u00FClkit sees how you slept, how active you were, and how your body is trending \u2014 so it can help you plan around your energy, not just your calendar.",
+    gives: "Daily activity (steps, calories, active minutes), sleep stages and efficiency, resting heart rate, heart rate zones, and weight trends. Ask how you slept or how active you\u2019ve been and get real numbers.",
+    tryPrompt: "How did I sleep last night?\u201D\n\u201CHow many steps this week?",
+    linkLabel: "fitbit.com",
+    linkHref: "https://www.fitbit.com",
   },
 };
 
@@ -1024,6 +1032,11 @@ function SourcesTab() {
   const [gdriveConnected, setGdriveConnected] = useState(false);
   const [gdriveDisconnecting, setGdriveDisconnecting] = useState(false);
 
+  const [fitbitConnected, setFitbitConnected] = useState(false);
+  const [fitbitExpanded, setFitbitExpanded] = useState(false);
+  const [fitbitLastSynced, setFitbitLastSynced] = useState(null);
+  const [fitbitDisconnecting, setFitbitDisconnecting] = useState(false);
+
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1076,8 +1089,11 @@ function SourcesTab() {
     if (params.get("gd") === "connected") {
       setGdriveConnected(true);
     }
+    if (params.get("fb") === "connected") {
+      setFitbitConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1110,7 +1126,8 @@ function SourcesTab() {
       check("/api/google/calendar/status"),
       check("/api/google/gmail/status"),
       check("/api/google/drive/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive]) => {
+      check("/api/health/fitbit/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1125,6 +1142,7 @@ function SourcesTab() {
       if (gcal) { setGcalConnected(gcal.connected); if (gcal.lastSynced) setGcalLastSynced(gcal.lastSynced); }
       if (gmail) { setGmailConnected(gmail.connected); }
       if (gdrive) { setGdriveConnected(gdrive.connected); }
+      if (fitbit) { setFitbitConnected(fitbit.connected); if (fitbit.lastSynced) setFitbitLastSynced(fitbit.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1503,6 +1521,31 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  function connectFitbit() {
+    if (accessToken) {
+      window.open("/api/health/fitbit/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/health/fitbit/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectFitbit() {
+    setFitbitDisconnecting(true);
+    try {
+      await fetch("/api/health/fitbit/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setFitbitConnected(false);
+    } catch {}
+    setFitbitDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -1514,8 +1557,9 @@ function SourcesTab() {
     ...(stripeConnected ? ["stripe"] : []),
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
+    ...(fitbitConnected ? ["fitbit"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1534,6 +1578,7 @@ function SourcesTab() {
     if (id === "stripe") { connectStripe(); return; }
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
+    if (id === "fitbit") { connectFitbit(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1546,6 +1591,7 @@ function SourcesTab() {
     if (id === "stripe") { disconnectStripe(); return; }
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
+    if (id === "fitbit") { disconnectFitbit(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -1681,7 +1727,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -2167,6 +2213,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: trelloDisconnecting ? 0.5 : 1 }}
                         >
                           {trelloDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Fitbit — connected */}
+            {fitbitConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.fitbit || SOURCE_LOGOS.google}
+                  name="Fitbit"
+                  subtitle="Your body, in context."
+                  isExpanded={fitbitExpanded}
+                  onToggle={() => setFitbitExpanded(!fitbitExpanded)}
+                />
+                <Drawer open={fitbitExpanded}>
+                  {richDrawerContent({
+                    expanded: fitbitExpanded,
+                    description: "Fitbit tracks your activity, sleep, heart rate, and weight every day. Connecting it means F\u00FClkit sees how you slept, how active you were, and how your body is trending \u2014 so it can help you plan around your energy, not just your calendar.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Daily activity (steps, calories, active minutes), sleep stages and efficiency, resting heart rate, heart rate zones, and weight trends. Ask how you slept or how active you\u2019ve been and get real numbers.",
+                    tryPrompt: "How did I sleep last night?\u201D\n\u201CHow many steps this week?",
+                    linkLabel: "fitbit.com",
+                    linkHref: "https://www.fitbit.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{fitbitLastSynced ? ` \u00B7 Last synced ${timeAgo(fitbitLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectFitbit}
+                          disabled={fitbitDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fitbitDisconnecting ? 0.5 : 1 }}
+                        >
+                          {fitbitDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),
