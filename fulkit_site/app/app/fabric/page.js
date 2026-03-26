@@ -2533,11 +2533,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
         // ── Alpha fade trail instead of layer stacking ──
-        // Don't clear fully — paint semi-transparent bg to create organic trail
-        const bgColor = getComputedStyle(canvasRef.current).getPropertyValue("--color-bg").trim() || "#EFEDE8";
-        const bgR = parseInt(bgColor.slice(1,3),16) || 239, bgG = parseInt(bgColor.slice(3,5),16) || 237, bgB = parseInt(bgColor.slice(5,7),16) || 232;
-        const fadeAlpha = k.state === "idle" ? 0.3 : 0.08 + (1 - s2amp) * 0.12; // faster fade when quiet
-        ctx.fillStyle = `rgba(${bgR},${bgG},${bgB},${fadeAlpha})`;
+        // Use fixed bg color — no getComputedStyle per frame (kills perf)
+        const fadeAlpha = k.state === "idle" ? 0.3 : 0.08 + (1 - s2amp) * 0.12;
+        ctx.fillStyle = `rgba(239,237,232,${fadeAlpha})`; // warm bg, hardcoded for perf
         ctx.fillRect(0, 0, w, h);
 
         // Silent — clean circle
