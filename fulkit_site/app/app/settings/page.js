@@ -175,6 +175,16 @@ const SOURCE_LOGOS = {
       <rect x="13.5" y="3.5" width="7" height="9" rx="1.5"/>
     </svg>
   ),
+  fitbit: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="3.5" r="1.8" opacity="0.4"/>
+      <circle cx="12" cy="8.5" r="2.2" opacity="0.6"/>
+      <circle cx="12" cy="14" r="2.5"/>
+      <circle cx="12" cy="19.5" r="2.2" opacity="0.6"/>
+      <circle cx="6.5" cy="11" r="1.8" opacity="0.5"/>
+      <circle cx="17.5" cy="11" r="1.8" opacity="0.5"/>
+    </svg>
+  ),
 };
 
 const SUGGESTED_SOURCES = [];
