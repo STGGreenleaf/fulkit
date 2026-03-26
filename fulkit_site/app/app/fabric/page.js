@@ -2930,6 +2930,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const sharp = 1 - valence;
         const lw = 0.6 + acousticness * 0.6;
 
+        // Smoothed audio followers — shape chases the music
+        if (!s2.daBands) { s2.daBands = new Array(7).fill(0); s2.daLoud = 0; s2.daBeat = 0; }
+        const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        for (let b = 0; b < 7; b++) {
+          const bv = hasFabric ? (snap.bands[bandNames[b]] || 0) : 0;
+          s2.daBands[b] += (bv - s2.daBands[b]) * 0.12;
+        }
+        const rawLoud = hasFabric ? (snap.loudness || 0) : 0;
+        s2.daLoud += (rawLoud - s2.daLoud) * 0.08;
+        const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
+        s2.daBeat = Math.max(s2.daBeat * 0.92, rawBeat * 0.5);
+
         // Silent — thin circle
         if (s4amp < 0.03) {
           ctx.clearRect(0, 0, w, h);
@@ -2956,27 +2968,20 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
           radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * s4amp * 0.55);
 
-          // Displacement from audio — slower evolution for fluid motion
-          const n1 = noise2D(nx * 1.2 + s2.time * 0.12, ny * 1.2 + s2.time * 0.09);
-          const n2 = noise2D(nx * 3.5 + s2.time * 0.2, ny * 3.5 + s2.time * 0.15);
-          let nv = n1 * 0.9 + n2 * 0.15;
-          nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharp * 0.6);
+          // Audio bands are the PRIMARY shape driver (smoothed)
+          const bandPos = (i / DA_N) * 7;
+          const bandIdx = Math.floor(bandPos) % 7;
+          const bandNext = (bandIdx + 1) % 7;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = s2.daBands[bandIdx] * (1 - bandFrac) + s2.daBands[bandNext] * bandFrac;
 
-          // Audio bands shape the displacement when thumbprint data available
-          let bandMod = 1;
-          if (hasFabric) {
-            const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-            const bandPos = (i / DA_N) * 7;
-            const bandIdx = Math.floor(bandPos) % 7;
-            const bandNext = (bandIdx + 1) % 7;
-            const bandFrac = bandPos - Math.floor(bandPos);
-            const bandVal = (snap.bands[bandNames[bandIdx]] || 0) * (1 - bandFrac) +
-                            (snap.bands[bandNames[bandNext]] || 0) * bandFrac;
-            bandMod = 0.5 + bandVal * 1.5 + (snap.loudness || 0) * 0.5;
-          }
+          // Noise adds organic texture on top — not the driver
+          const tex = noise2D(nx * 1.2 + s2.time * 0.1, ny * 1.2 + s2.time * 0.07) * 0.15;
 
-          const beatBoost = 1 + beatPulse * 0.3;
-          disp[i] = nv * s4amp * energy * beatBoost * exhale * baseR * 0.55 * bandMod;
+          // Band energy + loudness = displacement, noise = texture
+          const audioDisp = (bandVal * 0.7 + s2.daLoud * 0.3) * (1 + tex);
+          const beatBoost = 1 + s2.daBeat * 0.4;
+          disp[i] = audioDisp * s4amp * beatBoost * exhale * baseR * 0.8;
         }
 
         // Neighbor-smooth — more passes for fluid contour
