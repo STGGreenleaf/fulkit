@@ -2688,10 +2688,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             const sy = cosPhi;
             const sz = sinPhi * sinTh;
 
-            // Base texture — always present, slowly evolving
-            const tex = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * 0.08;
-
-            // Audio displacement — only when playing
+            // Audio displacement — only when playing, perfect sphere at rest
             let disp = 0;
             if (activity > 0.01 && hasFabric) {
               const bandPos = (seg / segs) * 7;
@@ -2701,7 +2698,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
                               (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
               disp = bandVal * 0.4 + loud * 0.15;
-              disp *= sinPhi; // stronger at equator
+              disp *= sinPhi;
               disp += realFlux * n4(sx * 4 + s4.time * 0.3, sz * 4) * 0.06;
               if (snap.beat) disp += (snap.beat_strength || 0) * 0.08 * sinPhi;
               disp *= activity * exhale;
@@ -2709,7 +2706,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               disp = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * en * 0.15 * activity;
             }
 
-            const r = baseRadius + tex + disp;
+            const r = baseRadius + disp;
             vertices.push({ x3: sx * r, y3: sy * r, z3: sz * r });
 
             const idx = ring * segs + seg;
