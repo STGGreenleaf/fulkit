@@ -179,7 +179,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "google_calendar"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -238,18 +238,9 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
   },
-  google_calendar: {
-    subtitle: "Your schedule, connected.",
-    description: "Google Calendar holds your meetings, events, and availability. Connecting it means Fülkit sees your schedule and can help you plan your day, check conflicts, and create events from chat.",
-    gives: "Upcoming events, meeting details, attendee lists, and availability checks. Ask what's on your calendar or schedule something new.",
-    tryPrompt: "What do I have this week?",
-    linkLabel: "calendar.google.com",
-    linkHref: "https://calendar.google.com",
-  },
 };
 
 const ALL_SOURCES = [
-  { id: "google_calendar", name: "Google Calendar", cat: "Scheduling" },
   { id: "square", name: "Square", cat: "Payments & POS" },
   { id: "shopify", name: "Shopify", cat: "E-Commerce" },
   { id: "stripe", name: "Stripe", cat: "Payments" },
@@ -1452,13 +1443,12 @@ function SourcesTab() {
     ...(stripeConnected ? ["stripe"] : []),
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
-    ...(gcalConnected ? ["google_calendar"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "google_calendar"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
-    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && !["numbrly", "truegauge"].includes(s.id)
+    (s) => !allConnected.includes(s.id) && !SUGGESTED_SOURCES.includes(s.id) && !["numbrly", "truegauge", "google"].includes(s.id)
   );
   const moreCards = otherSources.filter((s) => REAL_INTEGRATIONS.includes(s.id) && SOURCE_DESCRIPTIONS[s.id]);
   const moreTiles = otherSources.filter((s) => !REAL_INTEGRATIONS.includes(s.id) || !SOURCE_DESCRIPTIONS[s.id]);
@@ -1473,7 +1463,6 @@ function SourcesTab() {
     if (id === "stripe") { connectStripe(); return; }
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
-    if (id === "google_calendar") { connectGcal(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1486,7 +1475,6 @@ function SourcesTab() {
     if (id === "stripe") { disconnectStripe(); return; }
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
-    if (id === "google_calendar") { disconnectGcal(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -1785,13 +1773,12 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Google — sub-service picker */}
-            {allConnected.includes("google") && (
-              <Card style={{ padding: 0, overflow: "hidden" }}>
+            {/* Google — sub-service picker (always visible — services connect individually) */}
+            <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
                   logo={SOURCE_LOGOS.google}
                   name="Google"
-                  subtitle={[googleServices.drive && "Drive", googleServices.gmail && "Gmail", googleServices.calendar && "Calendar"].filter(Boolean).join(", ") || "No services selected"}
+                  subtitle={[googleServices.drive && "Drive", googleServices.gmail && "Gmail", gcalConnected && "Calendar"].filter(Boolean).join(", ") || "No services connected"}
                   isExpanded={googleExpanded}
                   onToggle={() => setGoogleExpanded(!googleExpanded)}
                 />
@@ -1804,15 +1791,18 @@ function SourcesTab() {
                       {checkboxRow("Gmail", googleServices.gmail, () => setGoogleServices((p) => ({ ...p, gmail: !p.gmail })))}
                     </DrawerItem>
                     <DrawerItem index={2} visible={googleExpanded}>
-                      {checkboxRow("Google Calendar", googleServices.calendar, () => setGoogleServices((p) => ({ ...p, calendar: !p.calendar })))}
+                      {checkboxRow("Google Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
                     </DrawerItem>
-                    <DrawerItem index={3} visible={googleExpanded}>
-                      {disconnectFooter(() => disconnect("google"), false)}
-                    </DrawerItem>
+                    {gcalConnected && (
+                      <DrawerItem index={3} visible={googleExpanded}>
+                        <div style={{ padding: "var(--space-2) var(--space-4)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Calendar connected{gcalLastSynced ? ` · ${timeAgo(gcalLastSynced)}` : ""}
+                        </div>
+                      </DrawerItem>
+                    )}
                   </div>
                 </Drawer>
               </Card>
-            )}
 
             {/* Numbrly — connected */}
             {numbrlyConnected && (
@@ -2072,44 +2062,6 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: trelloDisconnecting ? 0.5 : 1 }}
                         >
                           {trelloDisconnecting ? "..." : "Disconnect"}
-                        </button>
-                      </div>
-                    ),
-                  })}
-                </Drawer>
-              </Card>
-            )}
-
-            {/* Google Calendar — connected */}
-            {gcalConnected && (
-              <Card style={{ padding: 0, overflow: "hidden" }}>
-                <CardHeader
-                  logo={SOURCE_LOGOS.google_calendar || SOURCE_LOGOS.google}
-                  name="Google Calendar"
-                  subtitle="Your schedule, connected."
-                  isExpanded={gcalExpanded}
-                  onToggle={() => setGcalExpanded(!gcalExpanded)}
-                />
-                <Drawer open={gcalExpanded}>
-                  {richDrawerContent({
-                    expanded: gcalExpanded,
-                    description: "Google Calendar holds your meetings, events, and availability. Connecting it means Fülkit sees your schedule and can help you plan your day, check conflicts, and create events from chat.",
-                    givesLabel: "What this gives Fülkit",
-                    gives: "Upcoming events, meeting details, attendee lists, and availability checks. Ask what's on your calendar or schedule something new.",
-                    tryPrompt: "What do I have this week?",
-                    linkLabel: "calendar.google.com",
-                    linkHref: "https://calendar.google.com",
-                    footer: (
-                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                          Connected{gcalLastSynced ? ` · Last synced ${timeAgo(gcalLastSynced)}` : ""}
-                        </div>
-                        <button
-                          onClick={disconnectGcal}
-                          disabled={gcalDisconnecting}
-                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: gcalDisconnecting ? 0.5 : 1 }}
-                        >
-                          {gcalDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),
