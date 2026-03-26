@@ -200,6 +200,8 @@ const ECOSYSTEM_KEYWORDS = {
   stripe: ["stripe", "subscription", "billing", "payment", "invoice", "charge"],
   toast: ["toast", "restaurant", "menu", "table", "kitchen", "dining"],
   google_calendar: ["calendar", "calander", "calender", "meeting", "schedule", "event", "appointment", "availability", "gcal", "busy", "free time"],
+  gmail: ["email", "inbox", "gmail", "mail", "message from", "reply", "sent", "unread"],
+  google_drive: ["drive", "document", "spreadsheet", "google doc", "google sheet", "slides", "file on drive", "shared with me"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -1726,6 +1728,207 @@ async function executeCalendarTool(name, input, userId) {
   throw new Error(`Unknown calendar tool: ${name}`);
 }
 
+// Gmail tools — search and read emails (read-only)
+const GMAIL_TOOLS = [
+  {
+    name: "gmail_search",
+    description: "Search the user's Gmail inbox. Returns matching email subjects, senders, dates, and snippets.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Gmail search query (same syntax as Gmail search bar, e.g. 'from:sarah subject:contract')" },
+        maxResults: { type: "integer", description: "Max emails to return. Default 10." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "gmail_get_thread",
+    description: "Get the full content of an email thread by thread ID (from gmail_search results).",
+    input_schema: {
+      type: "object",
+      properties: {
+        threadId: { type: "string", description: "Thread ID from gmail_search results" },
+      },
+      required: ["threadId"],
+    },
+  },
+];
+
+// Execute a Gmail tool call
+async function executeGmailTool(name, input, userId) {
+  const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
+
+  if (name === "gmail_search") {
+    const maxResults = Math.min(input.maxResults || 10, 20);
+    const params = new URLSearchParams({ q: input.query, maxResults: String(maxResults) });
+    const res = await googleFetch(userId, "gmail", `${GMAIL_API}/messages?${params}`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    if (!data.messages || data.messages.length === 0) return { results: [], message: "No emails found." };
+
+    // Fetch metadata for each message
+    const emails = [];
+    for (const msg of data.messages.slice(0, maxResults)) {
+      const msgRes = await googleFetch(userId, "gmail", `${GMAIL_API}/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`);
+      if (msgRes.error || !msgRes.ok) continue;
+      const msgData = await msgRes.json();
+      const headers = msgData.payload?.headers || [];
+      emails.push({
+        id: msgData.id,
+        threadId: msgData.threadId,
+        subject: headers.find(h => h.name === "Subject")?.value || "(No subject)",
+        from: headers.find(h => h.name === "From")?.value || "",
+        date: headers.find(h => h.name === "Date")?.value || "",
+        snippet: msgData.snippet || "",
+      });
+    }
+    return { results: emails };
+  }
+
+  if (name === "gmail_get_thread") {
+    const res = await googleFetch(userId, "gmail", `${GMAIL_API}/threads/${input.threadId}?format=full`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    const messages = (data.messages || []).map(msg => {
+      const headers = msg.payload?.headers || [];
+      // Extract plain text body
+      let body = "";
+      function extractText(part) {
+        if (part.mimeType === "text/plain" && part.body?.data) {
+          body += Buffer.from(part.body.data, "base64url").toString("utf-8");
+        }
+        if (part.parts) part.parts.forEach(extractText);
+      }
+      extractText(msg.payload || {});
+
+      return {
+        from: headers.find(h => h.name === "From")?.value || "",
+        date: headers.find(h => h.name === "Date")?.value || "",
+        subject: headers.find(h => h.name === "Subject")?.value || "",
+        body: body.slice(0, 3000), // cap at 3K chars
+      };
+    });
+    return { thread: messages };
+  }
+
+  throw new Error(`Unknown gmail tool: ${name}`);
+}
+
+// Google Drive tools — list and read files (read-only)
+const DRIVE_TOOLS = [
+  {
+    name: "drive_search",
+    description: "Search files in the user's Google Drive. Returns file names, types, and last modified dates.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search term (matches file name and content)" },
+        maxResults: { type: "integer", description: "Max files to return. Default 10." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "drive_get_file",
+    description: "Get the text content of a Google Drive file (Docs, Sheets, or plain text). Use file ID from drive_search results.",
+    input_schema: {
+      type: "object",
+      properties: {
+        fileId: { type: "string", description: "File ID from drive_search results" },
+      },
+      required: ["fileId"],
+    },
+  },
+  {
+    name: "drive_import_to_vault",
+    description: "Import a Google Drive file into the user's Fulkit vault as a note. Confirm with user before importing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        fileId: { type: "string", description: "File ID from drive_search results" },
+        folder: { type: "string", description: "Vault folder to import into. Default: 00-INBOX." },
+      },
+      required: ["fileId"],
+    },
+  },
+];
+
+// Execute a Google Drive tool call
+async function executeDriveTool(name, input, userId) {
+  const DRIVE_API = "https://www.googleapis.com/drive/v3";
+
+  if (name === "drive_search") {
+    const maxResults = Math.min(input.maxResults || 10, 25);
+    const q = `fullText contains '${input.query.replace(/'/g, "\\'")}'`;
+    const params = new URLSearchParams({
+      q,
+      pageSize: String(maxResults),
+      fields: "files(id,name,mimeType,modifiedTime,size,webViewLink)",
+      orderBy: "modifiedTime desc",
+    });
+    const res = await googleFetch(userId, "google_drive", `${DRIVE_API}/files?${params}`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    return {
+      files: (data.files || []).map(f => ({
+        id: f.id,
+        name: f.name,
+        type: f.mimeType,
+        modified: f.modifiedTime,
+        link: f.webViewLink,
+      })),
+    };
+  }
+
+  if (name === "drive_get_file") {
+    // Try export as plain text (works for Docs, Sheets, Slides)
+    let res = await googleFetch(userId, "google_drive", `${DRIVE_API}/files/${input.fileId}/export?mimeType=text/plain`);
+    if (res.error || !res.ok) {
+      // Fall back to direct download (for plain text files)
+      res = await googleFetch(userId, "google_drive", `${DRIVE_API}/files/${input.fileId}?alt=media`);
+    }
+    if (res.error || !res.ok) return { error: "Could not read file" };
+    const text = await res.text();
+    return { content: text.slice(0, 10000) }; // cap at 10K chars
+  }
+
+  if (name === "drive_import_to_vault") {
+    // Get file metadata
+    const metaRes = await googleFetch(userId, "google_drive", `${DRIVE_API}/files/${input.fileId}?fields=name,mimeType`);
+    if (metaRes.error || !metaRes.ok) return { error: "Could not read file metadata" };
+    const meta = await metaRes.json();
+
+    // Get content
+    let res = await googleFetch(userId, "google_drive", `${DRIVE_API}/files/${input.fileId}/export?mimeType=text/plain`);
+    if (!res.ok) {
+      res = await googleFetch(userId, "google_drive", `${DRIVE_API}/files/${input.fileId}?alt=media`);
+    }
+    if (res.error || !res.ok) return { error: "Could not read file content" };
+    const content = await res.text();
+
+    // Save as note
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.from("notes").insert({
+      user_id: userId,
+      title: meta.name || "Imported from Drive",
+      content: content.slice(0, 50000),
+      source: "google_drive",
+      folder: input.folder || "00-INBOX",
+      encrypted: false,
+      context_mode: "available",
+    }).select("id, title, folder").single();
+
+    if (error) return { error: error.message };
+    return { imported: true, noteId: data.id, title: data.title, folder: data.folder };
+  }
+
+  throw new Error(`Unknown drive tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2462,7 +2665,9 @@ export async function POST(request) {
         safeGet(getTrelloToken, "trello"),
         safeGet(getGitHubToken, "github"),
         safeGet(() => getGoogleToken(userId, "google_calendar"), "google_calendar"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null]),
+        safeGet(() => getGoogleToken(userId, "gmail"), "gmail"),
+        safeGet(() => getGoogleToken(userId, "google_drive"), "google_drive"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -2511,7 +2716,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -2523,6 +2728,7 @@ export async function POST(request) {
         { ref: "stripeToken", val: stripeToken }, { ref: "toastToken", val: toastToken },
         { ref: "trelloToken", val: trelloToken }, { ref: "ghToken", val: ghToken },
         { ref: "gcalToken", val: gcalToken },
+        { ref: "gmailToken", val: gmailToken }, { ref: "gdriveToken", val: gdriveToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -2539,6 +2745,8 @@ export async function POST(request) {
             else if (s.ref === "trelloToken") trelloToken = null;
             else if (s.ref === "ghToken") ghToken = null;
             else if (s.ref === "gcalToken") gcalToken = null;
+            else if (s.ref === "gmailToken") gmailToken = null;
+            else if (s.ref === "gdriveToken") gdriveToken = null;
           }
         }
       }
@@ -2822,6 +3030,7 @@ Never skip the preview step. The user must see and approve changes before they g
       nblKey && "Numbrly", tgKey && "TrueGauge", sqToken && "Square",
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
+      gmailToken && "Gmail", gdriveToken && "Google Drive",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -2896,6 +3105,8 @@ Never skip the preview step. The user must see and approve changes before they g
       trello: () => trelloToken ? TRELLO_TOOLS : [],
       github: () => ghToken ? GITHUB_TOOLS : [],
       google_calendar: () => gcalToken ? CALENDAR_TOOLS : [],
+      gmail: () => gmailToken ? GMAIL_TOOLS : [],
+      google_drive: () => gdriveToken ? DRIVE_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -2952,6 +3163,7 @@ Never skip the preview step. The user must see and approve changes before they g
         numbrly: !!nblKey, truegauge: !!tgKey, square: !!sqToken,
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
+        gmail: !!gmailToken, google_drive: !!gdriveToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3242,6 +3454,28 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Gmail tools
+              if (block.name.startsWith("gmail_") && gmailToken) {
+                try {
+                  const result = await withTimeout(() => executeGmailTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Google Drive tools
+              if (block.name.startsWith("drive_") && gdriveToken) {
+                try {
+                  const result = await withTimeout(() => executeDriveTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

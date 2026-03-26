@@ -1013,6 +1013,12 @@ function SourcesTab() {
   const [gcalLastSynced, setGcalLastSynced] = useState(null);
   const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
 
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
+
+  const [gdriveConnected, setGdriveConnected] = useState(false);
+  const [gdriveDisconnecting, setGdriveDisconnecting] = useState(false);
+
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1059,8 +1065,14 @@ function SourcesTab() {
     if (params.get("gc") === "connected") {
       setGcalConnected(true);
     }
+    if (params.get("gm") === "connected") {
+      setGmailConnected(true);
+    }
+    if (params.get("gd") === "connected") {
+      setGdriveConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1091,7 +1103,9 @@ function SourcesTab() {
       check("/api/toast/status"),
       check("/api/trello/status"),
       check("/api/google/calendar/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal]) => {
+      check("/api/google/gmail/status"),
+      check("/api/google/drive/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1104,6 +1118,8 @@ function SourcesTab() {
       if (toast) { setToastConnected(toast.connected); if (toast.lastSynced) setToastLastSynced(toast.lastSynced); }
       if (trello) { setTrelloConnected(trello.connected); if (trello.lastSynced) setTrelloLastSynced(trello.lastSynced); }
       if (gcal) { setGcalConnected(gcal.connected); if (gcal.lastSynced) setGcalLastSynced(gcal.lastSynced); }
+      if (gmail) { setGmailConnected(gmail.connected); }
+      if (gdrive) { setGdriveConnected(gdrive.connected); }
     });
   }, [accessToken]);
 
@@ -1432,6 +1448,56 @@ function SourcesTab() {
     setGcalDisconnecting(false);
   }
 
+  function connectGmail() {
+    if (accessToken) {
+      window.open("/api/google/gmail/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/google/gmail/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectGmail() {
+    setGmailDisconnecting(true);
+    try {
+      await fetch("/api/google/gmail/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setGmailConnected(false);
+    } catch {}
+    setGmailDisconnecting(false);
+  }
+
+  function connectGdrive() {
+    if (accessToken) {
+      window.open("/api/google/drive/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/google/drive/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectGdrive() {
+    setGdriveDisconnecting(true);
+    try {
+      await fetch("/api/google/drive/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setGdriveConnected(false);
+    } catch {}
+    setGdriveDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -1610,7 +1676,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -1778,17 +1844,17 @@ function SourcesTab() {
                 <CardHeader
                   logo={SOURCE_LOGOS.google}
                   name="Google"
-                  subtitle={[googleServices.drive && "Drive", googleServices.gmail && "Gmail", gcalConnected && "Calendar"].filter(Boolean).join(", ") || "No services connected"}
+                  subtitle={[gdriveConnected && "Drive", gmailConnected && "Gmail", gcalConnected && "Calendar"].filter(Boolean).join(", ") || "No services connected"}
                   isExpanded={googleExpanded}
                   onToggle={() => setGoogleExpanded(!googleExpanded)}
                 />
                 <Drawer open={googleExpanded}>
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     <DrawerItem index={0} visible={googleExpanded}>
-                      {checkboxRow("Google Drive", googleServices.drive, () => setGoogleServices((p) => ({ ...p, drive: !p.drive })))}
+                      {checkboxRow("Google Drive", gdriveConnected, () => { if (gdriveConnected) { disconnectGdrive(); } else { connectGdrive(); } })}
                     </DrawerItem>
                     <DrawerItem index={1} visible={googleExpanded}>
-                      {checkboxRow("Gmail", googleServices.gmail, () => setGoogleServices((p) => ({ ...p, gmail: !p.gmail })))}
+                      {checkboxRow("Gmail", gmailConnected, () => { if (gmailConnected) { disconnectGmail(); } else { connectGmail(); } })}
                     </DrawerItem>
                     <DrawerItem index={2} visible={googleExpanded}>
                       {checkboxRow("Google Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
