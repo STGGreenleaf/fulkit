@@ -2302,6 +2302,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const sparksRef = useRef([]);
   const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0, time: 0, amp: 0, ampVel: 0 });
   const style4Ref = useRef({ n: Array.from({ length: 6 }, (_, i) => createNoise2D()), time: 0 });
+  const spireRef = useRef({ rings: [], lastAdd: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
     try {
@@ -2927,6 +2928,128 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
+      // STYLE 6: Spire — stacked rings building upward over time
+      // Each ring captures the audio at that moment. Time sculpture.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 6) {
+        const s4 = style4Ref.current;
+        const [n1] = s4.n;
+        s4.time += dt;
+        const sp = spireRef.current;
+
+        const cx = w / 2, cy = h * 0.48;
+        const sc = dim * 0.4;
+        const ac = acousticness;
+        const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
+        const rotY = s4.time * 0.05 + keyOffset * 0.5;
+        const rotX = -0.4 + n1(s4.time * 0.015, 100) * 0.06;
+
+        ctx.clearRect(0, 0, w, h);
+
+        function project(x3, y3, z3) {
+          const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+          let rx = x3 * cosY - z3 * sinY;
+          let rz = x3 * sinY + z3 * cosY;
+          const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+          let ry = y3 * cosX - rz * sinX;
+          rz = y3 * sinX + rz * cosX;
+          const perspective = 600;
+          const depth = perspective / (perspective + rz + 200);
+          return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
+        }
+
+        // Accumulate rings while playing — one ring every ~3 frames
+        const maxRings = 50;
+        const ptsPerRing = 24;
+        if (isPlaying && s4.time - sp.lastAdd > 0.05) {
+          sp.lastAdd = s4.time;
+          const ringData = [];
+          for (let i = 0; i < ptsPerRing; i++) {
+            const a = (i / ptsPerRing) * Math.PI * 2;
+            let r = 0.3;
+            if (hasFabric) {
+              const bandPos = (i / ptsPerRing) * 7;
+              const bandIdx = Math.floor(bandPos) % 7;
+              const bandNext = (bandIdx + 1) % 7;
+              const bandFrac = bandPos - Math.floor(bandPos);
+              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+              r += bandVal * 0.35 + (snap.loudness || 0) * 0.15;
+              if (snap.beat) r += (snap.beat_strength || 0) * 0.1;
+            } else {
+              r += n1(Math.cos(a) * 2 + s4.time * 0.3, Math.sin(a) * 2 + s4.time * 0.25) * 0.15 * energy;
+            }
+            ringData.push(r);
+          }
+          sp.rings.push(ringData);
+          if (sp.rings.length > maxRings) sp.rings.shift();
+        }
+
+        // When paused with no rings, show a single base ring
+        if (sp.rings.length === 0) {
+          const baseRing = [];
+          for (let i = 0; i < ptsPerRing; i++) baseRing.push(0.3);
+          sp.rings.push(baseRing);
+        }
+
+        // Build mesh from ring history
+        const vertices = [];
+        const edges = [];
+        const totalRings = sp.rings.length;
+
+        for (let ring = 0; ring < totalRings; ring++) {
+          const rd = sp.rings[ring];
+          const yPos = (ring / maxRings - 0.5) * 2; // -1 to 1
+          const twist = ring * 0.04; // slight twist per layer
+
+          for (let i = 0; i < ptsPerRing; i++) {
+            const a = (i / ptsPerRing) * Math.PI * 2 + twist;
+            const r = rd[i];
+            vertices.push({
+              x3: Math.cos(a) * r,
+              y3: -yPos,
+              z3: Math.sin(a) * r,
+            });
+            const idx = ring * ptsPerRing + i;
+            // Horizontal edges (around ring)
+            if (i < ptsPerRing - 1) edges.push([idx, idx + 1]);
+            else edges.push([idx, idx - ptsPerRing + 1]); // close ring
+            // Vertical edges (between rings)
+            if (ring > 0) edges.push([idx, idx - ptsPerRing]);
+          }
+        }
+
+        // Project
+        const projected = vertices.map(v => project(v.x3, v.y3, v.z3));
+
+        // Sort back to front
+        edges.sort((a, b) => {
+          const za = (projected[a[0]].z + projected[a[1]].z) / 2;
+          const zb = (projected[b[0]].z + projected[b[1]].z) / 2;
+          return za - zb;
+        });
+
+        // Draw — constant alpha, depth-based
+        const col = [32, 30, 26];
+        for (const [i, j] of edges) {
+          const a = projected[i], b = projected[j];
+          if (!a || !b) continue;
+          const avgDepth = (a.depth + b.depth) / 2;
+          const alpha = Math.pow(avgDepth, 1.3) * 0.65;
+          if (alpha < 0.005) continue;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
+          ctx.lineWidth = (0.3 + ac * 0.5) * avgDepth;
+          ctx.stroke();
+        }
+
+        return;
+      }
+
+      // ══════════════════════════════════════════
       // STYLE 1: Atmospheric Radial Terrain — breathing orb
       // ══════════════════════════════════════════
       if (curVizStyle !== 3) {
@@ -3239,18 +3362,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 5) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
+            onClick={() => { if (n <= 6) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n <= 5 ? "pointer" : "default",
+              cursor: n <= 6 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n <= 5 ? (vizStyle === n ? 1 : 0.5) : 0.25,
+              opacity: n <= 6 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
