@@ -3965,6 +3965,26 @@ const OWNER_NOTES = [
     ],
   },
   {
+    category: "Google Suite",
+    items: [
+      { name: "Google Cloud Console", url: "https://console.cloud.google.com", note: "OAuth app, API keys, Calendar/Gmail/Drive APIs. Project: fulkit." },
+      { name: "Google Auth Platform", url: "https://console.cloud.google.com/auth/overview", note: "Branding, scopes, audience, verification status." },
+      { name: "Google Groups", url: "https://groups.google.com", note: "fulkit-dev@googlegroups.com — support email on consent screen." },
+    ],
+  },
+  {
+    category: "Health",
+    items: [
+      { name: "Fitbit Dev", url: "https://dev.fitbit.com", note: "OAuth app registered. Client ID: 23V5V8. Activity, sleep, heart rate, weight." },
+      { name: "Whoop Dev", url: "https://developer-dashboard.whoop.com", note: "Requires Whoop device + membership. Sleep, recovery, strain, HR." },
+      { name: "Oura Dev", url: "https://cloud.ouraring.com/oauth/applications", note: "Not yet registered. Sleep, readiness, HR." },
+      { name: "Strava Dev", url: "https://developers.strava.com", note: "Not yet registered. Runs, rides, workouts." },
+      { name: "Garmin Dev", url: "https://developerprogram.garmin.com", note: "Not yet registered. OAuth 1.0a (harder). Activity, sleep, HR, stress." },
+      { name: "Vital (paused)", url: "https://dashboard.tryvital.io", note: "Health aggregator. $300/mo min. Webhook configured, signing secret saved. Revisit at scale." },
+      { name: "Terra (skipped)", url: "https://dashboard.tryterra.co", note: "Health aggregator. $499/mo min. Too expensive pre-launch." },
+    ],
+  },
+  {
     category: "Internal Pages",
     items: [
       { name: "/landing", url: "https://fulkit.app/landing", note: "Public landing page — hero, problem, math, features, grid, pricing, trust, CTA" },
