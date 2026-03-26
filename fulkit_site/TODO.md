@@ -183,7 +183,7 @@
 
 ### Tier 1: Everyone
 - [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
-- [ ] **Gmail** — email context in chat. "What did Sarah say about the contract?" Keywords: email, inbox, send, reply. (Same Google OAuth — add gmail.readonly scope.)
+- [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
 - [ ] **Terra (Health)** — single API, 200+ devices (Whoop, Fitbit, Garmin, Oura, iFit, Peloton, Apple Health, Google Fit). Keywords: health, sleep, workout, steps, heart rate. No other AI chat has this.
 
 ### Tier 2: Extends Fabric
@@ -194,7 +194,7 @@
 ### Tier 3: Business verticals
 - [ ] **QuickBooks** — accounting for SMBs. Invoices, expenses, P&L. Intuit OAuth2. Keywords: accounting, invoice, expense, quickbooks, profit.
 - [ ] **Vagaro** — beauty/wellness scheduling + client management. Keywords: appointment, client, booking, salon, vagaro.
-- [ ] **Google Drive** — document import/sync into vault. Same Google OAuth — add drive.readonly scope.
+- [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
 
 ### Tier 4: Productivity
 - [ ] **Slack** — team chat context. Keywords: slack, channel, thread, team.
