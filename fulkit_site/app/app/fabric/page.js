@@ -2778,9 +2778,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           s4.sLoud = 0; s4.sEnergy = 0; s4.sBands = new Array(7).fill(0); s4.sBeat = 0;
           s4.presence = 0; // ramp-in from 0→1
         }
-        // Presence ramp — slow fade in over ~2 seconds, never snaps
-        const presenceTarget = activity > 0.01 ? 1 : 0;
-        s4.presence += (presenceTarget - s4.presence) * 0.02; // ~2s to reach full
+        // Presence ramp — ramp in when playing, ramp back to sphere on pause
+        const presenceTarget = isPlaying ? 1 : 0;
+        s4.presence += (presenceTarget - s4.presence) * 0.03; // ~1.5s ramp in/out
         const presence = s4.presence;
         const rawLoud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0);
         const rawEnergy = energy;
