@@ -62,7 +62,7 @@ export default function ThreadsPage({ initialFolder, initialView }) {
 }
 
 function ThreadsContent({ initialFolder, initialView }) {
-  const { user, compactMode } = useAuth();
+  const { user, compactMode, accessToken } = useAuth();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const track = useTrack();
@@ -242,6 +242,82 @@ function ThreadsContent({ initialFolder, initialView }) {
       }).catch(() => {});
   }, [user]);
 
+  // --- External events (Google Calendar + Trello) ---
+  const [externalEvents, setExternalEvents] = useState([]);
+  const [calendarFolderMap, setCalendarFolderMap] = useState({});
+
+  useEffect(() => {
+    if (!accessToken) return;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    // Load folder mapping from preferences
+    supabase.from("preferences").select("value").eq("user_id", user?.id).eq("key", "calendar_folder_map").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          try { setCalendarFolderMap(JSON.parse(data.value)); } catch {}
+        }
+      }).catch(() => {});
+
+    // Fetch external events in parallel
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
+
+    Promise.all([
+      fetch(`/api/google/calendar/events?start=${start}&end=${end}`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/trello/cards", { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([gcal, trello]) => {
+      const events = [];
+      if (gcal?.events) {
+        for (const e of gcal.events) {
+          const dateStr = (e.start || "").slice(0, 10);
+          events.push({
+            id: `gcal_${e.id}`,
+            title: e.title,
+            due_date: dateStr,
+            source: "google_calendar",
+            _external: true,
+            _sourceId: `google_calendar:${e.calendarId}`,
+            _calendarName: e.calendarName,
+            _location: e.location,
+            _start: e.start,
+            _end: e.end,
+          });
+        }
+      }
+      if (trello?.cards) {
+        for (const c of trello.cards) {
+          events.push({
+            id: `trello_${c.id}`,
+            title: c.title,
+            due_date: c.due_date,
+            source: "trello",
+            _external: true,
+            _sourceId: `trello:${c.boardId}`,
+            _boardName: c.boardName,
+            _url: c.url,
+            _dueComplete: c.dueComplete,
+          });
+        }
+      }
+      setExternalEvents(events);
+    });
+  }, [accessToken, user?.id]);
+
+  // Assign folders to external events based on mapping
+  const mappedExternalEvents = useMemo(() => {
+    return externalEvents.map((e) => {
+      const mappedFolder = calendarFolderMap[e._sourceId];
+      if (mappedFolder) return { ...e, folder: mappedFolder };
+      // Auto-match calendar/board name to folder keys
+      const name = (e._calendarName || e._boardName || "").toLowerCase();
+      for (const f of DEFAULT_FOLDERS) {
+        if (f.key !== "all" && name.includes(f.key)) return { ...e, folder: f.key };
+      }
+      return { ...e, folder: "work" }; // default
+    });
+  }, [externalEvents, calendarFolderMap]);
+
   // --- URL param selection ---
   useEffect(() => {
     const id = searchParams.get("id");
@@ -266,8 +342,17 @@ function ThreadsContent({ initialFolder, initialView }) {
     }
     // Exclude archived from non-archive contexts
     result = result.filter((n) => n.status !== "archived");
-    return result;
-  }, [notes, folder, searchQuery]);
+
+    // Merge external events (calendar view — folder-filtered)
+    const filteredExternal = folder === "all"
+      ? mappedExternalEvents
+      : mappedExternalEvents.filter((e) => e.folder === folder);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      return [...result, ...filteredExternal.filter((e) => e.title.toLowerCase().includes(q))];
+    }
+    return [...result, ...filteredExternal];
+  }, [notes, folder, searchQuery, mappedExternalEvents]);
 
   const selectedNote = useMemo(() => {
     return notes.find((n) => String(n.id) === String(selectedId));
@@ -433,10 +518,27 @@ function ThreadsContent({ initialFolder, initialView }) {
     listDragNoteId.current = null;
   }, []);
 
+  // Toast state for "move all like it" prompt
+  const [folderToast, setFolderToast] = useState(null); // { sourceId, folderKey, folderLabel }
+
   const handleFolderDrop = useCallback((e, folderKey) => {
     e.preventDefault();
     if (folderKey === "all" || !listDragNoteId.current) return;
     const noteId = listDragNoteId.current;
+
+    // Check if this is an external event (from calendar drag)
+    const externalEvent = externalEvents.find((ev) => String(ev.id) === String(noteId));
+    if (externalEvent) {
+      // Move this event immediately
+      setExternalEvents((prev) => prev.map((ev) => String(ev.id) === String(noteId) ? { ...ev, folder: folderKey } : ev));
+      // Show toast asking to move all from this source
+      const folderLabel = [...folders, ...customFolders].find((f) => f.key === folderKey)?.label || folderKey;
+      setFolderToast({ sourceId: externalEvent._sourceId, folderKey, folderLabel });
+      setDragOverFolder(null);
+      listDragNoteId.current = null;
+      return;
+    }
+
     setNotes((prev) => prev.map((n) => String(n.id) === String(noteId) ? { ...n, folder: folderKey } : n));
     setSelectedId(null);
     supabase.from("notes").update({ folder: folderKey }).eq("id", noteId);
@@ -446,7 +548,23 @@ function ThreadsContent({ initialFolder, initialView }) {
     if (listDragNode.current) listDragNode.current.style.opacity = "1";
     if (listDragGhost.current) { listDragGhost.current.remove(); listDragGhost.current = null; }
     listDragNoteId.current = null;
-  }, []);
+  }, [externalEvents, folders, customFolders]);
+
+  // Handle "move all like it" confirmation
+  const confirmFolderMapping = useCallback(async (moveAll) => {
+    if (!folderToast || !user?.id) return;
+    if (moveAll) {
+      const newMap = { ...calendarFolderMap, [folderToast.sourceId]: folderToast.folderKey };
+      setCalendarFolderMap(newMap);
+      // Persist to Supabase preferences
+      supabase.from("preferences").upsert({
+        user_id: user.id,
+        key: "calendar_folder_map",
+        value: JSON.stringify(newMap),
+      }, { onConflict: "user_id,key" }).then(() => {}).catch(() => {});
+    }
+    setFolderToast(null);
+  }, [folderToast, calendarFolderMap, user?.id]);
 
   // Urgency helper for list view
   const safeDate = (str) => {
@@ -1112,6 +1230,63 @@ function ThreadsContent({ initialFolder, initialView }) {
               </>
             )}
           </div>
+
+          {/* Folder mapping toast */}
+          {folderToast && (
+            <div style={{
+              position: "fixed",
+              bottom: "var(--space-8)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 50,
+              background: "var(--color-bg-inverse)",
+              color: "var(--color-text-inverse)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-3) var(--space-4)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+              boxShadow: "var(--shadow-lg)",
+              fontSize: "var(--font-size-sm)",
+              fontFamily: "var(--font-primary)",
+              maxWidth: 440,
+            }}>
+              <span>Moved to {folderToast.folderLabel}. Move all from this source?</span>
+              <button
+                onClick={() => confirmFolderMapping(true)}
+                style={{
+                  padding: "var(--space-1) var(--space-2)",
+                  background: "var(--color-bg-elevated)",
+                  color: "var(--color-text)",
+                  border: "none",
+                  borderRadius: "var(--radius-xs)",
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Yes, all
+              </button>
+              <button
+                onClick={() => confirmFolderMapping(false)}
+                style={{
+                  padding: "var(--space-1) var(--space-2)",
+                  background: "transparent",
+                  color: "var(--color-text-dim)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-xs)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Just this one
+              </button>
+            </div>
+          )}
     </AuthGuard>
   );
 }

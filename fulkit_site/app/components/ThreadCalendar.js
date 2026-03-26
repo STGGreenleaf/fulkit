@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Trello } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -243,15 +243,19 @@ export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNo
                       {date.getDate()}
                     </span>
                     {dayNotes.slice(0, 3).map((note) => {
-                      const urgency = getUrgency(note.due_date);
+                      const isExternal = note._external;
+                      const urgency = isExternal ? null : getUrgency(note.due_date);
                       const isActive = String(note.id) === String(selectedId);
+                      const SourceIcon = note.source === "google_calendar" ? Calendar : note.source === "trello" ? Trello : null;
                       return (
                         <button
                           key={note.id}
-                          draggable
+                          draggable={!isExternal}
                           onClick={(e) => { e.stopPropagation(); onSelect(note.id); }}
-                          onDragStart={(e) => handleDragStart(e, note.id)}
-                          onDragEnd={handleDragEnd}
+                          onDragStart={isExternal ? undefined : (e) => handleDragStart(e, note.id)}
+                          onDragEnd={isExternal ? undefined : handleDragEnd}
+                          data-source={note.source || "fulkit"}
+                          data-source-id={note._sourceId || ""}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -264,17 +268,17 @@ export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNo
                             borderRight: "none",
                             borderBottom: "none",
                             borderRadius: 0,
-                            cursor: "grab",
+                            cursor: isExternal ? "default" : "grab",
                             textAlign: "left",
                             fontSize: "var(--font-size-2xs)",
                             fontFamily: "var(--font-primary)",
-                            color: "var(--color-text)",
+                            color: isExternal ? "var(--color-text-muted)" : "var(--color-text)",
                             overflow: "hidden",
                             whiteSpace: "nowrap",
                             opacity: urgency === "overdue" ? 0.55 : 1,
                           }}
                         >
-                          <UrgencyMeter urgency={urgency} />
+                          {SourceIcon ? <SourceIcon size={8} strokeWidth={2} style={{ flexShrink: 0, pointerEvents: "none" }} /> : <UrgencyMeter urgency={urgency} />}
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{note.title}</span>
                         </button>
                       );
