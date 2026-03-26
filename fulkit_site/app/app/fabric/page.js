@@ -2301,6 +2301,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const wispsRef = useRef([]);
   const sparksRef = useRef([]);
   const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0, time: 0, amp: 0, ampVel: 0 });
+  const style4Ref = useRef({ n: Array.from({ length: 6 }, (_, i) => createNoise2D()), time: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
     try {
@@ -2630,7 +2631,157 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 1: Atmospheric Radial Terrain — wisps, sparks, breathing orb
+      // STYLE 4: Veil — 3D wireframe cloth draped over invisible audio form
+      // Perspective-projected mesh, depth-based alpha, audio-driven displacement.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 4) {
+        const s4 = style4Ref.current;
+        const [n1, n2, n3, n4] = s4.n;
+        if (k.state !== "idle") s4.time += dt;
+
+        const activity = Math.min(1, k.amplitude / 0.55);
+        const cx = w / 2, cy = h * 0.48;
+        const sc = dim * 0.4;
+
+        // Audio features
+        const en = energy;
+        const ac = acousticness;
+        const val = valence;
+        const loud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0.5);
+        const realFlux = hasFabric ? (snap.flux || 0) : 0;
+
+        // Slow rotation — key offsets the starting angle
+        const rotY = s4.time * 0.08 + keyOffset * 0.5;
+        const rotX = -0.45 + n1(s4.time * 0.02, 100) * 0.1;
+
+        ctx.clearRect(0, 0, w, h);
+
+        if (activity < 0.005) return;
+
+        // 3D → 2D projection with perspective
+        function project(x3, y3, z3) {
+          const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+          let rx = x3 * cosY - z3 * sinY;
+          let rz = x3 * sinY + z3 * cosY;
+          const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+          let ry = y3 * cosX - rz * sinX;
+          rz = y3 * sinX + rz * cosX;
+          const perspective = 600;
+          const depth = perspective / (perspective + rz + 200);
+          return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
+        }
+
+        // Build mesh — cloth draped over invisible audio form
+        const gridW = 30, gridH = 30;
+        const vertices = [];
+        const edges = [];
+        const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
+        for (let gz = 0; gz < gridH; gz++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const nx = (gx / (gridW - 1) - 0.5) * 2;
+            const nz = (gz / (gridH - 1) - 0.5) * 2;
+            const cDist = Math.sqrt(nx * nx + nz * nz);
+
+            // Invisible form shape — driven by audio bands
+            let formR = 0.5;
+            if (hasFabric) {
+              // Map grid angle to band — form bulges where frequency energy is
+              const gridAngle = Math.atan2(nz, nx);
+              const bandPos = ((gridAngle + Math.PI) / (Math.PI * 2)) * 7;
+              const bandIdx = Math.floor(bandPos) % 7;
+              const bandNext = (bandIdx + 1) % 7;
+              const bandFrac = bandPos - Math.floor(bandPos);
+              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+              formR = 0.35 + bandVal * 0.5 + loud * 0.2;
+            } else {
+              formR = 0.5 + n3(nx * 0.8, nz * 0.8) * 0.2 * activity;
+            }
+
+            let height;
+            if (cDist < formR) {
+              // On the form — follows its surface, displaced by audio
+              const surface = n1(nx * 3 + s4.time * 0.1, nz * 3 + s4.time * 0.08) * en * 0.6;
+              const formHeight = (formR - cDist) * 1.5 * activity;
+              const beatLift = beatPulse * 0.15 * (1 - cDist / formR);
+              height = formHeight + surface * activity * (1 + beatPulse * 0.3) + beatLift;
+              // Flux adds surface turbulence
+              height += realFlux * n4(nx * 6 + s4.time * 0.4, nz * 6) * 0.08 * activity;
+            } else {
+              // Hanging — gravity pulls down
+              const hangDist = cDist - formR;
+              height = -hangDist * 0.8 * activity;
+              // Acoustic = more drape (looser fabric), digital = stiffer
+              height *= (0.5 + ac * 0.5);
+            }
+            // Cloth ripple
+            height += n4(nx * 6 + s4.time * 0.3, nz * 6 + s4.time * 0.25) * 0.05 * activity;
+            height *= exhale;
+
+            vertices.push({ x3: nx, y3: -height, z3: nz });
+
+            const idx = gz * gridW + gx;
+            if (gx < gridW - 1) edges.push([idx, idx + 1]);
+            if (gz < gridH - 1) edges.push([idx, idx + gridW]);
+          }
+        }
+
+        // Project all vertices
+        const projected = vertices.map(v => project(v.x3, v.y3, v.z3));
+
+        // Sort edges by depth (back to front)
+        edges.sort((a, b) => {
+          const za = (projected[a[0]].z + projected[a[1]].z) / 2;
+          const zb = (projected[b[0]].z + projected[b[1]].z) / 2;
+          return za - zb;
+        });
+
+        // Draw edges — depth-based alpha
+        const col = [42, 40, 36]; // Fülkit Black
+        for (const [i, j] of edges) {
+          const a = projected[i], b = projected[j];
+          if (!a || !b) continue;
+          const avgDepth = (a.depth + b.depth) / 2;
+          const alpha = Math.pow(avgDepth, 1.5) * activity * (0.15 + en * 0.4) * (0.5 + loud * 0.5);
+          if (alpha < 0.005) continue;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.7, alpha)})`;
+          ctx.lineWidth = (0.3 + ac * 0.8) * avgDepth;
+          ctx.stroke();
+        }
+
+        // Vertex dots — subtle
+        for (const p of projected) {
+          const alpha = Math.pow(p.depth, 2) * activity * (0.1 + en * 0.3);
+          if (alpha < 0.03) continue;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (0.5 + ac) * p.depth, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.6, alpha)})`;
+          ctx.fill();
+        }
+
+        // Beat highlight — bright vertices pulse on beat
+        if (beatPulse > 0.3 && isPlaying) {
+          const step = Math.max(1, Math.floor(projected.length / 20));
+          for (let i = 0; i < projected.length; i += step) {
+            const p = projected[i];
+            const alpha = beatPulse * p.depth * activity * 0.4;
+            if (alpha < 0.02) continue;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, (1.5 + beatPulse * 3) * p.depth, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.5, alpha)})`;
+            ctx.fill();
+          }
+        }
+
+        return;
+      }
+
+      // ══════════════════════════════════════════
+      // STYLE 1: Atmospheric Radial Terrain — breathing orb
       // ══════════════════════════════════════════
       if (curVizStyle !== 3) {
       const activity = Math.min(1, k.amplitude / 0.55); // 0=idle, 1=active
@@ -2942,7 +3093,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 3) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
+            onClick={() => { if (n <= 4) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
@@ -2953,7 +3104,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n <= 3 ? (vizStyle === n ? 1 : 0.5) : 0.25,
+              opacity: n <= 4 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
