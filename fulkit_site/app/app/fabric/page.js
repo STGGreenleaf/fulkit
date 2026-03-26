@@ -2309,10 +2309,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     try {
       const params = new URLSearchParams(window.location.search);
       const urlViz = params.get("viz");
-      const valid = [2, 3, 4, 5];
-      if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); const v = parseInt(urlViz); return valid.includes(v) ? v : 2; }
-      const v = parseInt(localStorage.getItem("fulkit-viz-style")); return valid.includes(v) ? v : 2;
-    } catch { return 2; }
+      const valid = [1, 2, 3, 4];
+      if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); const v = parseInt(urlViz); return valid.includes(v) ? v : 1; }
+      const v = parseInt(localStorage.getItem("fulkit-viz-style")); return valid.includes(v) ? v : 1;
+    } catch { return 1; }
   });
   // Keep latest props in refs so the render loop always reads current values
   const getSnapshotRef = useRef(getSnapshot);
@@ -2517,14 +2517,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const curVizStyle = vizStyleRef.current;
 
       // ══════════════════════════════════════════
-      // STYLE 2: Deep Amoeba — tendrils, tracers, clip contours
-      // Uses SHARED kinetic state machine (k.amplitude, beatPulse, exhale)
-      // ══════════════════════════════════════════
-      // STYLE 2: Light Amoeba — fluid pulse + song data
+      // STYLE 1: Light Amoeba — fluid pulse + song data
       // Smooth morphing contour with fade trail. Audio data shapes
       // displacement, slow waves add fluid motion.
       // ══════════════════════════════════════════
-      if (curVizStyle === 2) {
+      if (curVizStyle === 1) {
         const s2 = style2Ref.current;
         if (k.state !== "idle") s2.time += dt;
         s2.frame++;
@@ -2634,182 +2631,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 4: Fluid Breathe — physics-driven mesh with surface tension,
-      // spring constraints, per-vertex velocity. Sphere inhales/exhales
-      // with audio, tangential drift creates organic surface flow.
-      // ══════════════════════════════════════════
-      if (curVizStyle === 4) {
-        const s4 = style4Ref.current;
-        const [n1, n2, n3] = s4.n;
-        s4.time += dt;
-
-        // Build mesh once (2x subdivided icosahedron)
-        if (!fluidRef.current) {
-          const phi2 = (1 + Math.sqrt(5)) / 2;
-          const raw = [[-1,phi2,0],[1,phi2,0],[-1,-phi2,0],[1,-phi2,0],[0,-1,phi2],[0,1,phi2],[0,-1,-phi2],[0,1,-phi2],[phi2,0,-1],[phi2,0,1],[-phi2,0,-1],[-phi2,0,1]];
-          for (const v of raw) { const l = Math.sqrt(v[0]**2+v[1]**2+v[2]**2); v[0]/=l; v[1]/=l; v[2]/=l; }
-          let faces = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
-          for (let s = 0; s < 2; s++) {
-            const mc = {};
-            const gm = (a, b) => { const k = Math.min(a,b)+'-'+Math.max(a,b); if(mc[k]!==undefined)return mc[k]; const va=raw[a],vb=raw[b],m=[(va[0]+vb[0])/2,(va[1]+vb[1])/2,(va[2]+vb[2])/2],l=Math.sqrt(m[0]**2+m[1]**2+m[2]**2); m[0]/=l;m[1]/=l;m[2]/=l; raw.push(m); return mc[k]=raw.length-1; };
-            const nf = []; for (const [a,b,c] of faces) { const ab=gm(a,b),bc=gm(b,c),ca=gm(c,a); nf.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]); } faces = nf;
-          }
-          const es = new Set(), edges = [];
-          for (const [a,b,c] of faces) { const add = (i,j) => { const k=Math.min(i,j)+'-'+Math.max(i,j); if(!es.has(k)){es.add(k);edges.push([i,j]);}}; add(a,b);add(b,c);add(c,a); }
-          const baseVerts = raw.map(v => [...v]);
-          const restLen = edges.map(([i,j]) => { const a=baseVerts[i],b=baseVerts[j]; return Math.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2); });
-          fluidRef.current = {
-            baseVerts, edges, restLen,
-            pos: baseVerts.map(v => [...v]),
-            vel: baseVerts.map(() => [0, 0, 0]),
-          };
-        }
-        const fl = fluidRef.current;
-        const { pos, vel, edges: flEdges, baseVerts: flBase, restLen: flRest } = fl;
-        const numV = pos.length;
-
-        const activity = Math.min(1, k.amplitude / 0.55);
-        const cx = w / 2, cy = h * 0.47;
-        const sc = dim * 0.35;
-        const ac = acousticness;
-        const en = energy;
-        const loud = hasFabric ? (snap.loudness || 0) : 0;
-
-        const rotY = s4.time * 0.04 + keyOffset * 0.5;
-        const rotX = -0.3 + n1(s4.time * 0.012, 100) * 0.12;
-
-        // ── Physics simulation ──
-        if (activity > 0.01) {
-          const pdt = 0.016;
-
-          // External forces — Breathe mode: surface tension + tangential drift
-          for (let vi = 0; vi < numV; vi++) {
-            const px = pos[vi][0], py = pos[vi][1], pz = pos[vi][2];
-            const dist = Math.sqrt(px*px + py*py + pz*pz) || 1;
-
-            // Breathing target radius — audio drives the inhale/exhale
-            const breathCycle = Math.sin(s4.time * 0.4) * 0.15 * activity;
-            const targetR = 1 + breathCycle + en * 0.25 * activity + loud * 0.15 * activity;
-            // Noise-varied target per vertex for organic shape
-            const localTarget = targetR + n1(px * 2 + s4.time * 0.1, pz * 2 + py) * 0.2 * activity;
-
-            // Surface tension — pull toward target radius
-            const surfaceForce = (localTarget - dist) * 1.5;
-            let fx = (px / dist) * surfaceForce;
-            let fy = (py / dist) * surfaceForce;
-            let fz = (pz / dist) * surfaceForce;
-
-            // Tangential drift — slow sliding across the surface
-            const tangX = n2(py * 1.5 + s4.time * 0.08, pz * 1.5) * activity * 0.3;
-            const tangZ = n3(px * 1.5 + s4.time * 0.06, py * 1.5) * activity * 0.3;
-            const dot = (tangX * px + tangZ * pz) / (dist * dist);
-            fx += tangX - dot * px;
-            fz += tangZ - dot * pz;
-
-            // Audio band displacement — frequency shapes the surface
-            if (hasFabric) {
-              const bandAngle = Math.atan2(pz, px);
-              const bandPos = ((bandAngle + Math.PI) / (Math.PI * 2)) * 7;
-              const bandIdx = Math.floor(bandPos) % 7;
-              const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-              const bandVal = snap.bands[bandNames[bandIdx]] || 0;
-              const bandPush = bandVal * 0.8 * activity;
-              fx += (px / dist) * bandPush * 0.5;
-              fy += (py / dist) * bandPush * 0.5;
-              fz += (pz / dist) * bandPush * 0.5;
-            }
-
-            // Beat: sharp inhale burst
-            if (beatPulse > 0.1) {
-              fx += (px / dist) * beatPulse * 1.5;
-              fy += (py / dist) * beatPulse * 1.5;
-              fz += (pz / dist) * beatPulse * 1.5;
-            }
-
-            vel[vi][0] += fx * pdt;
-            vel[vi][1] += fy * pdt;
-            vel[vi][2] += fz * pdt;
-          }
-
-          // Spring constraints — keep mesh connected
-          for (let ei = 0; ei < flEdges.length; ei++) {
-            const [i, j] = flEdges[ei];
-            const dx = pos[j][0]-pos[i][0], dy = pos[j][1]-pos[i][1], dz = pos[j][2]-pos[i][2];
-            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) || 0.001;
-            const force = ((dist - flRest[ei]) / dist) * 1.5;
-            vel[i][0] += dx * force * pdt;
-            vel[i][1] += dy * force * pdt;
-            vel[i][2] += dz * force * pdt;
-            vel[j][0] -= dx * force * pdt;
-            vel[j][1] -= dy * force * pdt;
-            vel[j][2] -= dz * force * pdt;
-          }
-
-          // Damping + integrate
-          for (let vi = 0; vi < numV; vi++) {
-            vel[vi][0] *= 0.95; vel[vi][1] *= 0.95; vel[vi][2] *= 0.95;
-            pos[vi][0] += vel[vi][0] * pdt;
-            pos[vi][1] += vel[vi][1] * pdt;
-            pos[vi][2] += vel[vi][2] * pdt;
-          }
-        } else {
-          // Silent — gently return to sphere
-          for (let vi = 0; vi < numV; vi++) {
-            pos[vi][0] += (flBase[vi][0] - pos[vi][0]) * 0.02;
-            pos[vi][1] += (flBase[vi][1] - pos[vi][1]) * 0.02;
-            pos[vi][2] += (flBase[vi][2] - pos[vi][2]) * 0.02;
-            vel[vi][0] *= 0.9; vel[vi][1] *= 0.9; vel[vi][2] *= 0.9;
-          }
-        }
-
-        // ── Project ──
-        ctx.clearRect(0, 0, w, h);
-        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
-        const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-        const projected = [];
-        for (let vi = 0; vi < numV; vi++) {
-          let x3 = pos[vi][0], y3 = pos[vi][1], z3 = pos[vi][2];
-          let rx = x3*cosY - z3*sinY, rz = x3*sinY + z3*cosY;
-          let ry = y3*cosX - rz*sinX; rz = y3*sinX + rz*cosX;
-          const d = 500 / (500 + rz + 150);
-          projected.push({ x: cx + rx*sc*d, y: cy + ry*sc*d, d, z: rz });
-        }
-
-        // Sort back to front
-        const sortedE = flEdges.map((_, i) => i).sort((a, b) => {
-          const ea = flEdges[a], eb = flEdges[b];
-          return (projected[ea[0]].z + projected[ea[1]].z) - (projected[eb[0]].z + projected[eb[1]].z);
-        });
-
-        // Draw edges — stretch affects visibility
-        const col = [32, 30, 26];
-        for (const ei of sortedE) {
-          const [i, j] = flEdges[ei];
-          const a = projected[i], b = projected[j];
-          const avgD = (a.d + b.d) / 2;
-          const realDist = Math.sqrt((pos[i][0]-pos[j][0])**2+(pos[i][1]-pos[j][1])**2+(pos[i][2]-pos[j][2])**2);
-          const stretchRatio = realDist / flRest[ei];
-
-          let alpha = Math.pow(avgD, 1.3) * 0.65;
-          alpha *= (0.6 + Math.min(stretchRatio, 2) * 0.3); // stretched edges brighter
-          if (alpha < 0.005) continue;
-
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
-          ctx.lineWidth = Math.max(0.1, (0.3 + ac * 0.5) * avgD * Math.max(0.15, 1.5 - stretchRatio * 0.4));
-          ctx.stroke();
-        }
-
-        return;
-      }
-
-      // ══════════════════════════════════════════
-      // STYLE 5: Crystal — subdivided icosahedron, audio warps facets
+      // STYLE 3: Crystal — subdivided icosahedron, audio warps facets
       // Perfect gem at rest, deforms with energy when playing.
       // ══════════════════════════════════════════
-      if (curVizStyle === 5) {
+      if (curVizStyle === 3) {
         const s4 = style4Ref.current;
         const [n1, n2, n3] = s4.n;
         s4.time += dt;
@@ -2976,9 +2801,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 3 (archive): Original Radial Terrain
+      // STYLE 2 (archive): Original Radial Terrain
       // ══════════════════════════════════════════
-      if (curVizStyle === 3) {
+      if (curVizStyle === 2) {
       const points = [];
       const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
@@ -3082,7 +2907,196 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.2) : inLw;
         ctx.stroke();
       }
-      } // end style 3
+      } // end style 2
+
+      // ══════════════════════════════════════════
+      // STYLE 4: Deep Amoeba — big lobes, tracer ghosts, interior tendrils
+      // 72 control points, dramatic irregular shape, layered depth.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 4) {
+        const s2 = style2Ref.current;
+        if (k.state !== "idle") s2.time += dt;
+        s2.frame++;
+
+        const noise2D = noiseRef.current;
+        const noise2B = s2.noise2 || noiseRef.current;
+        const cx = w / 2 + noise2D(s2.time * 0.12, 50) * dim * 0.018;
+        const cy = h / 2 + noise2D(80, s2.time * 0.1) * dim * 0.018;
+        const s4amp = k.amplitude / 0.55;
+        const DA_N = 72;
+        const rot = s2.time * 0.04;
+        const col = [62, 60, 56];
+
+        const sharp = 1 - valence;
+        const lw = 1.0 + acousticness * 1.3;
+
+        // Silent — thin circle
+        if (s4amp < 0.03) {
+          ctx.clearRect(0, 0, w, h);
+          ctx.beginPath();
+          ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.12 + s4amp * 2})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+          return;
+        }
+
+        // Build displacement — big lobes + detail
+        const disp = new Float32Array(DA_N);
+        const radii = new Float32Array(DA_N);
+        const irregularity = 0.5 + energy * 0.5;
+
+        for (let i = 0; i < DA_N; i++) {
+          const a = (i / DA_N) * Math.PI * 2 + rot;
+          const nx = Math.cos(a), ny = Math.sin(a);
+
+          // Amoeba base warp — 3 octaves
+          const d1 = noise2D(nx * 0.3, ny * 0.3 + s2.time * 0.002);
+          const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + s2.time * 0.005);
+          const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
+          radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * s4amp * 0.55);
+
+          // Displacement from audio
+          const n1 = noise2D(nx * 1.2 + s2.time * 0.25, ny * 1.2 + s2.time * 0.18);
+          const n2 = noise2D(nx * 3.5 + s2.time * 0.45, ny * 3.5 + s2.time * 0.35);
+          let nv = n1 * 0.9 + n2 * 0.2;
+          nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharp * 0.6);
+
+          // Audio bands shape the displacement when thumbprint data available
+          let bandMod = 1;
+          if (hasFabric) {
+            const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+            const bandPos = (i / DA_N) * 7;
+            const bandIdx = Math.floor(bandPos) % 7;
+            const bandNext = (bandIdx + 1) % 7;
+            const bandFrac = bandPos - Math.floor(bandPos);
+            const bandVal = (snap.bands[bandNames[bandIdx]] || 0) * (1 - bandFrac) +
+                            (snap.bands[bandNames[bandNext]] || 0) * bandFrac;
+            bandMod = 0.5 + bandVal * 1.5 + (snap.loudness || 0) * 0.5;
+          }
+
+          const beatBoost = 1 + beatPulse * 0.7;
+          disp[i] = nv * s4amp * energy * beatBoost * exhale * baseR * 0.85 * bandMod;
+          disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
+        }
+
+        // Neighbor-smooth — preserve big lobes
+        for (let pass = 0; pass < 2; pass++) {
+          const tmpD = new Float32Array(DA_N);
+          const tmpR = new Float32Array(DA_N);
+          for (let i = 0; i < DA_N; i++) {
+            const p = (i - 1 + DA_N) % DA_N;
+            const n = (i + 1) % DA_N;
+            tmpD[i] = disp[i] * 0.5 + disp[p] * 0.25 + disp[n] * 0.25;
+            tmpR[i] = radii[i] * 0.5 + radii[p] * 0.25 + radii[n] * 0.25;
+          }
+          disp.set(tmpD);
+          radii.set(tmpR);
+        }
+
+        // Capture tracer layers
+        if (!s2.daTracers) { s2.daTracers = []; s2.daHits = []; }
+        if (s2.frame % 3 === 0 && s4amp > 0.01) {
+          s2.daTracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), op: 0.6, age: 0 });
+          if (s2.daTracers.length > 24) s2.daTracers.shift();
+        }
+
+        // Hit layers on beat
+        if (beatPulse > 0.5 && isPlaying && s2.frame % 3 === 0) {
+          const hd = new Float32Array(DA_N);
+          for (let i = 0; i < DA_N; i++) hd[i] = disp[i] * 2.0;
+          for (let pass = 0; pass < 2; pass++) {
+            const tmp = new Float32Array(DA_N);
+            for (let i = 0; i < DA_N; i++) tmp[i] = hd[i] * 0.5 + hd[(i-1+DA_N)%DA_N] * 0.25 + hd[(i+1)%DA_N] * 0.25;
+            hd.set(tmp);
+          }
+          s2.daHits.push({ d: hd, r: new Float32Array(radii), op: 0.8, age: 0 });
+          if (s2.daHits.length > 6) s2.daHits.shift();
+        }
+
+        // Age layers
+        for (const l of s2.daTracers) { l.age++; l.op *= 0.96; }
+        for (const l of s2.daHits) { l.age++; l.op *= 0.984; }
+        s2.daTracers = s2.daTracers.filter(l => l.op > 0.015);
+        s2.daHits = s2.daHits.filter(l => l.op > 0.015);
+
+        // ── Render ──
+        ctx.clearRect(0, 0, w, h);
+
+        // Interior tendrils
+        if (s4amp > 0.02) {
+          const iAlpha = s4amp * 0.12;
+          for (let i = 0; i < DA_N; i += 7) {
+            const opp = (i + Math.floor(DA_N / 2)) % DA_N;
+            const a1 = (i / DA_N) * Math.PI * 2 + rot;
+            const a2 = (opp / DA_N) * Math.PI * 2 + rot;
+            const r1 = radii[i] * 0.6 + disp[i] * 0.3;
+            const r2 = radii[opp] * 0.6 + disp[opp] * 0.3;
+            const cpOff = noise2D(i * 0.5, s2.time * 0.3) * baseR * 0.3 * s4amp;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a1) * r1, cy + Math.sin(a1) * r1);
+            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.7,
+              cx + Math.cos(a2) * r2, cy + Math.sin(a2) * r2);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${iAlpha * (0.3 + Math.abs(disp[i]) / baseR)})`;
+            ctx.lineWidth = 0.5 + acousticness * 0.5;
+            ctx.stroke();
+          }
+        }
+
+        // All layers sorted oldest first
+        const allLayers = [
+          ...s2.daTracers, ...s2.daHits,
+          { d: disp, r: radii, op: 1.0, age: 0 },
+        ].sort((a, b) => b.age - a.age);
+
+        for (const layer of allLayers) {
+          const alpha = Math.max(0, Math.min(1, layer.op));
+          if (alpha < 0.01) continue;
+
+          const rShift = layer.age * 0.35;
+          const ageFade = Math.max(0, 1 - layer.age * 0.01);
+          const thisLw = lw * ageFade;
+
+          const pts = [];
+          for (let i = 0; i < DA_N; i++) {
+            const a = (i / DA_N) * Math.PI * 2 + rot;
+            const r = layer.r[i] + layer.d[i] - rShift;
+            pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+          }
+
+          // Clip-masked inner bleed
+          drawOrbSmooth(ctx, pts);
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.8 * (0.4 + s4amp * 0.6) * 0.12})`;
+          ctx.lineWidth = thisLw * 4;
+          ctx.stroke();
+          ctx.restore();
+
+          // Sharp contour
+          drawOrbSmooth(ctx, pts);
+          const contourPeak = 0.5 + s4amp * 0.45;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.8 * (0.4 + s4amp * 0.6) * (layer.age === 0 ? contourPeak : 0.45)})`;
+          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s4amp * 0.5 : 0.7));
+          ctx.stroke();
+
+          // Inward reflection
+          if (alpha > 0.06) {
+            const iPts = [];
+            for (let i = 0; i < DA_N; i++) {
+              const a = (i / DA_N) * Math.PI * 2 + rot;
+              const r = Math.max(0, layer.r[i] - layer.d[i] * 0.35 + rShift * 0.3);
+              iPts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+            }
+            drawOrbSmooth(ctx, iPts);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.04})`;
+            ctx.lineWidth = thisLw * 2.5;
+            ctx.stroke();
+          }
+        }
+
+        return;
+      }
     }
 
     animRef.current = requestAnimationFrame(draw);
@@ -3132,7 +3146,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[2, 3, 4, 5].map((n) => (
+        {[1, 2, 3, 4].map((n) => (
           <button
             key={n}
             onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} }}
