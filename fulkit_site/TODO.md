@@ -18,7 +18,7 @@
 - [x] **Welcome email** — Resend wired, fulkit.app domain verified, auto-sends on signup. Template preview at /email-preview. Session 22.
 - [x] **Keyboard shortcuts** — Enter to send (existing), Escape clears input, Cmd+K focuses chat input from anywhere
 - [x] **Loading skeletons** — Dashboard, Actions, Settings show skeleton placeholders (Skeleton component + pulse animation). Session 22.
-- [ ] **Spotify Extended Quota** — Request from Spotify developer dashboard. Currently Development Mode (only Collin's account works).
+- [x] **Spotify Extended Quota** — ✅ Submitted. Approved with 5-seat cap for now. Circle back when Spotify lifts the limit.
 
 ---
 
@@ -146,7 +146,7 @@
 - [x] **Remove planned features from landing** — ✅ Both Inbox Triage and Quick Capture are built and shipped. Updated descriptions to reflect actual functionality.
 - [x] **Remove unsourced stats from landing** — ✅ Replaced "15% / 3.6 hours" with real pain points (eight apps, eight logins).
 - [ ] **Ship remaining business integrations** — Landing page can't sell the ecosystem story until the ecosystem is built. Current: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, Spotify. Add the rest before rewriting.
-- [ ] **Spotify Extended Quota** — Still in Development Mode. Can't market Fabric to new users until this clears.
+- [x] **Spotify Extended Quota** — ✅ Approved, 5-seat cap. Revisit when Spotify lifts.
 
 ### Fix before rewrite
 - [x] **About page (/about) — remove nav frame** — ✅ Already frameless (standalone nav, no sidebar/app chrome). Same structure as /landing.
@@ -171,7 +171,7 @@
 > Items from earlier phases that are external or infrastructure tasks.
 
 - [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg
-- [ ] Spotify App — Extended Quota Mode (Spotify dashboard)
+- [x] Spotify App — Extended Quota Mode ✅ (5-seat cap, revisit when lifted)
 - [ ] Domain verification for Spotify OAuth redirect URI
 - [x] Fabric isolation — provider abstraction complete, DB migration run. Multi-provider ready. Session 22.
 - [ ] SoundCloud API integration (pending Artist Pro + API approval)
