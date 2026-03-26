@@ -2671,60 +2671,59 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
         }
 
-        // Build mesh — cloth draped over invisible audio form
-        const gridW = 30, gridH = 30;
+        // Build sphere mesh — UV sphere displaced by audio
+        const rings = 24, segs = 32;
         const vertices = [];
         const edges = [];
         const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        const baseRadius = 1.0;
 
-        for (let gz = 0; gz < gridH; gz++) {
-          for (let gx = 0; gx < gridW; gx++) {
-            const nx = (gx / (gridW - 1) - 0.5) * 2;
-            const nz = (gz / (gridH - 1) - 0.5) * 2;
-            const cDist = Math.sqrt(nx * nx + nz * nz);
+        for (let ring = 0; ring <= rings; ring++) {
+          const phi = (ring / rings) * Math.PI; // 0 (top) to PI (bottom)
+          const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
 
-            // Invisible form shape — driven by audio bands
-            let formR = 0.5;
+          for (let seg = 0; seg < segs; seg++) {
+            const theta = (seg / segs) * Math.PI * 2;
+            const sinTh = Math.sin(theta), cosTh = Math.cos(theta);
+
+            // Base sphere point
+            const sx = sinPhi * cosTh;
+            const sy = cosPhi;
+            const sz = sinPhi * sinTh;
+
+            // Audio displacement — bands map around the equator (theta), loudness globally
+            let disp = 0;
             if (hasFabric) {
-              // Map grid angle to band — form bulges where frequency energy is
-              const gridAngle = Math.atan2(nz, nx);
-              const bandPos = ((gridAngle + Math.PI) / (Math.PI * 2)) * 7;
+              const bandPos = (seg / segs) * 7;
               const bandIdx = Math.floor(bandPos) % 7;
               const bandNext = (bandIdx + 1) % 7;
               const bandFrac = bandPos - Math.floor(bandPos);
               const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
                               (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              formR = 0.35 + bandVal * 0.5 + loud * 0.2;
-            } else {
-              formR = 0.5 + n3(nx * 0.8, nz * 0.8) * 0.2 * activity;
+              disp = bandVal * 0.4 + loud * 0.15;
+              disp *= sinPhi; // stronger at equator, zero at poles
+              disp += realFlux * n4(sx * 4 + s4.time * 0.3, sz * 4) * 0.06;
+              if (snap.beat) disp += (snap.beat_strength || 0) * 0.08 * sinPhi;
             }
 
-            let height;
-            if (cDist < formR) {
-              // On the form — follows its surface, displaced by audio
-              const surface = n1(nx * 3 + s4.time * 0.1, nz * 3 + s4.time * 0.08) * en * 0.6;
-              const formHeight = (formR - cDist) * 1.5 * activity;
-              const beatLift = beatPulse * 0.15 * (1 - cDist / formR);
-              height = formHeight + surface * activity * (1 + beatPulse * 0.3) + beatLift;
-              // Flux adds surface turbulence
-              height += realFlux * n4(nx * 6 + s4.time * 0.4, nz * 6) * 0.08 * activity;
-            } else {
-              // Hanging — gravity pulls down
-              const hangDist = cDist - formR;
-              height = -hangDist * 0.8 * activity;
-              // Acoustic = more drape (looser fabric), digital = stiffer
-              height *= (0.5 + ac * 0.5);
-            }
-            // Cloth ripple
-            height += n4(nx * 6 + s4.time * 0.3, nz * 6 + s4.time * 0.25) * 0.05 * activity;
-            height *= exhale;
+            // Noise surface texture
+            const tex = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * en * 0.15;
 
-            vertices.push({ x3: nx, y3: -height, z3: nz });
+            const r = baseRadius + (disp + tex) * activity;
+            vertices.push({ x3: sx * r, y3: sy * r, z3: sz * r });
 
-            const idx = gz * gridW + gx;
-            if (gx < gridW - 1) edges.push([idx, idx + 1]);
-            if (gz < gridH - 1) edges.push([idx, idx + gridW]);
+            const idx = ring * segs + seg;
+            // Horizontal edge (around ring)
+            if (seg < segs - 1) edges.push([idx, idx + 1]);
+            else edges.push([idx, idx - segs + 1]); // close ring
+            // Vertical edge (between rings)
+            if (ring < rings) edges.push([idx, idx + segs]);
           }
+        }
+
+        // Apply exhale
+        if (exhale < 1) {
+          for (const v of vertices) { v.x3 *= exhale; v.y3 *= exhale; v.z3 *= exhale; }
         }
 
         // Project all vertices
@@ -2737,44 +2736,20 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return za - zb;
         });
 
-        // Draw edges — depth-based alpha
-        const col = [42, 40, 36]; // Fülkit Black
+        // Draw edges — dark, depth-based alpha
+        const col = [32, 30, 26];
         for (const [i, j] of edges) {
           const a = projected[i], b = projected[j];
           if (!a || !b) continue;
           const avgDepth = (a.depth + b.depth) / 2;
-          const alpha = Math.pow(avgDepth, 1.5) * activity * (0.15 + en * 0.4) * (0.5 + loud * 0.5);
+          const alpha = Math.pow(avgDepth, 1.3) * activity * (0.2 + en * 0.5) * (0.5 + loud * 0.5);
           if (alpha < 0.005) continue;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.7, alpha)})`;
-          ctx.lineWidth = (0.3 + ac * 0.8) * avgDepth;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
+          ctx.lineWidth = (0.4 + ac * 0.6) * avgDepth;
           ctx.stroke();
-        }
-
-        // Vertex dots — subtle
-        for (const p of projected) {
-          const alpha = Math.pow(p.depth, 2) * activity * (0.1 + en * 0.3);
-          if (alpha < 0.03) continue;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, (0.5 + ac) * p.depth, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.6, alpha)})`;
-          ctx.fill();
-        }
-
-        // Beat highlight — bright vertices pulse on beat
-        if (beatPulse > 0.3 && isPlaying) {
-          const step = Math.max(1, Math.floor(projected.length / 20));
-          for (let i = 0; i < projected.length; i += step) {
-            const p = projected[i];
-            const alpha = beatPulse * p.depth * activity * 0.4;
-            if (alpha < 0.02) continue;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, (1.5 + beatPulse * 3) * p.depth, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.5, alpha)})`;
-            ctx.fill();
-          }
         }
 
         return;
