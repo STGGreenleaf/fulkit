@@ -2731,47 +2731,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const layers = historyRef.current;
       const layerCount = layers.length;
 
-      // ── Wisps: ambient atmosphere drifting outward ──
-      const wisps = wispsRef.current;
-      const isActive = k.state === "active" || k.state === "spool-up" || k.state === "skip-spool";
-      // Spawn wisps — scale with loudness, reach far out
-      if (isActive && activity > 0.15) {
-        const spawnRate = Math.floor(2 + realLoud * 4); // 2–6 per frame
-        for (let s = 0; s < spawnRate; s++) {
-          if (wisps.length >= Math.floor(150 * Q)) break;
-          const angle = Math.random() * Math.PI * 2;
-          const cosA = Math.cos(angle), sinA = Math.sin(angle);
-          const surfaceR = baseR * (1 + realLoud * 0.4);
-          const speed = baseR * (0.012 + realLoud * 0.028);
-          const tangent = (Math.random() - 0.5) * 0.5;
-          wisps.push({
-            x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
-            vx: cosA * speed + sinA * tangent * speed,
-            vy: sinA * speed - cosA * tangent * speed,
-            life: 0, maxLife: 50 + Math.random() * 80,
-            alpha: 0.12 + realLoud * 0.18, size: 3 + Math.random() * 5,
-          });
-        }
-      }
-      // Update + render wisps (behind orb layers)
-      for (let i = wisps.length - 1; i >= 0; i--) {
-        const wp = wisps[i];
-        wp.x += wp.vx; wp.y += wp.vy;
-        wp.vx += (Math.random() - 0.5) * 0.2;
-        wp.vy += (Math.random() - 0.5) * 0.2;
-        wp.life++;
-        const lifeFrac = wp.life / wp.maxLife;
-        const fadeAlpha = wp.alpha * (1 - lifeFrac * lifeFrac);
-        if (fadeAlpha < 0.004 || wp.life > wp.maxLife) { wisps.splice(i, 1); continue; }
-        ctx.beginPath();
-        ctx.moveTo(wp.x, wp.y);
-        ctx.lineTo(wp.x - wp.vx * wp.size, wp.y - wp.vy * wp.size);
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
-        ctx.lineWidth = 0.8 + (1 - lifeFrac) * 1.0;
-        ctx.stroke();
-      }
-
-
       // ── Orb layers — wider spacing, per-layer rotation, bigger displacement ──
       for (let l = 0; l < layerCount; l++) {
         const data = layers[l];
@@ -2844,43 +2803,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }
       }
 
-      // ── Sparks: burst on beats/onsets (in front of orb) ──
-      const sparks = sparksRef.current;
-      if (hasFabric && isActive) {
-        const shouldBurst = (snap.onset && (snap.onset_strength || 0) > 0.3) || (snap.beat && (snap.beat_strength || 0) > 0.35);
-        if (shouldBurst) {
-          const strength = Math.max(snap.onset_strength || 0, snap.beat_strength || 0);
-          const count = Math.floor(8 + strength * 16); // 8–24 sparks
-          for (let s = 0; s < count; s++) {
-            if (sparks.length >= Math.floor(80 * Q)) break;
-            const angle = Math.random() * Math.PI * 2;
-            const cosA = Math.cos(angle), sinA = Math.sin(angle);
-            const surfaceR = baseR * (1.1 + realLoud * 0.5);
-            const speed = baseR * (0.02 + strength * 0.04);
-            sparks.push({
-              x: cx + cosA * surfaceR, y: cy + sinA * surfaceR,
-              vx: cosA * speed * (0.6 + Math.random() * 0.8),
-              vy: sinA * speed * (0.6 + Math.random() * 0.8),
-              life: 0, maxLife: 20 + Math.random() * 30,
-              alpha: 0.18 + strength * 0.25,
-            });
-          }
-        }
-      }
-      // Update + render sparks
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const sp = sparks[i];
-        sp.x += sp.vx; sp.y += sp.vy;
-        sp.vx *= 0.97; sp.vy *= 0.97; // slower deceleration = travel further
-        sp.life++;
-        const lifeFrac = sp.life / sp.maxLife;
-        const fadeAlpha = sp.alpha * (1 - lifeFrac);
-        if (fadeAlpha < 0.006 || sp.life > sp.maxLife) { sparks.splice(i, 1); continue; }
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, 1.0 + (1 - lifeFrac) * 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
-        ctx.fill();
-      }
       } else {
       // ══════════════════════════════════════════
       // STYLE 3 (archive): Original Radial Terrain — heavy, pre-V4 formula
