@@ -2814,8 +2814,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const noise2D = noiseRef.current;
         const cx = w / 2, cy = h / 2;
         const SEGS = 164;
-        const innerR = dim * 0.12;
-        const outerR = dim * 0.22;
+        const innerR = dim * 0.10;
+        const outerR = dim * 0.30;
         const midR = (innerR + outerR) / 2;
         const col = [42, 40, 36];
 
@@ -2853,7 +2853,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const nx = cosA * scl, ny = sinA * scl;
           const noiseVal = Math.pow(
             (1 + n1(nx / 2 + mr * Math.cos(Math.PI * 2 * loopT), ny / 2 + mr * Math.sin(Math.PI * 2 * loopT))) / 2,
-            3.0
+            2.0
           );
 
           // Audio modulation — band energy shapes the ring
@@ -2863,25 +2863,25 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandFrac = bandPos - Math.floor(bandPos);
           const bandVal = s4.prBands[bandIdx] * (1 - bandFrac) + s4.prBands[bandNext] * bandFrac;
 
-          // Combined displacement: noise base + audio push
-          const audioMod = (bandVal * 0.6 + s4.prLoud * 0.3 + s4.prBeat * 0.2) * presence;
-          const displacement = noiseVal * (0.3 + audioMod * 1.5);
+          // Combined displacement: noise base + audio push — amplified
+          const audioMod = (bandVal * 0.8 + s4.prLoud * 0.4 + s4.prBeat * 0.4) * presence;
+          const displacement = noiseVal * (0.4 + audioMod * 2.0);
 
-          // Inner and outer points — displacement pushes outward from mid-ring
-          const iR = midR - (innerR * 0.3) * (1 - displacement * 0.5);
-          const oR = midR + (outerR - midR) * displacement + s4.prBeat * dim * 0.02 * presence;
+          // Inner and outer points — wide reach
+          const iR = midR - (innerR * 0.5) * (1 - displacement * 0.6);
+          const oR = midR + (outerR - midR) * displacement * 1.3 + s4.prBeat * dim * 0.04 * presence;
 
           const x1 = cx + cosA * iR, y1 = cy + sinA * iR;
           const x2 = cx + cosA * oR, y2 = cy + sinA * oR;
 
-          // Spoke alpha — brighter where energy is
-          const spokeAlpha = 0.08 + displacement * 0.4 + audioMod * 0.15;
+          // Spoke alpha — much more visible
+          const spokeAlpha = 0.12 + displacement * 0.5 + audioMod * 0.25;
 
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.6, spokeAlpha)})`;
-          ctx.lineWidth = 0.4 + displacement * 0.8;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.75, spokeAlpha)})`;
+          ctx.lineWidth = 0.6 + displacement * 1.2;
           ctx.stroke();
         }
 
@@ -2893,21 +2893,21 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const scl = 2.5;
           const noiseVal = Math.pow(
             (1 + n1(cosA * scl / 2 + mr * Math.cos(Math.PI * 2 * loopT), sinA * scl / 2 + mr * Math.sin(Math.PI * 2 * loopT))) / 2,
-            3.0
+            2.0
           );
           const bandPos = (i / SEGS) * 7;
           const bIdx = Math.floor(bandPos) % 7;
           const bNext = (bIdx + 1) % 7;
           const bFrac = bandPos - Math.floor(bandPos);
           const bVal = s4.prBands[bIdx] * (1 - bFrac) + s4.prBands[bNext] * bFrac;
-          const audioMod = (bVal * 0.6 + s4.prLoud * 0.3) * presence;
-          const oR = midR + (outerR - midR) * noiseVal * (0.3 + audioMod * 1.5) + s4.prBeat * dim * 0.02 * presence;
+          const audioMod = (bVal * 0.8 + s4.prLoud * 0.4) * presence;
+          const oR = midR + (outerR - midR) * noiseVal * (0.4 + audioMod * 2.0) * 1.3 + s4.prBeat * dim * 0.04 * presence;
           const x = cx + cosA * oR, y = cy + sinA * oR;
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.25 + s4.prLoud * 0.2 * presence})`;
-        ctx.lineWidth = 1.0 + s4.prLoud * 0.5 * presence;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.35 + s4.prLoud * 0.3 * presence})`;
+        ctx.lineWidth = 1.2 + s4.prLoud * 0.8 * presence;
         ctx.stroke();
 
         // ── Inner ring contour — thin, steady ──
@@ -2919,8 +2919,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.15)`;
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.25)`;
+        ctx.lineWidth = 0.8;
         ctx.stroke();
 
         return;
