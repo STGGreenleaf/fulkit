@@ -2933,16 +2933,24 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // Audio followers — fast enough to chase the music
         if (!s2.daBands) { s2.daBands = new Array(7).fill(0); s2.daLoud = 0; s2.daBeat = 0; s2.daOnset = 0; }
         const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-        for (let b = 0; b < 7; b++) {
-          const bv = hasFabric ? (snap.bands[bandNames[b]] || 0) : 0;
-          s2.daBands[b] += (bv - s2.daBands[b]) * 0.25; // fast — chase the music
+        if (hasFabric) {
+          for (let b = 0; b < 7; b++) {
+            s2.daBands[b] += ((snap.bands[bandNames[b]] || 0) - s2.daBands[b]) * 0.25;
+          }
+          s2.daLoud += ((snap.loudness || 0) - s2.daLoud) * 0.15;
+          s2.daBeat = Math.max(s2.daBeat * 0.88, snap.beat ? (snap.beat_strength || 0) * 0.8 : 0);
+          s2.daOnset = Math.max(s2.daOnset * 0.85, snap.onset ? (snap.onset_strength || 0) * 0.6 : 0);
+        } else {
+          // No thumbprint — use procedural features so it still reacts
+          const procEnergy = energy * s4amp;
+          for (let b = 0; b < 7; b++) {
+            const procBand = procEnergy * (0.5 + noise2D(b * 3 + s2.time * 0.2, s2.time * 0.1) * 0.5);
+            s2.daBands[b] += (procBand - s2.daBands[b]) * 0.2;
+          }
+          s2.daLoud += (procEnergy * 0.7 - s2.daLoud) * 0.15;
+          s2.daBeat = Math.max(s2.daBeat * 0.88, beatPulse * 0.6);
+          s2.daOnset = Math.max(s2.daOnset * 0.85, beatPulse > 0.5 ? 0.4 : 0);
         }
-        const rawLoud = hasFabric ? (snap.loudness || 0) : 0;
-        s2.daLoud += (rawLoud - s2.daLoud) * 0.15;
-        const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
-        s2.daBeat = Math.max(s2.daBeat * 0.88, rawBeat * 0.8);
-        const rawOnset = hasFabric && snap.onset ? (snap.onset_strength || 0) : 0;
-        s2.daOnset = Math.max(s2.daOnset * 0.85, rawOnset * 0.6);
 
         // Silent — thin circle
         if (s4amp < 0.03) {
