@@ -2528,13 +2528,13 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const s2amp = k.amplitude / 0.55;
         const S2_N = 40; // lightweight point count
         const rot = s2.time * 0.06;
-        const morphT = s2.time * 2.5;
+        const morphT = s2.time * 1.5;
         const col = [100, 97, 90];
         const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
         // ── Alpha fade trail instead of layer stacking ──
         // Use fixed bg color — no getComputedStyle per frame (kills perf)
-        const fadeAlpha = k.state === "idle" ? 0.3 : 0.08 + (1 - s2amp) * 0.12;
+        const fadeAlpha = k.state === "idle" ? 0.3 : 0.12 + (1 - s2amp) * 0.15;
         ctx.fillStyle = `rgba(239,237,232,${fadeAlpha})`; // warm bg, hardcoded for perf
         ctx.fillRect(0, 0, w, h);
 
@@ -2552,7 +2552,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // ── Build one amoeba shape per frame ──
         const pts = [];
         const innerPts = [];
-        const breathe = Math.sin(s2.time * 1.2) * 0.12 * s2amp;
+        const breathe = Math.sin(s2.time * 1.2) * 0.08 * s2amp;
 
         for (let i = 0; i < S2_N; i++) {
           const a = (i / S2_N) * Math.PI * 2 + rot;
@@ -2561,7 +2561,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           // Liquid morphing — 2 octaves evolving fast
           const m1 = noise2D(nx * 1.0, ny * 1.0 + morphT) * 0.5;
           const m2 = noise2D(nx * 2.5 + 30, ny * 2.5 + morphT * 1.5) * 0.25;
-          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.2 + breathe + beatPulse * 0.06);
+          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.15 + breathe + beatPulse * 0.03);
 
           // Displacement from audio
           let disp;
@@ -2573,15 +2573,15 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             const bandVal = (snap.bands[bandNames2[bandIdx]] || 0) * (1 - bandFrac) +
                             (snap.bands[bandNames2[bandNext]] || 0) * bandFrac;
             const realLoud = snap.loudness || 0;
-            const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.5 : 0;
-            disp = (Math.pow(bandVal, 0.8) * 0.6 + realLoud * 0.25 + onsetSpike) * (0.4 + realLoud * 0.6);
-            disp *= (1 + (snap.flux || 0) * 0.5);
-            if (snap.beat) disp *= (1 + (snap.beat_strength || 0) * 0.6);
+            const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.3 : 0;
+            disp = (Math.pow(bandVal, 0.8) * 0.5 + realLoud * 0.2 + onsetSpike) * (0.4 + realLoud * 0.5);
+            disp *= (1 + (snap.flux || 0) * 0.3);
+            if (snap.beat) disp *= (1 + (snap.beat_strength || 0) * 0.35);
           } else {
             disp = noise2D(nx * 1.5 + morphT * 0.3, ny * 1.5 + morphT * 0.2) * 0.5 + 0.3;
             disp *= (1 + beatPulse * 0.5);
           }
-          disp *= s2amp * exhale * baseR * 1.5;
+          disp *= s2amp * exhale * baseR * 0.9;
 
           const outerR = aR + disp;
           pts.push({ x: cx + nx * outerR, y: cy + ny * outerR });
@@ -2594,9 +2594,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         // ── Draw outer contour ──
         drawOrbSmooth(ctx, pts);
-        const outerAlpha = 0.25 + s2amp * 0.35 + beatPulse * 0.15;
+        const outerAlpha = 0.2 + s2amp * 0.3 + beatPulse * 0.08;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${outerAlpha})`;
-        ctx.lineWidth = 0.8 + s2amp * 0.8 + beatPulse * 0.4;
+        ctx.lineWidth = 0.8 + s2amp * 0.6 + beatPulse * 0.2;
         ctx.stroke();
 
         // ── Draw inner contour ──
@@ -2610,7 +2610,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         if (s2amp > 0.15) {
           for (let i = 0; i < S2_N; i += 5) {
             const opp = (i + Math.floor(S2_N * 0.4 + Math.random() * S2_N * 0.2)) % S2_N;
-            const cpOff = noise2D(i * 0.4, morphT * 0.3) * baseR * 0.3 * s2amp;
+            const cpOff = noise2D(i * 0.4, morphT * 0.3) * baseR * 0.2 * s2amp;
             ctx.beginPath();
             ctx.moveTo(innerPts[i].x, innerPts[i].y);
             ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, innerPts[opp].x, innerPts[opp].y);
