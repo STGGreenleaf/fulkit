@@ -1629,7 +1629,7 @@ function SourcesTab() {
           </div>
         </DrawerItem>
         <DrawerItem index={2} visible={isOpen}>
-          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
+          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", whiteSpace: "pre-line" }}>
             {`\u201C${tryPrompt}\u201D`}
           </div>
         </DrawerItem>
@@ -1854,7 +1854,7 @@ function SourcesTab() {
                     description: "Your Google services, connected individually. Each one has its own consent \u2014 Calendar doesn\u2019t see your email, Gmail doesn\u2019t touch your files. Gmail is read-only \u2014 F\u00FClkit can search and read threads to answer your questions, but it never sends, deletes, or modifies emails. Connect only what you want.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Calendar: upcoming events, availability checks, create events from chat. Gmail: search emails, read threads, surface context in conversation. Drive: find files, read documents, import to your vault as notes.",
-                    tryPrompt: "What do I have this week?",
+                    tryPrompt: "What do I have this week?\u201D\n\u201CWhat did Sarah say about the contract?\u201D\n\u201CPull in my project notes from Drive",
                     linkLabel: "myaccount.google.com",
                     linkHref: "https://myaccount.google.com/permissions",
                     footer: (
