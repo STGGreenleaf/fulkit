@@ -2516,8 +2516,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // STYLE 2: Deep Amoeba — tendrils, tracers, clip contours
       // Uses SHARED kinetic state machine (k.amplitude, beatPulse, exhale)
       // ══════════════════════════════════════════
-      // STYLE 2: Light Amoeba — single shape + canvas fade trail
-      // One contour per frame, trail via alpha fade. No clip/restore.
+      // STYLE 2: Light Amoeba — flowing wave shape + canvas fade trail
+      // One contour per frame, trail via alpha fade. Waves travel around
+      // the contour synced to BPM; swell follows energy envelope.
       // ══════════════════════════════════════════
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
@@ -2526,16 +2527,15 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         const cx = w / 2, cy = h / 2;
         const s2amp = k.amplitude / 0.55;
-        const S2_N = 40; // lightweight point count
-        const rot = s2.time * 0.06;
-        const morphT = s2.time * 1.5;
+        const S2_N = 40;
+        const rot = s2.time * 0.04;
+        const morphT = s2.time * 1.2;
         const col = [100, 97, 90];
         const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
-        // ── Alpha fade trail instead of layer stacking ──
-        // Use fixed bg color — no getComputedStyle per frame (kills perf)
-        const fadeAlpha = k.state === "idle" ? 0.3 : 0.12 + (1 - s2amp) * 0.15;
-        ctx.fillStyle = `rgba(239,237,232,${fadeAlpha})`; // warm bg, hardcoded for perf
+        // ── Alpha fade trail ──
+        const fadeAlpha = k.state === "idle" ? 0.3 : 0.10 + (1 - s2amp) * 0.12;
+        ctx.fillStyle = `rgba(239,237,232,${fadeAlpha})`;
         ctx.fillRect(0, 0, w, h);
 
         // Silent — clean circle
@@ -2549,21 +2549,46 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return;
         }
 
+        // ── Continuous wave instead of beat pulse ──
+        // Sine wave synced to BPM — smooth undulation, not spike-decay
+        const beatWave = Math.sin(k.beatAccumulator * Math.PI * 2) * 0.5 + 0.5; // 0–1 smooth
+        const beatWave2 = Math.sin(k.beatAccumulator * Math.PI) * 0.5 + 0.5; // half-tempo swell
+
+        // ── Energy swell — smoothed envelope follower ──
+        const targetSwell = hasEnvelope ? envelopeValue : energy;
+        if (s2.swell === undefined) s2.swell = 0;
+        s2.swell += (targetSwell - s2.swell) * 0.03; // slow follow — no snapping
+        const swell = s2.swell;
+
         // ── Build one amoeba shape per frame ──
         const pts = [];
         const innerPts = [];
-        const breathe = Math.sin(s2.time * 1.2) * 0.08 * s2amp;
+        const breathe = Math.sin(s2.time * 0.8) * 0.06 * s2amp;
+
+        // Traveling wave phase — rotates around the contour at BPM
+        const travelPhase = k.beatAccumulator * Math.PI * 2;
 
         for (let i = 0; i < S2_N; i++) {
           const a = (i / S2_N) * Math.PI * 2 + rot;
           const nx = Math.cos(a), ny = Math.sin(a);
+          const pointAngle = (i / S2_N) * Math.PI * 2;
 
-          // Liquid morphing — 2 octaves evolving fast
+          // Liquid morphing — slow, organic
           const m1 = noise2D(nx * 1.0, ny * 1.0 + morphT) * 0.5;
-          const m2 = noise2D(nx * 2.5 + 30, ny * 2.5 + morphT * 1.5) * 0.25;
-          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.15 + breathe + beatPulse * 0.03);
+          const m2 = noise2D(nx * 2.0 + 30, ny * 2.0 + morphT * 0.8) * 0.25;
 
-          // Displacement from audio
+          // Traveling wave: sine that moves around the perimeter at BPM
+          // 3 lobes so it looks like a flowing shape, not uniform expand/contract
+          const travel = Math.sin(pointAngle * 3 - travelPhase) * 0.5 + 0.5;
+          // Second harmonic for complexity
+          const travel2 = Math.sin(pointAngle * 2 + travelPhase * 0.7) * 0.3 + 0.5;
+
+          const waveDisp = (travel * 0.6 + travel2 * 0.4) * beatWave * s2amp * 0.12;
+          const swellDisp = swell * beatWave2 * s2amp * 0.08;
+
+          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.12 + breathe + waveDisp + swellDisp);
+
+          // Displacement from audio — flows, doesn't spike
           let disp;
           if (hasFabric) {
             const bandPos = (i / S2_N) * bandNames2.length;
@@ -2573,49 +2598,51 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             const bandVal = (snap.bands[bandNames2[bandIdx]] || 0) * (1 - bandFrac) +
                             (snap.bands[bandNames2[bandNext]] || 0) * bandFrac;
             const realLoud = snap.loudness || 0;
-            const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.3 : 0;
-            disp = (Math.pow(bandVal, 0.8) * 0.5 + realLoud * 0.2 + onsetSpike) * (0.4 + realLoud * 0.5);
-            disp *= (1 + (snap.flux || 0) * 0.3);
-            if (snap.beat) disp *= (1 + (snap.beat_strength || 0) * 0.35);
+            // No onset spikes — smooth band energy + loudness swell
+            disp = (Math.pow(bandVal, 0.6) * 0.5 + realLoud * 0.3) * (0.3 + swell * 0.7);
+            disp *= (1 + (snap.flux || 0) * 0.15);
+            // Blend band energy with traveling wave so displacement flows around the shape
+            disp *= (0.5 + travel * 0.5);
           } else {
-            disp = noise2D(nx * 1.5 + morphT * 0.3, ny * 1.5 + morphT * 0.2) * 0.5 + 0.3;
-            disp *= (1 + beatPulse * 0.5);
+            disp = noise2D(nx * 1.5 + morphT * 0.2, ny * 1.5 + morphT * 0.15) * 0.4 + 0.25;
+            disp *= (0.5 + beatWave * 0.5);
           }
-          disp *= s2amp * exhale * baseR * 0.9;
+          disp *= s2amp * exhale * baseR * 1.1;
 
           const outerR = aR + disp;
           pts.push({ x: cx + nx * outerR, y: cy + ny * outerR });
 
-          // Inner contour — independent morphing
-          const im = noise2D(nx * 1.5 + 200, ny * 1.5 + morphT * 1.3);
-          const innerR = Math.max(baseR * 0.04, aR * (0.7 + breathe * 0.5) - disp * 0.6 + im * baseR * 0.15 * s2amp);
+          // Inner contour — dances opposite to outer (push-pull)
+          const im = noise2D(nx * 1.5 + 200, ny * 1.5 + morphT * 0.9);
+          const innerWave = Math.sin(pointAngle * 3 + travelPhase) * 0.5 + 0.5; // opposite phase
+          const innerR = Math.max(baseR * 0.04, aR * (0.65 + breathe * 0.4) - disp * 0.4 + im * baseR * 0.12 * s2amp - innerWave * baseR * 0.06 * s2amp);
           innerPts.push({ x: cx + nx * innerR, y: cy + ny * innerR });
         }
 
         // ── Draw outer contour ──
         drawOrbSmooth(ctx, pts);
-        const outerAlpha = 0.2 + s2amp * 0.3 + beatPulse * 0.08;
+        const outerAlpha = 0.18 + s2amp * 0.28 + beatWave * s2amp * 0.06;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${outerAlpha})`;
-        ctx.lineWidth = 0.8 + s2amp * 0.6 + beatPulse * 0.2;
+        ctx.lineWidth = 0.8 + s2amp * 0.6 + beatWave * s2amp * 0.15;
         ctx.stroke();
 
         // ── Draw inner contour ──
         drawOrbSmooth(ctx, innerPts);
-        const innerAlpha = 0.15 + s2amp * 0.25;
+        const innerAlpha = 0.12 + s2amp * 0.22;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha})`;
-        ctx.lineWidth = 0.5 + s2amp * 0.5;
+        ctx.lineWidth = 0.5 + s2amp * 0.4;
         ctx.stroke();
 
         // ── Interior tendrils (lightweight — every 5th point) ──
         if (s2amp > 0.15) {
           for (let i = 0; i < S2_N; i += 5) {
             const opp = (i + Math.floor(S2_N * 0.4 + Math.random() * S2_N * 0.2)) % S2_N;
-            const cpOff = noise2D(i * 0.4, morphT * 0.3) * baseR * 0.2 * s2amp;
+            const cpOff = noise2D(i * 0.4, morphT * 0.25) * baseR * 0.2 * s2amp;
             ctx.beginPath();
             ctx.moveTo(innerPts[i].x, innerPts[i].y);
             ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, innerPts[opp].x, innerPts[opp].y);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${s2amp * 0.08})`;
-            ctx.lineWidth = 0.3 + s2amp * 0.3;
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${s2amp * 0.06})`;
+            ctx.lineWidth = 0.3 + s2amp * 0.25;
             ctx.stroke();
           }
         }
