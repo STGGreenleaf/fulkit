@@ -176,10 +176,39 @@
 - [x] Fabric isolation — provider abstraction complete, DB migration run. Multi-provider ready. Session 22.
 - [ ] SoundCloud API integration (pending Artist Pro + API approval)
 
+## Integration Roadmap
+
+> 8 chat sources live (GitHub, Stripe, Shopify, Square, Toast, Trello, Numbrly, TrueGauge) + Spotify (Fabric) + 4 social publish.
+> Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card. ~2-4 hours each.
+
+### Tier 1: Everyone
+- [ ] **Google Calendar** — scheduling, availability, meeting prep. Keywords: calendar, meeting, schedule, event. (Extends existing Google OAuth — add calendar scope.)
+- [ ] **Gmail** — email context in chat. "What did Sarah say about the contract?" Keywords: email, inbox, send, reply. (Same Google OAuth — add gmail.readonly scope.)
+- [ ] **Terra (Health)** — single API, 200+ devices (Whoop, Fitbit, Garmin, Oura, iFit, Peloton, Apple Health, Google Fit). Keywords: health, sleep, workout, steps, heart rate. No other AI chat has this.
+
+### Tier 2: Extends Fabric
+- [ ] **Sonos** — play Fabric through home speakers. Sonos Control API (OAuth2). Speaker selection/grouping in player UI.
+- [ ] **SoundCloud** — multi-source Fabric. Pending Artist Pro + API approval.
+- [ ] **Apple Music** — MusicKit JS. Third Fabric source.
+
+### Tier 3: Business verticals
+- [ ] **QuickBooks** — accounting for SMBs. Invoices, expenses, P&L. Intuit OAuth2. Keywords: accounting, invoice, expense, quickbooks, profit.
+- [ ] **Vagaro** — beauty/wellness scheduling + client management. Keywords: appointment, client, booking, salon, vagaro.
+- [ ] **Google Drive** — document import/sync into vault. Same Google OAuth — add drive.readonly scope.
+
+### Tier 4: Productivity
+- [ ] **Slack** — team chat context. Keywords: slack, channel, thread, team.
+- [ ] **Linear** — issue tracking for dev teams. Keywords: issue, bug, ticket, linear, sprint.
+- [ ] **Notion** — import from competitor + ongoing sync. Keywords: notion, page, database.
+
+### Contenders (evaluate later)
+Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, Monday.com, ClickUp, Zoom, Strava, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
+
+---
+
 ## Future Phases (unchanged)
 
 ### Phase 6: MCP Integrations
-- [ ] Git, Spotify, Google Calendar, Gmail, Obsidian, Stripe, Vercel
 - [ ] Custom MCP server scaffold
 
 ### Phase 6.5: v3 — The Cognizant Layer (Phases 0-5 complete, Session 22)
