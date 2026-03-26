@@ -2757,6 +2757,148 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
+      // STYLE 5: Crystal — subdivided icosahedron, audio warps facets
+      // Perfect gem at rest, deforms with energy when playing.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 5) {
+        const s4 = style4Ref.current;
+        const [n1, n2, n3] = s4.n;
+        s4.time += dt;
+
+        const activity = Math.min(1, k.amplitude / 0.55);
+        const cx = w / 2, cy = h * 0.48;
+        const sc = dim * 0.4;
+
+        const en = energy;
+        const ac = acousticness;
+        const val = valence;
+        const loud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0.5);
+        const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
+        const rotY = s4.time * 0.06 + keyOffset * 0.5;
+        const rotX = -0.35 + n1(s4.time * 0.015, 100) * 0.08;
+
+        ctx.clearRect(0, 0, w, h);
+
+        function project(x3, y3, z3) {
+          const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+          let rx = x3 * cosY - z3 * sinY;
+          let rz = x3 * sinY + z3 * cosY;
+          const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+          let ry = y3 * cosX - rz * sinX;
+          rz = y3 * sinX + rz * cosX;
+          const perspective = 600;
+          const depth = perspective / (perspective + rz + 200);
+          return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
+        }
+
+        // Build icosahedron
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const icoRaw = [
+          [-1,phi,0],[1,phi,0],[-1,-phi,0],[1,-phi,0],
+          [0,-1,phi],[0,1,phi],[0,-1,-phi],[0,1,-phi],
+          [phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1],
+        ];
+        // Normalize
+        const icoVerts = icoRaw.map(v => {
+          const len = Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2);
+          return [v[0]/len, v[1]/len, v[2]/len];
+        });
+        const icoFaces = [
+          [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
+          [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+          [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
+          [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1],
+        ];
+
+        // Subdivide twice for finer facets
+        const midCache = {};
+        function getMid(a, b) {
+          const key = Math.min(a,b) + '-' + Math.max(a,b);
+          if (midCache[key] !== undefined) return midCache[key];
+          const va = icoVerts[a], vb = icoVerts[b];
+          const mid = [(va[0]+vb[0])/2, (va[1]+vb[1])/2, (va[2]+vb[2])/2];
+          const len = Math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2);
+          mid[0]/=len; mid[1]/=len; mid[2]/=len;
+          icoVerts.push(mid);
+          midCache[key] = icoVerts.length - 1;
+          return midCache[key];
+        }
+
+        let faces = icoFaces;
+        for (let sub = 0; sub < 2; sub++) {
+          const newFaces = [];
+          for (const [a,b,c] of faces) {
+            const ab = getMid(a,b), bc = getMid(b,c), ca = getMid(c,a);
+            newFaces.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]);
+          }
+          faces = newFaces;
+        }
+
+        // Deform vertices by audio — perfect crystal at rest
+        const vertices = [];
+        for (const v of icoVerts) {
+          let r = 1.0;
+          if (activity > 0.01) {
+            const deform = n1(v[0] * 2 + s4.time * 0.12, v[2] * 2 + v[1] * 1.5 + s4.time * 0.09);
+            const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.12;
+            let magnitude = loud * 0.3 + en * 0.25;
+            if (hasFabric) {
+              const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
+              const bandIdx = Math.floor(bandPos) % 7;
+              const bandNext = (bandIdx + 1) % 7;
+              const bandFrac = bandPos - Math.floor(bandPos);
+              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+              magnitude += bandVal * 0.3;
+              if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.12;
+            }
+            r += (deform * 0.5 + facet) * magnitude * activity * exhale;
+          }
+          vertices.push({ x3: v[0] * r, y3: v[1] * r, z3: v[2] * r });
+        }
+
+        // Edges from faces (deduplicated)
+        const edges = [];
+        const edgeSet = new Set();
+        for (const [a,b,c] of faces) {
+          const add = (i,j) => {
+            const key = Math.min(i,j) + '-' + Math.max(i,j);
+            if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([i,j]); }
+          };
+          add(a,b); add(b,c); add(c,a);
+        }
+
+        // Project
+        const projected = vertices.map(v => project(v.x3, v.y3, v.z3));
+
+        // Sort back to front
+        edges.sort((a, b) => {
+          const za = (projected[a[0]].z + projected[a[1]].z) / 2;
+          const zb = (projected[b[0]].z + projected[b[1]].z) / 2;
+          return za - zb;
+        });
+
+        // Draw
+        const col = [32, 30, 26];
+        for (const [i, j] of edges) {
+          const a = projected[i], b = projected[j];
+          if (!a || !b) continue;
+          const avgDepth = (a.depth + b.depth) / 2;
+          const alpha = Math.pow(avgDepth, 1.3) * (0.25 + activity * (0.2 + en * 0.4) * (0.5 + loud * 0.5));
+          if (alpha < 0.005) continue;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
+          ctx.lineWidth = (0.3 + ac * 0.5) * avgDepth;
+          ctx.stroke();
+        }
+
+        return;
+      }
+
+      // ══════════════════════════════════════════
       // STYLE 1: Atmospheric Radial Terrain — breathing orb
       // ══════════════════════════════════════════
       if (curVizStyle !== 3) {
@@ -3069,18 +3211,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 4) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
+            onClick={() => { if (n <= 5) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n <= 4 ? "pointer" : "default",
+              cursor: n <= 5 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n <= 4 ? (vizStyle === n ? 1 : 0.5) : 0.25,
+              opacity: n <= 5 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
