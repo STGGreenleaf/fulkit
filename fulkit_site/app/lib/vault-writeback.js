@@ -4,6 +4,18 @@
 
 import { supabase } from "./supabase";
 
+// Vault folder structure — shared by write-back pipeline and triage API
+export const VAULT_FOLDERS = [
+  { id: "00-INBOX", label: "Inbox", description: "Unsorted — landing zone" },
+  { id: "01-PERSONAL", label: "Personal", description: "Personal notes, goals, health, family" },
+  { id: "02-BUSINESS", label: "Business", description: "Revenue, strategy, customers, marketing" },
+  { id: "03-PROJECTS", label: "Projects", description: "Active project tracking, milestones" },
+  { id: "04-DEV", label: "Dev", description: "Code, architecture, deployment, technical" },
+  { id: "05-IDEAS", label: "Ideas", description: "Brainstorms, raw concepts, explorations" },
+  { id: "06-LEARNING", label: "Learning", description: "Books, courses, research, articles" },
+  { id: "07-ARCHIVE", label: "Archive", description: "Completed / reference material" },
+];
+
 // Check if text looks like a file path or code dump — never thread these
 function isFilePath(text) {
   return /^(fulkit\/|app\/|lib\/|components\/|src\/|\.\/|\/)[^\s]*\.(js|ts|jsx|tsx|md|css|json|html|py|sql)$/i.test(text.trim());

@@ -9,6 +9,7 @@ import { useAuth } from "../lib/auth";
 import { useVaultContext } from "../lib/vault";
 import { supabase } from "../lib/supabase";
 import MessageRenderer from "./MessageRenderer";
+import TriageCard, { ScanningState } from "./TriageCard";
 import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
 import { useSandbox } from "../lib/sandbox";
@@ -125,6 +126,9 @@ export default function ChatContent({ isPopout = false }) {
   const [showPins, setShowPins] = useState(() => typeof window !== "undefined" && window.location.pathname === "/chat/pinned");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showChapters, setShowChapters] = useState(false);
+  // ─── Inbox Triage state ─────────────────────────────────
+  const [triageResults, setTriageResults] = useState([]); // completed triage cards
+  const [triageScanning, setTriageScanning] = useState(null); // { fileName, phase } during active scan
   const [greeting, setGreeting] = useState(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
   const [greetingDelay, setGreetingDelay] = useState(false);
@@ -331,6 +335,86 @@ export default function ChatContent({ isPopout = false }) {
     chat.sendMessage(ctx.assembleContext, userText);
   }, [chat.sendMessage, ctx.assembleContext]);
 
+  // ─── Inbox Triage — drop files → AI reads → triage cards ─
+  const handleTriageDrop = useCallback(async (droppedFiles) => {
+    if (!accessToken || droppedFiles.length === 0) return;
+
+    // Read files client-side
+    const { files: prepared, rejected } = await ctx.prepareTriageFiles(droppedFiles);
+    if (prepared.length === 0) return;
+
+    setTriageScanning({ fileName: prepared[0].name, phase: "parsing" });
+
+    try {
+      const res = await fetch("/api/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ files: prepared }),
+      });
+
+      if (!res.ok) {
+        setTriageScanning(null);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '"[DONE]"' || payload === "[DONE]") {
+            setTriageScanning(null);
+            continue;
+          }
+          try {
+            const data = JSON.parse(payload);
+            if (data.phase) {
+              setTriageScanning({ fileName: data.fileName, phase: data.phase });
+            } else if (data.triage) {
+              setTriageResults((prev) => [...prev, data]);
+              setTriageScanning(null);
+            } else if (data.error) {
+              console.warn("[triage] File error:", data.fileName, data.error);
+              setTriageScanning(null);
+            }
+          } catch { /* skip malformed */ }
+        }
+      }
+    } catch (err) {
+      console.error("[triage] Stream error:", err);
+    }
+    setTriageScanning(null);
+  }, [accessToken, ctx]);
+
+  // "Discuss it" handler — inject triaged document into chat and start conversation
+  const handleTriageDiscuss = useCallback(async (doc) => {
+    // Build file objects for chat context
+    const fileObjs = [];
+    if (doc.content) {
+      fileObjs.push({ name: doc.fileName, type: "text", content: doc.content });
+    } else if (doc.fileData && doc.fileType === "image") {
+      fileObjs.push({ name: doc.fileName, type: "image", media_type: doc.fileMediaType, data: doc.fileData });
+    }
+    if (fileObjs.length > 0) {
+      ctx.handleChatFiles(fileObjs);
+    }
+    // Set input text and let user send, or auto-send
+    const prompt = `Let's discuss this document: ${doc.fileName}${doc.summary ? `\n\nSummary: ${doc.summary}` : ""}`;
+    chat.setInput(prompt);
+    // Focus the input so user can just hit Enter
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  }, [ctx, chat]);
+
   const handleKeyDown = (e) => {
     // Enter or Cmd+Enter to send
     if (e.key === "Enter" && !e.shiftKey) {
@@ -428,7 +512,7 @@ export default function ChatContent({ isPopout = false }) {
               style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", position: "relative" }}
               onDragOver={(e) => { e.preventDefault(); setChatDragOver(true); }}
               onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget)) return; setChatDragOver(false); }}
-              onDrop={(e) => { e.preventDefault(); setChatDragOver(false); if (e.dataTransfer.files?.length) ctx.handleChatFiles(Array.from(e.dataTransfer.files)); }}
+              onDrop={(e) => { e.preventDefault(); setChatDragOver(false); if (e.dataTransfer.files?.length) handleTriageDrop(Array.from(e.dataTransfer.files)); }}
             >
               {sandbox.sandboxActive && (
                 <span style={{
@@ -454,7 +538,7 @@ export default function ChatContent({ isPopout = false }) {
                   }}
                 >
                   <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
-                    Drop files to attach
+                    Drop to triage
                   </span>
                 </div>
               )}
@@ -883,6 +967,94 @@ export default function ChatContent({ isPopout = false }) {
                   </div>
                 ))}
 
+                {/* Triage cards */}
+                {triageResults.map((result, i) => (
+                  <div
+                    key={`triage-${i}`}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      maxWidth: 640,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    <TriageCard
+                      result={result}
+                      accessToken={accessToken}
+                      onDiscuss={handleTriageDiscuss}
+                    />
+                  </div>
+                ))}
+
+                {/* Triage scanning indicator */}
+                {triageScanning && (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    maxWidth: 640,
+                    alignSelf: "flex-start",
+                  }}>
+                    <div style={{
+                      background: "var(--color-bg-alt)",
+                      border: "1px solid var(--color-border-light)",
+                      borderRadius: "var(--radius-xl)",
+                      overflow: "hidden",
+                      maxWidth: 520,
+                    }}>
+                      <ScanningState fileName={triageScanning.fileName} phase={triageScanning.phase} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-file "File all" batch action */}
+                {triageResults.length >= 2 && (
+                  <div style={{
+                    maxWidth: 640,
+                    alignSelf: "flex-start",
+                    padding: "var(--space-1) 0",
+                  }}>
+                    <button
+                      onClick={async () => {
+                        for (const result of triageResults) {
+                          if (!result.triage) continue;
+                          const folder = result.triage.suggestedFolder || "00-INBOX";
+                          await fetch("/api/notes/import", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+                            body: JSON.stringify({
+                              notes: [{
+                                title: result.triage.suggestedTitle || result.fileName,
+                                content: result.rawContent || result.triage.summary,
+                                source: "triage",
+                                folder,
+                              }],
+                            }),
+                          }).catch(() => {});
+                        }
+                        setTriageResults([]);
+                      }}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        padding: "var(--space-2) var(--space-3)",
+                        background: "var(--color-accent)",
+                        color: "var(--color-text-inverse)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        fontFamily: "var(--font-primary)",
+                        cursor: "pointer",
+                        textAlign: "center",
+                      }}
+                    >
+                      File all ({triageResults.length} documents)
+                    </button>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
@@ -1234,9 +1406,9 @@ export default function ChatContent({ isPopout = false }) {
                   <input
                     ref={chatFileRef}
                     type="file"
-                    accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv,.png,.jpg,.jpeg,.gif,.webp"
+                    accept=".md,.txt,.js,.jsx,.ts,.tsx,.css,.json,.html,.py,.rb,.go,.rs,.sh,.yaml,.yml,.toml,.sql,.csv,.png,.jpg,.jpeg,.gif,.webp,.pdf"
                     multiple
-                    onChange={(e) => { if (e.target.files?.length) ctx.handleChatFiles(Array.from(e.target.files)); e.target.value = ""; }}
+                    onChange={(e) => { if (e.target.files?.length) handleTriageDrop(Array.from(e.target.files)); e.target.value = ""; }}
                     style={{ display: "none" }}
                   />
                   <textarea

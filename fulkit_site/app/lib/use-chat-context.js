@@ -78,50 +78,66 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
 
   const [fileError, setFileError] = useState(null);
 
+  const TEXT_EXTS = /\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv|xml|rtf|log|ini|cfg|conf|tsv|tex)$/i;
+  const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|webp)$/i;
+  const PDF_EXT = /\.pdf$/i;
+  const IMAGE_MEDIA = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
+  const MAX_TEXT = 500000;
+  const MAX_IMAGE = 5 * 1024 * 1024; // 5MB
+  const MAX_PDF = 20 * 1024 * 1024; // 20MB
+
+  // Read a single file into a triage-ready object ({ name, type, content/data, media_type })
+  const readFileForTriage = useCallback(async (file) => {
+    if (file.name.match(PDF_EXT)) {
+      if (file.size > MAX_PDF) return { error: `${file.name} (over 20MB)` };
+      try {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let j = 0; j < bytes.length; j += 8192) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(j, j + 8192));
+        }
+        return { name: file.name, type: "pdf", data: btoa(binary) };
+      } catch {
+        return { error: `${file.name} (unreadable)` };
+      }
+    }
+    if (file.name.match(IMAGE_EXTS)) {
+      if (file.size > MAX_IMAGE) return { error: `${file.name} (over 5MB)` };
+      try {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let j = 0; j < bytes.length; j += 8192) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(j, j + 8192));
+        }
+        const ext = file.name.split(".").pop().toLowerCase();
+        return { name: file.name, type: "image", media_type: IMAGE_MEDIA[ext] || "image/png", data: btoa(binary) };
+      } catch {
+        return { error: `${file.name} (unreadable)` };
+      }
+    }
+    if (file.name.match(TEXT_EXTS)) {
+      try {
+        const content = await file.text();
+        if (content.length > MAX_TEXT) return { error: `${file.name} (too large)` };
+        return { name: file.name, type: "text", content };
+      } catch {
+        return { error: `${file.name} (unreadable)` };
+      }
+    }
+    return { error: file.name };
+  }, []);
+
+  // Legacy attach flow (adds files as chat context chips)
   const handleChatFiles = useCallback(async (files) => {
     setFileError(null);
-    const TEXT_EXTS = /\.(md|txt|js|jsx|ts|tsx|css|json|html|py|rb|go|rs|sh|yaml|yml|toml|sql|env|csv|xml|rtf|log|ini|cfg|conf|tsv|tex)$/i;
-    const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|webp)$/i;
-    const IMAGE_MEDIA = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
-    const MAX_TEXT = 500000;
-    const MAX_IMAGE = 5 * 1024 * 1024; // 5MB
     const results = [];
     const rejected = [];
     for (const file of files) {
-      if (file.name.match(IMAGE_EXTS)) {
-        if (file.size > MAX_IMAGE) {
-          rejected.push(`${file.name} (over 5MB)`);
-          continue;
-        }
-        try {
-          const buf = await file.arrayBuffer();
-          const bytes = new Uint8Array(buf);
-          let binary = "";
-          for (let j = 0; j < bytes.length; j += 8192) {
-            binary += String.fromCharCode.apply(null, bytes.subarray(j, j + 8192));
-          }
-          const base64 = btoa(binary);
-          const ext = file.name.split(".").pop().toLowerCase();
-          results.push({ name: file.name, type: "image", media_type: IMAGE_MEDIA[ext] || "image/png", data: base64 });
-        } catch {
-          rejected.push(`${file.name} (unreadable)`);
-        }
-        continue;
-      }
-      if (!file.name.match(TEXT_EXTS)) {
-        rejected.push(file.name);
-        continue;
-      }
-      try {
-        const content = await file.text();
-        if (content.length > MAX_TEXT) {
-          rejected.push(`${file.name} (too large)`);
-          continue;
-        }
-        results.push({ name: file.name, type: "text", content });
-      } catch {
-        rejected.push(`${file.name} (unreadable)`);
-      }
+      const result = await readFileForTriage(file);
+      if (result.error) rejected.push(result.error);
+      else results.push(result);
     }
     if (results.length > 0) {
       setAttachedFiles((prev) => {
@@ -134,7 +150,19 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
       setFileError(`Can't attach: ${rejected.join(", ")}`);
       setTimeout(() => setFileError(null), 5000);
     }
-  }, []);
+  }, [readFileForTriage]);
+
+  // Triage flow — read files and return parsed array (caller sends to /api/triage)
+  const prepareTriageFiles = useCallback(async (files) => {
+    const results = [];
+    const rejected = [];
+    for (const file of files) {
+      const result = await readFileForTriage(file);
+      if (result.error) rejected.push(result.error);
+      else results.push(result);
+    }
+    return { files: results, rejected };
+  }, [readFileForTriage]);
 
   // ─── Recall command ───────────────────────────────────────
 
@@ -318,6 +346,7 @@ export function useChatContext({ user, accessToken, authFetch, githubConnected, 
     attachedFiles,
     setAttachedFiles,
     handleChatFiles,
+    prepareTriageFiles,
     fileError,
     // Recall
     recalledNotes,
