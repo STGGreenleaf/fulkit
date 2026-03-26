@@ -2835,14 +2835,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           faces = newFaces;
         }
 
-        // Deform vertices by audio — perfect crystal at rest
+        // Deform vertices — always shows noise surface, audio adds on top
         const vertices = [];
         for (const v of icoVerts) {
-          let r = 1.0;
+          const deform = n1(v[0] * 2 + s4.time * 0.12, v[2] * 2 + v[1] * 1.5 + s4.time * 0.09);
+          const deform2 = n3(v[0] * 1.2 - s4.time * 0.08, v[2] * 1.5 + v[1] + s4.time * 0.11) * 0.4;
+          const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.3;
+
+          // Base gentle breathing — always present even when paused
+          const baseDeform = (deform * 0.15 + deform2 * 0.1);
+
+          // Audio adds on top
+          let audioDeform = 0;
           if (activity > 0.01) {
-            const deform = n1(v[0] * 2 + s4.time * 0.12, v[2] * 2 + v[1] * 1.5 + s4.time * 0.09);
-            const deform2 = n3(v[0] * 1.2 - s4.time * 0.08, v[2] * 1.5 + v[1] + s4.time * 0.11) * 0.4;
-            const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.3;
             let magnitude = loud * 0.7 + en * 0.5;
             if (hasFabric) {
               const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
@@ -2854,8 +2859,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               magnitude += bandVal * 0.6;
               if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.3;
             }
-            r += (deform * 0.8 + deform2 + facet) * magnitude * activity * exhale;
+            audioDeform = (deform * 0.8 + deform2 + facet) * magnitude * activity * exhale;
           }
+
+          const r = 1.0 + baseDeform + audioDeform;
           vertices.push({ x3: v[0] * r, y3: v[1] * r, z3: v[2] * r });
         }
 
