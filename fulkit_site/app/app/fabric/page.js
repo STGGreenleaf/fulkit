@@ -2845,7 +2845,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           // Base gentle breathing — always present even when paused
           const baseDeform = (deform * 0.15 + deform2 * 0.1);
 
-          // Audio adds on top
+          // Audio adds on top — only peaks break through (60% stays normalized)
           let audioDeform = 0;
           if (activity > 0.01) {
             let magnitude = loud * 0.7 + en * 0.5;
@@ -2859,7 +2859,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               magnitude += bandVal * 0.6;
               if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.3;
             }
-            audioDeform = (deform * 0.8 + deform2 + facet) * magnitude * activity * exhale;
+            // Threshold: only the top ~40% of noise values push out
+            // Raw deform is -1 to 1. Shift so only peaks above 0.2 contribute.
+            const rawShape = deform * 0.8 + deform2 + facet;
+            const gated = Math.max(0, rawShape - 0.2) / 0.8; // 0 for 60%, ramps up for peaks
+            audioDeform = gated * magnitude * 1.8 * activity * exhale; // 1.8x to compensate for gating
           }
 
           const r = 1.0 + baseDeform + audioDeform;
