@@ -2516,208 +2516,109 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // STYLE 2: Deep Amoeba — tendrils, tracers, clip contours
       // Uses SHARED kinetic state machine (k.amplitude, beatPulse, exhale)
       // ══════════════════════════════════════════
+      // STYLE 2: Light Amoeba — single shape + canvas fade trail
+      // One contour per frame, trail via alpha fade. No clip/restore.
+      // ══════════════════════════════════════════
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
-        // Frame skip at low quality — render every other frame
-        if (Q < 0.5 && s2.frame % 2 !== 0) { s2.frame++; animRef.current = requestAnimationFrame(draw); return; }
-        const noise2B = s2.noise2;
-        const S2_N = Q > 0.7 ? 48 : Q > 0.4 ? 36 : 24; // reduced baseline: 48 max (was 72)
-        const MAX_TRACE = Math.max(4, Math.floor(12 * Q)); // 4–12 tracers (was 24)
-        const MAX_HITS = Math.max(1, Math.floor(3 * Q)); // 1–3 hits (was 6)
-        const CAP_INTERVAL = Q > 0.6 ? 4 : Q > 0.4 ? 6 : 8; // less frequent captures
-
-        // Own time counter for noise evolution (~1.0/sec)
         if (k.state !== "idle") s2.time += dt;
+        s2.frame++;
 
-        const cx = w / 2;
-        const cy = h / 2;
-        const rot = s2.time * 0.04;
-        const col = [62, 60, 56];
-        const lw = 1.0 + acousticness * 1.3;
-
-        // Normalized amplitude for style 2 scaling (active = ~1.0)
+        const cx = w / 2, cy = h / 2;
         const s2amp = k.amplitude / 0.55;
-
-        // Build displacement arrays
-        const disp = new Float32Array(S2_N);
-        const radii = new Float32Array(S2_N);
+        const S2_N = 40; // lightweight point count
+        const rot = s2.time * 0.06;
+        const morphT = s2.time * 2.5;
+        const col = [100, 97, 90];
         const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
-        for (let i = 0; i < S2_N; i++) {
-          const a = (i / S2_N) * Math.PI * 2 + rot;
-          const nx = Math.cos(a), ny = Math.sin(a);
+        // ── Alpha fade trail instead of layer stacking ──
+        // Don't clear fully — paint semi-transparent bg to create organic trail
+        const bgColor = getComputedStyle(canvasRef.current).getPropertyValue("--color-bg").trim() || "#EFEDE8";
+        const bgR = parseInt(bgColor.slice(1,3),16) || 239, bgG = parseInt(bgColor.slice(3,5),16) || 237, bgB = parseInt(bgColor.slice(5,7),16) || 232;
+        const fadeAlpha = k.state === "idle" ? 0.3 : 0.08 + (1 - s2amp) * 0.12; // faster fade when quiet
+        ctx.fillStyle = `rgba(${bgR},${bgG},${bgB},${fadeAlpha})`;
+        ctx.fillRect(0, 0, w, h);
 
-          // Amoeba base warp — 2 octaves (3rd dropped for perf)
-          const d1 = noise2D(nx * 0.3, ny * 0.3 + s2.time * 0.002);
-          const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + s2.time * 0.005);
-          const warp = s2amp * 0.55;
-          radii[i] = baseR * (1 + (d1 * 0.55 + d2 * 0.35) * warp);
-
-          // Displacement
-          let nv;
-          if (hasFabric) {
-            const bandPos = (i / S2_N) * bandNames2.length;
-            const bandIdx = Math.floor(bandPos) % bandNames2.length;
-            const bandNext = (bandIdx + 1) % bandNames2.length;
-            const bandFrac = bandPos - Math.floor(bandPos);
-            const bandVal = snap.bands[bandNames2[bandIdx]] * (1 - bandFrac) +
-                            snap.bands[bandNames2[bandNext]] * bandFrac;
-            const texture = noise2D(nx * 1.2 + s2.time * 0.25, ny * 1.2 + s2.time * 0.18) * 0.15;
-            const onsetSpike = snap.onset ? snap.onset_strength * 0.5 : 0;
-            nv = (bandVal * 0.5 + snap.loudness * 0.35 + onsetSpike + texture) * snap.loudness;
-            nv *= (1 + snap.flux * 0.8);
-            if (snap.beat) nv *= (1 + snap.beat_strength * 0.6);
-          } else {
-            const n1 = noise2D(nx * 1.2 + s2.time * 0.25, ny * 1.2 + s2.time * 0.18);
-            const n2 = noise2D(nx * 3.5 + s2.time * 0.45, ny * 3.5 + s2.time * 0.35);
-            nv = n1 * 0.9 + n2 * 0.2;
-            nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharpness * 0.6);
-          }
-
-          const beatBoost = 1 + beatPulse * 0.7;
-          disp[i] = nv * s2amp * energy * beatBoost * exhale * baseR * 0.85;
-          disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
-        }
-
-        // Neighbor-smooth (1 pass — was 2, enough with fewer points)
-        for (let pass = 0; pass < 1; pass++) {
-          const tmpD = new Float32Array(S2_N);
-          const tmpR = new Float32Array(S2_N);
-          for (let i = 0; i < S2_N; i++) {
-            const p = (i - 1 + S2_N) % S2_N;
-            const n = (i + 1) % S2_N;
-            tmpD[i] = disp[i] * 0.5 + disp[p] * 0.25 + disp[n] * 0.25;
-            tmpR[i] = radii[i] * 0.5 + radii[p] * 0.25 + radii[n] * 0.25;
-          }
-          disp.set(tmpD);
-          radii.set(tmpR);
-        }
-
-        // Capture tracers — only when active/spooling
-        const isS2Active = k.state === "active" || k.state === "spool-up" || k.state === "skip-spool";
-        const isS2Winding = k.state === "wind-down" || k.state === "skip-cut" || k.state === "skip-silence";
-        s2.frame++;
-        if (s2.frame % CAP_INTERVAL === 0 && isS2Active) {
-          s2.tracers.push({ d: new Float32Array(disp), r: new Float32Array(radii), op: 0.6, age: 0, hit: false });
-          if (s2.tracers.length > MAX_TRACE) s2.tracers.shift();
-        }
-
-        // Hit layers on strong beats (only when active)
-        if (beatPulse > 0.65 && isS2Active && s2.frame % CAP_INTERVAL === 0) {
-          const hd = new Float32Array(S2_N);
-          for (let i = 0; i < S2_N; i++) hd[i] = disp[i] * 2.0;
-          for (let pass = 0; pass < 2; pass++) {
-            const tmp = new Float32Array(S2_N);
-            for (let i = 0; i < S2_N; i++) {
-              tmp[i] = hd[i] * 0.5 + hd[(i - 1 + S2_N) % S2_N] * 0.25 + hd[(i + 1) % S2_N] * 0.25;
-            }
-            hd.set(tmp);
-          }
-          s2.hits.push({ d: hd, r: new Float32Array(radii), op: 0.8, age: 0, hit: true });
-          if (s2.hits.length > MAX_HITS) s2.hits.shift();
-        }
-
-        // Age and drain — faster when winding down, drain in idle
-        const ageRate = isS2Winding ? 0.92 : 0.96;
-        const hitAgeRate = isS2Winding ? 0.95 : 0.984;
-        for (const l of s2.tracers) { l.age++; l.op *= ageRate; }
-        for (const l of s2.hits) { l.age++; l.op *= hitAgeRate; }
-        s2.tracers = s2.tracers.filter(l => l.op > 0.015);
-        s2.hits = s2.hits.filter(l => l.op > 0.015);
-        // Drain in idle
-        if (k.state === "idle") {
-          if (s2.tracers.length > 0) s2.tracers.shift();
-          if (s2.hits.length > 0) s2.hits.shift();
-        }
-
-        // ── RENDER ──
-        ctx.clearRect(0, 0, w, h);
-
-        // Silent/idle state — thin resting circle
-        if (s2amp < 0.05 && s2.tracers.length === 0 && s2.hits.length === 0) {
-          const silentAlpha = 0.12;
+        // Silent — clean circle
+        if (s2amp < 0.05) {
+          ctx.clearRect(0, 0, w, h);
           ctx.beginPath();
           ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${silentAlpha})`;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.12)`;
           ctx.lineWidth = 0.6;
           ctx.stroke();
           animRef.current = requestAnimationFrame(draw);
           return;
         }
 
-        // Interior tendrils
-        const s2TendrilStep = Q > 0.6 ? 7 : Q > 0.4 ? 12 : 18;
-        if (s2amp > 0.05) {
-          const interiorAlpha = s2amp * 0.12;
-          for (let i = 0; i < S2_N; i += s2TendrilStep) {
-            const opp = (i + Math.floor(S2_N / 2)) % S2_N;
-            const a1 = (i / S2_N) * Math.PI * 2 + rot;
-            const a2 = (opp / S2_N) * Math.PI * 2 + rot;
-            const r1 = radii[i] * 0.6 + disp[i] * 0.3;
-            const r2 = radii[opp] * 0.6 + disp[opp] * 0.3;
-            const x1 = cx + Math.cos(a1) * r1, y1 = cy + Math.sin(a1) * r1;
-            const x2 = cx + Math.cos(a2) * r2, y2 = cy + Math.sin(a2) * r2;
-            const cpOff = noise2D(i * 0.5, s2.time * 0.3) * baseR * 0.3 * s2amp;
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.7, x2, y2);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${interiorAlpha * (0.3 + Math.abs(disp[i]) / baseR)})`;
-            ctx.lineWidth = 0.5 + acousticness * 0.5;
-            ctx.stroke();
+        // ── Build one amoeba shape per frame ──
+        const pts = [];
+        const innerPts = [];
+        const breathe = Math.sin(s2.time * 1.2) * 0.12 * s2amp;
+
+        for (let i = 0; i < S2_N; i++) {
+          const a = (i / S2_N) * Math.PI * 2 + rot;
+          const nx = Math.cos(a), ny = Math.sin(a);
+
+          // Liquid morphing — 2 octaves evolving fast
+          const m1 = noise2D(nx * 1.0, ny * 1.0 + morphT) * 0.5;
+          const m2 = noise2D(nx * 2.5 + 30, ny * 2.5 + morphT * 1.5) * 0.25;
+          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.2 + breathe + beatPulse * 0.06);
+
+          // Displacement from audio
+          let disp;
+          if (hasFabric) {
+            const bandPos = (i / S2_N) * bandNames2.length;
+            const bandIdx = Math.floor(bandPos) % bandNames2.length;
+            const bandNext = (bandIdx + 1) % bandNames2.length;
+            const bandFrac = bandPos - Math.floor(bandPos);
+            const bandVal = (snap.bands[bandNames2[bandIdx]] || 0) * (1 - bandFrac) +
+                            (snap.bands[bandNames2[bandNext]] || 0) * bandFrac;
+            const realLoud = snap.loudness || 0;
+            const onsetSpike = snap.onset ? (snap.onset_strength || 0) * 0.5 : 0;
+            disp = (Math.pow(bandVal, 0.8) * 0.6 + realLoud * 0.25 + onsetSpike) * (0.4 + realLoud * 0.6);
+            disp *= (1 + (snap.flux || 0) * 0.5);
+            if (snap.beat) disp *= (1 + (snap.beat_strength || 0) * 0.6);
+          } else {
+            disp = noise2D(nx * 1.5 + morphT * 0.3, ny * 1.5 + morphT * 0.2) * 0.5 + 0.3;
+            disp *= (1 + beatPulse * 0.5);
           }
+          disp *= s2amp * exhale * baseR * 1.5;
+
+          const outerR = aR + disp;
+          pts.push({ x: cx + nx * outerR, y: cy + ny * outerR });
+
+          // Inner contour — independent morphing
+          const im = noise2D(nx * 1.5 + 200, ny * 1.5 + morphT * 1.3);
+          const innerR = Math.max(baseR * 0.04, aR * (0.7 + breathe * 0.5) - disp * 0.6 + im * baseR * 0.15 * s2amp);
+          innerPts.push({ x: cx + nx * innerR, y: cy + ny * innerR });
         }
 
-        // All layers sorted oldest-first
-        const allLayers = [
-          ...s2.tracers, ...s2.hits,
-          ...(s2amp > 0.02 ? [{ d: disp, r: radii, op: 1.0, age: 0, hit: false }] : []),
-        ].sort((a, b) => b.age - a.age);
+        // ── Draw outer contour ──
+        drawOrbSmooth(ctx, pts);
+        const outerAlpha = 0.25 + s2amp * 0.35 + beatPulse * 0.15;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${outerAlpha})`;
+        ctx.lineWidth = 0.8 + s2amp * 0.8 + beatPulse * 0.4;
+        ctx.stroke();
 
-        for (const layer of allLayers) {
-          const alpha = Math.max(0, Math.min(1, layer.op));
-          if (alpha < 0.01) continue;
+        // ── Draw inner contour ──
+        drawOrbSmooth(ctx, innerPts);
+        const innerAlpha = 0.15 + s2amp * 0.25;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha})`;
+        ctx.lineWidth = 0.5 + s2amp * 0.5;
+        ctx.stroke();
 
-          const rShift = layer.age * 0.35;
-          const ageFade = Math.max(0, 1 - layer.age * 0.01);
-          const thisLw = lw * (layer.hit ? 1.6 : 1) * ageFade;
-
-          const pts = [];
-          for (let i = 0; i < S2_N; i++) {
-            const a = (i / S2_N) * Math.PI * 2 + rot;
-            const r = layer.r[i] + layer.d[i] - rShift;
-            pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
-          }
-
-          // Clip-based inner bleed — skip at low quality (save/clip/restore is expensive)
-          const edgeAlpha = alpha * 0.8 * (0.4 + s2amp * 0.6);
-          if (Q > 0.5) {
-            drawOrbSmooth(ctx, pts);
-            ctx.save();
-            ctx.clip();
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * 0.12})`;
-            ctx.lineWidth = thisLw * 4;
-            ctx.stroke();
-            ctx.restore();
-          }
-
-          // Sharp contour
-          drawOrbSmooth(ctx, pts);
-          const contourPeak = 0.5 + s2amp * 0.45;
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${edgeAlpha * (layer.age === 0 ? contourPeak : 0.45)})`;
-          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s2amp * 0.5 : 0.7));
-          ctx.stroke();
-
-          // Inward reflection — skip at low quality
-          if (alpha > 0.06 && Q > 0.4) {
-            const iPts = [];
-            for (let i = 0; i < S2_N; i++) {
-              const a = (i / S2_N) * Math.PI * 2 + rot;
-              const r = Math.max(0, layer.r[i] - layer.d[i] * 0.35 + rShift * 0.3);
-              iPts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
-            }
-            drawOrbSmooth(ctx, iPts);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.04})`;
-            ctx.lineWidth = thisLw * 2.5;
+        // ── Interior tendrils (lightweight — every 5th point) ──
+        if (s2amp > 0.15) {
+          for (let i = 0; i < S2_N; i += 5) {
+            const opp = (i + Math.floor(S2_N * 0.4 + Math.random() * S2_N * 0.2)) % S2_N;
+            const cpOff = noise2D(i * 0.4, morphT * 0.3) * baseR * 0.3 * s2amp;
+            ctx.beginPath();
+            ctx.moveTo(innerPts[i].x, innerPts[i].y);
+            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, innerPts[opp].x, innerPts[opp].y);
+            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${s2amp * 0.08})`;
+            ctx.lineWidth = 0.3 + s2amp * 0.3;
             ctx.stroke();
           }
         }
