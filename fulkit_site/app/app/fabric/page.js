@@ -2309,7 +2309,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     try {
       const params = new URLSearchParams(window.location.search);
       const urlViz = params.get("viz");
-      const valid = [1, 2, 3, 4, 5];
+      const valid = [1, 2, 3, 4];
       if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); const v = parseInt(urlViz); return valid.includes(v) ? v : 1; }
       const v = parseInt(localStorage.getItem("fulkit-viz-style")); return valid.includes(v) ? v : 1;
     } catch { return 1; }
@@ -2802,11 +2802,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
 
       // ══════════════════════════════════════════
-      // STYLE 5: Pulse Ring — radial spokes between inner/outer circles
+      // STYLE 4: Pulse Ring — radial spokes between inner/outer circles
       // Noise modulates each spoke's reach. Audio drives intensity.
       // Inspired by Etienne Jacob's ring of particles.
       // ══════════════════════════════════════════
-      if (curVizStyle === 5) {
+      if (curVizStyle === 4) {
         const s4 = style4Ref.current;
         const [n1, n2] = s4.n;
         s4.time += dt;
@@ -2827,20 +2827,20 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const presence = s4.prPresence;
 
         if (hasFabric) {
-          for (let b = 0; b < 7; b++) s4.prBands[b] += ((snap.bands[bandNames[b]] || 0) - s4.prBands[b]) * 0.2;
-          s4.prLoud += ((snap.loudness || 0) - s4.prLoud) * 0.12;
-          s4.prBeat = Math.max(s4.prBeat * 0.88, snap.beat ? (snap.beat_strength || 0) * 0.7 : 0);
+          for (let b = 0; b < 7; b++) s4.prBands[b] += ((snap.bands[bandNames[b]] || 0) - s4.prBands[b]) * 0.08;
+          s4.prLoud += ((snap.loudness || 0) - s4.prLoud) * 0.06;
+          s4.prBeat = Math.max(s4.prBeat * 0.94, snap.beat ? (snap.beat_strength || 0) * 0.4 : 0);
         } else {
           const proc = energy * Math.min(1, k.amplitude / 0.55);
-          for (let b = 0; b < 7; b++) s4.prBands[b] += (proc * (0.5 + noise2D(b * 3 + s4.time * 0.2, s4.time * 0.1) * 0.5) - s4.prBands[b]) * 0.15;
-          s4.prLoud += (proc * 0.7 - s4.prLoud) * 0.12;
-          s4.prBeat = Math.max(s4.prBeat * 0.88, beatPulse * 0.5);
+          for (let b = 0; b < 7; b++) s4.prBands[b] += (proc * (0.5 + noise2D(b * 3 + s4.time * 0.2, s4.time * 0.1) * 0.5) - s4.prBands[b]) * 0.06;
+          s4.prLoud += (proc * 0.7 - s4.prLoud) * 0.06;
+          s4.prBeat = Math.max(s4.prBeat * 0.94, beatPulse * 0.3);
         }
 
         ctx.clearRect(0, 0, w, h);
 
         // Looping time parameter (like Etienne's seamless loop)
-        const loopT = s4.time * 0.08;
+        const loopT = s4.time * 0.04;
         const mr = 0.8; // loop radius in noise space
 
         // ── Draw radial spokes ──
@@ -2864,12 +2864,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandVal = s4.prBands[bandIdx] * (1 - bandFrac) + s4.prBands[bandNext] * bandFrac;
 
           // Combined displacement: noise base + audio push — amplified
-          const audioMod = (bandVal * 0.8 + s4.prLoud * 0.4 + s4.prBeat * 0.4) * presence;
+          const audioMod = (bandVal * 0.8 + s4.prLoud * 0.4 + s4.prBeat * 0.15) * presence;
           const displacement = noiseVal * (0.4 + audioMod * 2.0);
 
           // Inner and outer points — wide reach
           const iR = midR - (innerR * 0.5) * (1 - displacement * 0.6);
-          const oR = midR + (outerR - midR) * displacement * 1.3 + s4.prBeat * dim * 0.04 * presence;
+          const oR = midR + (outerR - midR) * displacement * 1.3 + s4.prBeat * dim * 0.015 * presence;
 
           const x1 = cx + cosA * iR, y1 = cy + sinA * iR;
           const x2 = cx + cosA * oR, y2 = cy + sinA * oR;
@@ -2901,7 +2901,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bFrac = bandPos - Math.floor(bandPos);
           const bVal = s4.prBands[bIdx] * (1 - bFrac) + s4.prBands[bNext] * bFrac;
           const audioMod = (bVal * 0.8 + s4.prLoud * 0.4) * presence;
-          const oR = midR + (outerR - midR) * noiseVal * (0.4 + audioMod * 2.0) * 1.3 + s4.prBeat * dim * 0.04 * presence;
+          const oR = midR + (outerR - midR) * noiseVal * (0.4 + audioMod * 2.0) * 1.3 + s4.prBeat * dim * 0.015 * presence;
           const x = cx + cosA * oR, y = cy + sinA * oR;
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
@@ -3035,59 +3035,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
       } // end style 2
 
-      // ══════════════════════════════════════════
-      // STYLE 4: Deep Amoeba — big lobes, tracer ghosts, interior tendrils
-      // 72 control points, dramatic irregular shape, layered depth.
-      // ══════════════════════════════════════════
-      if (curVizStyle === 4) {
-        const s2 = style2Ref.current;
-        if (k.state !== "idle") s2.time += dt;
-        s2.frame++;
-
-        const noise2D = noiseRef.current;
-        const noise2B = s2.noise2 || noiseRef.current;
-        const cx = w / 2 + noise2D(s2.time * 0.12, 50) * dim * 0.018;
-        const cy = h / 2 + noise2D(80, s2.time * 0.1) * dim * 0.018;
-        const s4amp = k.amplitude / 0.55;
-        const DA_N = 72;
-        const rot = s2.time * 0.04;
-        const col = [62, 60, 56];
-
-        const sharp = 1 - valence;
-        const lw = 0.6 + acousticness * 0.6;
-
-        // Audio followers — fast enough to chase the music
-        if (!s2.daBands) { s2.daBands = new Array(7).fill(0); s2.daLoud = 0; s2.daBeat = 0; s2.daOnset = 0; }
-        const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-        if (hasFabric) {
-          for (let b = 0; b < 7; b++) {
-            s2.daBands[b] += ((snap.bands[bandNames[b]] || 0) - s2.daBands[b]) * 0.25;
-          }
-          s2.daLoud += ((snap.loudness || 0) - s2.daLoud) * 0.15;
-          s2.daBeat = Math.max(s2.daBeat * 0.88, snap.beat ? (snap.beat_strength || 0) * 0.8 : 0);
-          s2.daOnset = Math.max(s2.daOnset * 0.85, snap.onset ? (snap.onset_strength || 0) * 0.6 : 0);
-        } else {
-          // No thumbprint — use procedural features so it still reacts
-          const procEnergy = energy * s4amp;
-          for (let b = 0; b < 7; b++) {
-            const procBand = procEnergy * (0.5 + noise2D(b * 3 + s2.time * 0.2, s2.time * 0.1) * 0.5);
-            s2.daBands[b] += (procBand - s2.daBands[b]) * 0.2;
-          }
-          s2.daLoud += (procEnergy * 0.7 - s2.daLoud) * 0.15;
-          s2.daBeat = Math.max(s2.daBeat * 0.88, beatPulse * 0.6);
-          s2.daOnset = Math.max(s2.daOnset * 0.85, beatPulse > 0.5 ? 0.4 : 0);
-        }
-
-        // Silent — thin circle
-        if (s4amp < 0.03) {
-          ctx.clearRect(0, 0, w, h);
-          ctx.beginPath();
-          ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.12 + s4amp * 2})`;
-          ctx.lineWidth = 0.6;
-          ctx.stroke();
-          return;
-        }
 
         // Energy propagation buffer — persists between frames
         if (!s2.daEnergy) s2.daEnergy = new Float32Array(DA_N);
@@ -3300,7 +3247,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[1, 2, 3, 4, 5].map((n) => (
+        {[1, 2, 3, 4].map((n) => (
           <button
             key={n}
             onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} }}
@@ -4473,7 +4420,7 @@ export default function FabricPage() {
             ))}
             {/* Viz mode selector — owner only, hidden when collapsed */}
             {deckExpanded && isOwner && <div style={{ marginLeft: "auto", display: "flex", gap: 2, alignItems: "center" }}>
-              {[1, 2, 3, 4, 5].map((n) => (
+              {[1, 2, 3, 4].map((n) => (
                 <button
                   key={n}
                   onClick={() => {
