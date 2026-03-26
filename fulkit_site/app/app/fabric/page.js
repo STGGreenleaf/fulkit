@@ -2633,20 +2633,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.lineWidth = 0.5 + s2amp * 0.4;
         ctx.stroke();
 
-        // ── Interior tendrils (lightweight — every 5th point) ──
-        if (s2amp > 0.15) {
-          for (let i = 0; i < S2_N; i += 5) {
-            const opp = (i + Math.floor(S2_N * 0.4 + Math.random() * S2_N * 0.2)) % S2_N;
-            const cpOff = noise2D(i * 0.4, morphT * 0.25) * baseR * 0.2 * s2amp;
-            ctx.beginPath();
-            ctx.moveTo(innerPts[i].x, innerPts[i].y);
-            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.6, innerPts[opp].x, innerPts[opp].y);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${s2amp * 0.06})`;
-            ctx.lineWidth = 0.3 + s2amp * 0.25;
-            ctx.stroke();
-          }
-        }
-
         return;
       }
 
