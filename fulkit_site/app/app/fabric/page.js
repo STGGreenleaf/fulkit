@@ -3090,7 +3090,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[1, 2, 3, 4, 5].map((n) => (
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
           <button
             key={n}
             onClick={() => { if (n <= 4) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
