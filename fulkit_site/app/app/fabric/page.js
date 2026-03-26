@@ -2930,17 +2930,19 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const sharp = 1 - valence;
         const lw = 0.6 + acousticness * 0.6;
 
-        // Smoothed audio followers — shape chases the music
-        if (!s2.daBands) { s2.daBands = new Array(7).fill(0); s2.daLoud = 0; s2.daBeat = 0; }
+        // Audio followers — fast enough to chase the music
+        if (!s2.daBands) { s2.daBands = new Array(7).fill(0); s2.daLoud = 0; s2.daBeat = 0; s2.daOnset = 0; }
         const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
         for (let b = 0; b < 7; b++) {
           const bv = hasFabric ? (snap.bands[bandNames[b]] || 0) : 0;
-          s2.daBands[b] += (bv - s2.daBands[b]) * 0.12;
+          s2.daBands[b] += (bv - s2.daBands[b]) * 0.25; // fast — chase the music
         }
         const rawLoud = hasFabric ? (snap.loudness || 0) : 0;
-        s2.daLoud += (rawLoud - s2.daLoud) * 0.08;
+        s2.daLoud += (rawLoud - s2.daLoud) * 0.15;
         const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
-        s2.daBeat = Math.max(s2.daBeat * 0.92, rawBeat * 0.5);
+        s2.daBeat = Math.max(s2.daBeat * 0.88, rawBeat * 0.8);
+        const rawOnset = hasFabric && snap.onset ? (snap.onset_strength || 0) : 0;
+        s2.daOnset = Math.max(s2.daOnset * 0.85, rawOnset * 0.6);
 
         // Silent — thin circle
         if (s4amp < 0.03) {
@@ -2968,20 +2970,28 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
           radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * s4amp * 0.55);
 
-          // Audio bands are the PRIMARY shape driver (smoothed)
+          // Each point samples a band — creates directional shape
           const bandPos = (i / DA_N) * 7;
           const bandIdx = Math.floor(bandPos) % 7;
           const bandNext = (bandIdx + 1) % 7;
           const bandFrac = bandPos - Math.floor(bandPos);
           const bandVal = s2.daBands[bandIdx] * (1 - bandFrac) + s2.daBands[bandNext] * bandFrac;
 
-          // Noise adds organic texture on top — not the driver
-          const tex = noise2D(nx * 1.2 + s2.time * 0.1, ny * 1.2 + s2.time * 0.07) * 0.2;
+          // Per-point noise creates differential WITHIN each band region
+          // So even if two adjacent bands have similar values, the contour varies
+          const pointNoise = noise2D(i * 0.3 + s2.time * 0.15, bandIdx * 2 + s2.time * 0.08);
+          const differential = 0.5 + pointNoise * 0.5; // 0–1, varies per point
 
-          // Band energy drives displacement hard — sqrt opens up low values
-          const bandPush = Math.pow(bandVal, 0.5) * 0.8 + s2.daLoud * 0.5;
-          const beatBoost = 1 + s2.daBeat * 0.6;
-          disp[i] = (bandPush + tex) * s4amp * beatBoost * exhale * baseR * 1.4;
+          // Band energy is the driver, differential prevents uniform expansion
+          const bandPush = Math.pow(bandVal, 0.5) * differential;
+          // Loudness adds global swell
+          const loudSwell = s2.daLoud * 0.4;
+          // Onset creates sharp directional spikes
+          const onsetSpike = s2.daOnset * differential * 0.5;
+          // Beat is a global pump
+          const beatPump = s2.daBeat * 0.3;
+
+          disp[i] = (bandPush + loudSwell + onsetSpike + beatPump) * s4amp * exhale * baseR * 1.2;
         }
 
         // Neighbor-smooth — more passes for fluid contour
