@@ -137,6 +137,29 @@
 
 ---
 
+## Public Pages Rewrite — Pre-Work
+
+> The landing, about, and manual pages were authored early. The product has outgrown the copy.
+> Complete these before rewriting body copy. Then circle back for a full rewrite session.
+
+### Build first (the copy can't be honest until these ship)
+- [x] **Remove planned features from landing** — ✅ Both Inbox Triage and Quick Capture are built and shipped. Updated descriptions to reflect actual functionality.
+- [x] **Remove unsourced stats from landing** — ✅ Replaced "15% / 3.6 hours" with real pain points (eight apps, eight logins).
+- [ ] **Ship remaining business integrations** — Landing page can't sell the ecosystem story until the ecosystem is built. Current: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, Spotify. Add the rest before rewriting.
+- [ ] **Spotify Extended Quota** — Still in Development Mode. Can't market Fabric to new users until this clears.
+
+### Fix before rewrite
+- [x] **About page (/about) — remove nav frame** — ✅ Already frameless (standalone nav, no sidebar/app chrome). Same structure as /landing.
+- [ ] **Pitches.md audit** — Update `[!]` flagged items: `stack-problem` (8 apps/$92 — verify current), `referral` (9 refs not 7), `trust-soc2` (controls, not certified). Make the copy safe actually safe.
+- [ ] **Competitive grid — expand scope** — Current grid only compares notes/AI tools (Obsidian, Notion, ChatGPT, Claude). Doesn't reflect the real moat: business integrations, music, vault, voice. Redesign to show the full picture once integrations ship.
+
+### Rewrite scope (do these together in one session)
+- [ ] **Landing /landing** — Tighten hero (keep dictionary concept, cut 40% of words before CTA). Add integrations section. Add vault/BYOK as differentiator. Replace planned features with shipped ones. Update competitive grid.
+- [ ] **About /about** — Keep brand philosophy (ü, name, design heritage) but add product substance. Who built it, what it does, who it's for. Balance manifesto with information.
+- [ ] **Manual /settings/manual** — Rethink as "Getting Started → Ask Chat." Light orientation (3-5 steps), then a CTA to just talk to Fülkit. The manual IS the chat now. Integration command reference can stay as a collapsible reference.
+
+---
+
 ## From Signals (2026-03-19)
 
 - [x] **Chat LCP slow (4-6s)** — ✅ Session 22: AuthGuard now preloads children under splash overlay. Fetches fire during 2800ms wink. Signal thresholds raised to 6s.

@@ -41,11 +41,11 @@ const features = [
   },
   {
     title: "Inbox Triage",
-    desc: "Drop a doc. Get a summary and action items in seconds.",
+    desc: "Drop any file — PDF, image, text. AI reads it, files it, pulls action items, finds related notes.",
   },
   {
     title: "Quick Capture",
-    desc: "Global shortcut. Thought to saved in 2 seconds. AI files it for you.",
+    desc: "Floating button, text or voice. Thought to saved in 2 seconds. AI files it for you.",
   },
 ];
 
@@ -417,8 +417,8 @@ export default function Landing() {
               margin: "0 auto var(--space-10)",
             }}
           >
-            Only 15% of saved knowledge is ever found again. You spend 3.6 hours a
-            day searching for information. Your notes are a graveyard.
+            You save things to never look at them again. Eight apps, eight logins,
+            eight places your ideas go to die. Your notes are a graveyard.
           </p>
           <div
             style={{
