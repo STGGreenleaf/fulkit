@@ -2631,171 +2631,126 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
-      // STYLE 3: Crystal — subdivided icosahedron, audio warps facets
-      // Perfect gem at rest, deforms with energy when playing.
+      // STYLE 3: Pulse Ring — radial spokes between inner/outer circles
+      // Noise modulates each spoke's reach. Audio drives intensity.
+      // Inspired by Etienne Jacob's ring of particles.
       // ══════════════════════════════════════════
       if (curVizStyle === 3) {
         const s4 = style4Ref.current;
-        const [n1, n2, n3] = s4.n;
+        const [n1, n2] = s4.n;
         s4.time += dt;
 
-        const activity = Math.min(1, k.amplitude / 0.55);
-        const cx = w / 2, cy = h * 0.48;
-        const sc = dim * 0.4;
+        const noise2D = noiseRef.current;
+        const cx = w / 2, cy = h / 2;
+        const SEGS = 164;
+        const innerR = dim * 0.12;
+        const outerR = dim * 0.22;
+        const midR = (innerR + outerR) / 2;
+        const col = [42, 40, 36];
 
-        const ac = acousticness;
-        const val = valence;
-        const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        // Smoothed followers
+        if (!s4.prBands) { s4.prBands = new Array(7).fill(0); s4.prLoud = 0; s4.prBeat = 0; s4.prPresence = 0; }
+        const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        const presTarget = isPlaying ? 1 : 0;
+        s4.prPresence += (presTarget - s4.prPresence) * 0.03;
+        const presence = s4.prPresence;
 
-        // Smoothed audio followers — ebb and flow instead of snapping
-        if (s4.sLoud === undefined) {
-          s4.sLoud = 0; s4.sEnergy = 0; s4.sBands = new Array(7).fill(0); s4.sBeat = 0;
-          s4.presence = 0; // ramp-in from 0→1
+        if (hasFabric) {
+          for (let b = 0; b < 7; b++) s4.prBands[b] += ((snap.bands[bandNames[b]] || 0) - s4.prBands[b]) * 0.2;
+          s4.prLoud += ((snap.loudness || 0) - s4.prLoud) * 0.12;
+          s4.prBeat = Math.max(s4.prBeat * 0.88, snap.beat ? (snap.beat_strength || 0) * 0.7 : 0);
+        } else {
+          const proc = energy * Math.min(1, k.amplitude / 0.55);
+          for (let b = 0; b < 7; b++) s4.prBands[b] += (proc * (0.5 + noise2D(b * 3 + s4.time * 0.2, s4.time * 0.1) * 0.5) - s4.prBands[b]) * 0.15;
+          s4.prLoud += (proc * 0.7 - s4.prLoud) * 0.12;
+          s4.prBeat = Math.max(s4.prBeat * 0.88, beatPulse * 0.5);
         }
-        // Presence ramp — ramp in when playing, ramp back to sphere on pause
-        const presenceTarget = isPlaying ? 1 : 0;
-        s4.presence += (presenceTarget - s4.presence) * 0.03; // ~1.5s ramp in/out
-        const presence = s4.presence;
-        const rawLoud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0);
-        const rawEnergy = energy;
-        s4.sLoud += (rawLoud - s4.sLoud) * 0.06;       // slow swell
-        s4.sEnergy += (rawEnergy - s4.sEnergy) * 0.05;  // gradual rise/fall
-        for (let b = 0; b < 7; b++) {
-          const bv = hasFabric ? (snap.bands[bandNames4[b]] || 0) : 0;
-          s4.sBands[b] += (bv - s4.sBands[b]) * 0.08;   // per-band smooth
-        }
-        // Beat decays naturally — quick rise, slow fall
-        const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
-        s4.sBeat = Math.max(s4.sBeat * 0.93, rawBeat);
-
-        const loud = s4.sLoud;
-        const en = s4.sEnergy;
-
-        const rotY = s4.time * 0.06 + keyOffset * 0.5;
-        const rotX = -0.35 + n1(s4.time * 0.015, 100) * 0.08;
 
         ctx.clearRect(0, 0, w, h);
 
-        function project(x3, y3, z3) {
-          const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
-          let rx = x3 * cosY - z3 * sinY;
-          let rz = x3 * sinY + z3 * cosY;
-          const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-          let ry = y3 * cosX - rz * sinX;
-          rz = y3 * sinX + rz * cosX;
-          const perspective = 600;
-          const depth = perspective / (perspective + rz + 200);
-          return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
-        }
+        // Looping time parameter (like Etienne's seamless loop)
+        const loopT = s4.time * 0.08;
+        const mr = 0.8; // loop radius in noise space
 
-        // Build icosahedron
-        const phi = (1 + Math.sqrt(5)) / 2;
-        const icoRaw = [
-          [-1,phi,0],[1,phi,0],[-1,-phi,0],[1,-phi,0],
-          [0,-1,phi],[0,1,phi],[0,-1,-phi],[0,1,-phi],
-          [phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1],
-        ];
-        // Normalize
-        const icoVerts = icoRaw.map(v => {
-          const len = Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2);
-          return [v[0]/len, v[1]/len, v[2]/len];
-        });
-        const icoFaces = [
-          [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
-          [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
-          [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
-          [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1],
-        ];
+        // ── Draw radial spokes ──
+        for (let i = 0; i < SEGS; i++) {
+          const angle = (i / SEGS) * Math.PI * 2;
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
 
-        // Subdivide twice for finer facets
-        const midCache = {};
-        function getMid(a, b) {
-          const key = Math.min(a,b) + '-' + Math.max(a,b);
-          if (midCache[key] !== undefined) return midCache[key];
-          const va = icoVerts[a], vb = icoVerts[b];
-          const mid = [(va[0]+vb[0])/2, (va[1]+vb[1])/2, (va[2]+vb[2])/2];
-          const len = Math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2);
-          mid[0]/=len; mid[1]/=len; mid[2]/=len;
-          icoVerts.push(mid);
-          midCache[key] = icoVerts.length - 1;
-          return midCache[key];
-        }
+          // Noise displacement — flows around the ring like the original
+          const scl = 2.5;
+          const nx = cosA * scl, ny = sinA * scl;
+          const noiseVal = Math.pow(
+            (1 + n1(nx / 2 + mr * Math.cos(Math.PI * 2 * loopT), ny / 2 + mr * Math.sin(Math.PI * 2 * loopT))) / 2,
+            3.0
+          );
 
-        let faces = icoFaces;
-        for (let sub = 0; sub < 2; sub++) {
-          const newFaces = [];
-          for (const [a,b,c] of faces) {
-            const ab = getMid(a,b), bc = getMid(b,c), ca = getMid(c,a);
-            newFaces.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]);
-          }
-          faces = newFaces;
-        }
+          // Audio modulation — band energy shapes the ring
+          const bandPos = (i / SEGS) * 7;
+          const bandIdx = Math.floor(bandPos) % 7;
+          const bandNext = (bandIdx + 1) % 7;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = s4.prBands[bandIdx] * (1 - bandFrac) + s4.prBands[bandNext] * bandFrac;
 
-        // Deform vertices — always shows noise surface, audio adds on top
-        const vertices = [];
-        for (const v of icoVerts) {
-          const deform = n1(v[0] * 2 + s4.time * 0.12, v[2] * 2 + v[1] * 1.5 + s4.time * 0.09);
-          const deform2 = n3(v[0] * 1.2 - s4.time * 0.08, v[2] * 1.5 + v[1] + s4.time * 0.11) * 0.4;
-          const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.3;
+          // Combined displacement: noise base + audio push
+          const audioMod = (bandVal * 0.6 + s4.prLoud * 0.3 + s4.prBeat * 0.2) * presence;
+          const displacement = noiseVal * (0.3 + audioMod * 1.5);
 
-          // Base breathing — scales with presence (ramps in, ramps out)
-          const baseDeform = (deform * 0.15 + deform2 * 0.1) * presence;
+          // Inner and outer points — displacement pushes outward from mid-ring
+          const iR = midR - (innerR * 0.3) * (1 - displacement * 0.5);
+          const oR = midR + (outerR - midR) * displacement + s4.prBeat * dim * 0.02 * presence;
 
-          // Audio adds on top — gated through presence ramp
-          let audioDeform = 0;
-          if (presence > 0.01) {
-            let magnitude = loud * 0.7 + en * 0.5 + s4.sBeat * 0.3;
-            const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
-            const bandIdx = Math.floor(bandPos) % 7;
-            const bandNext = (bandIdx + 1) % 7;
-            const bandFrac = bandPos - Math.floor(bandPos);
-            const bandVal = s4.sBands[bandIdx] * (1 - bandFrac) + s4.sBands[bandNext] * bandFrac;
-            magnitude += bandVal * 0.6;
-            const rawShape = deform * 0.8 + deform2 + facet;
-            const gated = Math.max(0, rawShape - 0.2) / 0.8;
-            audioDeform = gated * magnitude * 1.8 * presence * exhale;
-          }
+          const x1 = cx + cosA * iR, y1 = cy + sinA * iR;
+          const x2 = cx + cosA * oR, y2 = cy + sinA * oR;
 
-          const r = 1.0 + baseDeform + audioDeform;
-          vertices.push({ x3: v[0] * r, y3: v[1] * r, z3: v[2] * r });
-        }
+          // Spoke alpha — brighter where energy is
+          const spokeAlpha = 0.08 + displacement * 0.4 + audioMod * 0.15;
 
-        // Edges from faces (deduplicated)
-        const edges = [];
-        const edgeSet = new Set();
-        for (const [a,b,c] of faces) {
-          const add = (i,j) => {
-            const key = Math.min(i,j) + '-' + Math.max(i,j);
-            if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([i,j]); }
-          };
-          add(a,b); add(b,c); add(c,a);
-        }
-
-        // Project
-        const projected = vertices.map(v => project(v.x3, v.y3, v.z3));
-
-        // Sort back to front
-        edges.sort((a, b) => {
-          const za = (projected[a[0]].z + projected[a[1]].z) / 2;
-          const zb = (projected[b[0]].z + projected[b[1]].z) / 2;
-          return za - zb;
-        });
-
-        // Draw
-        const col = [32, 30, 26];
-        for (const [i, j] of edges) {
-          const a = projected[i], b = projected[j];
-          if (!a || !b) continue;
-          const avgDepth = (a.depth + b.depth) / 2;
-          const alpha = Math.pow(avgDepth, 1.3) * 0.65;
-          if (alpha < 0.005) continue;
           ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
-          ctx.lineWidth = (0.3 + ac * 0.5) * avgDepth;
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.6, spokeAlpha)})`;
+          ctx.lineWidth = 0.4 + displacement * 0.8;
           ctx.stroke();
         }
+
+        // ── Outer ring contour ──
+        ctx.beginPath();
+        for (let i = 0; i <= SEGS; i++) {
+          const angle = (i / SEGS) * Math.PI * 2;
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
+          const scl = 2.5;
+          const noiseVal = Math.pow(
+            (1 + n1(cosA * scl / 2 + mr * Math.cos(Math.PI * 2 * loopT), sinA * scl / 2 + mr * Math.sin(Math.PI * 2 * loopT))) / 2,
+            3.0
+          );
+          const bandPos = (i / SEGS) * 7;
+          const bIdx = Math.floor(bandPos) % 7;
+          const bNext = (bIdx + 1) % 7;
+          const bFrac = bandPos - Math.floor(bandPos);
+          const bVal = s4.prBands[bIdx] * (1 - bFrac) + s4.prBands[bNext] * bFrac;
+          const audioMod = (bVal * 0.6 + s4.prLoud * 0.3) * presence;
+          const oR = midR + (outerR - midR) * noiseVal * (0.3 + audioMod * 1.5) + s4.prBeat * dim * 0.02 * presence;
+          const x = cx + cosA * oR, y = cy + sinA * oR;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.25 + s4.prLoud * 0.2 * presence})`;
+        ctx.lineWidth = 1.0 + s4.prLoud * 0.5 * presence;
+        ctx.stroke();
+
+        // ── Inner ring contour — thin, steady ──
+        ctx.beginPath();
+        for (let i = 0; i <= SEGS; i++) {
+          const angle = (i / SEGS) * Math.PI * 2;
+          const x = cx + Math.cos(angle) * (midR - innerR * 0.3);
+          const y = cy + Math.sin(angle) * (midR - innerR * 0.3);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.15)`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
 
         return;
       }
