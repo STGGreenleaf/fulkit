@@ -10,6 +10,7 @@ import { getShopifyToken, shopifyFetch } from "../../../lib/shopify-server";
 import { getStripeToken, stripeFetch } from "../../../lib/stripe-server";
 import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
+import { getGoogleToken, googleFetch } from "../../../lib/google-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -198,6 +199,7 @@ const ECOSYSTEM_KEYWORDS = {
   shopify: ["shopify", "storefront", "ecommerce", "shipping", "fulfillment"],
   stripe: ["stripe", "subscription", "billing", "payment", "invoice", "charge"],
   toast: ["toast", "restaurant", "menu", "table", "kitchen", "dining"],
+  google_calendar: ["calendar", "meeting", "schedule", "event", "appointment", "availability", "gcal"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -1565,6 +1567,165 @@ const GITHUB_TOOLS = [
   },
 ];
 
+// Google Calendar tools — list, search, create events
+const CALENDAR_TOOLS = [
+  {
+    name: "calendar_list_events",
+    description: "List upcoming calendar events. Returns title, time, location, attendees.",
+    input_schema: {
+      type: "object",
+      properties: {
+        days: { type: "integer", description: "Number of days to look ahead. Default 7." },
+        maxResults: { type: "integer", description: "Max events to return. Default 10." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "calendar_search_events",
+    description: "Search calendar events by keyword. Searches event titles, descriptions, and attendees.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search term (name, topic, attendee)" },
+        days: { type: "integer", description: "How many days back and forward to search. Default 30." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "calendar_create_event",
+    description: "Create a new calendar event. Always confirm details with user before creating.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Event title" },
+        startTime: { type: "string", description: "Start time in ISO 8601 format (e.g. 2026-03-27T14:00:00-05:00)" },
+        endTime: { type: "string", description: "End time in ISO 8601 format" },
+        description: { type: "string", description: "Event description or notes. Optional." },
+        location: { type: "string", description: "Event location. Optional." },
+        attendees: { type: "array", items: { type: "string" }, description: "Email addresses of attendees. Optional." },
+      },
+      required: ["title", "startTime", "endTime"],
+    },
+  },
+  {
+    name: "calendar_check_availability",
+    description: "Check if the user is free during a specific time range.",
+    input_schema: {
+      type: "object",
+      properties: {
+        startTime: { type: "string", description: "Range start in ISO 8601" },
+        endTime: { type: "string", description: "Range end in ISO 8601" },
+      },
+      required: ["startTime", "endTime"],
+    },
+  },
+];
+
+// Execute a Google Calendar tool call
+async function executeCalendarTool(name, input, userId) {
+  const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
+
+  if (name === "calendar_list_events") {
+    const days = input.days || 7;
+    const maxResults = Math.min(input.maxResults || 10, 25);
+    const now = new Date();
+    const until = new Date(now.getTime() + days * 86400000);
+
+    const params = new URLSearchParams({
+      timeMin: now.toISOString(),
+      timeMax: until.toISOString(),
+      maxResults: String(maxResults),
+      singleEvents: "true",
+      orderBy: "startTime",
+    });
+
+    const res = await googleFetch(userId, "google_calendar", `${CALENDAR_API}/calendars/primary/events?${params}`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    return (data.items || []).map(e => ({
+      title: e.summary,
+      start: e.start?.dateTime || e.start?.date,
+      end: e.end?.dateTime || e.end?.date,
+      location: e.location || null,
+      description: e.description ? e.description.slice(0, 200) : null,
+      attendees: (e.attendees || []).map(a => a.email).slice(0, 10),
+      link: e.htmlLink,
+    }));
+  }
+
+  if (name === "calendar_search_events") {
+    const days = input.days || 30;
+    const now = new Date();
+    const past = new Date(now.getTime() - days * 86400000);
+    const future = new Date(now.getTime() + days * 86400000);
+
+    const params = new URLSearchParams({
+      q: input.query,
+      timeMin: past.toISOString(),
+      timeMax: future.toISOString(),
+      maxResults: "15",
+      singleEvents: "true",
+      orderBy: "startTime",
+    });
+
+    const res = await googleFetch(userId, "google_calendar", `${CALENDAR_API}/calendars/primary/events?${params}`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    return (data.items || []).map(e => ({
+      title: e.summary,
+      start: e.start?.dateTime || e.start?.date,
+      end: e.end?.dateTime || e.end?.date,
+      location: e.location || null,
+      attendees: (e.attendees || []).map(a => a.email).slice(0, 10),
+    }));
+  }
+
+  if (name === "calendar_create_event") {
+    const event = {
+      summary: input.title,
+      start: { dateTime: input.startTime },
+      end: { dateTime: input.endTime },
+    };
+    if (input.description) event.description = input.description;
+    if (input.location) event.location = input.location;
+    if (input.attendees) event.attendees = input.attendees.map(email => ({ email }));
+
+    const res = await googleFetch(userId, "google_calendar", `${CALENDAR_API}/calendars/primary/events`, {
+      method: "POST",
+      body: JSON.stringify(event),
+    });
+    if (res.error) return res;
+    const data = await res.json();
+
+    return { created: true, title: data.summary, start: data.start?.dateTime, link: data.htmlLink };
+  }
+
+  if (name === "calendar_check_availability") {
+    const params = new URLSearchParams({
+      timeMin: input.startTime,
+      timeMax: input.endTime,
+      singleEvents: "true",
+      orderBy: "startTime",
+    });
+
+    const res = await googleFetch(userId, "google_calendar", `${CALENDAR_API}/calendars/primary/events?${params}`);
+    if (res.error) return res;
+    const data = await res.json();
+
+    const events = (data.items || []).filter(e => e.status !== "cancelled");
+    return {
+      free: events.length === 0,
+      conflicts: events.map(e => ({ title: e.summary, start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
+    };
+  }
+
+  throw new Error(`Unknown calendar tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2300,6 +2461,7 @@ export async function POST(request) {
         safeGet(getToastToken, "toast"),
         safeGet(getTrelloToken, "trello"),
         safeGet(getGitHubToken, "github"),
+        safeGet(() => getGoogleToken(userId, "google_calendar"), "google_calendar"),
       ]) : Promise.resolve([null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
@@ -2349,7 +2511,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -2360,6 +2522,7 @@ export async function POST(request) {
         { ref: "sqToken", val: sqToken }, { ref: "shopifyToken", val: shopifyToken },
         { ref: "stripeToken", val: stripeToken }, { ref: "toastToken", val: toastToken },
         { ref: "trelloToken", val: trelloToken }, { ref: "ghToken", val: ghToken },
+        { ref: "gcalToken", val: gcalToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -2375,6 +2538,7 @@ export async function POST(request) {
             else if (s.ref === "toastToken") toastToken = null;
             else if (s.ref === "trelloToken") trelloToken = null;
             else if (s.ref === "ghToken") ghToken = null;
+            else if (s.ref === "gcalToken") gcalToken = null;
           }
         }
       }
@@ -2657,7 +2821,7 @@ Never skip the preview step. The user must see and approve changes before they g
     const connectedProviders = [
       nblKey && "Numbrly", tgKey && "TrueGauge", sqToken && "Square",
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
-      trelloToken && "Trello", ghToken && "GitHub",
+      trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -2731,6 +2895,7 @@ Never skip the preview step. The user must see and approve changes before they g
       toast: () => toastToken ? TOAST_TOOLS : [],
       trello: () => trelloToken ? TRELLO_TOOLS : [],
       github: () => ghToken ? GITHUB_TOOLS : [],
+      google_calendar: () => gcalToken ? CALENDAR_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -2786,7 +2951,7 @@ Never skip the preview step. The user must see and approve changes before they g
       integrations: {
         numbrly: !!nblKey, truegauge: !!tgKey, square: !!sqToken,
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
-        trello: !!trelloToken, github: !!ghToken,
+        trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3077,6 +3242,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Google Calendar tools
+              if (block.name.startsWith("calendar_") && gcalToken) {
+                try {
+                  const result = await withTimeout(() => executeCalendarTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

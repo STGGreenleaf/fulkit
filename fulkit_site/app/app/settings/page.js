@@ -179,7 +179,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "google_calendar"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -238,9 +238,18 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
   },
+  google_calendar: {
+    subtitle: "Your schedule, connected.",
+    description: "Google Calendar holds your meetings, events, and availability. Connecting it means Fülkit sees your schedule and can help you plan your day, check conflicts, and create events from chat.",
+    gives: "Upcoming events, meeting details, attendee lists, and availability checks. Ask what's on your calendar or schedule something new.",
+    tryPrompt: "What do I have this week?",
+    linkLabel: "calendar.google.com",
+    linkHref: "https://calendar.google.com",
+  },
 };
 
 const ALL_SOURCES = [
+  { id: "google_calendar", name: "Google Calendar", cat: "Scheduling" },
   { id: "square", name: "Square", cat: "Payments & POS" },
   { id: "shopify", name: "Shopify", cat: "E-Commerce" },
   { id: "stripe", name: "Stripe", cat: "Payments" },
@@ -1007,6 +1016,12 @@ function SourcesTab() {
   const [trelloExpanded, setTrelloExpanded] = useState(false);
   const [trelloLastSynced, setTrelloLastSynced] = useState(null);
   const [trelloDisconnecting, setTrelloDisconnecting] = useState(false);
+
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalExpanded, setGcalExpanded] = useState(false);
+  const [gcalLastSynced, setGcalLastSynced] = useState(null);
+  const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
+
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1050,11 +1065,14 @@ function SourcesTab() {
     if (params.get("toast") === "connected") {
       setToastConnected(true);
     }
+    if (params.get("gc") === "connected") {
+      setGcalConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
-        setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src} account.`);
+        setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
         const url = new URL(window.location);
         url.searchParams.delete(src);
         url.searchParams.delete("reason");
@@ -1081,7 +1099,8 @@ function SourcesTab() {
       check("/api/stripe/status"),
       check("/api/toast/status"),
       check("/api/trello/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello]) => {
+      check("/api/google/calendar/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1093,6 +1112,7 @@ function SourcesTab() {
       if (stripe) { setStripeConnected(stripe.connected); if (stripe.lastSynced) setStripeLastSynced(stripe.lastSynced); }
       if (toast) { setToastConnected(toast.connected); if (toast.lastSynced) setToastLastSynced(toast.lastSynced); }
       if (trello) { setTrelloConnected(trello.connected); if (trello.lastSynced) setTrelloLastSynced(trello.lastSynced); }
+      if (gcal) { setGcalConnected(gcal.connected); if (gcal.lastSynced) setGcalLastSynced(gcal.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1396,6 +1416,31 @@ function SourcesTab() {
     setTrelloDisconnecting(false);
   }
 
+  function connectGcal() {
+    if (accessToken) {
+      window.open("/api/google/calendar/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/google/calendar/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectGcal() {
+    setGcalDisconnecting(true);
+    try {
+      await fetch("/api/google/calendar/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setGcalConnected(false);
+    } catch {}
+    setGcalDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -1407,8 +1452,9 @@ function SourcesTab() {
     ...(stripeConnected ? ["stripe"] : []),
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
+    ...(gcalConnected ? ["google_calendar"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "google_calendar"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1427,6 +1473,7 @@ function SourcesTab() {
     if (id === "stripe") { connectStripe(); return; }
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
+    if (id === "google_calendar") { connectGcal(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1439,6 +1486,7 @@ function SourcesTab() {
     if (id === "stripe") { disconnectStripe(); return; }
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
+    if (id === "google_calendar") { disconnectGcal(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -1574,7 +1622,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -2024,6 +2072,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: trelloDisconnecting ? 0.5 : 1 }}
                         >
                           {trelloDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Google Calendar — connected */}
+            {gcalConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.google_calendar || SOURCE_LOGOS.google}
+                  name="Google Calendar"
+                  subtitle="Your schedule, connected."
+                  isExpanded={gcalExpanded}
+                  onToggle={() => setGcalExpanded(!gcalExpanded)}
+                />
+                <Drawer open={gcalExpanded}>
+                  {richDrawerContent({
+                    expanded: gcalExpanded,
+                    description: "Google Calendar holds your meetings, events, and availability. Connecting it means Fülkit sees your schedule and can help you plan your day, check conflicts, and create events from chat.",
+                    givesLabel: "What this gives Fülkit",
+                    gives: "Upcoming events, meeting details, attendee lists, and availability checks. Ask what's on your calendar or schedule something new.",
+                    tryPrompt: "What do I have this week?",
+                    linkLabel: "calendar.google.com",
+                    linkHref: "https://calendar.google.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{gcalLastSynced ? ` · Last synced ${timeAgo(gcalLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectGcal}
+                          disabled={gcalDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: gcalDisconnecting ? 0.5 : 1 }}
+                        >
+                          {gcalDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),
