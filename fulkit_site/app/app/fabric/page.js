@@ -2928,7 +2928,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const col = [62, 60, 56];
 
         const sharp = 1 - valence;
-        const lw = 1.0 + acousticness * 1.3;
+        const lw = 0.6 + acousticness * 0.6;
 
         // Silent — thin circle
         if (s4amp < 0.03) {
@@ -2956,10 +2956,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
           radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * s4amp * 0.55);
 
-          // Displacement from audio
-          const n1 = noise2D(nx * 1.2 + s2.time * 0.25, ny * 1.2 + s2.time * 0.18);
-          const n2 = noise2D(nx * 3.5 + s2.time * 0.45, ny * 3.5 + s2.time * 0.35);
-          let nv = n1 * 0.9 + n2 * 0.2;
+          // Displacement from audio — slower evolution for fluid motion
+          const n1 = noise2D(nx * 1.2 + s2.time * 0.12, ny * 1.2 + s2.time * 0.09);
+          const n2 = noise2D(nx * 3.5 + s2.time * 0.2, ny * 3.5 + s2.time * 0.15);
+          let nv = n1 * 0.9 + n2 * 0.15;
           nv = Math.sign(nv) * Math.pow(Math.abs(nv), 1 + sharp * 0.6);
 
           // Audio bands shape the displacement when thumbprint data available
@@ -2975,13 +2975,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             bandMod = 0.5 + bandVal * 1.5 + (snap.loudness || 0) * 0.5;
           }
 
-          const beatBoost = 1 + beatPulse * 0.7;
-          disp[i] = nv * s4amp * energy * beatBoost * exhale * baseR * 0.85 * bandMod;
-          disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
+          const beatBoost = 1 + beatPulse * 0.3;
+          disp[i] = nv * s4amp * energy * beatBoost * exhale * baseR * 0.55 * bandMod;
         }
 
-        // Neighbor-smooth — preserve big lobes
-        for (let pass = 0; pass < 2; pass++) {
+        // Neighbor-smooth — more passes for fluid contour
+        for (let pass = 0; pass < 4; pass++) {
           const tmpD = new Float32Array(DA_N);
           const tmpR = new Float32Array(DA_N);
           for (let i = 0; i < DA_N; i++) {
@@ -3023,26 +3022,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // ── Render ──
         ctx.clearRect(0, 0, w, h);
 
-        // Interior tendrils
-        if (s4amp > 0.02) {
-          const iAlpha = s4amp * 0.12;
-          for (let i = 0; i < DA_N; i += 7) {
-            const opp = (i + Math.floor(DA_N / 2)) % DA_N;
-            const a1 = (i / DA_N) * Math.PI * 2 + rot;
-            const a2 = (opp / DA_N) * Math.PI * 2 + rot;
-            const r1 = radii[i] * 0.6 + disp[i] * 0.3;
-            const r2 = radii[opp] * 0.6 + disp[opp] * 0.3;
-            const cpOff = noise2D(i * 0.5, s2.time * 0.3) * baseR * 0.3 * s4amp;
-            ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(a1) * r1, cy + Math.sin(a1) * r1);
-            ctx.quadraticCurveTo(cx + cpOff, cy + cpOff * 0.7,
-              cx + Math.cos(a2) * r2, cy + Math.sin(a2) * r2);
-            ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${iAlpha * (0.3 + Math.abs(disp[i]) / baseR)})`;
-            ctx.lineWidth = 0.5 + acousticness * 0.5;
-            ctx.stroke();
-          }
-        }
-
         // All layers sorted oldest first
         const allLayers = [
           ...s2.daTracers, ...s2.daHits,
@@ -3069,7 +3048,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.save();
           ctx.clip();
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.8 * (0.4 + s4amp * 0.6) * 0.12})`;
-          ctx.lineWidth = thisLw * 4;
+          ctx.lineWidth = thisLw * 3;
           ctx.stroke();
           ctx.restore();
 
@@ -3077,7 +3056,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           drawOrbSmooth(ctx, pts);
           const contourPeak = 0.5 + s4amp * 0.45;
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.8 * (0.4 + s4amp * 0.6) * (layer.age === 0 ? contourPeak : 0.45)})`;
-          ctx.lineWidth = Math.max(0.3, thisLw * (layer.age === 0 ? 1.0 + s4amp * 0.5 : 0.7));
+          ctx.lineWidth = Math.max(0.2, thisLw * (layer.age === 0 ? 0.8 + s4amp * 0.3 : 0.5));
           ctx.stroke();
 
           // Inward reflection
@@ -3090,7 +3069,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             }
             drawOrbSmooth(ctx, iPts);
             ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha * 0.04})`;
-            ctx.lineWidth = thisLw * 2.5;
+            ctx.lineWidth = thisLw * 1.8;
             ctx.stroke();
           }
         }
