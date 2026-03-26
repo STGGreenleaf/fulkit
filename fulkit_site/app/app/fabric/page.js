@@ -2688,22 +2688,33 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             const sy = cosPhi;
             const sz = sinPhi * sinTh;
 
-            // Audio displacement — only when playing, perfect sphere at rest
+            // Lava lamp displacement — smooth flowing blobs, perfect sphere at rest
             let disp = 0;
-            if (activity > 0.01 && hasFabric) {
-              const bandPos = (seg / segs) * 7;
-              const bandIdx = Math.floor(bandPos) % 7;
-              const bandNext = (bandIdx + 1) % 7;
-              const bandFrac = bandPos - Math.floor(bandPos);
-              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
-                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              disp = bandVal * 0.4 + loud * 0.15;
-              disp *= sinPhi;
-              disp += realFlux * n4(sx * 4 + s4.time * 0.3, sz * 4) * 0.06;
-              if (snap.beat) disp += (snap.beat_strength || 0) * 0.08 * sinPhi;
-              disp *= activity * exhale;
-            } else if (activity > 0.01) {
-              disp = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * en * 0.15 * activity;
+            if (activity > 0.01) {
+              // Low-frequency noise blobs — big soft lobes that drift across the surface
+              const blob1 = n1(sx * 1.2 + s4.time * 0.12, sz * 1.2 + sy * 0.8 + s4.time * 0.09);
+              const blob2 = n2(sx * 0.8 + s4.time * 0.07 + 50, sz * 0.8 + sy * 1.2 - s4.time * 0.06);
+              const blob3 = n3(sx * 1.8 - s4.time * 0.1, sz * 1.5 + sy * 0.5 + s4.time * 0.14);
+              // Combine — creates 2-3 big lobes that slowly migrate
+              const blobShape = blob1 * 0.5 + blob2 * 0.3 + blob3 * 0.2;
+              // Only push outward (lava bulges out, doesn't dent in)
+              const bulge = Math.max(0, blobShape);
+
+              // Audio energy scales the bulge magnitude
+              let magnitude = loud * 0.5 + en * 0.3;
+              if (hasFabric) {
+                // Blend band energy in smoothly — not per-segment, use sphere position
+                const bandPos = ((Math.atan2(sz, sx) + Math.PI) / (Math.PI * 2)) * 7;
+                const bandIdx = Math.floor(bandPos) % 7;
+                const bandNext = (bandIdx + 1) % 7;
+                const bandFrac = bandPos - Math.floor(bandPos);
+                const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                                (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+                magnitude += bandVal * 0.4;
+                if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.15;
+              }
+
+              disp = bulge * magnitude * activity * exhale * 0.6;
             }
 
             const r = baseRadius + disp;
