@@ -2546,7 +2546,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.12)`;
           ctx.lineWidth = 0.6;
           ctx.stroke();
-          animRef.current = requestAnimationFrame(draw);
           return;
         }
 
@@ -2621,7 +2620,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           }
         }
 
-        animRef.current = requestAnimationFrame(draw);
         return;
       }
 
@@ -3007,7 +3005,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       } // end style 1/3 branch
     }
 
-    animRef.current = requestAnimationFrame(draw);
     return () => { running = false; cancelAnimationFrame(animRef.current); };
   }, [isPlaying, progress, duration, features]);
   return (
