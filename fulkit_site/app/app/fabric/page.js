@@ -2769,11 +2769,28 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const cx = w / 2, cy = h * 0.48;
         const sc = dim * 0.4;
 
-        const en = energy;
         const ac = acousticness;
         const val = valence;
-        const loud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0.5);
         const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+
+        // Smoothed audio followers — ebb and flow instead of snapping
+        if (s4.sLoud === undefined) {
+          s4.sLoud = 0; s4.sEnergy = 0; s4.sBands = new Array(7).fill(0); s4.sBeat = 0;
+        }
+        const rawLoud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0);
+        const rawEnergy = energy;
+        s4.sLoud += (rawLoud - s4.sLoud) * 0.06;       // slow swell
+        s4.sEnergy += (rawEnergy - s4.sEnergy) * 0.05;  // gradual rise/fall
+        for (let b = 0; b < 7; b++) {
+          const bv = hasFabric ? (snap.bands[bandNames4[b]] || 0) : 0;
+          s4.sBands[b] += (bv - s4.sBands[b]) * 0.08;   // per-band smooth
+        }
+        // Beat decays naturally — quick rise, slow fall
+        const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
+        s4.sBeat = Math.max(s4.sBeat * 0.93, rawBeat);
+
+        const loud = s4.sLoud;
+        const en = s4.sEnergy;
 
         const rotY = s4.time * 0.06 + keyOffset * 0.5;
         const rotX = -0.35 + n1(s4.time * 0.015, 100) * 0.08;
@@ -2848,17 +2865,14 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           // Audio adds on top — only peaks break through (60% stays normalized)
           let audioDeform = 0;
           if (activity > 0.01) {
-            let magnitude = loud * 0.7 + en * 0.5;
-            if (hasFabric) {
-              const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
-              const bandIdx = Math.floor(bandPos) % 7;
-              const bandNext = (bandIdx + 1) % 7;
-              const bandFrac = bandPos - Math.floor(bandPos);
-              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
-                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              magnitude += bandVal * 0.6;
-              if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.3;
-            }
+            let magnitude = loud * 0.7 + en * 0.5 + s4.sBeat * 0.3;
+            // Use smoothed band values — flows instead of snapping
+            const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
+            const bandIdx = Math.floor(bandPos) % 7;
+            const bandNext = (bandIdx + 1) % 7;
+            const bandFrac = bandPos - Math.floor(bandPos);
+            const bandVal = s4.sBands[bandIdx] * (1 - bandFrac) + s4.sBands[bandNext] * bandFrac;
+            magnitude += bandVal * 0.6;
             // Threshold: only the top ~40% of noise values push out
             // Raw deform is -1 to 1. Shift so only peaks above 0.2 contribute.
             const rawShape = deform * 0.8 + deform2 + facet;
