@@ -2308,7 +2308,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     try {
       const params = new URLSearchParams(window.location.search);
       const urlViz = params.get("viz");
-      const valid = [2, 3, 4, 5];
+      const valid = [2, 3, 5];
       if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); const v = parseInt(urlViz); return valid.includes(v) ? v : 2; }
       const v = parseInt(localStorage.getItem("fulkit-viz-style")); return valid.includes(v) ? v : 2;
     } catch { return 2; }
@@ -2628,125 +2628,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha})`;
         ctx.lineWidth = 0.5 + s2amp * 0.4;
         ctx.stroke();
-
-        return;
-      }
-
-      // ══════════════════════════════════════════
-      // STYLE 4: Aurora — fullscreen layered light curtains
-      // Each frequency band is a flowing horizontal curtain of light.
-      // Sub lives at the bottom, air at the top. The whole screen breathes.
-      // ══════════════════════════════════════════
-      if (curVizStyle === 4) {
-        const s2 = style2Ref.current;
-        if (s2.auroraTime === undefined) { s2.auroraTime = 0; s2.aSmooth = new Array(7).fill(0); s2.aLoud = 0; s2.aBeat = 0; s2.aPresence = 0; }
-        s2.auroraTime += dt;
-        const t = s2.auroraTime;
-
-        const noise2D = noiseRef.current;
-        const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
-
-        // Smoothed followers
-        const presTarget = isPlaying ? 1 : 0;
-        s2.aPresence += (presTarget - s2.aPresence) * 0.025;
-        const presence = s2.aPresence;
-
-        const rawLoud = hasFabric ? (snap.loudness || 0) : 0;
-        s2.aLoud += (rawLoud - s2.aLoud) * 0.06;
-        const rawBeat = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
-        s2.aBeat = Math.max(s2.aBeat * 0.92, rawBeat * 0.7);
-
-        for (let b = 0; b < 7; b++) {
-          const bv = hasFabric ? (snap.bands[bandNames[b]] || 0) : 0;
-          s2.aSmooth[b] += (bv - s2.aSmooth[b]) * 0.10;
-        }
-
-        ctx.clearRect(0, 0, w, h);
-
-        // Each band is a flowing horizontal curtain
-        // Sub at bottom (y ≈ 85%), air at top (y ≈ 15%)
-        const col = [42, 40, 36];
-        const bandSpacing = h * 0.7 / 6; // spread across 70% of screen height
-        const topMargin = h * 0.15;
-        const samples = 80; // points across the width
-
-        for (let b = 6; b >= 0; b--) { // draw from top (air) to bottom (sub), so sub layers on top
-          const bandEnergy = s2.aSmooth[b];
-          const baseY = topMargin + (6 - b) * bandSpacing; // air at top, sub at bottom
-          const noiseSpeed = 0.08 + b * 0.015; // higher bands shimmer faster
-          const noiseSeed = b * 100;
-
-          // Amplitude: base gentle wave + audio-driven swell
-          const baseAmp = 8 + b * 3; // subtle idle undulation (bigger for lower bands)
-          const audioAmp = bandEnergy * (60 + b * 15) * presence; // audio drives the curtain height
-          const beatBoost = s2.aBeat * 20 * presence;
-          const loudScale = 0.4 + s2.aLoud * 0.6;
-          const totalAmp = baseAmp + (audioAmp + beatBoost) * loudScale;
-
-          // Build curtain curve
-          const curvePoints = [];
-          for (let i = 0; i <= samples; i++) {
-            const x = (i / samples) * w;
-            const nx = i / samples;
-            // Multi-octave noise for organic flow
-            const n1 = noise2D(nx * 3 + t * noiseSpeed + noiseSeed, t * 0.04 + noiseSeed) * 0.6;
-            const n2 = noise2D(nx * 6 + t * noiseSpeed * 1.5 + noiseSeed + 50, t * 0.07 + noiseSeed) * 0.25;
-            const n3 = noise2D(nx * 12 + t * noiseSpeed * 0.8 + noiseSeed + 100, t * 0.03 + noiseSeed) * 0.15;
-            const wave = n1 + n2 + n3;
-            const y = baseY + wave * totalAmp;
-            curvePoints.push({ x, y });
-          }
-
-          // Draw the curtain as a gradient-filled area
-          // Glow region: from curve upward, fading out
-          const glowHeight = 30 + audioAmp * 0.8 + s2.aLoud * 40;
-
-          ctx.beginPath();
-          ctx.moveTo(curvePoints[0].x, curvePoints[0].y);
-          for (let i = 1; i < curvePoints.length; i++) {
-            const prev = curvePoints[i - 1];
-            const curr = curvePoints[i];
-            const cpx = (prev.x + curr.x) / 2;
-            ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
-          }
-          ctx.lineTo(w, curvePoints[curvePoints.length - 1].y - glowHeight);
-          // Close path upward (the glow region)
-          for (let i = curvePoints.length - 1; i >= 0; i--) {
-            const x = curvePoints[i].x;
-            const y = curvePoints[i].y - glowHeight;
-            if (i === curvePoints.length - 1) ctx.lineTo(x, y);
-            else {
-              const next = curvePoints[i + 1];
-              const cpx = (x + next.x) / 2;
-              ctx.quadraticCurveTo(next.x, next.y - glowHeight, cpx, (y + next.y - glowHeight) / 2);
-            }
-          }
-          ctx.closePath();
-
-          // Gradient fill — bright at curve edge, fading upward
-          const gradY = baseY;
-          const grad = ctx.createLinearGradient(0, gradY, 0, gradY - glowHeight);
-          const baseAlpha = 0.03 + bandEnergy * 0.12 * presence + s2.aBeat * 0.04 * presence;
-          const edgeAlpha = 0.08 + bandEnergy * 0.25 * presence + s2.aLoud * 0.1 * presence + s2.aBeat * 0.06 * presence;
-          grad.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.5, edgeAlpha)})`);
-          grad.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
-          ctx.fillStyle = grad;
-          ctx.fill();
-
-          // Draw the curve edge itself — the bright line
-          ctx.beginPath();
-          ctx.moveTo(curvePoints[0].x, curvePoints[0].y);
-          for (let i = 1; i < curvePoints.length; i++) {
-            const prev = curvePoints[i - 1];
-            const curr = curvePoints[i];
-            const cpx = (prev.x + curr.x) / 2;
-            ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
-          }
-          const lineAlpha = 0.08 + bandEnergy * 0.35 * presence + s2.aLoud * 0.15 * presence;
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.65, lineAlpha)})`;
-          ctx.lineWidth = 0.8 + bandEnergy * 1.5 * presence;
-          ctx.stroke();
-        }
 
         return;
       }
@@ -3078,7 +2959,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[2, 3, 4, 5].map((n) => (
+        {[2, 3, 5].map((n) => (
           <button
             key={n}
             onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} }}
