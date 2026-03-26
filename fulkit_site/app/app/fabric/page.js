@@ -2776,7 +2776,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // Smoothed audio followers — ebb and flow instead of snapping
         if (s4.sLoud === undefined) {
           s4.sLoud = 0; s4.sEnergy = 0; s4.sBands = new Array(7).fill(0); s4.sBeat = 0;
+          s4.presence = 0; // ramp-in from 0→1
         }
+        // Presence ramp — slow fade in over ~2 seconds, never snaps
+        const presenceTarget = activity > 0.01 ? 1 : 0;
+        s4.presence += (presenceTarget - s4.presence) * 0.02; // ~2s to reach full
+        const presence = s4.presence;
         const rawLoud = hasFabric ? (snap.loudness || 0) : (features?.loudness ? Math.max(0, (features.loudness + 35) / 35) : 0);
         const rawEnergy = energy;
         s4.sLoud += (rawLoud - s4.sLoud) * 0.06;       // slow swell
@@ -2859,25 +2864,22 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const deform2 = n3(v[0] * 1.2 - s4.time * 0.08, v[2] * 1.5 + v[1] + s4.time * 0.11) * 0.4;
           const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.3;
 
-          // Base gentle breathing — always present even when paused
-          const baseDeform = (deform * 0.15 + deform2 * 0.1);
+          // Base breathing — scales with presence (ramps in, ramps out)
+          const baseDeform = (deform * 0.15 + deform2 * 0.1) * presence;
 
-          // Audio adds on top — only peaks break through (60% stays normalized)
+          // Audio adds on top — gated through presence ramp
           let audioDeform = 0;
-          if (activity > 0.01) {
+          if (presence > 0.01) {
             let magnitude = loud * 0.7 + en * 0.5 + s4.sBeat * 0.3;
-            // Use smoothed band values — flows instead of snapping
             const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
             const bandIdx = Math.floor(bandPos) % 7;
             const bandNext = (bandIdx + 1) % 7;
             const bandFrac = bandPos - Math.floor(bandPos);
             const bandVal = s4.sBands[bandIdx] * (1 - bandFrac) + s4.sBands[bandNext] * bandFrac;
             magnitude += bandVal * 0.6;
-            // Threshold: only the top ~40% of noise values push out
-            // Raw deform is -1 to 1. Shift so only peaks above 0.2 contribute.
             const rawShape = deform * 0.8 + deform2 + facet;
-            const gated = Math.max(0, rawShape - 0.2) / 0.8; // 0 for 60%, ramps up for peaks
-            audioDeform = gated * magnitude * 1.8 * activity * exhale; // 1.8x to compensate for gating
+            const gated = Math.max(0, rawShape - 0.2) / 0.8;
+            audioDeform = gated * magnitude * 1.8 * presence * exhale;
           }
 
           const r = 1.0 + baseDeform + audioDeform;
