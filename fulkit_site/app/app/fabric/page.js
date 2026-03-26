@@ -3050,6 +3050,154 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       }
 
       // ══════════════════════════════════════════
+      // STYLE 7: Iceberg — dual grid, top rises with audio, bottom mirrors dampened
+      // Horizon line splits surface from depth. Always spinning, constant lines.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 7) {
+        const s4 = style4Ref.current;
+        const [n1, n2] = s4.n;
+        s4.time += dt;
+
+        const activity = Math.min(1, k.amplitude / 0.55);
+        const cx = w / 2, cy = h * 0.48;
+        const sc = dim * 0.38;
+        const ac = acousticness;
+        const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        const loud = hasFabric ? (snap.loudness || 0) : 0;
+        const en = energy;
+
+        const rotY = s4.time * 0.06 + keyOffset * 0.5;
+        const rotX = -0.4 + n1(s4.time * 0.015, 100) * 0.06;
+
+        ctx.clearRect(0, 0, w, h);
+
+        function project(x3, y3, z3) {
+          const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+          let rx = x3 * cosY - z3 * sinY;
+          let rz = x3 * sinY + z3 * cosY;
+          const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+          let ry = y3 * cosX - rz * sinX;
+          rz = y3 * sinX + rz * cosX;
+          const perspective = 600;
+          const depth = perspective / (perspective + rz + 200);
+          return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
+        }
+
+        const gridW = 24, gridH = 24;
+        const vertices = [];
+        const edges = [];
+
+        // ── Top half: rises with current audio ──
+        for (let gz = 0; gz < gridH; gz++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const nx = (gx / (gridW - 1) - 0.5) * 2;
+            const nz = (gz / (gridH - 1) - 0.5) * 2;
+            const cDist = Math.sqrt(nx * nx + nz * nz);
+            const peak = Math.max(0, 1 - cDist * 1.1);
+
+            let height = 0;
+            const baseH = Math.abs(n1(nx * 2.5 + s4.time * 0.12, nz * 2.5 + s4.time * 0.09)) * peak * 0.15;
+            height = baseH;
+
+            if (activity > 0.01) {
+              const audioH = Math.abs(n1(nx * 2.5 + s4.time * 0.12, nz * 2.5 + s4.time * 0.09)) * peak * en;
+              let bandLift = 0;
+              if (hasFabric) {
+                const bandPos = ((nx + 1) / 2) * 7;
+                const bandIdx = Math.floor(bandPos) % 7;
+                const bandNext = (bandIdx + 1) % 7;
+                const bandFrac = bandPos - Math.floor(bandPos);
+                const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                                (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+                bandLift = bandVal * 0.4 * peak + loud * 0.2 * peak;
+                if (snap.beat) bandLift += (snap.beat_strength || 0) * 0.1 * peak;
+              }
+              height += (audioH + bandLift) * activity * exhale;
+            }
+
+            vertices.push({ x3: nx, y3: -height, z3: nz });
+          }
+        }
+
+        // ── Bottom half: dampened mirror beneath the horizon ──
+        const topCount = vertices.length;
+        for (let gz = 0; gz < gridH; gz++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const nx = (gx / (gridW - 1) - 0.5) * 2;
+            const nz = (gz / (gridH - 1) - 0.5) * 2;
+            const cDist = Math.sqrt(nx * nx + nz * nz);
+            const peak = Math.max(0, 1 - cDist * 1.3);
+
+            let height = 0;
+            const baseH = Math.abs(n2(nx * 2 + s4.time * 0.08, nz * 2 + s4.time * 0.06)) * peak * 0.1;
+            height = baseH;
+
+            if (activity > 0.01) {
+              const audioH = Math.abs(n2(nx * 2 + s4.time * 0.08, nz * 2 + s4.time * 0.06)) * peak * en * 0.5;
+              height += audioH * activity * 0.6;
+            }
+
+            vertices.push({ x3: nx * 0.95, y3: height * 0.8 + 0.05, z3: nz * 0.95 });
+          }
+        }
+
+        // Edges for both grids
+        for (let half = 0; half < 2; half++) {
+          const off = half * topCount;
+          for (let gz = 0; gz < gridH; gz++) {
+            for (let gx = 0; gx < gridW; gx++) {
+              const idx = off + gz * gridW + gx;
+              if (gx < gridW - 1) edges.push([idx, idx + 1]);
+              if (gz < gridH - 1) edges.push([idx, idx + gridW]);
+            }
+          }
+        }
+        // Sparse vertical connections between top and bottom
+        for (let i = 0; i < topCount; i += 5) {
+          edges.push([i, topCount + i]);
+        }
+
+        // Project
+        const projected = vertices.map(v => project(v.x3, v.y3, v.z3));
+
+        // Sort back to front
+        edges.sort((a, b) => {
+          const za = (projected[a[0]].z + projected[a[1]].z) / 2;
+          const zb = (projected[b[0]].z + projected[b[1]].z) / 2;
+          return za - zb;
+        });
+
+        // Draw wireframe — constant alpha
+        const col = [32, 30, 26];
+        for (const [i, j] of edges) {
+          const a = projected[i], b = projected[j];
+          if (!a || !b) continue;
+          const avgDepth = (a.depth + b.depth) / 2;
+          const alpha = Math.pow(avgDepth, 1.3) * 0.65;
+          if (alpha < 0.005) continue;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
+          ctx.lineWidth = (0.3 + ac * 0.5) * avgDepth;
+          ctx.stroke();
+        }
+
+        // Horizon line
+        const hy = project(0, 0, 0).y;
+        ctx.beginPath();
+        ctx.moveTo(0, hy);
+        ctx.lineTo(w, hy);
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.12)`;
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([4, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        return;
+      }
+
+      // ══════════════════════════════════════════
       // STYLE 1: Atmospheric Radial Terrain — breathing orb
       // ══════════════════════════════════════════
       if (curVizStyle !== 3) {
@@ -3362,18 +3510,18 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
           <button
             key={n}
-            onClick={() => { if (n <= 6) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
+            onClick={() => { if (n <= 7) { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} } }}
             style={{
               width: 28, height: 28,
               background: "transparent",
               border: "none",
               color: vizStyle === n ? "var(--color-text-muted)" : "var(--color-text-dim)",
               fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)",
-              cursor: n <= 6 ? "pointer" : "default",
+              cursor: n <= 7 ? "pointer" : "default",
               padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 200ms",
-              opacity: n <= 6 ? (vizStyle === n ? 1 : 0.5) : 0.25,
+              opacity: n <= 7 ? (vizStyle === n ? 1 : 0.5) : 0.25,
             }}
           >
             {n}
