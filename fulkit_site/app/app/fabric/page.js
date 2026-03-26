@@ -2518,11 +2518,13 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // ══════════════════════════════════════════
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
+        // Frame skip at low quality — render every other frame
+        if (Q < 0.5 && s2.frame % 2 !== 0) { s2.frame++; animRef.current = requestAnimationFrame(draw); return; }
         const noise2B = s2.noise2;
-        const S2_N = Q > 0.6 ? 72 : Q > 0.4 ? 48 : 32; // adaptive point count
-        const MAX_TRACE = Math.max(6, Math.floor(24 * Q)); // 6–24 tracers
-        const MAX_HITS = Math.max(2, Math.floor(6 * Q)); // 2–6 hits
-        const CAP_INTERVAL = Q > 0.6 ? 3 : Q > 0.4 ? 4 : 6; // capture less often at low Q
+        const S2_N = Q > 0.7 ? 48 : Q > 0.4 ? 36 : 24; // reduced baseline: 48 max (was 72)
+        const MAX_TRACE = Math.max(4, Math.floor(12 * Q)); // 4–12 tracers (was 24)
+        const MAX_HITS = Math.max(1, Math.floor(3 * Q)); // 1–3 hits (was 6)
+        const CAP_INTERVAL = Q > 0.6 ? 4 : Q > 0.4 ? 6 : 8; // less frequent captures
 
         // Own time counter for noise evolution (~1.0/sec)
         if (k.state !== "idle") s2.time += dt;
@@ -2545,13 +2547,11 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const a = (i / S2_N) * Math.PI * 2 + rot;
           const nx = Math.cos(a), ny = Math.sin(a);
 
-          // Amoeba base warp — 3 octaves of noise, amplitude-gated
+          // Amoeba base warp — 2 octaves (3rd dropped for perf)
           const d1 = noise2D(nx * 0.3, ny * 0.3 + s2.time * 0.002);
           const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + s2.time * 0.005);
-          const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
           const warp = s2amp * 0.55;
-          const irregularity = 0.5 + energy * 0.5;
-          radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * warp);
+          radii[i] = baseR * (1 + (d1 * 0.55 + d2 * 0.35) * warp);
 
           // Displacement
           let nv;
@@ -2579,8 +2579,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           disp[i] *= (1 + (Math.random() - 0.5) * 0.05);
         }
 
-        // Neighbor-smooth (2 passes)
-        for (let pass = 0; pass < 2; pass++) {
+        // Neighbor-smooth (1 pass — was 2, enough with fewer points)
+        for (let pass = 0; pass < 1; pass++) {
           const tmpD = new Float32Array(S2_N);
           const tmpR = new Float32Array(S2_N);
           for (let i = 0; i < S2_N; i++) {
