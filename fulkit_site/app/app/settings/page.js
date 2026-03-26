@@ -1839,16 +1839,17 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Google — sub-service picker (always visible — services connect individually) */}
+            {/* Google Suite — everything visible, no drawer */}
             <Card style={{ padding: 0, overflow: "hidden" }}>
-                <CardHeader
-                  logo={SOURCE_LOGOS.google}
-                  name="Google Suite"
-                  subtitle={[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ") || "Calendar, Gmail, Drive"}
-                  isExpanded={googleExpanded}
-                  onToggle={() => setGoogleExpanded(!googleExpanded)}
-                />
-                {/* Always-visible description — no drawer needed to read about it */}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)" }}>
+                  <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {SOURCE_LOGOS.google}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>Google Suite</div>
+                    <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-muted)" }}>Calendar, Gmail, Drive</div>
+                  </div>
+                </div>
                 <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
                     Your Google services, connected individually. Each one has its own consent {"\u2014"} Calendar doesn{"\u2019"}t see your email, Gmail doesn{"\u2019"}t touch your files. Connect only what you want.
@@ -1864,19 +1865,23 @@ function SourcesTab() {
                   <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
                     {"\u201C"}What do I have this week?{"\u201D"}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 0, borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
-                    {checkboxRow("Google Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
+                    {checkboxRow("Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
                     {checkboxRow("Gmail", gmailConnected, () => { if (gmailConnected) { disconnectGmail(); } else { connectGmail(); } })}
-                    {checkboxRow("Google Drive", gdriveConnected, () => { if (gdriveConnected) { disconnectGdrive(); } else { connectGdrive(); } })}
+                    {checkboxRow("Drive", gdriveConnected, () => { if (gdriveConnected) { disconnectGdrive(); } else { connectGdrive(); } })}
                   </div>
-                  <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
-                    {"\u2197 "}Manage Google permissions
-                  </a>
-                  {(gcalConnected || gmailConnected || gdriveConnected) && (
-                    <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                      {[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ")} connected{gcalLastSynced ? ` \u00B7 ${timeAgo(gcalLastSynced)}` : ""}
-                    </div>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
+                    {(gcalConnected || gmailConnected || gdriveConnected) ? (
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                        {[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ")} connected{gcalLastSynced ? ` \u00B7 ${timeAgo(gcalLastSynced)}` : ""}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>No services connected</div>
+                    )}
+                    <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+                      {"\u2197 "}Manage permissions
+                    </a>
+                  </div>
                 </div>
               </Card>
 
