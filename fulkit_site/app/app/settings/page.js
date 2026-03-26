@@ -1869,14 +1869,14 @@ function SourcesTab() {
                       <DrawerItem index={2} visible={googleExpanded}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)" }}>
                           <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What do I have this week?{"\u201D"}</div>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What did Sarah say about the contract?{"\u201D"}</div>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Pull in my project notes from Drive{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What should I prep for my 2pm?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Did the vendor confirm the delivery date?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Import the Q2 proposal so I can reference it{"\u201D"}</div>
                           </div>
                           <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Am I free Thursday afternoon?{"\u201D"}</div>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find the invoice email from last month{"\u201D"}</div>
-                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s in my shared folder?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Block off Friday morning for deep work{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Pull the key points from that thread with accounting{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s the latest version of the budget spreadsheet?{"\u201D"}</div>
                           </div>
                         </div>
                       </DrawerItem>
