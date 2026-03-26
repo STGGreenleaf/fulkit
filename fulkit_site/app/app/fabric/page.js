@@ -2302,13 +2302,14 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   const sparksRef = useRef([]);
   const style2Ref = useRef({ noise2: createNoise2D(), tracers: [], hits: [], frame: 0, time: 0, amp: 0, ampVel: 0 });
   const style4Ref = useRef({ n: Array.from({ length: 6 }, (_, i) => createNoise2D()), time: 0 });
+  const fluidRef = useRef(null);
   const spireRef = useRef({ rings: [], lastAdd: 0 });
   const [vizStyle, setVizStyle] = useState(() => {
     if (typeof window === "undefined") return 1;
     try {
       const params = new URLSearchParams(window.location.search);
       const urlViz = params.get("viz");
-      const valid = [2, 3, 5];
+      const valid = [2, 3, 4, 5];
       if (urlViz) { localStorage.setItem("fulkit-viz-style", urlViz); const v = parseInt(urlViz); return valid.includes(v) ? v : 2; }
       const v = parseInt(localStorage.getItem("fulkit-viz-style")); return valid.includes(v) ? v : 2;
     } catch { return 2; }
@@ -2628,6 +2629,178 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha})`;
         ctx.lineWidth = 0.5 + s2amp * 0.4;
         ctx.stroke();
+
+        return;
+      }
+
+      // ══════════════════════════════════════════
+      // STYLE 4: Fluid Breathe — physics-driven mesh with surface tension,
+      // spring constraints, per-vertex velocity. Sphere inhales/exhales
+      // with audio, tangential drift creates organic surface flow.
+      // ══════════════════════════════════════════
+      if (curVizStyle === 4) {
+        const s4 = style4Ref.current;
+        const [n1, n2, n3] = s4.n;
+        s4.time += dt;
+
+        // Build mesh once (2x subdivided icosahedron)
+        if (!fluidRef.current) {
+          const phi2 = (1 + Math.sqrt(5)) / 2;
+          const raw = [[-1,phi2,0],[1,phi2,0],[-1,-phi2,0],[1,-phi2,0],[0,-1,phi2],[0,1,phi2],[0,-1,-phi2],[0,1,-phi2],[phi2,0,-1],[phi2,0,1],[-phi2,0,-1],[-phi2,0,1]];
+          for (const v of raw) { const l = Math.sqrt(v[0]**2+v[1]**2+v[2]**2); v[0]/=l; v[1]/=l; v[2]/=l; }
+          let faces = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+          for (let s = 0; s < 2; s++) {
+            const mc = {};
+            const gm = (a, b) => { const k = Math.min(a,b)+'-'+Math.max(a,b); if(mc[k]!==undefined)return mc[k]; const va=raw[a],vb=raw[b],m=[(va[0]+vb[0])/2,(va[1]+vb[1])/2,(va[2]+vb[2])/2],l=Math.sqrt(m[0]**2+m[1]**2+m[2]**2); m[0]/=l;m[1]/=l;m[2]/=l; raw.push(m); return mc[k]=raw.length-1; };
+            const nf = []; for (const [a,b,c] of faces) { const ab=gm(a,b),bc=gm(b,c),ca=gm(c,a); nf.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]); } faces = nf;
+          }
+          const es = new Set(), edges = [];
+          for (const [a,b,c] of faces) { const add = (i,j) => { const k=Math.min(i,j)+'-'+Math.max(i,j); if(!es.has(k)){es.add(k);edges.push([i,j]);}}; add(a,b);add(b,c);add(c,a); }
+          const baseVerts = raw.map(v => [...v]);
+          const restLen = edges.map(([i,j]) => { const a=baseVerts[i],b=baseVerts[j]; return Math.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2); });
+          fluidRef.current = {
+            baseVerts, edges, restLen,
+            pos: baseVerts.map(v => [...v]),
+            vel: baseVerts.map(() => [0, 0, 0]),
+          };
+        }
+        const fl = fluidRef.current;
+        const { pos, vel, edges: flEdges, baseVerts: flBase, restLen: flRest } = fl;
+        const numV = pos.length;
+
+        const activity = Math.min(1, k.amplitude / 0.55);
+        const cx = w / 2, cy = h * 0.47;
+        const sc = dim * 0.35;
+        const ac = acousticness;
+        const en = energy;
+        const loud = hasFabric ? (snap.loudness || 0) : 0;
+
+        const rotY = s4.time * 0.04 + keyOffset * 0.5;
+        const rotX = -0.3 + n1(s4.time * 0.012, 100) * 0.12;
+
+        // ── Physics simulation ──
+        if (activity > 0.01) {
+          const pdt = 0.016;
+
+          // External forces — Breathe mode: surface tension + tangential drift
+          for (let vi = 0; vi < numV; vi++) {
+            const px = pos[vi][0], py = pos[vi][1], pz = pos[vi][2];
+            const dist = Math.sqrt(px*px + py*py + pz*pz) || 1;
+
+            // Breathing target radius — audio drives the inhale/exhale
+            const breathCycle = Math.sin(s4.time * 0.4) * 0.15 * activity;
+            const targetR = 1 + breathCycle + en * 0.25 * activity + loud * 0.15 * activity;
+            // Noise-varied target per vertex for organic shape
+            const localTarget = targetR + n1(px * 2 + s4.time * 0.1, pz * 2 + py) * 0.2 * activity;
+
+            // Surface tension — pull toward target radius
+            const surfaceForce = (localTarget - dist) * 1.5;
+            let fx = (px / dist) * surfaceForce;
+            let fy = (py / dist) * surfaceForce;
+            let fz = (pz / dist) * surfaceForce;
+
+            // Tangential drift — slow sliding across the surface
+            const tangX = n2(py * 1.5 + s4.time * 0.08, pz * 1.5) * activity * 0.3;
+            const tangZ = n3(px * 1.5 + s4.time * 0.06, py * 1.5) * activity * 0.3;
+            const dot = (tangX * px + tangZ * pz) / (dist * dist);
+            fx += tangX - dot * px;
+            fz += tangZ - dot * pz;
+
+            // Audio band displacement — frequency shapes the surface
+            if (hasFabric) {
+              const bandAngle = Math.atan2(pz, px);
+              const bandPos = ((bandAngle + Math.PI) / (Math.PI * 2)) * 7;
+              const bandIdx = Math.floor(bandPos) % 7;
+              const bandNames = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+              const bandVal = snap.bands[bandNames[bandIdx]] || 0;
+              const bandPush = bandVal * 0.8 * activity;
+              fx += (px / dist) * bandPush * 0.5;
+              fy += (py / dist) * bandPush * 0.5;
+              fz += (pz / dist) * bandPush * 0.5;
+            }
+
+            // Beat: sharp inhale burst
+            if (beatPulse > 0.1) {
+              fx += (px / dist) * beatPulse * 1.5;
+              fy += (py / dist) * beatPulse * 1.5;
+              fz += (pz / dist) * beatPulse * 1.5;
+            }
+
+            vel[vi][0] += fx * pdt;
+            vel[vi][1] += fy * pdt;
+            vel[vi][2] += fz * pdt;
+          }
+
+          // Spring constraints — keep mesh connected
+          for (let ei = 0; ei < flEdges.length; ei++) {
+            const [i, j] = flEdges[ei];
+            const dx = pos[j][0]-pos[i][0], dy = pos[j][1]-pos[i][1], dz = pos[j][2]-pos[i][2];
+            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) || 0.001;
+            const force = ((dist - flRest[ei]) / dist) * 1.5;
+            vel[i][0] += dx * force * pdt;
+            vel[i][1] += dy * force * pdt;
+            vel[i][2] += dz * force * pdt;
+            vel[j][0] -= dx * force * pdt;
+            vel[j][1] -= dy * force * pdt;
+            vel[j][2] -= dz * force * pdt;
+          }
+
+          // Damping + integrate
+          for (let vi = 0; vi < numV; vi++) {
+            vel[vi][0] *= 0.95; vel[vi][1] *= 0.95; vel[vi][2] *= 0.95;
+            pos[vi][0] += vel[vi][0] * pdt;
+            pos[vi][1] += vel[vi][1] * pdt;
+            pos[vi][2] += vel[vi][2] * pdt;
+          }
+        } else {
+          // Silent — gently return to sphere
+          for (let vi = 0; vi < numV; vi++) {
+            pos[vi][0] += (flBase[vi][0] - pos[vi][0]) * 0.02;
+            pos[vi][1] += (flBase[vi][1] - pos[vi][1]) * 0.02;
+            pos[vi][2] += (flBase[vi][2] - pos[vi][2]) * 0.02;
+            vel[vi][0] *= 0.9; vel[vi][1] *= 0.9; vel[vi][2] *= 0.9;
+          }
+        }
+
+        // ── Project ──
+        ctx.clearRect(0, 0, w, h);
+        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+        const projected = [];
+        for (let vi = 0; vi < numV; vi++) {
+          let x3 = pos[vi][0], y3 = pos[vi][1], z3 = pos[vi][2];
+          let rx = x3*cosY - z3*sinY, rz = x3*sinY + z3*cosY;
+          let ry = y3*cosX - rz*sinX; rz = y3*sinX + rz*cosX;
+          const d = 500 / (500 + rz + 150);
+          projected.push({ x: cx + rx*sc*d, y: cy + ry*sc*d, d, z: rz });
+        }
+
+        // Sort back to front
+        const sortedE = flEdges.map((_, i) => i).sort((a, b) => {
+          const ea = flEdges[a], eb = flEdges[b];
+          return (projected[ea[0]].z + projected[ea[1]].z) - (projected[eb[0]].z + projected[eb[1]].z);
+        });
+
+        // Draw edges — stretch affects visibility
+        const col = [32, 30, 26];
+        for (const ei of sortedE) {
+          const [i, j] = flEdges[ei];
+          const a = projected[i], b = projected[j];
+          const avgD = (a.d + b.d) / 2;
+          const realDist = Math.sqrt((pos[i][0]-pos[j][0])**2+(pos[i][1]-pos[j][1])**2+(pos[i][2]-pos[j][2])**2);
+          const stretchRatio = realDist / flRest[ei];
+
+          let alpha = Math.pow(avgD, 1.3) * 0.65;
+          alpha *= (0.6 + Math.min(stretchRatio, 2) * 0.3); // stretched edges brighter
+          if (alpha < 0.005) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.8, alpha)})`;
+          ctx.lineWidth = Math.max(0.1, (0.3 + ac * 0.5) * avgD * Math.max(0.15, 1.5 - stretchRatio * 0.4));
+          ctx.stroke();
+        }
 
         return;
       }
@@ -2959,7 +3132,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)",
         display: "flex", gap: 2, zIndex: 1,
       }}>
-        {[2, 3, 5].map((n) => (
+        {[2, 3, 4, 5].map((n) => (
           <button
             key={n}
             onClick={() => { setVizStyle(n); try { localStorage.setItem("fulkit-viz-style", String(n)); } catch {} }}
