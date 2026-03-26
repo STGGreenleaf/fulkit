@@ -1843,58 +1843,41 @@ function SourcesTab() {
             <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
                   logo={SOURCE_LOGOS.google}
-                  name="Google"
-                  subtitle={[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ") || "Connect a service"}
+                  name="Google Suite"
+                  subtitle={[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ") || "Calendar, Gmail, Drive"}
                   isExpanded={googleExpanded}
                   onToggle={() => setGoogleExpanded(!googleExpanded)}
                 />
-                <Drawer open={googleExpanded}>
-                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                    <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                      <DrawerItem index={0} visible={googleExpanded}>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
-                          Your Google services, connected individually. Each one has its own consent — Calendar doesn't see your email, Gmail doesn't touch your files. Connect only what you want.
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={1} visible={googleExpanded}>
-                        <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
-                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
-                            What this gives F{"\u00FC"}lkit
-                          </div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
-                            Calendar: upcoming events, availability checks, create events from chat. Gmail: search emails, read threads, surface context. Drive: find files, read documents, import to vault.
-                          </div>
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={2} visible={googleExpanded}>
-                        <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
-                          {"\u201C"}What do I have this week?{"\u201D"}
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={3} visible={googleExpanded}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 0, borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
-                          {checkboxRow("Google Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
-                          {checkboxRow("Gmail", gmailConnected, () => { if (gmailConnected) { disconnectGmail(); } else { connectGmail(); } })}
-                          {checkboxRow("Google Drive", gdriveConnected, () => { if (gdriveConnected) { disconnectGdrive(); } else { connectGdrive(); } })}
-                        </div>
-                      </DrawerItem>
-                      <DrawerItem index={4} visible={googleExpanded}>
-                        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
-                          {"\u2197 "}Manage Google permissions
-                        </a>
-                      </DrawerItem>
-                    </div>
-                    {(gcalConnected || gmailConnected || gdriveConnected) && (
-                      <DrawerItem index={5} visible={googleExpanded}>
-                        <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                            {[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ")} connected{gcalLastSynced ? ` \u00B7 ${timeAgo(gcalLastSynced)}` : ""}
-                          </div>
-                        </div>
-                      </DrawerItem>
-                    )}
+                {/* Always-visible description — no drawer needed to read about it */}
+                <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                    Your Google services, connected individually. Each one has its own consent {"\u2014"} Calendar doesn{"\u2019"}t see your email, Gmail doesn{"\u2019"}t touch your files. Connect only what you want.
                   </div>
-                </Drawer>
+                  <div>
+                    <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                      What this gives F{"\u00FC"}lkit
+                    </div>
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                      Calendar: upcoming events, availability checks, create events from chat. Gmail: search emails, read threads, surface context. Drive: find files, read documents, import to vault.
+                    </div>
+                  </div>
+                  <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)" }}>
+                    {"\u201C"}What do I have this week?{"\u201D"}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0, borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
+                    {checkboxRow("Google Calendar", gcalConnected, () => { if (gcalConnected) { disconnectGcal(); } else { connectGcal(); } })}
+                    {checkboxRow("Gmail", gmailConnected, () => { if (gmailConnected) { disconnectGmail(); } else { connectGmail(); } })}
+                    {checkboxRow("Google Drive", gdriveConnected, () => { if (gdriveConnected) { disconnectGdrive(); } else { connectGdrive(); } })}
+                  </div>
+                  <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+                    {"\u2197 "}Manage Google permissions
+                  </a>
+                  {(gcalConnected || gmailConnected || gdriveConnected) && (
+                    <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                      {[gcalConnected && "Calendar", gmailConnected && "Gmail", gdriveConnected && "Drive"].filter(Boolean).join(", ")} connected{gcalLastSynced ? ` \u00B7 ${timeAgo(gcalLastSynced)}` : ""}
+                    </div>
+                  )}
+                </div>
               </Card>
 
             {/* Numbrly — connected */}
