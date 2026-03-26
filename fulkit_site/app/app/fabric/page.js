@@ -2841,8 +2841,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           let r = 1.0;
           if (activity > 0.01) {
             const deform = n1(v[0] * 2 + s4.time * 0.12, v[2] * 2 + v[1] * 1.5 + s4.time * 0.09);
-            const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.12;
-            let magnitude = loud * 0.3 + en * 0.25;
+            const deform2 = n3(v[0] * 1.2 - s4.time * 0.08, v[2] * 1.5 + v[1] + s4.time * 0.11) * 0.4;
+            const facet = (1 - val) * n2(v[0] * 6, v[2] * 6 + s4.time * 0.15) * 0.3;
+            let magnitude = loud * 0.7 + en * 0.5;
             if (hasFabric) {
               const bandPos = ((Math.atan2(v[2], v[0]) + Math.PI) / (Math.PI * 2)) * 7;
               const bandIdx = Math.floor(bandPos) % 7;
@@ -2850,10 +2851,10 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
               const bandFrac = bandPos - Math.floor(bandPos);
               const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
                               (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              magnitude += bandVal * 0.3;
-              if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.12;
+              magnitude += bandVal * 0.6;
+              if (snap.beat) magnitude += (snap.beat_strength || 0) * 0.3;
             }
-            r += (deform * 0.5 + facet) * magnitude * activity * exhale;
+            r += (deform * 0.8 + deform2 + facet) * magnitude * activity * exhale;
           }
           vertices.push({ x3: v[0] * r, y3: v[1] * r, z3: v[2] * r });
         }
