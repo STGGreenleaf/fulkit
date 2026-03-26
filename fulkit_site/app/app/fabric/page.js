@@ -3005,6 +3005,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       } // end style 1/3 branch
     }
 
+    animRef.current = requestAnimationFrame(draw);
     return () => { running = false; cancelAnimationFrame(animRef.current); };
   }, [isPlaying, progress, duration, features]);
   return (
