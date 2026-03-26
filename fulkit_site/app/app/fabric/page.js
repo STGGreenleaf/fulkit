@@ -2771,47 +2771,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.stroke();
       }
 
-      // ── Interior radiation: rotating, evolving, frequency-driven ──
-      const tendrilStep = Q > 0.6 ? 2 : Q > 0.4 ? 4 : 6; // adaptive density
-      const spokeStep = Q > 0.6 ? 4 : Q > 0.4 ? 8 : 12;
-      if (isActive && activity > 0.2) {
-        const innerAlpha = activity * 0.22 * (0.4 + realLoud * 0.6);
-        const innerRot = rot * 1.7 + phase * 0.15;
-        for (let i = 0; i < N; i += tendrilStep) {
-          const th1 = (i / N) * Math.PI * 2 + innerRot;
-          // Connect to points at varying distances around the circle, not just opposite
-          const spread = Math.floor(N * 0.3 + N * 0.4 * noise2D(i * 0.5, phase * 0.1));
-          const opp = (i + spread + N) % N;
-          const th2 = (opp / N) * Math.PI * 2 + innerRot;
-          const r1 = baseR * (0.08 + points[i] * 0.85);
-          const r2 = baseR * (0.08 + points[opp] * 0.85);
-          const x1 = cx + Math.cos(th1) * r1, y1 = cy + Math.sin(th1) * r1;
-          const x2 = cx + Math.cos(th2) * r2, y2 = cy + Math.sin(th2) * r2;
-          // Control point wanders with noise — curves evolve over time
-          const cpAngle = (th1 + th2) / 2 + noise2D(i * 0.4, phase * 0.3) * 1.2;
-          const cpDist = baseR * (0.1 + noise2D(i * 0.2, phase * 0.15) * 0.35) * activity;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.quadraticCurveTo(cx + Math.cos(cpAngle) * cpDist, cy + Math.sin(cpAngle) * cpDist, x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * (0.25 + points[i] * 0.85)})`;
-          ctx.lineWidth = 0.5 + activity * 0.9;
-          ctx.stroke();
-        }
-        for (let i = 0; i < N; i += spokeStep) {
-          const th = (i / N) * Math.PI * 2 + innerRot;
-          const spokeLen = baseR * (0.3 + points[i] * 1.0);
-          const x1 = cx + Math.cos(th) * baseR * 0.03;
-          const y1 = cy + Math.sin(th) * baseR * 0.03;
-          const x2 = cx + Math.cos(th) * spokeLen;
-          const y2 = cy + Math.sin(th) * spokeLen;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 1.0})`;
-          ctx.lineWidth = 0.4 + points[i] * 0.8;
-          ctx.stroke();
-        }
-      }
 
       // ── Orb layers — wider spacing, per-layer rotation, bigger displacement ──
       for (let l = 0; l < layerCount; l++) {
