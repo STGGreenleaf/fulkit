@@ -1867,13 +1867,17 @@ function SourcesTab() {
                         </div>
                       </DrawerItem>
                       <DrawerItem index={2} visible={googleExpanded}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)" }}>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What do I have this week?{"\u201D"}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Am I free Thursday afternoon?{"\u201D"}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What did Sarah say about the contract?{"\u201D"}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find the invoice email from last month{"\u201D"}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Pull in my project notes from Drive{"\u201D"}</div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s in my shared folder?{"\u201D"}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)" }}>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What do I have this week?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What did Sarah say about the contract?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Pull in my project notes from Drive{"\u201D"}</div>
+                          </div>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Am I free Thursday afternoon?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find the invoice email from last month{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s in my shared folder?{"\u201D"}</div>
+                          </div>
                         </div>
                       </DrawerItem>
                       <DrawerItem index={3} visible={googleExpanded}>
