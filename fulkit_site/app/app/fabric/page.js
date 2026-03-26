@@ -2669,53 +2669,53 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return { x: cx + rx * sc * depth, y: cy + ry * sc * depth, depth, z: rz };
         }
 
-        // Build terrain grid — height from noise + audio bands
-        const gridW = 28, gridH = 28;
+        // Build sphere mesh — UV sphere, audio displaces radially
+        const rings = 24, segs = 32;
         const vertices = [];
         const edges = [];
         const bandNames4 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
+        const baseRadius = 1.0;
 
-        for (let gz = 0; gz < gridH; gz++) {
-          for (let gx = 0; gx < gridW; gx++) {
-            const nx = (gx / (gridW - 1) - 0.5) * 2;
-            const nz = (gz / (gridH - 1) - 0.5) * 2;
+        for (let ring = 0; ring <= rings; ring++) {
+          const phi = (ring / rings) * Math.PI;
+          const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
 
-            // Base terrain — always visible, slowly evolving noise landscape
-            const centerDist = Math.sqrt(nx * nx + nz * nz);
-            const peak = Math.max(0, 1 - centerDist * 1.2);
-            const b1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * 0.3;
-            const b2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * 0.12;
-            const baseHeight = (b1 + b2) * peak;
+          for (let seg = 0; seg < segs; seg++) {
+            const theta = (seg / segs) * Math.PI * 2;
+            const sinTh = Math.sin(theta), cosTh = Math.cos(theta);
 
-            // Audio displacement — added on top when playing
-            let audioHeight = 0;
-            if (activity > 0.01) {
-              const h1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * en;
-              const h2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * en * 0.4;
-              const h3 = n3(nx * 8 + s4.time * 0.35, nz * 8) * en * 0.15 * (1 - val);
-              audioHeight = (h1 + h2 + h3) * peak * activity;
+            const sx = sinPhi * cosTh;
+            const sy = cosPhi;
+            const sz = sinPhi * sinTh;
 
-              if (hasFabric) {
-                const bandPos = ((nx + 1) / 2) * 7;
-                const bandIdx = Math.floor(bandPos) % 7;
-                const bandNext = (bandIdx + 1) % 7;
-                const bandFrac = bandPos - Math.floor(bandPos);
-                const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
-                                (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-                audioHeight += (bandVal * 0.5 + loud * 0.15) * peak * activity;
-                if (snap.beat) audioHeight += (snap.beat_strength || 0) * 0.12 * peak * activity;
-              }
-              audioHeight *= (1 + beatPulse * 0.3) * exhale;
+            // Base texture — always present, slowly evolving
+            const tex = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * 0.08;
+
+            // Audio displacement — only when playing
+            let disp = 0;
+            if (activity > 0.01 && hasFabric) {
+              const bandPos = (seg / segs) * 7;
+              const bandIdx = Math.floor(bandPos) % 7;
+              const bandNext = (bandIdx + 1) % 7;
+              const bandFrac = bandPos - Math.floor(bandPos);
+              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+              disp = bandVal * 0.4 + loud * 0.15;
+              disp *= sinPhi; // stronger at equator
+              disp += realFlux * n4(sx * 4 + s4.time * 0.3, sz * 4) * 0.06;
+              if (snap.beat) disp += (snap.beat_strength || 0) * 0.08 * sinPhi;
+              disp *= activity * exhale;
+            } else if (activity > 0.01) {
+              disp = n1(sx * 3 + s4.time * 0.1, sz * 3 + sy * 2 + s4.time * 0.08) * en * 0.15 * activity;
             }
 
-            const height = baseHeight + audioHeight;
-            const shimmer = realFlux * n4(nx * 6 + s4.time * 0.4, nz * 6) * 0.04 * activity;
+            const r = baseRadius + tex + disp;
+            vertices.push({ x3: sx * r, y3: sy * r, z3: sz * r });
 
-            vertices.push({ x3: nx, y3: -(height + shimmer), z3: nz });
-
-            const idx = gz * gridW + gx;
-            if (gx < gridW - 1) edges.push([idx, idx + 1]);
-            if (gz < gridH - 1) edges.push([idx, idx + gridW]);
+            const idx = ring * segs + seg;
+            if (seg < segs - 1) edges.push([idx, idx + 1]);
+            else edges.push([idx, idx - segs + 1]);
+            if (ring < rings) edges.push([idx, idx + segs]);
           }
         }
 
