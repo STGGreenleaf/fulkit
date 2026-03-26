@@ -2743,7 +2743,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const a = projected[i], b = projected[j];
           if (!a || !b) continue;
           const avgDepth = (a.depth + b.depth) / 2;
-          const alpha = Math.pow(avgDepth, 1.3) * (0.25 + activity * (0.2 + en * 0.4) * (0.5 + loud * 0.5));
+          const alpha = Math.pow(avgDepth, 1.3) * (0.45 + activity * (0.25 + en * 0.5) * (0.5 + loud * 0.5));
           if (alpha < 0.005) continue;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
@@ -2885,7 +2885,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const a = projected[i], b = projected[j];
           if (!a || !b) continue;
           const avgDepth = (a.depth + b.depth) / 2;
-          const alpha = Math.pow(avgDepth, 1.3) * (0.25 + activity * (0.2 + en * 0.4) * (0.5 + loud * 0.5));
+          const alpha = Math.pow(avgDepth, 1.3) * (0.45 + activity * (0.25 + en * 0.5) * (0.5 + loud * 0.5));
           if (alpha < 0.005) continue;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
