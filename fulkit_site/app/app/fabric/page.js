@@ -2727,7 +2727,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // Amoeba deformation gated by activity — idle = smooth circle
       const amoebaMag = activity * (0.08 + acousticness * 0.12);
       const morphT = phase * 3.0; // liquid speed — constantly shifting
-      const col = [120, 116, 108];
+      const col = [100, 97, 90];
       const layers = historyRef.current;
       const layerCount = layers.length;
 
@@ -2749,7 +2749,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             vx: cosA * speed + sinA * tangent * speed,
             vy: sinA * speed - cosA * tangent * speed,
             life: 0, maxLife: 50 + Math.random() * 80,
-            alpha: 0.08 + realLoud * 0.14, size: 3 + Math.random() * 5,
+            alpha: 0.12 + realLoud * 0.18, size: 3 + Math.random() * 5,
           });
         }
       }
@@ -2767,7 +2767,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         ctx.moveTo(wp.x, wp.y);
         ctx.lineTo(wp.x - wp.vx * wp.size, wp.y - wp.vy * wp.size);
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fadeAlpha})`;
-        ctx.lineWidth = 0.6 + (1 - lifeFrac) * 0.8;
+        ctx.lineWidth = 0.8 + (1 - lifeFrac) * 1.0;
         ctx.stroke();
       }
 
@@ -2775,7 +2775,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       const tendrilStep = Q > 0.6 ? 2 : Q > 0.4 ? 4 : 6; // adaptive density
       const spokeStep = Q > 0.6 ? 4 : Q > 0.4 ? 8 : 12;
       if (isActive && activity > 0.2) {
-        const innerAlpha = activity * 0.15 * (0.4 + realLoud * 0.6);
+        const innerAlpha = activity * 0.22 * (0.4 + realLoud * 0.6);
         const innerRot = rot * 1.7 + phase * 0.15;
         for (let i = 0; i < N; i += tendrilStep) {
           const th1 = (i / N) * Math.PI * 2 + innerRot;
@@ -2793,8 +2793,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.quadraticCurveTo(cx + Math.cos(cpAngle) * cpDist, cy + Math.sin(cpAngle) * cpDist, x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * (0.2 + points[i] * 0.8)})`;
-          ctx.lineWidth = 0.4 + activity * 0.7;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * (0.25 + points[i] * 0.85)})`;
+          ctx.lineWidth = 0.5 + activity * 0.9;
           ctx.stroke();
         }
         for (let i = 0; i < N; i += spokeStep) {
@@ -2807,8 +2807,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 0.8})`;
-          ctx.lineWidth = 0.3 + points[i] * 0.6;
+          ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha * points[i] * 1.0})`;
+          ctx.lineWidth = 0.4 + points[i] * 0.8;
           ctx.stroke();
         }
       }
@@ -2821,12 +2821,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         // Per-layer rotation — older layers rotate slightly, shape evolves over time
         const layerRot = rot + (1 - age) * 0.15 * activity;
         const alpha = age < 0.33
-          ? 0.02 + age * 0.08
+          ? 0.04 + age * 0.14
           : age < 0.66
-          ? 0.05 + (age - 0.33) * 0.35
-          : 0.17 + (age - 0.66) * 1.0;
-        const baseLw = 0.25 + age * 1.1;
-        const lw = baseLw * (0.7 + acousticness * 0.5);
+          ? 0.09 + (age - 0.33) * 0.5
+          : 0.26 + (age - 0.66) * 1.2;
+        const baseLw = 0.35 + age * 1.3;
+        const lw = baseLw * (0.75 + acousticness * 0.55);
         const ageMorph = (1 - age) * 0.3;
         const outPts = [];
         const peakPush = 2.0 + (realLoud > 0.5 ? (realLoud - 0.5) * 4.0 : 0);
@@ -2877,8 +2877,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             inPts.push({ x: cx + cnTh * r, y: cy + snTh * r });
           }
           drawOrbSmooth(ctx, inPts);
-          const inAlpha = 0.015 + age * age * 0.28;
-          const inLw = (0.25 + age * 0.8) * (0.7 + acousticness * 0.5);
+          const inAlpha = 0.03 + age * age * 0.35;
+          const inLw = (0.3 + age * 1.0) * (0.75 + acousticness * 0.55);
           ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${isNewest ? inAlpha * (1 + beatPulse * 0.3) : inAlpha})`;
           ctx.lineWidth = isNewest ? inLw * (1 + beatPulse * 0.25) : inLw;
           ctx.stroke();
