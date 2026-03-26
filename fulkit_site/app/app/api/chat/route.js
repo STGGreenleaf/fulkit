@@ -199,7 +199,7 @@ const ECOSYSTEM_KEYWORDS = {
   shopify: ["shopify", "storefront", "ecommerce", "shipping", "fulfillment"],
   stripe: ["stripe", "subscription", "billing", "payment", "invoice", "charge"],
   toast: ["toast", "restaurant", "menu", "table", "kitchen", "dining"],
-  google_calendar: ["calendar", "meeting", "schedule", "event", "appointment", "availability", "gcal"],
+  google_calendar: ["calendar", "calander", "calender", "meeting", "schedule", "event", "appointment", "availability", "gcal", "busy", "free time"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
