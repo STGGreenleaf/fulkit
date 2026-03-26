@@ -2462,7 +2462,7 @@ export async function POST(request) {
         safeGet(getTrelloToken, "trello"),
         safeGet(getGitHubToken, "github"),
         safeGet(() => getGoogleToken(userId, "google_calendar"), "google_calendar"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null]),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
