@@ -2963,7 +2963,51 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return;
         }
 
-        // Build displacement — big lobes + detail
+        // Energy propagation buffer — persists between frames
+        if (!s2.daEnergy) s2.daEnergy = new Float32Array(DA_N);
+        const eBuf = s2.daEnergy;
+
+        // ── Step 1: Inject energy at band positions ──
+        for (let b = 0; b < 7; b++) {
+          const bandEnergy = s2.daBands[b];
+          if (bandEnergy < 0.01) continue;
+          // Each band injects at its slice of the contour
+          const centerPt = Math.floor((b / 7) * DA_N);
+          const spread = 4; // injection spreads across ~8 points
+          for (let s = -spread; s <= spread; s++) {
+            const idx = (centerPt + s + DA_N) % DA_N;
+            const falloff = 1 - Math.abs(s) / (spread + 1);
+            eBuf[idx] = Math.max(eBuf[idx], bandEnergy * falloff * 0.8);
+          }
+        }
+        // Onset injects a sharp spike at a rotating position
+        if (s2.daOnset > 0.05) {
+          const onsetPt = Math.floor((s2.time * 3) % DA_N);
+          for (let s = -3; s <= 3; s++) {
+            const idx = (onsetPt + s + DA_N) % DA_N;
+            eBuf[idx] = Math.max(eBuf[idx], s2.daOnset * (1 - Math.abs(s) / 4));
+          }
+        }
+        // Beat pumps everything
+        if (s2.daBeat > 0.05) {
+          for (let i = 0; i < DA_N; i++) eBuf[i] = Math.max(eBuf[i], s2.daBeat * 0.3);
+        }
+
+        // ── Step 2: Propagate — energy flows to neighbors ──
+        const tmp = new Float32Array(DA_N);
+        for (let i = 0; i < DA_N; i++) {
+          const prev = (i - 1 + DA_N) % DA_N;
+          const next = (i + 1) % DA_N;
+          // Diffusion: energy spreads sideways
+          tmp[i] = eBuf[i] * 0.55 + eBuf[prev] * 0.18 + eBuf[next] * 0.18;
+        }
+
+        // ── Step 3: Decay — energy fades each frame ──
+        for (let i = 0; i < DA_N; i++) {
+          eBuf[i] = tmp[i] * 0.92; // 8% decay per frame
+        }
+
+        // ── Step 4: Build displacement from energy buffer ──
         const disp = new Float32Array(DA_N);
         const radii = new Float32Array(DA_N);
         const irregularity = 0.5 + energy * 0.5;
@@ -2972,45 +3016,27 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const a = (i / DA_N) * Math.PI * 2 + rot;
           const nx = Math.cos(a), ny = Math.sin(a);
 
-          // Amoeba base warp — 3 octaves
+          // Amoeba base warp
           const d1 = noise2D(nx * 0.3, ny * 0.3 + s2.time * 0.002);
           const d2 = noise2B(nx * 0.6 + 10, ny * 0.6 + s2.time * 0.005);
           const d3 = noise2D(nx * 1.2 + 30, ny * 1.2 + s2.time * 0.008);
           radii[i] = baseR * (1 + (d1 * 0.5 + d2 * 0.25 + d3 * 0.25 * irregularity) * s4amp * 0.55);
 
-          // Each point samples a band — creates directional shape
-          const bandPos = (i / DA_N) * 7;
-          const bandIdx = Math.floor(bandPos) % 7;
-          const bandNext = (bandIdx + 1) % 7;
-          const bandFrac = bandPos - Math.floor(bandPos);
-          const bandVal = s2.daBands[bandIdx] * (1 - bandFrac) + s2.daBands[bandNext] * bandFrac;
-
-          // Per-point noise creates differential WITHIN each band region
-          // So even if two adjacent bands have similar values, the contour varies
-          const pointNoise = noise2D(i * 0.3 + s2.time * 0.15, bandIdx * 2 + s2.time * 0.08);
-          const differential = 0.5 + pointNoise * 0.5; // 0–1, varies per point
-
-          // Band energy is the driver, differential prevents uniform expansion
-          const bandPush = Math.pow(bandVal, 0.5) * differential;
-          // Loudness adds global swell
-          const loudSwell = s2.daLoud * 0.4;
-          // Onset creates sharp directional spikes
-          const onsetSpike = s2.daOnset * differential * 0.5;
-          // Beat is a global pump
-          const beatPump = s2.daBeat * 0.3;
-
-          disp[i] = (bandPush + loudSwell + onsetSpike + beatPump) * s4amp * exhale * baseR * 1.2;
+          // Displacement from energy buffer + loudness swell
+          const eVal = eBuf[i];
+          const loudSwell = s2.daLoud * 0.3;
+          disp[i] = (Math.pow(eVal, 0.6) * 1.0 + loudSwell) * s4amp * exhale * baseR * 1.3;
         }
 
-        // Neighbor-smooth — more passes for fluid contour
-        for (let pass = 0; pass < 4; pass++) {
+        // Light smooth — preserve the energy flow shape
+        for (let pass = 0; pass < 2; pass++) {
           const tmpD = new Float32Array(DA_N);
           const tmpR = new Float32Array(DA_N);
           for (let i = 0; i < DA_N; i++) {
             const p = (i - 1 + DA_N) % DA_N;
             const n = (i + 1) % DA_N;
-            tmpD[i] = disp[i] * 0.5 + disp[p] * 0.25 + disp[n] * 0.25;
-            tmpR[i] = radii[i] * 0.5 + radii[p] * 0.25 + radii[n] * 0.25;
+            tmpD[i] = disp[i] * 0.6 + disp[p] * 0.2 + disp[n] * 0.2;
+            tmpR[i] = radii[i] * 0.6 + radii[p] * 0.2 + radii[n] * 0.2;
           }
           disp.set(tmpD);
           radii.set(tmpR);
