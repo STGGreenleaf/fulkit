@@ -2976,12 +2976,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const bandVal = s2.daBands[bandIdx] * (1 - bandFrac) + s2.daBands[bandNext] * bandFrac;
 
           // Noise adds organic texture on top — not the driver
-          const tex = noise2D(nx * 1.2 + s2.time * 0.1, ny * 1.2 + s2.time * 0.07) * 0.15;
+          const tex = noise2D(nx * 1.2 + s2.time * 0.1, ny * 1.2 + s2.time * 0.07) * 0.2;
 
-          // Band energy + loudness = displacement, noise = texture
-          const audioDisp = (bandVal * 0.7 + s2.daLoud * 0.3) * (1 + tex);
-          const beatBoost = 1 + s2.daBeat * 0.4;
-          disp[i] = audioDisp * s4amp * beatBoost * exhale * baseR * 0.8;
+          // Band energy drives displacement hard — sqrt opens up low values
+          const bandPush = Math.pow(bandVal, 0.5) * 0.8 + s2.daLoud * 0.5;
+          const beatBoost = 1 + s2.daBeat * 0.6;
+          disp[i] = (bandPush + tex) * s4amp * beatBoost * exhale * baseR * 1.4;
         }
 
         // Neighbor-smooth — more passes for fluid contour
