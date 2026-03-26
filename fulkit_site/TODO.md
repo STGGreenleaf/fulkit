@@ -182,7 +182,7 @@
 > Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card. ~2-4 hours each.
 
 ### Tier 1: Everyone
-- [ ] **Google Calendar** — scheduling, availability, meeting prep. Keywords: calendar, meeting, schedule, event. (Extends existing Google OAuth — add calendar scope.)
+- [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
 - [ ] **Gmail** — email context in chat. "What did Sarah say about the contract?" Keywords: email, inbox, send, reply. (Same Google OAuth — add gmail.readonly scope.)
 - [ ] **Terra (Health)** — single API, 200+ devices (Whoop, Fitbit, Garmin, Oura, iFit, Peloton, Apple Health, Google Fit). Keywords: health, sleep, workout, steps, heart rate. No other AI chat has this.
 
