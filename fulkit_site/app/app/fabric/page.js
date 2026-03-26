@@ -2516,9 +2516,12 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       // STYLE 2: Deep Amoeba — tendrils, tracers, clip contours
       // Uses SHARED kinetic state machine (k.amplitude, beatPulse, exhale)
       // ══════════════════════════════════════════
-      // STYLE 2: Light Amoeba — flowing wave shape + canvas fade trail
-      // One contour per frame, trail via alpha fade. Waves travel around
-      // the contour synced to BPM; swell follows energy envelope.
+      // STYLE 2: Light Amoeba — 100% song data driven
+      // Every visual parameter comes from the thumbprint snapshot.
+      // No sine waves, no BPM clock, no fake motion.
+      // Shape = bands, size = loudness, weight shift = centroid,
+      // texture = flux, bloom = onset/beat, trail = loudness.
+      // Noise only smooths — never drives.
       // ══════════════════════════════════════════
       if (curVizStyle === 2) {
         const s2 = style2Ref.current;
@@ -2528,13 +2531,43 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const cx = w / 2, cy = h / 2;
         const s2amp = k.amplitude / 0.55;
         const S2_N = 40;
-        const rot = s2.time * 0.04;
-        const morphT = s2.time * 1.2;
         const col = [100, 97, 90];
         const bandNames2 = ["sub", "bass", "low_mid", "mid", "high_mid", "high", "air"];
 
-        // ── Alpha fade trail ──
-        const fadeAlpha = k.state === "idle" ? 0.3 : 0.10 + (1 - s2amp) * 0.12;
+        // ── Smoothed song data (lerp followers — no snapping) ──
+        if (s2.smoothLoud === undefined) {
+          s2.smoothLoud = 0; s2.smoothCentroid = 0.5; s2.smoothFlux = 0;
+          s2.smoothSpread = 0.5; s2.smoothBands = new Array(7).fill(0);
+          s2.bloom = 0;
+        }
+        const loud = hasFabric ? (snap.loudness || 0) : 0;
+        const centroid = hasFabric ? Math.min(1, (snap.spectral_centroid || 2000) / 8000) : 0.5;
+        const flux = hasFabric ? (snap.flux || 0) : 0;
+        const spread = hasFabric ? Math.min(1, (snap.spectral_spread || 1500) / 4000) : 0.5;
+        const onsetHit = hasFabric && snap.onset ? (snap.onset_strength || 0) : 0;
+        const beatHit = hasFabric && snap.beat ? (snap.beat_strength || 0) : 0;
+
+        // Smooth followers — different rates for different feels
+        s2.smoothLoud += (loud - s2.smoothLoud) * 0.08;           // medium — tracks loudness changes
+        s2.smoothCentroid += (centroid - s2.smoothCentroid) * 0.04; // slow — weight drifts gradually
+        s2.smoothFlux += (flux - s2.smoothFlux) * 0.12;           // faster — texture responds
+        s2.smoothSpread += (spread - s2.smoothSpread) * 0.06;     // medium — shape width follows
+        for (let b = 0; b < 7; b++) {
+          const bv = hasFabric ? (snap.bands[bandNames2[b]] || 0) : 0;
+          s2.smoothBands[b] += (bv - s2.smoothBands[b]) * 0.10;   // per-band smooth
+        }
+        // Bloom: onset/beat creates a burst that decays naturally
+        s2.bloom = Math.max(s2.bloom * 0.92, Math.max(onsetHit * 0.6, beatHit * 0.4));
+
+        const sLoud = s2.smoothLoud;
+        const sCentroid = s2.smoothCentroid;
+        const sFlux = s2.smoothFlux;
+        const sSpread = s2.smoothSpread;
+        const sBands = s2.smoothBands;
+        const bloom = s2.bloom;
+
+        // ── Alpha fade trail — loudness controls ghost length ──
+        const fadeAlpha = k.state === "idle" ? 0.3 : 0.08 + (1 - sLoud) * 0.18;
         ctx.fillStyle = `rgba(239,237,232,${fadeAlpha})`;
         ctx.fillRect(0, 0, w, h);
 
@@ -2549,86 +2582,72 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           return;
         }
 
-        // ── Ebb and flow — long, slow waves ──
-        // Half-tempo sine for gentle rise/fall, quarter-tempo for deep swell
-        const ebb = Math.sin(k.beatAccumulator * Math.PI) * 0.5 + 0.5; // half-tempo: one cycle per 2 beats
-        const deepSwell = Math.sin(k.beatAccumulator * Math.PI * 0.5) * 0.5 + 0.5; // quarter-tempo: one cycle per 4 beats
+        // ── Rotation from flux — shape turns when the sound changes ──
+        const rot = s2.time * 0.02 + sFlux * 0.3;
+        // Morph speed from flux — more timbral change = faster surface evolution
+        const morphT = s2.time * (0.4 + sFlux * 1.5);
 
-        // ── Energy swell — very smooth envelope follower ──
-        const targetSwell = hasEnvelope ? envelopeValue : energy;
-        if (s2.swell === undefined) s2.swell = 0;
-        s2.swell += (targetSwell - s2.swell) * 0.015; // very slow follow — gradual rise and fall
-        const swell = s2.swell;
+        // ── Overall radius from loudness ──
+        const loudR = baseR * (1 + sLoud * 0.25 + bloom * 0.12);
 
-        // ── Build one amoeba shape per frame ──
+        // ── Centroid shifts weight — bright sounds push the top, dark push the bottom ──
+        // This is what makes the shape MOVE with the song — not a clock
+        const centroidAngle = (1 - sCentroid) * Math.PI; // low centroid = bottom, high = top
+
+        // ── Build shape from song data ──
         const pts = [];
         const innerPts = [];
-        const breathe = Math.sin(s2.time * 0.4) * 0.06 * s2amp; // slow breath
-
-        // Traveling wave — single lobe drifting slowly around the contour
-        const travelPhase = k.beatAccumulator * Math.PI * 0.5; // quarter-tempo rotation
 
         for (let i = 0; i < S2_N; i++) {
           const a = (i / S2_N) * Math.PI * 2 + rot;
           const nx = Math.cos(a), ny = Math.sin(a);
           const pointAngle = (i / S2_N) * Math.PI * 2;
 
-          // Liquid morphing — slow, organic
-          const m1 = noise2D(nx * 1.0, ny * 1.0 + morphT) * 0.5;
-          const m2 = noise2D(nx * 2.0 + 30, ny * 2.0 + morphT * 0.6) * 0.25;
+          // Organic smoothing only — noise adds texture, not motion
+          const tex = noise2D(nx * 1.5, ny * 1.5 + morphT) * 0.08 * s2amp;
 
-          // Single wide lobe that drifts around — ebb, not bounce
-          const travel = Math.sin(pointAngle - travelPhase) * 0.5 + 0.5;
-          // Gentle second shape for asymmetry (very slow counter-drift)
-          const travel2 = Math.sin(pointAngle * 2 + travelPhase * 0.3) * 0.25 + 0.5;
+          // Band displacement — each band owns a slice of the contour
+          const bandPos = (i / S2_N) * 7;
+          const bandIdx = Math.floor(bandPos) % 7;
+          const bandNext = (bandIdx + 1) % 7;
+          const bandFrac = bandPos - Math.floor(bandPos);
+          const bandVal = sBands[bandIdx] * (1 - bandFrac) + sBands[bandNext] * bandFrac;
 
-          const waveDisp = (travel * 0.7 + travel2 * 0.3) * ebb * s2amp * 0.10;
-          const swellDisp = swell * deepSwell * s2amp * 0.10;
+          // Centroid weight — points near the centroid angle get more displacement
+          const angleToCentroid = Math.cos(pointAngle - centroidAngle);
+          const centroidWeight = 0.5 + angleToCentroid * 0.5; // 0–1, peaks at centroid angle
 
-          const aR = baseR * (1 + (m1 + m2) * s2amp * 0.12 + breathe + waveDisp + swellDisp);
+          // Spread controls how evenly displacement is distributed
+          // Low spread = concentrated at centroid, high spread = even all around
+          const spreadBlend = sSpread * 0.7 + 0.3; // never fully zero
+          const weight = spreadBlend + (1 - spreadBlend) * centroidWeight;
 
-          // Displacement from audio — flows with the drift
-          let disp;
-          if (hasFabric) {
-            const bandPos = (i / S2_N) * bandNames2.length;
-            const bandIdx = Math.floor(bandPos) % bandNames2.length;
-            const bandNext = (bandIdx + 1) % bandNames2.length;
-            const bandFrac = bandPos - Math.floor(bandPos);
-            const bandVal = (snap.bands[bandNames2[bandIdx]] || 0) * (1 - bandFrac) +
-                            (snap.bands[bandNames2[bandNext]] || 0) * bandFrac;
-            const realLoud = snap.loudness || 0;
-            disp = (Math.pow(bandVal, 0.6) * 0.5 + realLoud * 0.3) * (0.3 + swell * 0.7);
-            disp *= (1 + (snap.flux || 0) * 0.1);
-            // Band energy rides the traveling lobe
-            disp *= (0.4 + travel * 0.6);
-          } else {
-            disp = noise2D(nx * 1.5 + morphT * 0.15, ny * 1.5 + morphT * 0.1) * 0.4 + 0.25;
-            disp *= (0.4 + ebb * 0.6);
-          }
-          disp *= s2amp * exhale * baseR * 1.1;
+          // Displacement from real band data + loudness
+          const disp = (Math.pow(bandVal, 0.7) * 0.7 + sLoud * 0.3) * weight;
+          const bloomPush = bloom * centroidWeight * 0.15;
 
-          const outerR = aR + disp;
+          const outerR = loudR * (1 + disp * s2amp * 0.8 + bloomPush + tex) * exhale;
           pts.push({ x: cx + nx * outerR, y: cy + ny * outerR });
 
-          // Inner contour — dances opposite to outer (push-pull)
-          const im = noise2D(nx * 1.5 + 200, ny * 1.5 + morphT * 0.7);
-          const innerEbb = Math.sin(pointAngle + travelPhase) * 0.5 + 0.5; // opposite drift
-          const innerR = Math.max(baseR * 0.04, aR * (0.65 + breathe * 0.4) - disp * 0.4 + im * baseR * 0.12 * s2amp - innerEbb * baseR * 0.05 * s2amp);
+          // Inner contour — inverse of outer displacement (loud parts push in)
+          const innerBase = loudR * (0.6 - sLoud * 0.15);
+          const innerDisp = disp * s2amp * 0.35;
+          const innerR = Math.max(baseR * 0.04, innerBase - innerDisp * baseR * 0.5 + tex * baseR * 0.3);
           innerPts.push({ x: cx + nx * innerR, y: cy + ny * innerR });
         }
 
-        // ── Draw outer contour ──
+        // ── Draw outer contour — alpha/weight from loudness ──
         drawOrbSmooth(ctx, pts);
-        const outerAlpha = 0.18 + s2amp * 0.28 + ebb * s2amp * 0.04;
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${outerAlpha})`;
-        ctx.lineWidth = 0.8 + s2amp * 0.6 + ebb * s2amp * 0.1;
+        const outerAlpha = 0.15 + sLoud * 0.3 + bloom * 0.08;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${Math.min(0.7, outerAlpha)})`;
+        ctx.lineWidth = 0.6 + sLoud * 0.8 + bloom * 0.4;
         ctx.stroke();
 
         // ── Draw inner contour ──
         drawOrbSmooth(ctx, innerPts);
-        const innerAlpha = 0.12 + s2amp * 0.22;
+        const innerAlpha = 0.10 + sLoud * 0.2;
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${innerAlpha})`;
-        ctx.lineWidth = 0.5 + s2amp * 0.4;
+        ctx.lineWidth = 0.4 + sLoud * 0.4;
         ctx.stroke();
 
         return;
