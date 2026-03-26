@@ -2637,13 +2637,13 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
       if (curVizStyle === 4) {
         const s4 = style4Ref.current;
         const [n1, n2, n3, n4] = s4.n;
-        if (k.state !== "idle") s4.time += dt;
+        s4.time += dt; // always spin, even when paused
 
         const activity = Math.min(1, k.amplitude / 0.55);
         const cx = w / 2, cy = h * 0.48;
         const sc = dim * 0.4;
 
-        // Audio features
+        // Audio features — zero when paused, terrain still renders
         const en = energy;
         const ac = acousticness;
         const val = valence;
@@ -2655,8 +2655,6 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         const rotX = -0.45 + n1(s4.time * 0.02, 100) * 0.1;
 
         ctx.clearRect(0, 0, w, h);
-
-        if (activity < 0.005) return;
 
         // 3D → 2D projection with perspective
         function project(x3, y3, z3) {
@@ -2682,31 +2680,35 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
             const nx = (gx / (gridW - 1) - 0.5) * 2;
             const nz = (gz / (gridH - 1) - 0.5) * 2;
 
-            // Multi-octave noise terrain
-            const h1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * en;
-            const h2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * en * 0.4;
-            const h3 = n3(nx * 8 + s4.time * 0.35, nz * 8) * en * 0.15 * (1 - val);
-
-            // Center peak bias — mountains rise from the center
+            // Base terrain — always visible, slowly evolving noise landscape
             const centerDist = Math.sqrt(nx * nx + nz * nz);
             const peak = Math.max(0, 1 - centerDist * 1.2);
+            const b1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * 0.3;
+            const b2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * 0.12;
+            const baseHeight = (b1 + b2) * peak;
 
-            // Audio band displacement — map grid X position to bands
-            let bandLift = 0;
-            if (hasFabric) {
-              const bandPos = ((nx + 1) / 2) * 7; // left edge = sub, right = air
-              const bandIdx = Math.floor(bandPos) % 7;
-              const bandNext = (bandIdx + 1) % 7;
-              const bandFrac = bandPos - Math.floor(bandPos);
-              const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
-                              (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
-              bandLift = bandVal * 0.5 * peak;
-              bandLift += loud * 0.15 * peak;
-              if (snap.beat) bandLift += (snap.beat_strength || 0) * 0.12 * peak;
+            // Audio displacement — added on top when playing
+            let audioHeight = 0;
+            if (activity > 0.01) {
+              const h1 = n1(nx * 2 + s4.time * 0.1, nz * 2 + s4.time * 0.08) * en;
+              const h2 = n2(nx * 4 + s4.time * 0.2, nz * 4 + s4.time * 0.15) * en * 0.4;
+              const h3 = n3(nx * 8 + s4.time * 0.35, nz * 8) * en * 0.15 * (1 - val);
+              audioHeight = (h1 + h2 + h3) * peak * activity;
+
+              if (hasFabric) {
+                const bandPos = ((nx + 1) / 2) * 7;
+                const bandIdx = Math.floor(bandPos) % 7;
+                const bandNext = (bandIdx + 1) % 7;
+                const bandFrac = bandPos - Math.floor(bandPos);
+                const bandVal = (snap.bands[bandNames4[bandIdx]] || 0) * (1 - bandFrac) +
+                                (snap.bands[bandNames4[bandNext]] || 0) * bandFrac;
+                audioHeight += (bandVal * 0.5 + loud * 0.15) * peak * activity;
+                if (snap.beat) audioHeight += (snap.beat_strength || 0) * 0.12 * peak * activity;
+              }
+              audioHeight *= (1 + beatPulse * 0.3) * exhale;
             }
 
-            const height = ((h1 + h2 + h3) * peak + bandLift) * activity * (1 + beatPulse * 0.3) * exhale;
-            // Flux adds surface shimmer
+            const height = baseHeight + audioHeight;
             const shimmer = realFlux * n4(nx * 6 + s4.time * 0.4, nz * 6) * 0.04 * activity;
 
             vertices.push({ x3: nx, y3: -(height + shimmer), z3: nz });
@@ -2733,7 +2735,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
           const a = projected[i], b = projected[j];
           if (!a || !b) continue;
           const avgDepth = (a.depth + b.depth) / 2;
-          const alpha = Math.pow(avgDepth, 1.3) * activity * (0.2 + en * 0.5) * (0.5 + loud * 0.5);
+          const alpha = Math.pow(avgDepth, 1.3) * (0.25 + activity * (0.2 + en * 0.4) * (0.5 + loud * 0.5));
           if (alpha < 0.005) continue;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
