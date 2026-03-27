@@ -218,7 +218,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -276,6 +276,22 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s on my board right now?",
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
+  },
+  dropbox: {
+    subtitle: "Your files, connected.",
+    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox.",
+    gives: "File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what\u2019s in it.",
+    tryPrompt: "Find my budget spreadsheet in Dropbox\u201D\n\u201CWhat\u2019s in my project folder?",
+    linkLabel: "dropbox.com",
+    linkHref: "https://dropbox.com",
+  },
+  slack: {
+    subtitle: "Your team chat, in context.",
+    description: "Slack is where your team talks. Connecting it means F\u00FClkit can search messages, browse channels, and surface conversations \u2014 so you can reference what was said without scrolling through threads.",
+    gives: "Message search across all channels, channel listing, and recent conversation history. Ask what the team discussed and get real answers.",
+    tryPrompt: "What did the team say about the launch?\u201D\n\u201CShow me recent messages in #general",
+    linkLabel: "slack.com",
+    linkHref: "https://slack.com",
   },
   notion: {
     subtitle: "Your workspace, connected.",
@@ -1111,6 +1127,16 @@ function SourcesTab() {
   const [suggestInput, setSuggestInput] = useState("");
   const [suggestSent, setSuggestSent] = useState(false);
 
+  const [dropboxConnected, setDropboxConnected] = useState(false);
+  const [dropboxExpanded, setDropboxExpanded] = useState(false);
+  const [dropboxLastSynced, setDropboxLastSynced] = useState(null);
+  const [dropboxDisconnecting, setDropboxDisconnecting] = useState(false);
+
+  const [slackConnected, setSlackConnected] = useState(false);
+  const [slackExpanded, setSlackExpanded] = useState(false);
+  const [slackLastSynced, setSlackLastSynced] = useState(null);
+  const [slackDisconnecting, setSlackDisconnecting] = useState(false);
+
   const [notionConnected, setNotionConnected] = useState(false);
   const [notionExpanded, setNotionExpanded] = useState(false);
   const [notionLastSynced, setNotionLastSynced] = useState(null);
@@ -1181,8 +1207,14 @@ function SourcesTab() {
     if (params.get("nt") === "connected") {
       setNotionConnected(true);
     }
+    if (params.get("db") === "connected") {
+      setDropboxConnected(true);
+    }
+    if (params.get("sl") === "connected") {
+      setSlackConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb", "nt"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb", "nt", "db", "sl"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1218,7 +1250,9 @@ function SourcesTab() {
       check("/api/health/fitbit/status"),
       check("/api/quickbooks/status"),
       check("/api/notion/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion]) => {
+      check("/api/dropbox/status"),
+      check("/api/slack/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1236,6 +1270,8 @@ function SourcesTab() {
       if (fitbit) { setFitbitConnected(fitbit.connected); if (fitbit.lastSynced) setFitbitLastSynced(fitbit.lastSynced); }
       if (qb) { setQbConnected(qb.connected); if (qb.lastSynced) setQbLastSynced(qb.lastSynced); }
       if (notion) { setNotionConnected(notion.connected); if (notion.lastSynced) setNotionLastSynced(notion.lastSynced); }
+      if (dropbox) { setDropboxConnected(dropbox.connected); if (dropbox.lastSynced) setDropboxLastSynced(dropbox.lastSynced); }
+      if (slack) { setSlackConnected(slack.connected); if (slack.lastSynced) setSlackLastSynced(slack.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1637,6 +1673,26 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  function connectDropbox() {
+    if (accessToken) { window.open("/api/dropbox/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/dropbox/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectDropbox() {
+    setDropboxDisconnecting(true);
+    try { await fetch("/api/dropbox/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setDropboxConnected(false); } catch {}
+    setDropboxDisconnecting(false);
+  }
+
+  function connectSlack() {
+    if (accessToken) { window.open("/api/slack/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/slack/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectSlack() {
+    setSlackDisconnecting(true);
+    try { await fetch("/api/slack/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setSlackConnected(false); } catch {}
+    setSlackDisconnecting(false);
+  }
+
   function connectNotion() {
     if (accessToken) {
       window.open("/api/notion/connect?token=" + encodeURIComponent(accessToken), "_blank");
@@ -1795,8 +1851,10 @@ function SourcesTab() {
     ...(qbConnected ? ["quickbooks"] : []),
     ...(obsidianConnected ? ["obsidian"] : []),
     ...(notionConnected ? ["notion"] : []),
+    ...(dropboxConnected ? ["dropbox"] : []),
+    ...(slackConnected ? ["slack"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1819,6 +1877,8 @@ function SourcesTab() {
     if (id === "quickbooks") { connectQB(); return; }
     if (id === "obsidian") { connectObsidian(); return; }
     if (id === "notion") { connectNotion(); return; }
+    if (id === "dropbox") { connectDropbox(); return; }
+    if (id === "slack") { connectSlack(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1835,6 +1895,8 @@ function SourcesTab() {
     if (id === "quickbooks") { disconnectQB(); return; }
     if (id === "obsidian") { disconnectObsidian(); return; }
     if (id === "notion") { disconnectNotion(); return; }
+    if (id === "dropbox") { disconnectDropbox(); return; }
+    if (id === "slack") { disconnectSlack(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 

@@ -14,6 +14,8 @@ import { getGoogleToken, googleFetch } from "../../../lib/google-server";
 import { getFitbitToken, fitbitFetch } from "../../../lib/fitbit-server";
 import { getQuickBooksToken, qbFetch } from "../../../lib/quickbooks-server";
 import { getNotionToken, notionFetch } from "../../../lib/notion-server";
+import { getDropboxToken, dropboxFetch } from "../../../lib/dropbox-server";
+import { getSlackToken, slackFetch } from "../../../lib/slack-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -208,6 +210,8 @@ const ECOSYSTEM_KEYWORDS = {
   fitbit: ["fitbit", "steps", "sleep", "heart rate", "activity", "workout", "calories", "weight", "health", "recovery", "resting heart"],
   quickbooks: ["quickbooks", "accounting", "invoice", "expense", "profit", "loss", "p&l", "balance sheet", "accounts receivable", "payable", "tax"],
   notion: ["notion", "page", "database", "wiki", "workspace"],
+  dropbox: ["dropbox", "file", "folder", "shared folder", "upload"],
+  slack: ["slack", "channel", "thread", "team", "message", "dm"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -2353,6 +2357,147 @@ async function executeNotionTool(name, input, userId) {
   throw new Error(`Unknown notion tool: ${name}`);
 }
 
+// Dropbox tools — search files, read content, import to vault
+const DROPBOX_TOOLS = [
+  {
+    name: "dropbox_search",
+    description: "Search the user's Dropbox for files by name or content.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search term" },
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "dropbox_read_file",
+    description: "Read the text content of a Dropbox file (text, markdown, code files). Use path from dropbox_search.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "File path from dropbox_search results" },
+      },
+      required: ["path"],
+    },
+  },
+];
+
+async function executeDropboxTool(name, input, userId) {
+  if (name === "dropbox_search") {
+    const limit = Math.min(input.limit || 10, 20);
+    const res = await dropboxFetch(userId, "/files/search_v2", {
+      body: { query: input.query, options: { max_results: limit, file_extensions: ["md", "txt", "js", "py", "csv", "json", "html", "css", "ts", "tsx", "jsx"] } },
+    });
+    if (res.error) return res;
+    const data = typeof res.json === "function" ? await res.json() : res;
+    return {
+      files: (data.matches || []).map(m => ({
+        name: m.metadata?.metadata?.name,
+        path: m.metadata?.metadata?.path_display,
+        modified: m.metadata?.metadata?.server_modified,
+        size: m.metadata?.metadata?.size,
+      })),
+    };
+  }
+
+  if (name === "dropbox_read_file") {
+    const res = await dropboxFetch(userId, "/files/download", {
+      content: true,
+      headers: { "Dropbox-API-Arg": JSON.stringify({ path: input.path }), "Content-Type": "text/plain" },
+    });
+    if (res.error) return res;
+    const text = await res.text();
+    return { content: text.slice(0, 10000) };
+  }
+
+  throw new Error(`Unknown dropbox tool: ${name}`);
+}
+
+// Slack tools — search messages, list channels
+const SLACK_TOOLS = [
+  {
+    name: "slack_search",
+    description: "Search messages in the user's Slack workspace.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search term" },
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "slack_channels",
+    description: "List the user's Slack channels.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", description: "Max results. Default 20." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "slack_history",
+    description: "Get recent messages from a Slack channel by channel ID (from slack_channels).",
+    input_schema: {
+      type: "object",
+      properties: {
+        channelId: { type: "string", description: "Channel ID from slack_channels" },
+        limit: { type: "integer", description: "Max messages. Default 20." },
+      },
+      required: ["channelId"],
+    },
+  },
+];
+
+async function executeSlackTool(name, input, userId) {
+  if (name === "slack_search") {
+    const data = await slackFetch(userId, "search.messages", { query: input.query, count: Math.min(input.limit || 10, 20) });
+    if (!data.ok) return { error: data.error || "Search failed" };
+    return {
+      messages: (data.messages?.matches || []).map(m => ({
+        text: m.text?.slice(0, 500),
+        user: m.username,
+        channel: m.channel?.name,
+        timestamp: m.ts,
+        permalink: m.permalink,
+      })),
+    };
+  }
+
+  if (name === "slack_channels") {
+    const data = await slackFetch(userId, "conversations.list", { limit: Math.min(input.limit || 20, 50), types: "public_channel,private_channel" });
+    if (!data.ok) return { error: data.error || "Failed to list channels" };
+    return {
+      channels: (data.channels || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        topic: c.topic?.value,
+        memberCount: c.num_members,
+      })),
+    };
+  }
+
+  if (name === "slack_history") {
+    const data = await slackFetch(userId, "conversations.history", { channel: input.channelId, limit: Math.min(input.limit || 20, 50) });
+    if (!data.ok) return { error: data.error || "Failed to get history" };
+    return {
+      messages: (data.messages || []).map(m => ({
+        text: m.text?.slice(0, 500),
+        user: m.user,
+        timestamp: m.ts,
+        type: m.subtype || "message",
+      })),
+    };
+  }
+
+  throw new Error(`Unknown slack tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -3094,7 +3239,9 @@ export async function POST(request) {
         safeGet(getFitbitToken, "fitbit"),
         safeGet(getQuickBooksToken, "quickbooks"),
         safeGet(getNotionToken, "notion"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getDropboxToken, "dropbox"),
+        safeGet(getSlackToken, "slack"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -3143,7 +3290,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -3159,6 +3306,7 @@ export async function POST(request) {
         { ref: "fitbitToken", val: fitbitToken },
         { ref: "qbToken", val: qbToken },
         { ref: "notionToken", val: notionToken },
+        { ref: "dropboxToken", val: dropboxToken }, { ref: "slackToken", val: slackToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -3180,6 +3328,8 @@ export async function POST(request) {
             else if (s.ref === "fitbitToken") fitbitToken = null;
             else if (s.ref === "qbToken") qbToken = null;
             else if (s.ref === "notionToken") notionToken = null;
+            else if (s.ref === "dropboxToken") dropboxToken = null;
+            else if (s.ref === "slackToken") slackToken = null;
           }
         }
       }
@@ -3465,6 +3615,7 @@ Never skip the preview step. The user must see and approve changes before they g
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
       gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
       qbToken && "QuickBooks", notionToken && "Notion",
+      dropboxToken && "Dropbox", slackToken && "Slack",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3544,6 +3695,8 @@ Never skip the preview step. The user must see and approve changes before they g
       fitbit: () => fitbitToken ? FITBIT_TOOLS : [],
       quickbooks: () => qbToken ? QUICKBOOKS_TOOLS : [],
       notion: () => notionToken ? NOTION_TOOLS : [],
+      dropbox: () => dropboxToken ? DROPBOX_TOOLS : [],
+      slack: () => slackToken ? SLACK_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3602,6 +3755,7 @@ Never skip the preview step. The user must see and approve changes before they g
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
         gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
         quickbooks: !!qbToken, notion: !!notionToken,
+        dropbox: !!dropboxToken, slack: !!slackToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3892,6 +4046,28 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Dropbox tools
+              if (block.name.startsWith("dropbox_") && dropboxToken) {
+                try {
+                  const result = await withTimeout(() => executeDropboxTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Slack tools
+              if (block.name.startsWith("slack_") && slackToken) {
+                try {
+                  const result = await withTimeout(() => executeSlackTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
