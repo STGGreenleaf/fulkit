@@ -160,28 +160,52 @@ function compressConversation(messages, maxTokens = 80000, chapterSummaries = nu
   const older = messages.slice(0, messages.length - keep.length);
   if (older.length === 0) return keep;
 
-  // Improved structured summary — extract topics and key points instead of 200-char truncation
+  // Structured summary — extract topics, key points, and decisions from older messages
   const userTopics = [];
   const assistantPoints = [];
+  const maxPoints = Math.min(25, Math.max(15, Math.ceil(older.length * 0.8)));
+
   for (const m of older) {
     const text = typeof m.content === "string"
       ? m.content
       : Array.isArray(m.content)
         ? m.content.filter((b) => b.type === "text").map((b) => b.text).join(" ")
         : "";
+    if (!text) continue;
+
     if (m.role === "user") {
-      userTopics.push(text.slice(0, 150));
+      // Extract first 2 sentences (preserves full intent) — cap at 250 chars
+      const sentences = text.match(/[^.!?\n]+[.!?]*/g) || [text];
+      const topic = sentences.slice(0, 2).join("").trim();
+      if (topic) userTopics.push(topic.length > 250 ? topic.slice(0, 247) + "..." : topic);
     } else {
+      if (assistantPoints.length >= maxPoints) continue;
       const lines = text.split("\n");
+      const bullets = [];
+      const proseLines = [];
+
       for (const line of lines) {
         const t = line.trim();
         if ((t.startsWith("- ") || t.startsWith("* ") || t.match(/^\d+\./)) && t.length > 10 && t.length < 200) {
-          if (assistantPoints.length < 15) assistantPoints.push(t);
+          bullets.push(t);
+        } else if (t.length > 20) {
+          proseLines.push(t);
         }
       }
-      if (assistantPoints.length === 0 && text.length > 0) {
-        const firstSentence = text.split(/[.!?]\s/)[0];
-        if (firstSentence) assistantPoints.push(firstSentence.slice(0, 200));
+
+      // Capture bullets (cap 5 per message so one response doesn't dominate)
+      if (bullets.length > 0) {
+        const room = maxPoints - assistantPoints.length;
+        assistantPoints.push(...bullets.slice(0, Math.min(5, room)));
+      }
+
+      // Always capture lead prose — even when bullets exist
+      if (proseLines.length > 0 && assistantPoints.length < maxPoints) {
+        const prose = proseLines[0];
+        const firstSentence = prose.split(/[.!?]\s/)[0];
+        if (firstSentence && firstSentence.length > 15) {
+          assistantPoints.push(firstSentence.slice(0, 200));
+        }
       }
     }
   }
