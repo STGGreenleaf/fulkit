@@ -3624,6 +3624,31 @@ function ManualTab() {
     <div>
       <SectionTitle>Operator&apos;s Manual</SectionTitle>
 
+      <div style={{
+        padding: "var(--space-4)",
+        background: "var(--color-bg-alt)",
+        border: "1px solid var(--color-border-light)",
+        borderRadius: "var(--radius-lg)",
+        marginBottom: "var(--space-4)",
+      }}>
+        <div style={{
+          fontSize: "var(--font-size-lg)",
+          fontWeight: "var(--font-weight-bold)",
+          color: "var(--color-text)",
+          lineHeight: "var(--line-height-tight)",
+          marginBottom: "var(--space-2)",
+        }}>
+          The manual is the chat.
+        </div>
+        <div style={{
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-secondary)",
+          lineHeight: "var(--line-height-relaxed)",
+        }}>
+          If you get stuck, have a question, or want to know how something works {"\u2014"} just ask. F{"\u00FC"}lkit knows how F{"\u00FC"}lkit works. Every feature, every integration, every shortcut is accessible through the conversation. You don{"\u2019"}t need this page. But here are some ideas to get you started.
+        </div>
+      </div>
+
       {/* ═══ Layer 1: Getting Started ═══ */}
       <SectionDivider label="Getting Started" />
       <div>
