@@ -13,6 +13,7 @@ import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { getGoogleToken, googleFetch } from "../../../lib/google-server";
 import { getFitbitToken, fitbitFetch } from "../../../lib/fitbit-server";
 import { getQuickBooksToken, qbFetch } from "../../../lib/quickbooks-server";
+import { getNotionToken, notionFetch } from "../../../lib/notion-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -206,6 +207,7 @@ const ECOSYSTEM_KEYWORDS = {
   google_drive: ["drive", "document", "spreadsheet", "google doc", "google sheet", "slides", "file on drive", "shared with me"],
   fitbit: ["fitbit", "steps", "sleep", "heart rate", "activity", "workout", "calories", "weight", "health", "recovery", "resting heart"],
   quickbooks: ["quickbooks", "accounting", "invoice", "expense", "profit", "loss", "p&l", "balance sheet", "accounts receivable", "payable", "tax"],
+  notion: ["notion", "page", "database", "wiki", "workspace"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -2231,6 +2233,126 @@ async function executeQBTool(name, input, userId) {
   throw new Error(`Unknown quickbooks tool: ${name}`);
 }
 
+// Notion tools — search pages, get page content
+const NOTION_TOOLS = [
+  {
+    name: "notion_search",
+    description: "Search the user's Notion workspace for pages and databases by keyword.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search term" },
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "notion_get_page",
+    description: "Get the content of a Notion page by ID (from notion_search results).",
+    input_schema: {
+      type: "object",
+      properties: {
+        pageId: { type: "string", description: "Page ID from notion_search results" },
+      },
+      required: ["pageId"],
+    },
+  },
+  {
+    name: "notion_import_page",
+    description: "Import a Notion page into the user's Fulkit vault as a note. Confirm with user first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        pageId: { type: "string", description: "Page ID from notion_search results" },
+        folder: { type: "string", description: "Vault folder. Default: 00-INBOX." },
+      },
+      required: ["pageId"],
+    },
+  },
+];
+
+// Extract plain text from Notion blocks
+function extractNotionText(blocks) {
+  return (blocks || []).map(b => {
+    const text = b[b.type]?.rich_text?.map(t => t.plain_text).join("") || "";
+    if (b.type === "heading_1") return `# ${text}`;
+    if (b.type === "heading_2") return `## ${text}`;
+    if (b.type === "heading_3") return `### ${text}`;
+    if (b.type === "bulleted_list_item") return `- ${text}`;
+    if (b.type === "numbered_list_item") return `1. ${text}`;
+    if (b.type === "to_do") return `- [${b.to_do?.checked ? "x" : " "}] ${text}`;
+    if (b.type === "code") return `\`\`\`\n${text}\n\`\`\``;
+    if (b.type === "quote") return `> ${text}`;
+    if (b.type === "divider") return "---";
+    return text;
+  }).filter(Boolean).join("\n");
+}
+
+async function executeNotionTool(name, input, userId) {
+  if (name === "notion_search") {
+    const limit = Math.min(input.limit || 10, 20);
+    const res = await notionFetch(userId, "/search", {
+      method: "POST",
+      body: JSON.stringify({
+        query: input.query,
+        page_size: limit,
+        sort: { direction: "descending", timestamp: "last_edited_time" },
+      }),
+    });
+    if (res.error) return res;
+    const data = await res.json();
+    return {
+      results: (data.results || []).map(r => ({
+        id: r.id,
+        type: r.object,
+        title: r.properties?.title?.title?.[0]?.plain_text || r.properties?.Name?.title?.[0]?.plain_text || "(Untitled)",
+        lastEdited: r.last_edited_time,
+        url: r.url,
+      })),
+    };
+  }
+
+  if (name === "notion_get_page") {
+    const res = await notionFetch(userId, `/blocks/${input.pageId}/children?page_size=100`);
+    if (res.error) return res;
+    const data = await res.json();
+    const content = extractNotionText(data.results);
+    return { content: content.slice(0, 5000) };
+  }
+
+  if (name === "notion_import_page") {
+    // Get page title
+    const pageRes = await notionFetch(userId, `/pages/${input.pageId}`);
+    if (pageRes.error) return pageRes;
+    const page = await pageRes.json();
+    const title = page.properties?.title?.title?.[0]?.plain_text || page.properties?.Name?.title?.[0]?.plain_text || "Notion Import";
+
+    // Get content
+    const blocksRes = await notionFetch(userId, `/blocks/${input.pageId}/children?page_size=100`);
+    if (blocksRes.error) return blocksRes;
+    const blocks = await blocksRes.json();
+    const content = extractNotionText(blocks.results);
+
+    // Save as note
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.from("notes").insert({
+      user_id: userId,
+      title,
+      content: content.slice(0, 50000),
+      source: "notion",
+      folder: input.folder || "00-INBOX",
+      encrypted: false,
+      context_mode: "available",
+    }).select("id, title, folder").single();
+
+    if (error) return { error: error.message };
+    return { imported: true, noteId: data.id, title: data.title, folder: data.folder };
+  }
+
+  throw new Error(`Unknown notion tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2971,7 +3093,8 @@ export async function POST(request) {
         safeGet(() => getGoogleToken(userId, "google_drive"), "google_drive"),
         safeGet(getFitbitToken, "fitbit"),
         safeGet(getQuickBooksToken, "quickbooks"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getNotionToken, "notion"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -3020,7 +3143,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -3035,6 +3158,7 @@ export async function POST(request) {
         { ref: "gmailToken", val: gmailToken }, { ref: "gdriveToken", val: gdriveToken },
         { ref: "fitbitToken", val: fitbitToken },
         { ref: "qbToken", val: qbToken },
+        { ref: "notionToken", val: notionToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -3055,6 +3179,7 @@ export async function POST(request) {
             else if (s.ref === "gdriveToken") gdriveToken = null;
             else if (s.ref === "fitbitToken") fitbitToken = null;
             else if (s.ref === "qbToken") qbToken = null;
+            else if (s.ref === "notionToken") notionToken = null;
           }
         }
       }
@@ -3339,7 +3464,7 @@ Never skip the preview step. The user must see and approve changes before they g
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
       gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
-      qbToken && "QuickBooks",
+      qbToken && "QuickBooks", notionToken && "Notion",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3418,6 +3543,7 @@ Never skip the preview step. The user must see and approve changes before they g
       google_drive: () => gdriveToken ? DRIVE_TOOLS : [],
       fitbit: () => fitbitToken ? FITBIT_TOOLS : [],
       quickbooks: () => qbToken ? QUICKBOOKS_TOOLS : [],
+      notion: () => notionToken ? NOTION_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3475,7 +3601,7 @@ Never skip the preview step. The user must see and approve changes before they g
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
         gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
-        quickbooks: !!qbToken,
+        quickbooks: !!qbToken, notion: !!notionToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3766,6 +3892,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Notion tools
+              if (block.name.startsWith("notion_") && notionToken) {
+                try {
+                  const result = await withTimeout(() => executeNotionTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

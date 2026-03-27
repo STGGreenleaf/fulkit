@@ -218,7 +218,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -276,6 +276,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s on my board right now?",
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
+  },
+  notion: {
+    subtitle: "Your workspace, connected.",
+    description: "Notion holds your pages, databases, wikis, and docs. Connecting it means F\u00FClkit can search your workspace, read page content, and import pages into your vault \u2014 so your Notion knowledge is accessible in chat without switching apps.",
+    gives: "Search across all pages and databases, read full page content, and import pages as Fulkit notes. Ask about anything in your Notion workspace.",
+    tryPrompt: "What\u2019s in my Notion workspace about onboarding?\u201D\n\u201CImport my meeting notes from Notion",
+    linkLabel: "notion.so",
+    linkHref: "https://notion.so",
   },
   obsidian: {
     subtitle: "Your vault, imported.",
@@ -1103,6 +1111,11 @@ function SourcesTab() {
   const [suggestInput, setSuggestInput] = useState("");
   const [suggestSent, setSuggestSent] = useState(false);
 
+  const [notionConnected, setNotionConnected] = useState(false);
+  const [notionExpanded, setNotionExpanded] = useState(false);
+  const [notionLastSynced, setNotionLastSynced] = useState(null);
+  const [notionDisconnecting, setNotionDisconnecting] = useState(false);
+
   const [obsidianConnected, setObsidianConnected] = useState(false);
   const [obsidianExpanded, setObsidianExpanded] = useState(false);
   const [obsidianImporting, setObsidianImporting] = useState(false);
@@ -1165,8 +1178,11 @@ function SourcesTab() {
     if (params.get("qb") === "connected") {
       setQbConnected(true);
     }
+    if (params.get("nt") === "connected") {
+      setNotionConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb", "nt"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1201,7 +1217,8 @@ function SourcesTab() {
       check("/api/google/drive/status"),
       check("/api/health/fitbit/status"),
       check("/api/quickbooks/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb]) => {
+      check("/api/notion/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1218,6 +1235,7 @@ function SourcesTab() {
       if (gdrive) { setGdriveConnected(gdrive.connected); }
       if (fitbit) { setFitbitConnected(fitbit.connected); if (fitbit.lastSynced) setFitbitLastSynced(fitbit.lastSynced); }
       if (qb) { setQbConnected(qb.connected); if (qb.lastSynced) setQbLastSynced(qb.lastSynced); }
+      if (notion) { setNotionConnected(notion.connected); if (notion.lastSynced) setNotionLastSynced(notion.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1619,6 +1637,31 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  function connectNotion() {
+    if (accessToken) {
+      window.open("/api/notion/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/notion/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectNotion() {
+    setNotionDisconnecting(true);
+    try {
+      await fetch("/api/notion/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setNotionConnected(false);
+    } catch {}
+    setNotionDisconnecting(false);
+  }
+
   async function connectObsidian() {
     if (!("showDirectoryPicker" in window)) {
       alert("Your browser doesn\u2019t support folder access. Use Chrome, Edge, or Arc.");
@@ -1751,8 +1794,9 @@ function SourcesTab() {
     ...(fitbitConnected ? ["fitbit"] : []),
     ...(qbConnected ? ["quickbooks"] : []),
     ...(obsidianConnected ? ["obsidian"] : []),
+    ...(notionConnected ? ["notion"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1774,6 +1818,7 @@ function SourcesTab() {
     if (id === "fitbit") { connectFitbit(); return; }
     if (id === "quickbooks") { connectQB(); return; }
     if (id === "obsidian") { connectObsidian(); return; }
+    if (id === "notion") { connectNotion(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1789,6 +1834,7 @@ function SourcesTab() {
     if (id === "fitbit") { disconnectFitbit(); return; }
     if (id === "quickbooks") { disconnectQB(); return; }
     if (id === "obsidian") { disconnectObsidian(); return; }
+    if (id === "notion") { disconnectNotion(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -2571,6 +2617,44 @@ function SourcesTab() {
                             Disconnect
                           </button>
                         </div>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Notion — connected */}
+            {notionConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.notion}
+                  name="Notion"
+                  subtitle="Your workspace, connected."
+                  isExpanded={notionExpanded}
+                  onToggle={() => setNotionExpanded(!notionExpanded)}
+                />
+                <Drawer open={notionExpanded}>
+                  {richDrawerContent({
+                    expanded: notionExpanded,
+                    description: "Notion holds your pages, databases, wikis, and docs. Connecting it means F\u00FClkit can search your workspace, read page content, and import pages into your vault \u2014 so your Notion knowledge is accessible in chat without switching apps.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Search across all pages and databases, read full page content, and import pages as Fulkit notes. Ask about anything in your Notion workspace.",
+                    tryPrompt: "What\u2019s in my Notion workspace about onboarding?\u201D\n\u201CImport my meeting notes from Notion",
+                    linkLabel: "notion.so",
+                    linkHref: "https://notion.so",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{notionLastSynced ? ` \u00B7 Last synced ${timeAgo(notionLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectNotion}
+                          disabled={notionDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: notionDisconnecting ? 0.5 : 1 }}
+                        >
+                          {notionDisconnecting ? "..." : "Disconnect"}
+                        </button>
                       </div>
                     ),
                   })}
