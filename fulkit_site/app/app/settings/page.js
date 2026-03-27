@@ -203,7 +203,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -285,6 +285,22 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s in my Notion workspace about onboarding?\u201D\n\u201CImport my meeting notes from Notion",
     linkLabel: "notion.so",
     linkHref: "https://notion.so",
+  },
+  onenote: {
+    subtitle: "Your notebooks, connected.",
+    description: "OneNote organizes your notes into notebooks, sections, and pages. Connecting it means F\u00FClkit can browse your notebooks, read page content, and surface your notes in conversation \u2014 so your Microsoft notes are accessible alongside everything else.",
+    gives: "Notebook and section listing, full page content, and note search. Ask about anything in your OneNote and get real answers.",
+    tryPrompt: "What\u2019s in my work notebook?\u201D\n\u201CRead my meeting notes from last week",
+    linkLabel: "onenote.com",
+    linkHref: "https://www.onenote.com",
+  },
+  todoist: {
+    subtitle: "Your tasks, connected.",
+    description: "Todoist tracks your tasks, projects, and priorities. Connecting it means F\u00FClkit sees what\u2019s on your plate \u2014 due dates, labels, projects \u2014 and can help you plan around what actually needs to get done.",
+    gives: "Active tasks with due dates, priorities, and labels. Project listing. Ask what\u2019s due or what you need to focus on and get a real answer.",
+    tryPrompt: "What\u2019s due today?\u201D\n\u201CShow me all high-priority tasks",
+    linkLabel: "todoist.com",
+    linkHref: "https://todoist.com",
   },
   obsidian: {
     subtitle: "Your vault, imported.",
@@ -1109,6 +1125,16 @@ function SourcesTab() {
   const [suggestInput, setSuggestInput] = useState("");
   const [suggestSent, setSuggestSent] = useState(false);
 
+  const [onenoteConnected, setOnenoteConnected] = useState(false);
+  const [onenoteExpanded, setOnenoteExpanded] = useState(false);
+  const [onenoteLastSynced, setOnenoteLastSynced] = useState(null);
+  const [onenoteDisconnecting, setOnenoteDisconnecting] = useState(false);
+
+  const [todoistConnected, setTodoistConnected] = useState(false);
+  const [todoistExpanded, setTodoistExpanded] = useState(false);
+  const [todoistLastSynced, setTodoistLastSynced] = useState(null);
+  const [todoistDisconnecting, setTodoistDisconnecting] = useState(false);
+
   const [dropboxConnected, setDropboxConnected] = useState(false);
   const [dropboxExpanded, setDropboxExpanded] = useState(false);
   const [dropboxLastSynced, setDropboxLastSynced] = useState(null);
@@ -1195,8 +1221,14 @@ function SourcesTab() {
     if (params.get("sl") === "connected") {
       setSlackConnected(true);
     }
+    if (params.get("on") === "connected") {
+      setOnenoteConnected(true);
+    }
+    if (params.get("td") === "connected") {
+      setTodoistConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb", "nt", "db", "sl"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb", "nt", "db", "sl", "on", "td"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1234,7 +1266,9 @@ function SourcesTab() {
       check("/api/notion/status"),
       check("/api/dropbox/status"),
       check("/api/slack/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack]) => {
+      check("/api/onenote/status"),
+      check("/api/todoist/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack, onenote, todoist]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1254,6 +1288,8 @@ function SourcesTab() {
       if (notion) { setNotionConnected(notion.connected); if (notion.lastSynced) setNotionLastSynced(notion.lastSynced); }
       if (dropbox) { setDropboxConnected(dropbox.connected); if (dropbox.lastSynced) setDropboxLastSynced(dropbox.lastSynced); }
       if (slack) { setSlackConnected(slack.connected); if (slack.lastSynced) setSlackLastSynced(slack.lastSynced); }
+      if (onenote) { setOnenoteConnected(onenote.connected); if (onenote.lastSynced) setOnenoteLastSynced(onenote.lastSynced); }
+      if (todoist) { setTodoistConnected(todoist.connected); if (todoist.lastSynced) setTodoistLastSynced(todoist.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1655,6 +1691,26 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  function connectOnenote() {
+    if (accessToken) { window.open("/api/onenote/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/onenote/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectOnenote() {
+    setOnenoteDisconnecting(true);
+    try { await fetch("/api/onenote/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setOnenoteConnected(false); } catch {}
+    setOnenoteDisconnecting(false);
+  }
+
+  function connectTodoist() {
+    if (accessToken) { window.open("/api/todoist/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/todoist/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectTodoist() {
+    setTodoistDisconnecting(true);
+    try { await fetch("/api/todoist/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setTodoistConnected(false); } catch {}
+    setTodoistDisconnecting(false);
+  }
+
   function connectDropbox() {
     if (accessToken) { window.open("/api/dropbox/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
     supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/dropbox/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
@@ -1835,8 +1891,10 @@ function SourcesTab() {
     ...(notionConnected ? ["notion"] : []),
     ...(dropboxConnected ? ["dropbox"] : []),
     ...(slackConnected ? ["slack"] : []),
+    ...(onenoteConnected ? ["onenote"] : []),
+    ...(todoistConnected ? ["todoist"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1861,6 +1919,8 @@ function SourcesTab() {
     if (id === "notion") { connectNotion(); return; }
     if (id === "dropbox") { connectDropbox(); return; }
     if (id === "slack") { connectSlack(); return; }
+    if (id === "onenote") { connectOnenote(); return; }
+    if (id === "todoist") { connectTodoist(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1879,6 +1939,8 @@ function SourcesTab() {
     if (id === "notion") { disconnectNotion(); return; }
     if (id === "dropbox") { disconnectDropbox(); return; }
     if (id === "slack") { disconnectSlack(); return; }
+    if (id === "onenote") { disconnectOnenote(); return; }
+    if (id === "todoist") { disconnectTodoist(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -2824,6 +2886,54 @@ function SourcesTab() {
                       </div>
                     </DrawerItem>
                   </div>
+                </Drawer>
+              </Card>
+            )}
+
+            {/* OneNote — connected */}
+            {onenoteConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.onenote} name="OneNote" subtitle="Your notebooks, connected." isExpanded={onenoteExpanded} onToggle={() => setOnenoteExpanded(!onenoteExpanded)} />
+                <Drawer open={onenoteExpanded}>
+                  {richDrawerContent({
+                    expanded: onenoteExpanded,
+                    description: "OneNote organizes your notes into notebooks, sections, and pages. Connecting it means F\u00FClkit can browse your notebooks, read page content, and surface your notes in conversation.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Notebook and section listing, full page content, and note search. Ask about anything in your OneNote and get real answers.",
+                    tryPrompt: "What\u2019s in my work notebook?\u201D\n\u201CRead my meeting notes from last week",
+                    linkLabel: "onenote.com",
+                    linkHref: "https://www.onenote.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{onenoteLastSynced ? ` \u00B7 Last synced ${timeAgo(onenoteLastSynced)}` : ""}</div>
+                        <button onClick={disconnectOnenote} disabled={onenoteDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: onenoteDisconnecting ? 0.5 : 1 }}>{onenoteDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Todoist — connected */}
+            {todoistConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.todoist} name="Todoist" subtitle="Your tasks, connected." isExpanded={todoistExpanded} onToggle={() => setTodoistExpanded(!todoistExpanded)} />
+                <Drawer open={todoistExpanded}>
+                  {richDrawerContent({
+                    expanded: todoistExpanded,
+                    description: "Todoist tracks your tasks, projects, and priorities. Connecting it means F\u00FClkit sees what\u2019s on your plate \u2014 due dates, labels, projects \u2014 and can help you plan around what actually needs to get done.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Active tasks with due dates, priorities, and labels. Project listing. Ask what\u2019s due or what you need to focus on and get a real answer.",
+                    tryPrompt: "What\u2019s due today?\u201D\n\u201CShow me all high-priority tasks",
+                    linkLabel: "todoist.com",
+                    linkHref: "https://todoist.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{todoistLastSynced ? ` \u00B7 Last synced ${timeAgo(todoistLastSynced)}` : ""}</div>
+                        <button onClick={disconnectTodoist} disabled={todoistDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: todoistDisconnecting ? 0.5 : 1 }}>{todoistDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
                 </Drawer>
               </Card>
             )}

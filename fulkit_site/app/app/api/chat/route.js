@@ -16,6 +16,8 @@ import { getQuickBooksToken, qbFetch } from "../../../lib/quickbooks-server";
 import { getNotionToken, notionFetch } from "../../../lib/notion-server";
 import { getDropboxToken, dropboxFetch } from "../../../lib/dropbox-server";
 import { getSlackToken, slackFetch } from "../../../lib/slack-server";
+import { getOneNoteToken, onenoteFetch } from "../../../lib/onenote-server";
+import { getTodoistToken, todoistFetch } from "../../../lib/todoist-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -212,6 +214,8 @@ const ECOSYSTEM_KEYWORDS = {
   notion: ["notion", "page", "database", "wiki", "workspace"],
   dropbox: ["dropbox", "file", "folder", "shared folder", "upload"],
   slack: ["slack", "channel", "thread", "team", "message", "dm"],
+  onenote: ["onenote", "notebook", "one note", "microsoft notes", "section"],
+  todoist: ["todoist", "todo", "task", "project", "due", "priority", "label"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -2498,6 +2502,90 @@ async function executeSlackTool(name, input, userId) {
   throw new Error(`Unknown slack tool: ${name}`);
 }
 
+// OneNote tools — list notebooks, search pages, get page content
+const ONENOTE_TOOLS = [
+  {
+    name: "onenote_notebooks",
+    description: "List the user's OneNote notebooks and sections.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "onenote_pages",
+    description: "List pages in a OneNote section by section ID (from onenote_notebooks).",
+    input_schema: { type: "object", properties: { sectionId: { type: "string", description: "Section ID" } }, required: ["sectionId"] },
+  },
+  {
+    name: "onenote_get_page",
+    description: "Get the content of a OneNote page by page ID.",
+    input_schema: { type: "object", properties: { pageId: { type: "string", description: "Page ID" } }, required: ["pageId"] },
+  },
+];
+
+async function executeOneNoteTool(name, input, userId) {
+  if (name === "onenote_notebooks") {
+    const res = await onenoteFetch(userId, "/me/onenote/notebooks?$expand=sections($select=id,displayName)&$select=id,displayName");
+    if (res.error) return res;
+    const data = await res.json();
+    return { notebooks: (data.value || []).map(nb => ({ id: nb.id, name: nb.displayName, sections: (nb.sections || []).map(s => ({ id: s.id, name: s.displayName })) })) };
+  }
+  if (name === "onenote_pages") {
+    const res = await onenoteFetch(userId, `/me/onenote/sections/${input.sectionId}/pages?$select=id,title,lastModifiedDateTime&$top=20&$orderby=lastModifiedDateTime desc`);
+    if (res.error) return res;
+    const data = await res.json();
+    return { pages: (data.value || []).map(p => ({ id: p.id, title: p.title, modified: p.lastModifiedDateTime })) };
+  }
+  if (name === "onenote_get_page") {
+    const res = await onenoteFetch(userId, `/me/onenote/pages/${input.pageId}/content`, { headers: { Accept: "text/html" } });
+    if (res.error) return res;
+    const html = await res.text();
+    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return { content: text.slice(0, 5000) };
+  }
+  throw new Error(`Unknown onenote tool: ${name}`);
+}
+
+// Todoist tools — list tasks, projects
+const TODOIST_TOOLS = [
+  {
+    name: "todoist_tasks",
+    description: "List the user's active Todoist tasks. Can filter by project or label.",
+    input_schema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "Filter by project ID. Optional." },
+        label: { type: "string", description: "Filter by label name. Optional." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "todoist_projects",
+    description: "List the user's Todoist projects.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+];
+
+async function executeTodoistTool(name, input, userId) {
+  if (name === "todoist_tasks") {
+    let endpoint = "/tasks";
+    const params = [];
+    if (input.projectId) params.push(`project_id=${input.projectId}`);
+    if (input.label) params.push(`label=${input.label}`);
+    if (params.length) endpoint += `?${params.join("&")}`;
+    const res = await todoistFetch(userId, endpoint);
+    if (res.error) return res;
+    const data = await res.json();
+    return { tasks: (data || []).map(t => ({ id: t.id, content: t.content, description: t.description, priority: t.priority, due: t.due?.string || t.due?.date, labels: t.labels, projectId: t.project_id })) };
+  }
+  if (name === "todoist_projects") {
+    const res = await todoistFetch(userId, "/projects");
+    if (res.error) return res;
+    const data = await res.json();
+    return { projects: (data || []).map(p => ({ id: p.id, name: p.name, color: p.color, order: p.order })) };
+  }
+  throw new Error(`Unknown todoist tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -3241,7 +3329,9 @@ export async function POST(request) {
         safeGet(getNotionToken, "notion"),
         safeGet(getDropboxToken, "dropbox"),
         safeGet(getSlackToken, "slack"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getOneNoteToken, "onenote"),
+        safeGet(getTodoistToken, "todoist"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -3290,7 +3380,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -3307,6 +3397,7 @@ export async function POST(request) {
         { ref: "qbToken", val: qbToken },
         { ref: "notionToken", val: notionToken },
         { ref: "dropboxToken", val: dropboxToken }, { ref: "slackToken", val: slackToken },
+        { ref: "onenoteToken", val: onenoteToken }, { ref: "todoistToken", val: todoistToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -3330,6 +3421,8 @@ export async function POST(request) {
             else if (s.ref === "notionToken") notionToken = null;
             else if (s.ref === "dropboxToken") dropboxToken = null;
             else if (s.ref === "slackToken") slackToken = null;
+            else if (s.ref === "onenoteToken") onenoteToken = null;
+            else if (s.ref === "todoistToken") todoistToken = null;
           }
         }
       }
@@ -3616,6 +3709,7 @@ Never skip the preview step. The user must see and approve changes before they g
       gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
       qbToken && "QuickBooks", notionToken && "Notion",
       dropboxToken && "Dropbox", slackToken && "Slack",
+      onenoteToken && "OneNote", todoistToken && "Todoist",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3697,6 +3791,8 @@ Never skip the preview step. The user must see and approve changes before they g
       notion: () => notionToken ? NOTION_TOOLS : [],
       dropbox: () => dropboxToken ? DROPBOX_TOOLS : [],
       slack: () => slackToken ? SLACK_TOOLS : [],
+      onenote: () => onenoteToken ? ONENOTE_TOOLS : [],
+      todoist: () => todoistToken ? TODOIST_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3756,6 +3852,7 @@ Never skip the preview step. The user must see and approve changes before they g
         gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
+        onenote: !!onenoteToken, todoist: !!todoistToken,
       },
       kbIncluded,
       kbExcluded,
@@ -4046,6 +4143,28 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // OneNote tools
+              if (block.name.startsWith("onenote_") && onenoteToken) {
+                try {
+                  const result = await withTimeout(() => executeOneNoteTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Todoist tools
+              if (block.name.startsWith("todoist_") && todoistToken) {
+                try {
+                  const result = await withTimeout(() => executeTodoistTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
