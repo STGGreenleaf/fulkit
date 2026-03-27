@@ -2646,9 +2646,19 @@ async function executeReadwiseTool(name, input, userId) {
 // Geocode cache — locations don't move, cache aggressively
 const _geocodeCache = new Map();
 
-// ─── INVISIBLE INTELLIGENCE — server-side world knowledge, no user action needed ───
-// These tools are always available. Chappie decides when to call them.
+// ─── INVISIBLE INTELLIGENCE — server-side world knowledge, keyword-gated ───
 // No cards, no connect flow, no "Powered by" attribution. Just smarter answers.
+// Loaded only when message keywords match — default is zero world tools.
+
+const WORLD_KEYWORDS = {
+  location: ["weather", "temperature", "forecast", "rain", "uv", "air quality", "aqi", "sunrise", "sunset", "golden hour", "outside", "outdoor", "hiking", "running"],
+  food: ["calories", "nutrition", "protein", "carbs", "sugar", "fat", "food", "ingredient", "recipe", "meal", "smoothie", "snack"],
+  knowledge: ["define", "definition", "synonym", "meaning", "etymology", "wikipedia", "who is", "what is", "tell me about", "look up"],
+  compute: ["convert", "calculate", "how many days", "how much is", "exchange rate", "currency", "euros", "dollars", "pounds", "yen"],
+  curiosity: ["nasa", "asteroid", "space", "astronomy", "picture of the day", "iss", "mars"],
+  news: ["news", "headlines", "current events", "what happened", "breaking"],
+  security: ["breach", "pwned", "hacked", "password", "security check", "compromised"],
+};
 
 const WORLD_TOOLS = [
   {
@@ -4309,13 +4319,30 @@ Never skip the preview step. The user must see and approve changes before they g
       integrationTools.push(...ECOSYSTEM_TOOLS[eco]());
     }
 
+    // Gate world tools by message keywords (same pattern as ecosystem tools)
+    const WORLD_TOOL_MAP = {
+      location: WORLD_TOOLS.filter(t => ["world_weather", "world_sun", "world_air_quality", "world_geocode"].includes(t.name)),
+      food: WORLD_TOOLS.filter(t => t.name === "world_food"),
+      knowledge: WORLD_TOOLS.filter(t => ["world_define", "world_wikipedia", "world_book"].includes(t.name)),
+      compute: WORLD_TOOLS.filter(t => ["world_wolfram", "world_currency"].includes(t.name)),
+      curiosity: WORLD_TOOLS.filter(t => t.name === "world_nasa"),
+      news: WORLD_TOOLS.filter(t => t.name === "world_news"),
+      security: WORLD_TOOLS.filter(t => t.name === "world_breach_check"),
+    };
+    const worldTools = [];
+    for (const [category, kws] of Object.entries(WORLD_KEYWORDS)) {
+      if (kws.some(kw => recentText.includes(kw))) {
+        worldTools.push(...(WORLD_TOOL_MAP[category] || []));
+      }
+    }
+
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
       ...(userId ? KB_TOOLS : []),
-      ...WORLD_TOOLS,
+      ...worldTools,
       ...integrationTools,
     ];
     const toolSchemaTokens = allTools.length > 0 ? Math.ceil(JSON.stringify(allTools).length / 4) : 0;

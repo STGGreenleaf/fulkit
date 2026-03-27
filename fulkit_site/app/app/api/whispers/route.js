@@ -63,18 +63,28 @@ export async function GET(request) {
     const hour = new Date().getHours();
     const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 300,
-      messages: [{
-        role: "user",
-        content: `It's ${day} ${timeOfDay}. Based on this user context, generate exactly 2 short, useful whispers (proactive suggestions). Each should be 1-2 sentences, warm but not cheesy. They should feel like a thoughtful friend noticing something useful. No emojis. No greetings. Just the insight.
+    let response;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await anthropic.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 300,
+          messages: [{
+            role: "user",
+            content: `It's ${day} ${timeOfDay}. Based on this user context, generate exactly 2 short, useful whispers (proactive suggestions). Each should be 1-2 sentences, warm but not cheesy. They should feel like a thoughtful friend noticing something useful. No emojis. No greetings. Just the insight.
 
 ${contextBlock}
 
 Return ONLY a JSON array of 2 strings. Nothing else.`,
-      }],
-    });
+          }],
+        });
+        break;
+      } catch (apiErr) {
+        if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+        // Both attempts failed — return cached whispers or empty
+        return Response.json({ whispers: [], cached: true, fallback: true });
+      }
+    }
 
     let whispers = [];
     try {

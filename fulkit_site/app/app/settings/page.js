@@ -1256,6 +1256,7 @@ function SourcesTab() {
 
   // Check all integration statuses in one batch (single effect, single Promise.all)
   const statusLoadedRef = useRef(false);
+  const [statusReady, setStatusReady] = useState(false);
   useEffect(() => {
     if (!accessToken || statusLoadedRef.current) return;
     statusLoadedRef.current = true;
@@ -1305,6 +1306,7 @@ function SourcesTab() {
       if (onenote) { setOnenoteConnected(onenote.connected); if (onenote.lastSynced) setOnenoteLastSynced(onenote.lastSynced); }
       if (todoist) { setTodoistConnected(todoist.connected); if (todoist.lastSynced) setTodoistLastSynced(todoist.lastSynced); }
       if (readwise) { setReadwiseConnected(readwise.connected); }
+      setStatusReady(true);
     });
   }, [accessToken]);
 
@@ -2176,10 +2178,10 @@ function SourcesTab() {
         </div>
       )}
 
-      {/* Connected sources */}
+      {/* Connected sources — hidden until status checks complete to prevent CLS */}
       {hasConnected && (
         <>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)", opacity: statusReady ? 1 : 0, transition: "opacity var(--duration-normal) var(--ease-default)" }}>
             {/* GitHub */}
             {githubConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
