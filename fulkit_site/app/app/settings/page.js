@@ -3539,10 +3539,16 @@ const GETTING_STARTED = [
 ];
 
 const QUICK_REFERENCE = [
-  { left: "Enter \u2192 send", right: "\u201CSave this\u201D \u2192 note" },
-  { left: "Shift+Enter \u2192 new line", right: "\u201CRemind me\u201D \u2192 action" },
-  { left: "", right: "\u201CTrack this\u201D \u2192 thread" },
-  { left: "", right: "\u201CWhat did I save about\u2026\u201D \u2192 search" },
+  { left: "Enter", right: "Send message" },
+  { left: "Shift + Enter", right: "New line (don\u2019t send)" },
+  { left: "Cmd/Ctrl + K", right: "Focus chat input from anywhere" },
+  { left: "Escape", right: "Clear input or close panels" },
+  { left: "Ctrl + Shift + I", right: "Toggle dev inspector" },
+  { left: "Drop file on chat", right: "Triage \u2014 AI reads, files, extracts actions" },
+  { left: "/recall [topic]", right: "Search your notes inline" },
+  { left: "\u201CSave this\u201D", right: "Distill and save as a note" },
+  { left: "\u201CRemind me\u201D", right: "Create an action item" },
+  { left: "\u201CTrack this\u201D", right: "Start a thread" },
 ];
 
 function SectionDivider({ label, right }) {
@@ -3830,15 +3836,17 @@ function ManualTab() {
         {QUICK_REFERENCE.flatMap((row, i) => [
           <span key={`l${i}`} style={{
               fontFamily: "var(--font-mono)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              padding: "2px 0",
+              fontSize: "var(--font-size-xs)",
+              fontWeight: "var(--font-weight-medium)",
+              color: "var(--color-text-secondary)",
+              padding: "var(--space-1) 0",
+              borderBottom: "1px solid var(--color-border-light)",
             }}>{row.left}</span>,
           <span key={`r${i}`} style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-dim)",
-              padding: "2px 0",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              padding: "var(--space-1) 0",
+              borderBottom: "1px solid var(--color-border-light)",
             }}>{row.right}</span>,
         ])}
       </div>
