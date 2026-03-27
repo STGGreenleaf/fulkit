@@ -2735,15 +2735,42 @@ function SourcesTab() {
                   onToggle={() => setDropboxExpanded(!dropboxExpanded)}
                 />
                 <Drawer open={dropboxExpanded}>
-                  {richDrawerContent({
-                    expanded: dropboxExpanded,
-                    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox. Note: Dropbox may show a security warning during connect \u2014 this is normal for new apps and disappears once our verification is approved.",
-                    givesLabel: "What this gives F\u00FClkit",
-                    gives: "File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what\u2019s in it.",
-                    tryPrompt: "Find my budget spreadsheet in Dropbox\u201D\n\u201CWhat\u2019s in my project folder?",
-                    linkLabel: "dropbox.com",
-                    linkHref: "https://dropbox.com",
-                    footer: (
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                      <DrawerItem index={0} visible={dropboxExpanded}>
+                        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+                          Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F{"\u00FC"}lkit can search your files, read their content, and surface what you need in conversation {"\u2014"} without opening Dropbox. Note: Dropbox may show a security warning during connect {"\u2014"} this is normal for new apps and disappears once our verification is approved.
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={1} visible={dropboxExpanded}>
+                        <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
+                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>What this gives F{"\u00FC"}lkit</div>
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+                            File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what{"\u2019"}s in it.
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={2} visible={dropboxExpanded}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)" }}>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s in my Q2 planning folder?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find the contract we signed last month{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Read me the notes from the vendor meeting{"\u201D"}</div>
+                          </div>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s the latest version of the pitch deck?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find all CSVs with revenue data{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What did the onboarding doc say about day one?{"\u201D"}</div>
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={3} visible={dropboxExpanded}>
+                        <a href="https://dropbox.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+                          {"\u2197 "}dropbox.com
+                        </a>
+                      </DrawerItem>
+                    </div>
+                    <DrawerItem index={4} visible={dropboxExpanded}>
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                           Connected{dropboxLastSynced ? ` \u00B7 Last synced ${timeAgo(dropboxLastSynced)}` : ""}
@@ -2752,8 +2779,8 @@ function SourcesTab() {
                           {dropboxDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
-                    ),
-                  })}
+                    </DrawerItem>
+                  </div>
                 </Drawer>
               </Card>
             )}
@@ -2769,15 +2796,42 @@ function SourcesTab() {
                   onToggle={() => setSlackExpanded(!slackExpanded)}
                 />
                 <Drawer open={slackExpanded}>
-                  {richDrawerContent({
-                    expanded: slackExpanded,
-                    description: "Slack is where your team talks. Connecting it means F\u00FClkit can search messages, browse channels, and surface conversations \u2014 so you can reference what was said without scrolling through threads.",
-                    givesLabel: "What this gives F\u00FClkit",
-                    gives: "Message search across all channels, channel listing, and recent conversation history. Ask what the team discussed and get real answers.",
-                    tryPrompt: "What did the team say about the launch?\u201D\n\u201CShow me recent messages in #general",
-                    linkLabel: "slack.com",
-                    linkHref: "https://slack.com",
-                    footer: (
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                      <DrawerItem index={0} visible={slackExpanded}>
+                        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+                          Slack is where your team talks. Connecting it means F{"\u00FC"}lkit can search messages, browse channels, and surface conversations {"\u2014"} so you can reference what was said without scrolling through threads.
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={1} visible={slackExpanded}>
+                        <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
+                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>What this gives F{"\u00FC"}lkit</div>
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
+                            Message search across all channels, channel listing, and recent conversation history. Ask what the team discussed and get real answers.
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={2} visible={slackExpanded}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)" }}>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What did the team decide about pricing?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Find what Sarah said about the deadline{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s been happening in #engineering?{"\u201D"}</div>
+                          </div>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Did anyone mention the client feedback?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Show me today{"\u2019"}s messages in #general{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What channels am I in?{"\u201D"}</div>
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={3} visible={slackExpanded}>
+                        <a href="https://slack.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+                          {"\u2197 "}slack.com
+                        </a>
+                      </DrawerItem>
+                    </div>
+                    <DrawerItem index={4} visible={slackExpanded}>
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                           Connected{slackLastSynced ? ` \u00B7 Last synced ${timeAgo(slackLastSynced)}` : ""}
@@ -2786,8 +2840,8 @@ function SourcesTab() {
                           {slackDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
-                    ),
-                  })}
+                    </DrawerItem>
+                  </div>
                 </Drawer>
               </Card>
             )}
