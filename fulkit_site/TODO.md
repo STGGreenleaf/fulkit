@@ -202,9 +202,9 @@
 - [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
 
 ### Tier 4: Productivity
-- [ ] **Slack** — team chat context. Keywords: slack, channel, thread, team.
+- [x] **Slack** — ✅ OAuth + 3 chat tools (search messages, list channels, channel history). Settings card.
 - [ ] **Linear** — issue tracking for dev teams. Keywords: issue, bug, ticket, linear, sprint.
-- [ ] **Notion** — import from competitor + ongoing sync. Keywords: notion, page, database.
+- [x] **Notion** — ✅ OAuth + 3 chat tools (search, get page, import to vault). Block → markdown converter.
 
 ### Contenders (evaluate later)
 Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, Monday.com, ClickUp, Zoom, Strava, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.

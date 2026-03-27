@@ -3958,8 +3958,8 @@ const OWNER_NOTES = [
       { name: "Trello", url: "https://trello.com/power-ups/admin", note: "Power-Up for board integration." },
       { name: "QuickBooks", url: "https://developer.intuit.com/app/developer/dashboard", note: "Intuit Developer. App: Fulkit. Production keys live. Accounting + Payments API." },
       { name: "Notion", url: "https://www.notion.so/my-integrations", note: "Public integration. OAuth Client ID + Secret. Read content only." },
-      { name: "Dropbox", url: "https://www.dropbox.com/developers/apps", note: "Not yet registered. Needs Client ID + Secret." },
-      { name: "Slack", url: "https://api.slack.com/apps", note: "Not yet registered. Needs Client ID + Secret." },
+      { name: "Dropbox", url: "https://www.dropbox.com/developers/apps", note: "App: F\u00FClkit. Production applied. Read-only (files.metadata.read, files.content.read)." },
+      { name: "Slack", url: "https://api.slack.com/apps", note: "App: Fulkit. User scopes: channels:read, channels:history, search:read, users:read." },
     ],
   },
   {
