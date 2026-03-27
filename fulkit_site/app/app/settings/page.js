@@ -3740,120 +3740,84 @@ function ManualTab() {
         ))}
       </div>
 
-      {/* ═══ Layer 3: Reference ═══ */}
-      <SectionDivider label="Connect" right={`${connectedCount}/${ALL_INTEGRATIONS.length}`} />
-      <div style={{
-        overflow: "hidden",
-        background: "var(--color-bg-elevated)",
-        border: "1px solid var(--color-border-light)",
-      }}>
-        {ALL_INTEGRATIONS.map((integration) => {
-          const isConnected = connections[integration.id] || false;
-          const isExpanded = expanded[integration.id] || false;
-          const section = MANUAL_SECTIONS[integration.id];
-          const cmdCount = section ? section.categories.reduce((sum, c) => sum + c.commands.length, 0) : 0;
-          return (
-            <div key={integration.id} style={{
-              borderBottom: "1px solid var(--color-border-light)",
-            }}>
-              <button
-                onClick={() => {
-                  if (!isConnected || !section) return;
-                  setExpanded(prev => prev[integration.id] ? {} : { [integration.id]: true });
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  width: "100%",
-                  padding: "var(--space-2) var(--space-3)",
-                  background: isExpanded ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
-                  border: "none",
-                  borderLeft: isExpanded ? "3px solid var(--color-text-muted)" : "3px solid transparent",
-                  cursor: isConnected ? "pointer" : "default",
-                  fontFamily: "var(--font-primary)",
-                  borderRadius: 0,
-                  transition: "background var(--duration-fast) var(--ease-default)",
-                  opacity: isConnected ? 1 : 0.45,
-                }}
-              >
-                <span style={{
-                  width: 6, height: 6,
-                  borderRadius: "var(--radius-full)",
-                  background: isConnected ? "var(--color-text)" : "transparent",
-                  border: isConnected ? "none" : "1px solid var(--color-text-dim)",
-                  flexShrink: 0,
-                }} />
-                <span style={{ display: "flex", alignItems: "center", width: 16, height: 16 }}>
-                  {SOURCE_LOGOS[integration.id]}
-                </span>
-                <span style={{
+      {/* ═══ Layer 3: Ideas ═══ */}
+      <SectionDivider label="Try Asking" />
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {[
+          { category: "Your Day", prompts: [
+            "What\u2019s on my calendar this week?",
+            "What\u2019s due today?",
+            "Block off Friday morning for deep work",
+            "What should I prep for my 2pm?",
+          ]},
+          { category: "Your Business", prompts: [
+            "What\u2019s my P&L this month?",
+            "How did we do today?",
+            "Any overdue invoices I should follow up on?",
+            "Who owes me money right now?",
+          ]},
+          { category: "Your World", prompts: [
+            "What\u2019s the weather in St. George?",
+            "How many calories in an a\u00E7a\u00ED bowl?",
+            "How much is \u20AC500 in dollars right now?",
+            "When\u2019s sunset tonight?",
+          ]},
+          { category: "Your Health", prompts: [
+            "How did I sleep last night?",
+            "How many steps this week?",
+            "What\u2019s my resting heart rate trending?",
+            "Show me my weight over the last month",
+          ]},
+          { category: "Your Files", prompts: [
+            "What did Sarah say about the contract?",
+            "Pull in my project notes from Drive",
+            "Find the vendor meeting notes in Dropbox",
+            "Import my Q2 proposal so I can reference it",
+          ]},
+          { category: "Your Team", prompts: [
+            "What did the team decide about pricing?",
+            "Show me today\u2019s messages in #general",
+            "What\u2019s been happening in #engineering?",
+            "Find what Sarah said about the deadline",
+          ]},
+          { category: "Your Notes", prompts: [
+            "What did I write about project planning?",
+            "Find my notes on that book I read",
+            "What\u2019s in my Notion workspace about onboarding?",
+            "What did I highlight in Atomic Habits?",
+          ]},
+          { category: "Curiosity", prompts: [
+            "What\u2019s NASA\u2019s picture of the day?",
+            "Any asteroids passing close to Earth?",
+            "What\u2019s happening with food safety regulations?",
+            "Tell me about the book Thinking, Fast and Slow",
+          ]},
+        ].map((group) => (
+          <div key={group.category}>
+            <div style={{
+              fontSize: "var(--font-size-2xs)",
+              fontWeight: "var(--font-weight-semibold)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--letter-spacing-wider)",
+              color: "var(--color-text-muted)",
+              marginBottom: "var(--space-1)",
+            }}>{group.category}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1)" }}>
+              {group.prompts.map((p, i) => (
+                <div key={i} style={{
                   fontSize: "var(--font-size-xs)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  color: "var(--color-text)",
-                  width: 80,
-                  flexShrink: 0,
-                  textAlign: "left",
-                }}>{integration.name}</span>
-                <span style={{
-                  fontSize: "var(--font-size-2xs)",
-                  color: "var(--color-text-muted)",
-                  flex: 1,
-                  textAlign: "left",
-                }}>{integration.summary}</span>
-                {isConnected ? (
-                  <>
-                    <span style={{
-                      fontSize: "var(--font-size-2xs)",
-                      color: "var(--color-text-dim)",
-                      fontFamily: "var(--font-mono)",
-                    }}>{cmdCount}</span>
-                    <ChevronRight size={12} style={{
-                      color: "var(--color-text-dim)",
-                      transform: isExpanded ? "rotate(90deg)" : "none",
-                      transition: "transform 0.15s ease",
-                    }} />
-                  </>
-                ) : (
-                  <span style={{
-                    fontSize: "var(--font-size-2xs)",
-                    color: "var(--color-text-dim)",
-                  }}>Connect &rarr;</span>
-                )}
-              </button>
-              {isExpanded && section && (
-                <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-1) var(--space-3) var(--space-2)", background: "var(--color-surface)" }}>
-                  {section.categories.map((cat, catIdx) => (
-                    <div key={catIdx}>
-                      <div style={{
-                        fontSize: "var(--font-size-2xs)",
-                        fontWeight: "var(--font-weight-semibold)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        color: "var(--color-text-dim)",
-                        padding: "var(--space-1) 0 2px",
-                      }}>
-                        {cat.label}
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--space-2)" }}>
-                        {cat.commands.map((cmd, cmdIdx) => (
-                          <div key={cmdIdx} style={{ padding: "2px 0" }}>
-                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text)", fontStyle: "italic" }}>
-                              {`\u201C${cmd.example}\u201D`}
-                            </div>
-                            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-                              {cmd.description}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                  color: "var(--color-text-dim)",
+                  fontStyle: "italic",
+                  borderLeft: "2px solid var(--color-border)",
+                  paddingLeft: "var(--space-2)",
+                  lineHeight: "var(--line-height-relaxed)",
+                }}>
+                  {`\u201C${p}\u201D`}
                 </div>
-              )}
+              ))}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {/* Quick Reference */}
