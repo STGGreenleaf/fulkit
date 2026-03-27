@@ -59,7 +59,7 @@ function getPageName(pathname) {
 
 // ─── AppShell ─────────────────────────────────────────────
 export default function AppShell({ children }) {
-  const { user, compactMode, setCompactMode } = useAuth();
+  const { user, compactMode } = useAuth();
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
@@ -78,14 +78,12 @@ export default function AppShell({ children }) {
       if (!cmd) return;
 
       if (e.key === "n") { e.preventDefault(); router.push("/chat"); return; }
-      if (e.key === "/") { e.preventDefault(); setCompactMode(!compactMode); return; }
       if (e.key === "j") { e.preventDefault(); router.push("/threads"); return; }
       if (e.key === "h") { e.preventDefault(); router.push("/home"); return; }
-      if (e.key === ".") { e.preventDefault(); setCompactMode(!compactMode); return; }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [user, router, compactMode, setCompactMode]);
+  }, [user, router]);
 
   // Clear toolbar on navigation
   const prevPathRef = useRef(pathname);
