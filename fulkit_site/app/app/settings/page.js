@@ -3545,6 +3545,7 @@ const QUICK_REFERENCE = [
   { left: "Cmd/Ctrl + N", right: "New conversation" },
   { left: "Cmd/Ctrl + H", right: "Jump to home" },
   { left: "Cmd/Ctrl + J", right: "Jump to threads" },
+  { left: "Cmd/Ctrl + Shift + C", right: "Open chat in side window" },
   { left: "Escape", right: "Clear input or close panels" },
   { left: "Drop file", right: "Triage \u2014 AI reads, files, extracts" },
   { left: "/recall [topic]", right: "Search your notes inline" },

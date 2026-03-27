@@ -80,6 +80,7 @@ export default function AppShell({ children }) {
       if (e.key === "n") { e.preventDefault(); router.push("/chat"); return; }
       if (e.key === "j") { e.preventDefault(); router.push("/threads"); return; }
       if (e.key === "h") { e.preventDefault(); router.push("/home"); return; }
+      if (e.shiftKey && (e.key === "c" || e.key === "C")) { e.preventDefault(); window.open("/chat/popout", "fulkit-popout", "width=400,height=600,resizable=yes,scrollbars=yes"); return; }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
