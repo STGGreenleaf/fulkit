@@ -16,7 +16,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useIsMobile } from "../lib/use-mobile";
 import Sidebar from "./Sidebar";
@@ -59,11 +59,33 @@ function getPageName(pathname) {
 
 // ─── AppShell ─────────────────────────────────────────────
 export default function AppShell({ children }) {
-  const { user, compactMode } = useAuth();
+  const { user, compactMode, setCompactMode } = useAuth();
   const isMobile = useIsMobile();
   const pathname = usePathname();
+  const router = useRouter();
   const [toolbar, setToolbarRaw] = useState(null);
   const setToolbar = useCallback((content) => setToolbarRaw(content), []);
+
+  // ─── Global hotkeys ────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    const onKey = (e) => {
+      // Don't intercept when typing in inputs
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.contentEditable === "true") return;
+
+      const cmd = e.metaKey || e.ctrlKey;
+      if (!cmd) return;
+
+      if (e.key === "n") { e.preventDefault(); router.push("/chat"); return; }
+      if (e.key === "/") { e.preventDefault(); setCompactMode(!compactMode); return; }
+      if (e.key === "j") { e.preventDefault(); router.push("/threads"); return; }
+      if (e.key === "h") { e.preventDefault(); router.push("/home"); return; }
+      if (e.key === ".") { e.preventDefault(); setCompactMode(!compactMode); return; }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [user, router, compactMode, setCompactMode]);
 
   // Clear toolbar on navigation
   const prevPathRef = useRef(pathname);
