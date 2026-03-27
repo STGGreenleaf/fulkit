@@ -3989,6 +3989,28 @@ const OWNER_NOTES = [
     ],
   },
   {
+    category: "Integration Status (Session 23)",
+    items: [
+      { name: "Google Calendar", url: "https://console.cloud.google.com", note: "\u2705 Live. 4 chat tools. Google verification submitted (4-6 weeks). Events on ThreadCalendar." },
+      { name: "Gmail", url: "https://console.cloud.google.com", note: "\u2705 Live. Read-only. Search + get thread. Same Google OAuth app." },
+      { name: "Google Drive", url: "https://console.cloud.google.com", note: "\u2705 Live. Read-only + vault import. Same Google OAuth app." },
+      { name: "Fitbit", url: "https://dev.fitbit.com", note: "\u2705 Live. Daily summary, sleep, heart rate, weight. First health integration." },
+      { name: "QuickBooks", url: "https://developer.intuit.com/app/developer/dashboard", note: "\u2705 Live. Production keys. P&L, balance sheet, invoices, expenses, customers." },
+      { name: "Obsidian", url: "https://obsidian.md", note: "\u2705 Live. Folder picker import via File System Access API. No OAuth needed." },
+      { name: "Notion", url: "https://www.notion.so/my-integrations", note: "\u2705 Live. Search pages, read content, import to vault." },
+      { name: "Dropbox", url: "https://www.dropbox.com/developers/apps", note: "\u2705 Live. File search + read. Production applied (500 users until reviewed)." },
+      { name: "Slack", url: "https://api.slack.com/apps", note: "\u2705 Live. Search messages, list channels, channel history." },
+      { name: "Inbox Triage", url: "https://fulkit.app/chat", note: "\u2705 Live. Drop any file (PDF/image/text) \u2192 AI reads \u2192 triage card \u2192 file/discuss/extract/connect." },
+      { name: "ThreadCalendar", url: "https://fulkit.app/threads/calendar", note: "\u2705 Live. Google Calendar + Trello events on calendar grid. Drag-to-folder mapping." },
+      { name: "Vagaro", url: "https://docs.vagaro.com", note: "\u23F3 Pending. Email sent to Enterprise Sales for API access." },
+      { name: "Whoop", url: "https://developer-dashboard.whoop.com", note: "\u23F3 Blocked. Requires device + membership." },
+      { name: "Oura", url: "https://cloud.ouraring.com/oauth/applications", note: "\u23F3 Blocked. Requires ring + account." },
+      { name: "Strava", url: "https://developers.strava.com", note: "\u23F3 Blocked. API page erroring. Circle back." },
+      { name: "Garmin", url: "https://developerprogram.garmin.com", note: "\u23F3 Pending. OAuth 1.0a (harder). Build when accounts available." },
+      { name: "Terra/Vital", url: "https://dashboard.tryvital.io", note: "\u274C Paused. $300-499/mo. Webhook configured, signing secret saved. Revisit at scale." },
+    ],
+  },
+  {
     category: "Internal Pages",
     items: [
       { name: "/landing", url: "https://fulkit.app/landing", note: "Public landing page — hero, problem, math, features, grid, pricing, trust, CTA" },
