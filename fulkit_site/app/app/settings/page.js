@@ -76,11 +76,6 @@ const SOURCE_LOGOS = {
       <path d="M6 2l6 4-6 4 6 4-6 4-6-4 6-4-6-4zm12 0l6 4-6 4 6 4-6 4-6-4 6-4-6-4z"/>
     </svg>
   ),
-  icloud: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 19c3.5 0 6-2.5 6-5.5 0-2.8-2-5-4.8-5.4C13.4 5.8 11 4 8.5 4 5.4 4 3 6.5 3 9.5c0 .3 0 .6.1.9C1.3 11.1 0 12.9 0 15c0 2.8 2.2 4 4 4h9z"/>
-    </svg>
-  ),
   notion: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M4.5 2.5c.3.2.4.3.8.3h12.5c.4 0 .9-.2 1.2-.5l.5.5c-.1.5-.2 1.3-.2 2.1v14.3c0 .8.1 1.2.3 1.5l-.3.3H14l-.3-.3c.2-.3.3-.6.3-1.5V5.5L8.2 20l-.4.3c-.2-.2-.5-.4-.9-.7L4 17.3V5.6c0-.8-.1-1.2-.3-1.5l.8-1.6z"/>
@@ -89,16 +84,6 @@ const SOURCE_LOGOS = {
   onenote: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 4h16v16H4z"/><path d="M8 8v8l4-6v6"/>
-    </svg>
-  ),
-  markdown: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8v8l3-3 3 3V8"/><path d="M18 12l-2-2v4"/>
-    </svg>
-  ),
-  apple_notes: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/>
     </svg>
   ),
   slack: (
@@ -340,11 +325,8 @@ const ALL_SOURCES = [
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
   { id: "google", name: "Google", cat: "Account" },
   { id: "notion", name: "Notion", cat: "Notes" },
-  { id: "apple_notes", name: "Apple Notes", cat: "Notes" },
   { id: "dropbox", name: "Dropbox", cat: "Files" },
-  { id: "icloud", name: "iCloud Drive", cat: "Files" },
   { id: "onenote", name: "OneNote", cat: "Notes" },
-  { id: "markdown", name: "Markdown files", cat: "Notes" },
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
