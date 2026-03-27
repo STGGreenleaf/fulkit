@@ -2724,6 +2724,74 @@ function SourcesTab() {
               </Card>
             )}
 
+            {/* Dropbox — connected */}
+            {dropboxConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.dropbox}
+                  name="Dropbox"
+                  subtitle="Your files, connected."
+                  isExpanded={dropboxExpanded}
+                  onToggle={() => setDropboxExpanded(!dropboxExpanded)}
+                />
+                <Drawer open={dropboxExpanded}>
+                  {richDrawerContent({
+                    expanded: dropboxExpanded,
+                    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what\u2019s in it.",
+                    tryPrompt: "Find my budget spreadsheet in Dropbox\u201D\n\u201CWhat\u2019s in my project folder?",
+                    linkLabel: "dropbox.com",
+                    linkHref: "https://dropbox.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{dropboxLastSynced ? ` \u00B7 Last synced ${timeAgo(dropboxLastSynced)}` : ""}
+                        </div>
+                        <button onClick={disconnectDropbox} disabled={dropboxDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: dropboxDisconnecting ? 0.5 : 1 }}>
+                          {dropboxDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Slack — connected */}
+            {slackConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.slack}
+                  name="Slack"
+                  subtitle="Your team chat, in context."
+                  isExpanded={slackExpanded}
+                  onToggle={() => setSlackExpanded(!slackExpanded)}
+                />
+                <Drawer open={slackExpanded}>
+                  {richDrawerContent({
+                    expanded: slackExpanded,
+                    description: "Slack is where your team talks. Connecting it means F\u00FClkit can search messages, browse channels, and surface conversations \u2014 so you can reference what was said without scrolling through threads.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Message search across all channels, channel listing, and recent conversation history. Ask what the team discussed and get real answers.",
+                    tryPrompt: "What did the team say about the launch?\u201D\n\u201CShow me recent messages in #general",
+                    linkLabel: "slack.com",
+                    linkHref: "https://slack.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{slackLastSynced ? ` \u00B7 Last synced ${timeAgo(slackLastSynced)}` : ""}
+                        </div>
+                        <button onClick={disconnectSlack} disabled={slackDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: slackDisconnecting ? 0.5 : 1 }}>
+                          {slackDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
             {/* Other connected sources */}
             {connectedSources.filter((s) => s.id !== "google").map((src) => {
               const isExpanded = expanded[src.id];
