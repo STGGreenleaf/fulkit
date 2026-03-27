@@ -3758,7 +3758,7 @@ function ManualTab() {
           ]},
           { category: "Your World", prompts: [
             "What\u2019s the weather in St. George?",
-            "How many calories in an a\u00E7a\u00ED bowl?",
+            "Is the air quality good enough for a run today?",
             "How much is \u20AC500 in dollars right now?",
             "When\u2019s sunset tonight?",
           ]},
