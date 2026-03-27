@@ -1,26 +1,28 @@
 # Last Session
 
-**Date**: 2026-03-24 (marathon)
-**Scope**: Signal pipeline, viz tuning, Spotify independence, set fixes
+**Date**: 2026-03-26 → 2026-03-27 (marathon)
+**Scope**: Integrations, invisible intelligence, Sources UX, signal fixes
 
 **Shipped**:
-- Fabric Signal Pipeline: worker → FFT → 100ms spectral timelines (21 tracks)
-- Spotify gates removed — Fabric is native, Spotify is a source not structure
-- Set reorder: defensive guards, atomic moves, cross-set MOVE
-- Poster: Fabric Procedural Fingerprint (timestamp-seeded, popup modal, export PNG)
-- Thumbs down: full row fade + collapse + permanent block from Guy's Crate
-- Fixed render crash (envelope undefined) + worker normalization (per-track relative scaling)
-- Cleaned 91 duplicate Electro Static crates from Supabase
-- Build timeout fix (layout.js Supabase metadata 5s timeout)
-- Recovery page at /recover
+- Inbox Triage: drop any file → AI reads → triage card → file/discuss/extract/connect
+- Google Suite: Calendar (4 tools) + Gmail (2 tools) + Drive (3 tools), all under one card
+- Unified ThreadCalendar: Google Calendar + Trello events on grid, drag-to-folder mapping
+- 10 new integrations: Fitbit, QuickBooks, Obsidian, Notion, Dropbox, Slack, OneNote, Todoist, Readwise, + Google Suite (3)
+- 12 invisible intelligence APIs: weather, sun, food, books, currency, dictionary, geocoding, Wikipedia, NASA, air quality, Wolfram, news
+- Location intelligence: memory → IP fallback → Nominatim geocoding with cache
+- Sources UX: search bar, waitlist tickets, suggestion input, 2-column examples on all cards
+- Manual redesign: "The manual is the chat" + Try Asking (32 prompts) + Quick Reference
+- Global hotkeys: Cmd+N (chat), Cmd+H (home), Cmd+J (threads), Cmd+Shift+C (side chat)
+- Landing page: unsourced stats removed, features updated
+- Signal fixes: world tools keyword-gated, Sources CLS fixed, whispers retry, tool waste eliminated
+- All dev portals registered: Google, QuickBooks, Notion, Dropbox, Slack, OneNote, Todoist, Fitbit
 
-**Carry forward — NEXT SESSION TOP PRIORITY**:
-Rewrite Signal Terrain render to draw 7 independent frequency waves (sub, bass, low_mid, mid, high_mid, high, air) as smooth organic lines that weave around each other — like the VectorStock reference image. Each band = its own sinusoidal wave with independent phase/amplitude driven by real thumbprint data. Bass slow and wide, air fast and tight. Replace the single combined hump with a ribbon of interweaving frequency lines. The data pipeline is ready — this is purely rendering.
+**Carry forward**:
+- Signal Terrain 7-wave rewrite (rendering — data pipeline ready)
+- Clean up /recover and /api/recover-sets
+- Compression testing (8.1-8.5)
+- Card-worthy integrations: Pocket, Zotero, Wakatime
+- Sonos, Linear, Vagaro (pending API access)
+- OrbVisualizer performance, worker throttling, LoadingMark animation
 
-**Reference image**: /Users/greenleafhome/Desktop/f23d6a35-42a5-4437-a1c6-9ac86e3228ea.jpeg
-
-**Known issues**:
-- OrbVisualizer (fullscreen) bogs down browser — needs investigation
-- Worker needs connection throttling (caused Supabase 522 outage)
-- LoadingMark splash should be animated, not static logo
-- Debug logging still in Signal Terrain (remove after viz is tuned)
+**Integration count**: 19 user-facing + 12 invisible = 31 total
