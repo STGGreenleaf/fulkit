@@ -27,6 +27,7 @@ import {
   BookOpenText,
   Bug,
   ChevronDown,
+  Ticket,
 } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -189,6 +190,28 @@ const SOURCE_LOGOS = {
       <circle cx="12" cy="19.5" r="2.2" opacity="0.6"/>
       <circle cx="6.5" cy="11" r="1.8" opacity="0.5"/>
       <circle cx="17.5" cy="11" r="1.8" opacity="0.5"/>
+    </svg>
+  ),
+  whoop: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M2 7l3.5 10h1.5L9.5 10 12 17h1.5L16 10l2.5 7H20L22 7h-2.5l-1.5 6-2.5-6h-1.5L12 13 9.5 7H8L5.5 13 4 7H2z"/>
+    </svg>
+  ),
+  oura: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <circle cx="12" cy="12" r="8"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  strava: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066l-2.084 4.116z" opacity="0.6"/>
+      <path d="M7.578 13.828L12.298 4l4.722 9.828H14.93L12.298 8.46l-2.632 5.368H7.578z"/>
+    </svg>
+  ),
+  garmin: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 2L3 20h4l5-12 5 12h4L12 2z"/>
     </svg>
   ),
 };
@@ -1067,6 +1090,8 @@ function SourcesTab() {
   const [qbLastSynced, setQbLastSynced] = useState(null);
   const [qbDisconnecting, setQbDisconnecting] = useState(false);
 
+  const [searchMore, setSearchMore] = useState("");
+  const [waitlisted, setWaitlisted] = useState({});
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1180,6 +1205,29 @@ function SourcesTab() {
       if (qb) { setQbConnected(qb.connected); if (qb.lastSynced) setQbLastSynced(qb.lastSynced); }
     });
   }, [accessToken]);
+
+  // Load waitlist entries
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("preferences").select("key, value").eq("user_id", user.id).like("key", "waitlist_%")
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        for (const row of data) map[row.key.replace("waitlist_", "")] = true;
+        setWaitlisted(map);
+      }).catch(() => {});
+  }, [user?.id]);
+
+  function joinWaitlist(providerId) {
+    setWaitlisted((prev) => ({ ...prev, [providerId]: true }));
+    if (user?.id) {
+      supabase.from("preferences").upsert({
+        user_id: user.id,
+        key: `waitlist_${providerId}`,
+        value: new Date().toISOString(),
+      }, { onConflict: "user_id,key" }).then(() => {}).catch(() => {});
+    }
+  }
 
   async function fetchGithubRepos() {
     try {
@@ -1761,10 +1809,11 @@ function SourcesTab() {
 
   const sourceButton = (src) => {
     const isReal = REAL_INTEGRATIONS.includes(src.id);
+    const isOnWaitlist = waitlisted[src.id];
     return (
       <button
         key={src.id}
-        onClick={isReal ? () => connect(src.id) : undefined}
+        onClick={isReal ? () => connect(src.id) : (!isOnWaitlist ? () => joinWaitlist(src.id) : undefined)}
         style={{
           display: "flex",
           alignItems: "center",
@@ -1773,19 +1822,27 @@ function SourcesTab() {
           background: "var(--color-bg-elevated)",
           border: "1px solid var(--color-border-light)",
           borderRadius: "var(--radius-md)",
-          cursor: isReal ? "pointer" : "default",
+          cursor: isReal || !isOnWaitlist ? "pointer" : "default",
           fontFamily: "var(--font-primary)",
           opacity: 1,
           transition: `all var(--duration-fast) var(--ease-default)`,
+          width: "100%",
         }}
       >
         <div style={{ width: 16, height: 16, flexShrink: 0, color: "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {SOURCE_LOGOS[src.id]}
+          {SOURCE_LOGOS[src.id] || <Zap size={14} strokeWidth={1.8} />}
         </div>
-        <div style={{ textAlign: "left" }}>
-          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", textDecoration: isReal ? "none" : "line-through" }}>{src.name}</div>
-          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: isReal ? "none" : "line-through" }}>{isReal ? src.cat : "Coming soon"}</div>
+        <div style={{ textAlign: "left", flex: 1 }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+            {isReal ? src.cat : isOnWaitlist ? "On the list" : src.cat}
+          </div>
         </div>
+        {!isReal && (
+          <div style={{ flexShrink: 0, color: isOnWaitlist ? "var(--color-success)" : "var(--color-text-dim)", display: "flex", alignItems: "center" }}>
+            {isOnWaitlist ? <Check size={14} strokeWidth={2} /> : <Ticket size={14} strokeWidth={1.8} />}
+          </div>
+        )}
       </button>
     );
   };
@@ -2541,14 +2598,40 @@ function SourcesTab() {
       )}
 
       {/* All other sources */}
-      {(moreCards.length > 0 || moreTiles.length > 0) && (
+      {(moreCards.length > 0 || moreTiles.length > 0) && (() => {
+        const q = searchMore.toLowerCase().trim();
+        const filteredCards = q ? moreCards.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q)) : moreCards;
+        const filteredTiles = q ? moreTiles.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q)) : moreTiles;
+        return (
         <>
-          <SectionTitle>More</SectionTitle>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+            <SectionTitle style={{ marginBottom: 0, flex: 1 }}>More</SectionTitle>
+            <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
+              <Search size={13} strokeWidth={2} style={{ position: "absolute", left: "var(--space-2-5)", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="Search integrations..."
+                value={searchMore}
+                onChange={(e) => setSearchMore(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "var(--space-1-5) var(--space-2-5) var(--space-1-5) var(--space-8)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  color: "var(--color-text)",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
 
           {/* Real integrations — expandable swivel cards */}
-          {moreCards.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: moreTiles.length > 0 ? "var(--space-4)" : 0 }}>
-              {moreCards.map((src) => {
+          {filteredCards.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)", marginBottom: filteredTiles.length > 0 ? "var(--space-4)" : 0 }}>
+              {filteredCards.map((src) => {
                 const desc = SOURCE_DESCRIPTIONS[src.id];
                 const isOpen = src.id === "shopify" ? shopifyExpanded : src.id === "fabric" ? fabricExpanded : !!expanded[src.id];
                 const toggle = src.id === "shopify"
@@ -2662,14 +2745,21 @@ function SourcesTab() {
             </div>
           )}
 
-          {/* Non-real sources — flat grid tiles */}
-          {moreTiles.length > 0 && (
+          {/* Non-real sources — flat grid tiles with waitlist */}
+          {filteredTiles.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
-              {moreTiles.map(sourceButton)}
+              {filteredTiles.map(sourceButton)}
+            </div>
+          )}
+
+          {q && filteredCards.length === 0 && filteredTiles.length === 0 && (
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", padding: "var(--space-4) 0", textAlign: "center" }}>
+              No integrations match {"\u201C"}{searchMore}{"\u201D"}
             </div>
           )}
         </>
-      )}
+        );
+      })()}
     </div>
   );
 }
