@@ -3956,6 +3956,7 @@ const OWNER_NOTES = [
       { name: "Spotify", url: "https://developer.spotify.com", note: "Development Mode — only Collin's account. Needs Extended Quota Mode for other users." },
       { name: "GitHub", url: "https://github.com/settings/developers", note: "OAuth app for repo access integration." },
       { name: "Trello", url: "https://trello.com/power-ups/admin", note: "Power-Up for board integration." },
+      { name: "QuickBooks", url: "https://developer.intuit.com/app/developer/dashboard", note: "Intuit Developer. App: Fulkit. Production keys live. Accounting + Payments API." },
     ],
   },
   {
