@@ -18,6 +18,7 @@ import { getDropboxToken, dropboxFetch } from "../../../lib/dropbox-server";
 import { getSlackToken, slackFetch } from "../../../lib/slack-server";
 import { getOneNoteToken, onenoteFetch } from "../../../lib/onenote-server";
 import { getTodoistToken, todoistFetch } from "../../../lib/todoist-server";
+import { getReadwiseToken, readwiseFetch } from "../../../lib/readwise-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -216,6 +217,7 @@ const ECOSYSTEM_KEYWORDS = {
   slack: ["slack", "channel", "thread", "team", "message", "dm"],
   onenote: ["onenote", "notebook", "one note", "microsoft notes", "section"],
   todoist: ["todoist", "todo", "task", "project", "due", "priority", "label"],
+  readwise: ["readwise", "highlight", "annotation", "book", "article", "reading", "kindle"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -2586,6 +2588,60 @@ async function executeTodoistTool(name, input, userId) {
   throw new Error(`Unknown todoist tool: ${name}`);
 }
 
+// Readwise tools — highlights, books
+const READWISE_TOOLS = [
+  {
+    name: "readwise_highlights",
+    description: "Get the user's recent Readwise highlights and annotations from books, articles, and podcasts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", description: "Max highlights. Default 20." },
+        book: { type: "string", description: "Filter by book/article title. Optional." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "readwise_books",
+    description: "List the user's Readwise books, articles, and sources.",
+    input_schema: {
+      type: "object",
+      properties: { limit: { type: "integer", description: "Max results. Default 20." } },
+      required: [],
+    },
+  },
+];
+
+async function executeReadwiseTool(name, input, userId) {
+  if (name === "readwise_highlights") {
+    const limit = Math.min(input.limit || 20, 50);
+    const res = await readwiseFetch(userId, `/highlights/?page_size=${limit}`);
+    if (res.error) return res;
+    const data = await res.json();
+    let results = (data.results || []).map(h => ({
+      text: h.text,
+      note: h.note,
+      bookTitle: h.book_title,
+      author: h.author,
+      highlighted_at: h.highlighted_at,
+    }));
+    if (input.book) {
+      const q = input.book.toLowerCase();
+      results = results.filter(h => h.bookTitle?.toLowerCase().includes(q));
+    }
+    return { highlights: results };
+  }
+  if (name === "readwise_books") {
+    const limit = Math.min(input.limit || 20, 50);
+    const res = await readwiseFetch(userId, `/books/?page_size=${limit}`);
+    if (res.error) return res;
+    const data = await res.json();
+    return { books: (data.results || []).map(b => ({ id: b.id, title: b.title, author: b.author, category: b.category, numHighlights: b.num_highlights, lastHighlightAt: b.last_highlight_at })) };
+  }
+  throw new Error(`Unknown readwise tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -3331,7 +3387,8 @@ export async function POST(request) {
         safeGet(getSlackToken, "slack"),
         safeGet(getOneNoteToken, "onenote"),
         safeGet(getTodoistToken, "todoist"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getReadwiseToken, "readwise"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -3380,7 +3437,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -3398,6 +3455,7 @@ export async function POST(request) {
         { ref: "notionToken", val: notionToken },
         { ref: "dropboxToken", val: dropboxToken }, { ref: "slackToken", val: slackToken },
         { ref: "onenoteToken", val: onenoteToken }, { ref: "todoistToken", val: todoistToken },
+        { ref: "readwiseToken", val: readwiseToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -3423,6 +3481,7 @@ export async function POST(request) {
             else if (s.ref === "slackToken") slackToken = null;
             else if (s.ref === "onenoteToken") onenoteToken = null;
             else if (s.ref === "todoistToken") todoistToken = null;
+            else if (s.ref === "readwiseToken") readwiseToken = null;
           }
         }
       }
@@ -3709,7 +3768,7 @@ Never skip the preview step. The user must see and approve changes before they g
       gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
       qbToken && "QuickBooks", notionToken && "Notion",
       dropboxToken && "Dropbox", slackToken && "Slack",
-      onenoteToken && "OneNote", todoistToken && "Todoist",
+      onenoteToken && "OneNote", todoistToken && "Todoist", readwiseToken && "Readwise",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3793,6 +3852,7 @@ Never skip the preview step. The user must see and approve changes before they g
       slack: () => slackToken ? SLACK_TOOLS : [],
       onenote: () => onenoteToken ? ONENOTE_TOOLS : [],
       todoist: () => todoistToken ? TODOIST_TOOLS : [],
+      readwise: () => readwiseToken ? READWISE_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3852,7 +3912,7 @@ Never skip the preview step. The user must see and approve changes before they g
         gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
-        onenote: !!onenoteToken, todoist: !!todoistToken,
+        onenote: !!onenoteToken, todoist: !!todoistToken, readwise: !!readwiseToken,
       },
       kbIncluded,
       kbExcluded,
@@ -4143,6 +4203,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Readwise tools
+              if (block.name.startsWith("readwise_") && readwiseToken) {
+                try {
+                  const result = await withTimeout(() => executeReadwiseTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

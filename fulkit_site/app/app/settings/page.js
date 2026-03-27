@@ -203,7 +203,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -301,6 +301,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s due today?\u201D\n\u201CShow me all high-priority tasks",
     linkLabel: "todoist.com",
     linkHref: "https://todoist.com",
+  },
+  readwise: {
+    subtitle: "Your highlights, connected.",
+    description: "Readwise collects your highlights and annotations from Kindle, articles, podcasts, and more. Connecting it means F\u00FClkit can surface what you\u2019ve underlined, noted, and saved \u2014 so your reading becomes part of every conversation.",
+    gives: "Highlights and annotations from books, articles, and podcasts. Book and source listing. Ask about what you\u2019ve read and get your own words back.",
+    tryPrompt: "What did I highlight in Atomic Habits?\u201D\n\u201CShow me my recent reading highlights",
+    linkLabel: "readwise.io",
+    linkHref: "https://readwise.io",
   },
   obsidian: {
     subtitle: "Your vault, imported.",
@@ -1125,6 +1133,11 @@ function SourcesTab() {
   const [suggestInput, setSuggestInput] = useState("");
   const [suggestSent, setSuggestSent] = useState(false);
 
+  const [readwiseConnected, setReadwiseConnected] = useState(false);
+  const [readwiseExpanded, setReadwiseExpanded] = useState(false);
+  const [readwiseDisconnecting, setReadwiseDisconnecting] = useState(false);
+  const [readwiseKeyInput, setReadwiseKeyInput] = useState("");
+
   const [onenoteConnected, setOnenoteConnected] = useState(false);
   const [onenoteExpanded, setOnenoteExpanded] = useState(false);
   const [onenoteLastSynced, setOnenoteLastSynced] = useState(null);
@@ -1268,7 +1281,8 @@ function SourcesTab() {
       check("/api/slack/status"),
       check("/api/onenote/status"),
       check("/api/todoist/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack, onenote, todoist]) => {
+      check("/api/readwise/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack, onenote, todoist, readwise]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1290,6 +1304,7 @@ function SourcesTab() {
       if (slack) { setSlackConnected(slack.connected); if (slack.lastSynced) setSlackLastSynced(slack.lastSynced); }
       if (onenote) { setOnenoteConnected(onenote.connected); if (onenote.lastSynced) setOnenoteLastSynced(onenote.lastSynced); }
       if (todoist) { setTodoistConnected(todoist.connected); if (todoist.lastSynced) setTodoistLastSynced(todoist.lastSynced); }
+      if (readwise) { setReadwiseConnected(readwise.connected); }
     });
   }, [accessToken]);
 
@@ -1691,6 +1706,21 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  async function connectReadwise(key) {
+    if (!key || !accessToken) return;
+    const res = await fetch("/api/readwise/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ apiKey: key }),
+    });
+    if (res.ok) { setReadwiseConnected(true); setReadwiseKeyInput(""); }
+  }
+  async function disconnectReadwise() {
+    setReadwiseDisconnecting(true);
+    try { await fetch("/api/readwise/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setReadwiseConnected(false); } catch {}
+    setReadwiseDisconnecting(false);
+  }
+
   function connectOnenote() {
     if (accessToken) { window.open("/api/onenote/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
     supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/onenote/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
@@ -1893,8 +1923,9 @@ function SourcesTab() {
     ...(slackConnected ? ["slack"] : []),
     ...(onenoteConnected ? ["onenote"] : []),
     ...(todoistConnected ? ["todoist"] : []),
+    ...(readwiseConnected ? ["readwise"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1921,6 +1952,7 @@ function SourcesTab() {
     if (id === "slack") { connectSlack(); return; }
     if (id === "onenote") { connectOnenote(); return; }
     if (id === "todoist") { connectTodoist(); return; }
+    if (id === "readwise") { setReadwiseExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1941,6 +1973,7 @@ function SourcesTab() {
     if (id === "slack") { disconnectSlack(); return; }
     if (id === "onenote") { disconnectOnenote(); return; }
     if (id === "todoist") { disconnectTodoist(); return; }
+    if (id === "readwise") { disconnectReadwise(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -2886,6 +2919,30 @@ function SourcesTab() {
                       </div>
                     </DrawerItem>
                   </div>
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Readwise — connected */}
+            {readwiseConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.readwise} name="Readwise" subtitle="Your highlights, connected." isExpanded={readwiseExpanded} onToggle={() => setReadwiseExpanded(!readwiseExpanded)} />
+                <Drawer open={readwiseExpanded}>
+                  {richDrawerContent({
+                    expanded: readwiseExpanded,
+                    description: "Readwise collects your highlights and annotations from Kindle, articles, podcasts, and more. Connecting it means F\u00FClkit can surface what you\u2019ve underlined, noted, and saved \u2014 so your reading becomes part of every conversation.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Highlights and annotations from books, articles, and podcasts. Book and source listing. Ask about what you\u2019ve read and get your own words back.",
+                    tryPrompt: "What did I highlight in Atomic Habits?\u201D\n\u201CShow me my recent reading highlights",
+                    linkLabel: "readwise.io",
+                    linkHref: "https://readwise.io",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected</div>
+                        <button onClick={disconnectReadwise} disabled={readwiseDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: readwiseDisconnecting ? 0.5 : 1 }}>{readwiseDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
                 </Drawer>
               </Card>
             )}
