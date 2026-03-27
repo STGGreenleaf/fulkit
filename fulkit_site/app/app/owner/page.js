@@ -4625,6 +4625,33 @@ const PITCHES = [
   { cat: "Security", text: "Big tech reads your email to sell you ads. We encrypt your notes so even we can\u2019t read them. That\u2019s not a slogan. That\u2019s engineering.", star: true },
   { cat: "Security", text: "You wouldn\u2019t hand your journal to a stranger. So why do you hand your thoughts to an app that sells them?", star: true },
   { cat: "Security", text: "We don\u2019t have investors telling us to monetize your data. We have customers telling us to protect it." },
+  // ── Invisible Intelligence ──
+  { cat: "Invisible Intelligence", text: "I said \u201Cthinking about hiking Zion tomorrow.\u201D F\u00FClkit said \u201Cit\u2019s gonna cook out there \u2014 mid-90s. Go early.\u201D I didn\u2019t ask for the weather.", star: true },
+  { cat: "Invisible Intelligence", text: "My AI knows the weather. The air quality. The exchange rate. When the sun sets. The nutrition facts. I never turned any of it on.", star: true },
+  { cat: "Invisible Intelligence", text: "I mentioned a smoothie recipe. F\u00FClkit said \u201Cyou might want to ease up on the agave.\u201D It knew the sugar content. I didn\u2019t ask.", star: true },
+  { cat: "Invisible Intelligence", text: "The best AI features are the ones you never set up.", star: true },
+  { cat: "Invisible Intelligence", text: "ChatGPT doesn\u2019t know what time the sun sets. F\u00FClkit does. And it only mentions it when it matters." },
+  { cat: "Invisible Intelligence", text: "12 APIs running silently. Zero configuration. You just notice your AI is smarter than everyone else\u2019s." },
+  { cat: "Invisible Intelligence", text: "No weather widget. No nutrition tracker. No currency converter. F\u00FClkit just knows \u2014 and only says something when it matters.", star: true },
+  { cat: "Invisible Intelligence", text: "I asked \u201Cwhat\u2019s the word for when something feels both good and bad?\u201D F\u00FClkit gave me the word, the etymology, and a better way to phrase my sentence. One breath." },
+  // ── Integrations ──
+  { cat: "Integrations", text: "19 integrations. One conversation. \u201CHow\u2019s the business?\u201D pulls from Square, QuickBooks, and your calendar. Simultaneously.", star: true },
+  { cat: "Integrations", text: "Connected my calendar, my invoices, and my task list. Asked \u201Cwhat should I focus on today?\u201D Got a real answer.", star: true },
+  { cat: "Integrations", text: "Drop a PDF into chat. F\u00FClkit reads it, summarizes it, extracts the action items, and files it. In seconds.", star: true },
+  { cat: "Integrations", text: "I dropped a 20-page contract into F\u00FClkit. Got a 3-sentence summary and 4 action items. Took 8 seconds." },
+  { cat: "Integrations", text: "Google Calendar, Slack, Dropbox, QuickBooks, Notion, Todoist \u2014 all in one chat window. No switching. No copy-pasting. Just ask." },
+  { cat: "Integrations", text: "\u201CWhat did Sarah say about the contract?\u201D F\u00FClkit searched my Gmail and found it. I didn\u2019t open Gmail.", star: true },
+  { cat: "Integrations", text: "My calendar, my email, and my Slack all live in the same conversation. I ask one question and get context from three places.", star: true },
+  { cat: "Integrations", text: "Every integration connects with one click. Disconnects with one click. No forms. No setup wizards. Just in or out." },
+  { cat: "Integrations", text: "I imported my entire Obsidian vault in 10 seconds. 200 notes. All searchable in chat immediately." },
+  // ── Health ──
+  { cat: "Health", text: "\u201CHow did I sleep?\u201D Real answer. From your Fitbit. In chat. Not a dashboard.", star: true },
+  { cat: "Health", text: "Your AI knows your resting heart rate, your sleep efficiency, and how many steps you took. And it only brings it up when you need to hear it." },
+  { cat: "Health", text: "No health app dashboard. No charts. Just \u201Cyou slept 5 hours \u2014 maybe skip the hard workout today.\u201D", star: true },
+  // ── Calendar ──
+  { cat: "Calendar", text: "Your Google Calendar, Trello boards, and Fulkit threads \u2014 all on one calendar. Drag an event to a folder. Done.", star: true },
+  { cat: "Calendar", text: "\u201CBlock off Friday morning for deep work.\u201D Done. From chat. No switching to Google Calendar.", star: true },
+  { cat: "Calendar", text: "I asked \u201Cam I free Thursday afternoon?\u201D F\u00FClkit checked my calendar and said \u201Cyou have a dentist at 2. After that you\u2019re clear.\u201D" },
   { cat: "Security", text: "The question isn\u2019t \u201Cis my data safe?\u201D The question is \u201Cwho benefits from it?\u201D With F\u00FClkit, only you.", star: true },
   // ── For Cynics ──
   // ── Cynics ──
