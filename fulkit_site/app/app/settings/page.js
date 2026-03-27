@@ -3805,8 +3805,8 @@ function ManualTab() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1)" }}>
               {group.prompts.map((p, i) => (
                 <div key={i} style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-dim)",
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-text-muted)",
                   fontStyle: "italic",
                   borderLeft: "2px solid var(--color-border)",
                   paddingLeft: "var(--space-2)",
