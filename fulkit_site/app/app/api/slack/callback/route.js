@@ -33,14 +33,16 @@ export async function GET(request) {
     });
 
     const tokenData = await tokenRes.json();
-    if (!tokenData.ok || !tokenData.access_token) {
+    // Slack v2: user token is under authed_user, bot token is top-level
+    const userToken = tokenData.authed_user?.access_token || tokenData.access_token;
+    if (!tokenData.ok || !userToken) {
       console.error("[slack/callback] Token exchange failed:", tokenData);
       return NextResponse.redirect(new URL("/settings/sources?sl=error&reason=token_exchange", request.url));
     }
 
     const { error: dbError } = await getSupabaseAdmin().from("integrations").upsert({
       user_id: userId, provider: "slack",
-      access_token: encryptToken(tokenData.access_token), scope: tokenData.scope || "",
+      access_token: encryptToken(userToken), scope: tokenData.authed_user?.scope || tokenData.scope || "",
       metadata: encryptMeta({
         team_name: tokenData.team?.name,
         team_id: tokenData.team?.id,

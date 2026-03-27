@@ -38,7 +38,7 @@ export async function GET(request) {
     const params = new URLSearchParams({
       client_id: process.env.SLACK_CLIENT_ID,
       redirect_uri: redirectUri,
-      scope: SCOPES,
+      user_scope: SCOPES,
       state,
     });
 
