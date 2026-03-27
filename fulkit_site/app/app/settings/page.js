@@ -1092,6 +1092,8 @@ function SourcesTab() {
 
   const [searchMore, setSearchMore] = useState("");
   const [waitlisted, setWaitlisted] = useState({});
+  const [suggestInput, setSuggestInput] = useState("");
+  const [suggestSent, setSuggestSent] = useState(false);
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -2723,26 +2725,82 @@ function SourcesTab() {
             </div>
           )}
 
-          {/* Search + upcoming integrations */}
-          <div style={{ position: "relative", marginBottom: "var(--space-3)", marginTop: filteredCards.length > 0 ? "var(--space-4)" : 0 }}>
-            <Search size={13} strokeWidth={2} style={{ position: "absolute", left: "var(--space-2-5)", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
-            <input
-              type="text"
-              placeholder="Search upcoming integrations..."
-              value={searchMore}
-              onChange={(e) => setSearchMore(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2) var(--space-2-5) var(--space-2) var(--space-8)",
-                fontSize: "var(--font-size-xs)",
-                fontFamily: "var(--font-primary)",
-                color: "var(--color-text)",
-                background: "var(--color-bg-elevated)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-sm)",
-                outline: "none",
+          {/* Search + suggest row */}
+          <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-3)", marginTop: filteredCards.length > 0 ? "var(--space-4)" : 0 }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <Search size={13} strokeWidth={2} style={{ position: "absolute", left: "var(--space-2-5)", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="Search upcoming..."
+                value={searchMore}
+                onChange={(e) => setSearchMore(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "var(--space-2) var(--space-2-5) var(--space-2) var(--space-8)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  color: "var(--color-text)",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const text = suggestInput.trim();
+                if (!text || !user?.id) return;
+                supabase.from("preferences").insert({
+                  user_id: user.id,
+                  key: `suggest_integration_${Date.now()}`,
+                  value: text,
+                }).then(() => {}).catch(() => {});
+                setSuggestInput("");
+                setSuggestSent(true);
+                setTimeout(() => setSuggestSent(false), 3000);
               }}
-            />
+              style={{ display: "flex", flex: 1, gap: "var(--space-1)" }}
+            >
+              <input
+                type="text"
+                placeholder={suggestSent ? "Noted!" : "Suggest an integration..."}
+                value={suggestInput}
+                onChange={(e) => setSuggestInput(e.target.value)}
+                disabled={suggestSent}
+                style={{
+                  flex: 1,
+                  padding: "var(--space-2) var(--space-2-5)",
+                  fontSize: "var(--font-size-xs)",
+                  fontFamily: "var(--font-primary)",
+                  color: suggestSent ? "var(--color-success)" : "var(--color-text)",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-sm)",
+                  outline: "none",
+                }}
+              />
+              {suggestInput.trim() && (
+                <button
+                  type="submit"
+                  style={{
+                    padding: "var(--space-1-5) var(--space-3)",
+                    fontSize: "var(--font-size-xs)",
+                    fontWeight: "var(--font-weight-semibold)",
+                    fontFamily: "var(--font-primary)",
+                    background: "var(--color-accent)",
+                    color: "var(--color-text-inverse)",
+                    border: "none",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Send
+                </button>
+              )}
+            </form>
           </div>
           {filteredTiles.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
