@@ -16,16 +16,6 @@ export async function POST(request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Owner check
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    if (profile?.role !== "owner") {
-      return Response.json({ error: "Owner only" }, { status: 403 });
-    }
-
     const { notes } = await request.json();
     if (!Array.isArray(notes) || notes.length === 0) {
       return Response.json({ error: "notes array required" }, { status: 400 });

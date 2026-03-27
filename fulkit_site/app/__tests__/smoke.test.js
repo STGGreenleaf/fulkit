@@ -66,14 +66,13 @@ describe("api/notes/import", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects non-owner users", async () => {
+  it("allows any authenticated user to import", async () => {
     setMockUser({ id: "user-1", email: "test@test.com" });
-    // Mock profile query returning non-owner role
     mockAdmin.from.mockImplementation(() => {
       const chain = {
         select: () => chain,
         eq: () => chain,
-        single: () => Promise.resolve({ data: { role: "user" }, error: null }),
+        insert: () => ({ select: () => Promise.resolve({ data: [{ id: "1", title: "test" }], error: null }) }),
       };
       return chain;
     });
@@ -82,7 +81,7 @@ describe("api/notes/import", () => {
       body: { notes: [{ title: "test", content: "test" }] },
     });
     const res = await POST(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 });
 

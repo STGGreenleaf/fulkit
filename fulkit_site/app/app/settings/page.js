@@ -218,7 +218,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -276,6 +276,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "What\u2019s on my board right now?",
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
+  },
+  obsidian: {
+    subtitle: "Your vault, imported.",
+    description: "Obsidian stores your notes as plain markdown files in a local folder. Connecting it means F\u00FClkit reads your entire vault \u2014 every folder, every note \u2014 and imports them so they\u2019re searchable in chat. Your folder structure is preserved.",
+    gives: "All your Obsidian notes imported as searchable Fulkit notes. Folder structure maps to vault folders. Ask about anything you\u2019ve written and get real answers grounded in your own words.",
+    tryPrompt: "What did I write about project planning?\u201D\n\u201CFind my notes on that book I read",
+    linkLabel: "obsidian.md",
+    linkHref: "https://obsidian.md",
   },
   quickbooks: {
     subtitle: "Your books, in context.",
@@ -1094,6 +1102,11 @@ function SourcesTab() {
   const [waitlisted, setWaitlisted] = useState({});
   const [suggestInput, setSuggestInput] = useState("");
   const [suggestSent, setSuggestSent] = useState(false);
+
+  const [obsidianConnected, setObsidianConnected] = useState(false);
+  const [obsidianExpanded, setObsidianExpanded] = useState(false);
+  const [obsidianImporting, setObsidianImporting] = useState(false);
+  const [obsidianCount, setObsidianCount] = useState(null);
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1606,6 +1619,74 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  async function connectObsidian() {
+    if (!("showDirectoryPicker" in window)) {
+      alert("Your browser doesn\u2019t support folder access. Use Chrome, Edge, or Arc.");
+      return;
+    }
+    try {
+      setObsidianImporting(true);
+      const handle = await window.showDirectoryPicker({ mode: "read" });
+
+      // Recursively read all .md files
+      const files = [];
+      async function readDir(dirHandle, path = "") {
+        for await (const [name, entry] of dirHandle.entries()) {
+          if (name.startsWith(".")) continue; // skip hidden files/folders
+          if (entry.kind === "directory") {
+            await readDir(entry, path ? `${path}/${name}` : name);
+          } else if (entry.kind === "file" && name.endsWith(".md")) {
+            try {
+              const file = await entry.getFile();
+              const content = await file.text();
+              if (content.trim().length === 0) continue;
+              // Map folder to vault folder
+              const topFolder = path.split("/")[0] || "00-INBOX";
+              files.push({
+                title: name.replace(/\.md$/, ""),
+                content,
+                source: "obsidian",
+                folder: topFolder,
+              });
+            } catch { /* skip unreadable */ }
+          }
+        }
+      }
+      await readDir(handle);
+
+      if (files.length === 0) {
+        setObsidianImporting(false);
+        return;
+      }
+
+      // Batch import in chunks of 50
+      let imported = 0;
+      for (let i = 0; i < files.length; i += 50) {
+        const batch = files.slice(i, i + 50);
+        const res = await fetch("/api/notes/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ notes: batch }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          imported += data.imported || 0;
+        }
+      }
+
+      setObsidianCount(imported);
+      setObsidianConnected(true);
+    } catch (err) {
+      if (err.name !== "AbortError") console.error("[obsidian]", err);
+    }
+    setObsidianImporting(false);
+  }
+
+  function disconnectObsidian() {
+    setObsidianConnected(false);
+    setObsidianCount(null);
+  }
+
   function connectQB() {
     if (accessToken) {
       window.open("/api/quickbooks/connect?token=" + encodeURIComponent(accessToken), "_blank");
@@ -1669,8 +1750,9 @@ function SourcesTab() {
     ...(trelloConnected ? ["trello"] : []),
     ...(fitbitConnected ? ["fitbit"] : []),
     ...(qbConnected ? ["quickbooks"] : []),
+    ...(obsidianConnected ? ["obsidian"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1691,6 +1773,7 @@ function SourcesTab() {
     if (id === "trello") { connectTrello(); return; }
     if (id === "fitbit") { connectFitbit(); return; }
     if (id === "quickbooks") { connectQB(); return; }
+    if (id === "obsidian") { connectObsidian(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1705,6 +1788,7 @@ function SourcesTab() {
     if (id === "trello") { disconnectTrello(); return; }
     if (id === "fitbit") { disconnectFitbit(); return; }
     if (id === "quickbooks") { disconnectQB(); return; }
+    if (id === "obsidian") { disconnectObsidian(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -2444,6 +2528,52 @@ function SourcesTab() {
                       </div>
                     </DrawerItem>
                   </div>
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Obsidian — connected */}
+            {obsidianConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.obsidian}
+                  name="Obsidian"
+                  subtitle="Your vault, imported."
+                  isExpanded={obsidianExpanded}
+                  onToggle={() => setObsidianExpanded(!obsidianExpanded)}
+                />
+                <Drawer open={obsidianExpanded}>
+                  {richDrawerContent({
+                    expanded: obsidianExpanded,
+                    description: "Obsidian stores your notes as plain markdown files in a local folder. Connecting it means F\u00FClkit reads your entire vault \u2014 every folder, every note \u2014 and imports them so they\u2019re searchable in chat. Your folder structure is preserved.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "All your Obsidian notes imported as searchable Fulkit notes. Folder structure maps to vault folders. Ask about anything you\u2019ve written and get real answers grounded in your own words.",
+                    tryPrompt: "What did I write about project planning?\u201D\n\u201CFind my notes on that book I read",
+                    linkLabel: "obsidian.md",
+                    linkHref: "https://obsidian.md",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          {obsidianCount ? `${obsidianCount} notes imported` : "Connected"}
+                        </div>
+                        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                          <button
+                            onClick={connectObsidian}
+                            disabled={obsidianImporting}
+                            style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: obsidianImporting ? 0.5 : 1 }}
+                          >
+                            {obsidianImporting ? "Importing..." : "Re-import"}
+                          </button>
+                          <button
+                            onClick={disconnectObsidian}
+                            style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      </div>
+                    ),
+                  })}
                 </Drawer>
               </Card>
             )}
