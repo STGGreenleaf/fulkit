@@ -1728,22 +1728,22 @@ function SourcesTab() {
     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
       <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <DrawerItem index={0} visible={isOpen}>
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
             {description}
           </div>
         </DrawerItem>
         <DrawerItem index={1} visible={isOpen}>
           <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
-            <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+            <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
               {givesLabel}
             </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
               {gives}
             </div>
           </div>
         </DrawerItem>
         <DrawerItem index={2} visible={isOpen}>
-          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", whiteSpace: "pre-line" }}>
+          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", whiteSpace: "pre-line" }}>
             {`\u201C${tryPrompt}\u201D`}
           </div>
         </DrawerItem>
@@ -1966,7 +1966,7 @@ function SourcesTab() {
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                       <DrawerItem index={0} visible={googleExpanded}>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
                           Your Google services, connected individually. Each one has its own consent {"\u2014"} Calendar doesn{"\u2019"}t see your email, Gmail doesn{"\u2019"}t touch your files. Gmail is read-only {"\u2014"} F{"\u00FC"}lkit can search and read threads to answer your questions, but it never sends, deletes, or modifies emails. Connect only what you want.
                         </div>
                       </DrawerItem>
@@ -1975,7 +1975,7 @@ function SourcesTab() {
                           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
                             What this gives F{"\u00FC"}lkit
                           </div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
                             Calendar: upcoming events, availability checks, create events from chat. Gmail: search emails, read threads, surface context in conversation. Drive: find files, read documents, import to your vault as notes.
                           </div>
                         </div>
@@ -2336,7 +2336,7 @@ function SourcesTab() {
                   <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                     <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                       <DrawerItem index={0} visible={qbExpanded}>
-                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
                           QuickBooks tracks your invoices, expenses, customers, and financial reports. Connecting it means F{"\u00FC"}lkit sees your P&L, outstanding invoices, and cash position {"\u2014"} so you can ask about your business finances in plain English instead of digging through reports.
                         </div>
                       </DrawerItem>
@@ -2345,7 +2345,7 @@ function SourcesTab() {
                           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
                             What this gives F{"\u00FC"}lkit
                           </div>
-                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
                             Profit & Loss statements, balance sheets, invoice status (open, paid, overdue), recent expenses, customer balances, and payment history. Ask how the business is doing and get real numbers.
                           </div>
                         </div>
@@ -2578,7 +2578,7 @@ function SourcesTab() {
                         footer: seatsFull ? (
                           <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
                             <DrawerItem index={5} visible={isOpen}>
-                              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                              <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
                                 All Spotify seats are taken.
                               </div>
                               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: 2 }}>
