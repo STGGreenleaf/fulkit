@@ -3960,6 +3960,9 @@ const OWNER_NOTES = [
       { name: "Notion", url: "https://www.notion.so/my-integrations", note: "Public integration. OAuth Client ID + Secret. Read content only." },
       { name: "Dropbox", url: "https://www.dropbox.com/developers/apps", note: "App: F\u00FClkit. Production applied. Read-only (files.metadata.read, files.content.read)." },
       { name: "Slack", url: "https://api.slack.com/apps", note: "App: Fulkit. User scopes: channels:read, channels:history, search:read, users:read." },
+      { name: "Microsoft (OneNote)", url: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade", note: "Azure App Registration: Fulkit. Notes.Read + User.Read + offline_access. Multi-tenant." },
+      { name: "Todoist", url: "https://developer.todoist.com/appconsole.html", note: "App: Fulkit. data:read scope." },
+      { name: "Readwise", url: "https://readwise.io/access_token", note: "API key based \u2014 no developer app needed. Users paste their own key." },
     ],
   },
   {
