@@ -6122,20 +6122,33 @@ function PitchesTab() {
     const hash = decodeURIComponent(window.location.hash.slice(1));
     return allCats.includes(hash) ? hash : "All";
   });
+  const [hidden, setHidden] = useState(() => {
+    if (typeof window === "undefined") return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem("fulkit-hidden-pitches") || "[]")); } catch { return new Set(); }
+  });
+  const hidePitch = (text) => {
+    setHidden(prev => {
+      const next = new Set(prev);
+      next.add(text);
+      localStorage.setItem("fulkit-hidden-pitches", JSON.stringify([...next]));
+      return next;
+    });
+  };
   const selectCat = (cat) => {
     const next = cat === activeCat && cat !== "All" ? "All" : cat;
     setActiveCat(next);
     window.history.replaceState({}, "", next === "All" ? window.location.pathname : `${window.location.pathname}#${encodeURIComponent(next)}`);
   };
-  const items = activeCat === "All" ? PITCHES : PITCHES.filter(p => p.cat === activeCat);
+  const visiblePitches = PITCHES.filter(p => !hidden.has(p.text));
+  const items = activeCat === "All" ? visiblePitches : visiblePitches.filter(p => p.cat === activeCat);
   return (
     <div>
-      <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{PITCHES.length}</span></div>
+      <div style={TAB_TITLE}>Pitches <span style={{ fontWeight: "var(--font-weight-normal)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>{visiblePitches.length}</span></div>
       {/* Pill group */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-1)", marginBottom: "var(--space-4)" }}>
         {["All", ...PITCH_CATEGORIES].map((cat) => {
           const active = activeCat === cat;
-          const count = cat === "All" ? PITCHES.length : PITCHES.filter(p => p.cat === cat).length;
+          const count = cat === "All" ? visiblePitches.length : visiblePitches.filter(p => p.cat === cat).length;
           return (
             <button key={cat} onClick={() => selectCat(cat)} style={{
               padding: "var(--space-2) var(--space-3)",
@@ -6174,6 +6187,19 @@ function PitchesTab() {
               }}>
                 {pitch.text}
               </span>
+              <button
+                onClick={() => hidePitch(pitch.text)}
+                title="Remove"
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 2,
+                  color: "var(--color-text-dim)", display: "flex", flexShrink: 0,
+                  opacity: 0.4, transition: "opacity var(--duration-fast) var(--ease-default)",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = "0.4"}
+              >
+                <Trash2 size={11} strokeWidth={1.5} />
+              </button>
               <CopyButton text={pitch.text} />
             </div>
           ))}
