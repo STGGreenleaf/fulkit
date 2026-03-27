@@ -33,7 +33,10 @@ export async function generateMetadata() {
   } catch {}
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
-  const ogImageUrl = meta?.og_image_url || `${siteUrl}/api/og`;
+  const ogImageBase = meta?.og_image_url || `${siteUrl}/api/og`;
+  // Cache-bust: append updated_at timestamp so platforms re-fetch after changes
+  const ogCacheBust = meta?.updated_at ? `?v=${new Date(meta.updated_at).getTime()}` : "";
+  const ogImageUrl = ogImageBase + ogCacheBust;
   const ogImages = [{ url: ogImageUrl, width: 1200, height: 630 }];
 
   return {

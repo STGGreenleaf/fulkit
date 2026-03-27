@@ -5876,6 +5876,22 @@ function SocialsTab() {
         </div>
       </div>
 
+      {/* ── Cache-bust links ── */}
+      <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+        <a href="https://developers.facebook.com/tools/debug/?q=https%3A%2F%2Ffulkit.app" target="_blank" rel="noopener noreferrer" style={{
+          flex: 1, display: "block", textAlign: "center", padding: "var(--space-2) 0",
+          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
+          color: "var(--color-text-muted)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
+          textDecoration: "none", letterSpacing: "0.3px",
+        }}>Meta Debugger</a>
+        <a href="https://www.linkedin.com/post-inspector/inspect/https%3A%2F%2Ffulkit.app" target="_blank" rel="noopener noreferrer" style={{
+          flex: 1, display: "block", textAlign: "center", padding: "var(--space-2) 0",
+          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
+          color: "var(--color-text-muted)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
+          textDecoration: "none", letterSpacing: "0.3px",
+        }}>LinkedIn Inspector</a>
+      </div>
+
       {/* ── SAVE ── */}
       <button onClick={saveMeta} disabled={saving} style={{
         padding: "var(--space-2-5) var(--space-4)",
