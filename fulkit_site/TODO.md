@@ -197,7 +197,7 @@
 - [ ] **Apple Music** — MusicKit JS. Third Fabric source.
 
 ### Tier 3: Business verticals
-- [ ] **QuickBooks** — accounting for SMBs. Invoices, expenses, P&L. Intuit OAuth2. Keywords: accounting, invoice, expense, quickbooks, profit.
+- [x] **QuickBooks** — ✅ OAuth + 5 chat tools (P&L, balance sheet, invoices, expenses, customers). Settings card with rich drawer + logo.
 - [ ] **Vagaro** — beauty/wellness scheduling + client management. Keywords: appointment, client, booking, salon, vagaro.
 - [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
 

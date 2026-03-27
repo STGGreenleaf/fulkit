@@ -175,6 +175,12 @@ const SOURCE_LOGOS = {
       <rect x="13.5" y="3.5" width="7" height="9" rx="1.5"/>
     </svg>
   ),
+  quickbooks: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="12" r="10" opacity="0.15"/>
+      <path d="M8.5 7C6.57 7 5 8.57 5 10.5v3C5 15.43 6.57 17 8.5 17H10v-1.5H8.5c-1.1 0-2-.9-2-2v-3c0-1.1.9-2 2-2H10v4.5l3-3-3-3V7H8.5zm7 0H14v1.5h1.5c1.1 0 2 .9 2 2v3c0 1.1-.9 2-2 2H14v-4.5l-3 3 3 3V17h1.5c1.93 0 3.5-1.57 3.5-3.5v-3C19 8.57 17.43 7 15.5 7z"/>
+    </svg>
+  ),
   fitbit: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <circle cx="12" cy="3.5" r="1.8" opacity="0.4"/>
@@ -189,7 +195,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit"];
+const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -248,6 +254,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "trello.com",
     linkHref: "https://trello.com",
   },
+  quickbooks: {
+    subtitle: "Your books, in context.",
+    description: "QuickBooks tracks your invoices, expenses, customers, and financial reports. Connecting it means F\u00FClkit sees your P&L, outstanding invoices, and cash position \u2014 so you can ask about your business finances in plain English instead of digging through reports.",
+    gives: "Profit & Loss statements, balance sheets, invoice status (open, paid, overdue), recent expenses, and customer balances. Ask how the business is doing and get real numbers.",
+    tryPrompt: "What\u2019s my P&L this month?\u201D\n\u201CWho owes me money?",
+    linkLabel: "quickbooks.intuit.com",
+    linkHref: "https://quickbooks.intuit.com",
+  },
   fitbit: {
     subtitle: "Your body, in context.",
     description: "Fitbit tracks your activity, sleep, heart rate, and weight every day. Connecting it means F\u00FClkit sees how you slept, how active you were, and how your body is trending \u2014 so it can help you plan around your energy, not just your calendar.",
@@ -280,6 +294,7 @@ const ALL_SOURCES = [
   { id: "readwise", name: "Readwise", cat: "Reading" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
   { id: "linear", name: "Linear", cat: "Tasks" },
+  { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
   { id: "whoop", name: "Whoop", cat: "Health" },
   { id: "fitbit", name: "Fitbit", cat: "Health" },
   { id: "oura", name: "Oura", cat: "Health" },
@@ -1047,6 +1062,11 @@ function SourcesTab() {
   const [fitbitLastSynced, setFitbitLastSynced] = useState(null);
   const [fitbitDisconnecting, setFitbitDisconnecting] = useState(false);
 
+  const [qbConnected, setQbConnected] = useState(false);
+  const [qbExpanded, setQbExpanded] = useState(false);
+  const [qbLastSynced, setQbLastSynced] = useState(null);
+  const [qbDisconnecting, setQbDisconnecting] = useState(false);
+
   const [vaultCounts, setVaultCounts] = useState(null);
 
   // Fetch vault inventory counts
@@ -1102,8 +1122,11 @@ function SourcesTab() {
     if (params.get("fb") === "connected") {
       setFitbitConnected(true);
     }
+    if (params.get("qb") === "connected") {
+      setQbConnected(true);
+    }
     // Check for OAuth errors
-    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb"];
+    const errorSources = ["gh", "sp", "sq", "shopify", "stripe", "toast", "trello", "gc", "gm", "gd", "fb", "qb"];
     for (const src of errorSources) {
       if (params.get(src) === "error") {
         setConnectError(`Connection failed. Try again or check your ${src === "gh" ? "GitHub" : src === "sp" ? "Spotify" : src === "sq" ? "Square" : src === "gc" ? "Google Calendar" : src} account.`);
@@ -1137,7 +1160,8 @@ function SourcesTab() {
       check("/api/google/gmail/status"),
       check("/api/google/drive/status"),
       check("/api/health/fitbit/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit]) => {
+      check("/api/quickbooks/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1153,6 +1177,7 @@ function SourcesTab() {
       if (gmail) { setGmailConnected(gmail.connected); }
       if (gdrive) { setGdriveConnected(gdrive.connected); }
       if (fitbit) { setFitbitConnected(fitbit.connected); if (fitbit.lastSynced) setFitbitLastSynced(fitbit.lastSynced); }
+      if (qb) { setQbConnected(qb.connected); if (qb.lastSynced) setQbLastSynced(qb.lastSynced); }
     });
   }, [accessToken]);
 
@@ -1531,6 +1556,31 @@ function SourcesTab() {
     setGdriveDisconnecting(false);
   }
 
+  function connectQB() {
+    if (accessToken) {
+      window.open("/api/quickbooks/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/quickbooks/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectQB() {
+    setQbDisconnecting(true);
+    try {
+      await fetch("/api/quickbooks/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setQbConnected(false);
+    } catch {}
+    setQbDisconnecting(false);
+  }
+
   function connectFitbit() {
     if (accessToken) {
       window.open("/api/health/fitbit/connect?token=" + encodeURIComponent(accessToken), "_blank");
@@ -1568,8 +1618,9 @@ function SourcesTab() {
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
     ...(fitbitConnected ? ["fitbit"] : []),
+    ...(qbConnected ? ["quickbooks"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1589,6 +1640,7 @@ function SourcesTab() {
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
     if (id === "fitbit") { connectFitbit(); return; }
+    if (id === "quickbooks") { connectQB(); return; }
     setConnected((prev) => [...prev, id]);
   };
   const disconnect = (id) => {
@@ -1602,6 +1654,7 @@ function SourcesTab() {
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
     if (id === "fitbit") { disconnectFitbit(); return; }
+    if (id === "quickbooks") { disconnectQB(); return; }
     setConnected((prev) => prev.filter((x) => x !== id));
   };
 
@@ -1737,7 +1790,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || qbConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -2261,6 +2314,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fitbitDisconnecting ? 0.5 : 1 }}
                         >
                           {fitbitDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* QuickBooks — connected */}
+            {qbConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.quickbooks}
+                  name="QuickBooks"
+                  subtitle="Your books, in context."
+                  isExpanded={qbExpanded}
+                  onToggle={() => setQbExpanded(!qbExpanded)}
+                />
+                <Drawer open={qbExpanded}>
+                  {richDrawerContent({
+                    expanded: qbExpanded,
+                    description: "QuickBooks tracks your invoices, expenses, customers, and financial reports. Connecting it means F\u00FClkit sees your P&L, outstanding invoices, and cash position \u2014 so you can ask about your business finances in plain English instead of digging through reports.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Profit & Loss statements, balance sheets, invoice status (open, paid, overdue), recent expenses, and customer balances. Ask how the business is doing and get real numbers.",
+                    tryPrompt: "What\u2019s my P&L this month?\u201D\n\u201CWho owes me money?",
+                    linkLabel: "quickbooks.intuit.com",
+                    linkHref: "https://quickbooks.intuit.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{qbLastSynced ? ` \u00B7 Last synced ${timeAgo(qbLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectQB}
+                          disabled={qbDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: qbDisconnecting ? 0.5 : 1 }}
+                        >
+                          {qbDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),

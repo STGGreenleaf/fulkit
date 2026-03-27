@@ -12,6 +12,7 @@ import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { getGoogleToken, googleFetch } from "../../../lib/google-server";
 import { getFitbitToken, fitbitFetch } from "../../../lib/fitbit-server";
+import { getQuickBooksToken, qbFetch } from "../../../lib/quickbooks-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -204,6 +205,7 @@ const ECOSYSTEM_KEYWORDS = {
   gmail: ["email", "inbox", "gmail", "mail", "message from", "reply", "sent", "unread"],
   google_drive: ["drive", "document", "spreadsheet", "google doc", "google sheet", "slides", "file on drive", "shared with me"],
   fitbit: ["fitbit", "steps", "sleep", "heart rate", "activity", "workout", "calories", "weight", "health", "recovery", "resting heart"],
+  quickbooks: ["quickbooks", "accounting", "invoice", "expense", "profit", "loss", "p&l", "balance sheet", "accounts receivable", "payable", "tax"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -2062,6 +2064,173 @@ async function executeFitbitTool(name, input, userId) {
   throw new Error(`Unknown fitbit tool: ${name}`);
 }
 
+// QuickBooks tools — P&L, invoices, expenses, customers, balance
+const QUICKBOOKS_TOOLS = [
+  {
+    name: "qb_profit_loss",
+    description: "Get the user's Profit & Loss (income statement). Shows revenue, expenses, and net income for a date range.",
+    input_schema: {
+      type: "object",
+      properties: {
+        startDate: { type: "string", description: "Start date YYYY-MM-DD. Defaults to first of current month." },
+        endDate: { type: "string", description: "End date YYYY-MM-DD. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "qb_balance_sheet",
+    description: "Get the user's Balance Sheet — assets, liabilities, and equity as of a date.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "As-of date YYYY-MM-DD. Defaults to today." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "qb_invoices",
+    description: "List recent invoices — amount, customer, status (paid/unpaid/overdue), due date.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["open", "paid", "overdue", "all"], description: "Filter by status. Default: open." },
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "qb_expenses",
+    description: "List recent expenses and purchases — amount, vendor, category, date.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "qb_customers",
+    description: "List customers with outstanding balances or recent activity.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", description: "Max results. Default 10." },
+      },
+      required: [],
+    },
+  },
+];
+
+// Execute a QuickBooks tool call
+async function executeQBTool(name, input, userId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = today.slice(0, 7) + "-01";
+
+  if (name === "qb_profit_loss") {
+    const start = input.startDate || monthStart;
+    const end = input.endDate || today;
+    const res = await qbFetch(userId, `/reports/ProfitAndLoss?start_date=${start}&end_date=${end}`);
+    if (res.error) return res;
+    const data = await res.json();
+    // Extract summary rows
+    const rows = data.Rows?.Row || [];
+    const summary = {};
+    for (const row of rows) {
+      if (row.Summary) {
+        summary[row.group || "item"] = row.Summary.ColData?.map(c => c.value);
+      }
+      if (row.type === "Section" && row.Header) {
+        summary[row.Header.ColData?.[0]?.value] = row.Rows?.Row?.map(r => ({
+          name: r.ColData?.[0]?.value,
+          amount: r.ColData?.[1]?.value,
+        })).filter(r => r.name);
+      }
+    }
+    return { period: `${start} to ${end}`, report: summary };
+  }
+
+  if (name === "qb_balance_sheet") {
+    const date = input.date || today;
+    const res = await qbFetch(userId, `/reports/BalanceSheet?date_macro=Today`);
+    if (res.error) return res;
+    const data = await res.json();
+    const rows = data.Rows?.Row || [];
+    const sections = {};
+    for (const row of rows) {
+      if (row.Header && row.Rows) {
+        sections[row.Header.ColData?.[0]?.value] = row.Rows.Row?.map(r => ({
+          name: r.ColData?.[0]?.value,
+          amount: r.ColData?.[1]?.value,
+        })).filter(r => r.name);
+      }
+    }
+    return { asOf: date, report: sections };
+  }
+
+  if (name === "qb_invoices") {
+    const limit = Math.min(input.limit || 10, 25);
+    let query = `SELECT * FROM Invoice ORDERBY DueDate DESC MAXRESULTS ${limit}`;
+    if (input.status === "open") query = `SELECT * FROM Invoice WHERE Balance > '0' ORDERBY DueDate DESC MAXRESULTS ${limit}`;
+    if (input.status === "paid") query = `SELECT * FROM Invoice WHERE Balance = '0' ORDERBY DueDate DESC MAXRESULTS ${limit}`;
+    if (input.status === "overdue") query = `SELECT * FROM Invoice WHERE DueDate < '${today}' AND Balance > '0' ORDERBY DueDate DESC MAXRESULTS ${limit}`;
+    const res = await qbFetch(userId, `/query?query=${encodeURIComponent(query)}`);
+    if (res.error) return res;
+    const data = await res.json();
+    return {
+      invoices: (data.QueryResponse?.Invoice || []).map(inv => ({
+        id: inv.Id,
+        number: inv.DocNumber,
+        customer: inv.CustomerRef?.name,
+        total: inv.TotalAmt,
+        balance: inv.Balance,
+        dueDate: inv.DueDate,
+        status: inv.Balance > 0 ? (new Date(inv.DueDate) < new Date() ? "overdue" : "open") : "paid",
+      })),
+    };
+  }
+
+  if (name === "qb_expenses") {
+    const limit = Math.min(input.limit || 10, 25);
+    const query = `SELECT * FROM Purchase ORDERBY TxnDate DESC MAXRESULTS ${limit}`;
+    const res = await qbFetch(userId, `/query?query=${encodeURIComponent(query)}`);
+    if (res.error) return res;
+    const data = await res.json();
+    return {
+      expenses: (data.QueryResponse?.Purchase || []).map(exp => ({
+        id: exp.Id,
+        date: exp.TxnDate,
+        amount: exp.TotalAmt,
+        vendor: exp.EntityRef?.name,
+        account: exp.AccountRef?.name,
+        type: exp.PaymentType,
+      })),
+    };
+  }
+
+  if (name === "qb_customers") {
+    const limit = Math.min(input.limit || 10, 25);
+    const query = `SELECT * FROM Customer WHERE Balance > '0' ORDERBY Balance DESC MAXRESULTS ${limit}`;
+    const res = await qbFetch(userId, `/query?query=${encodeURIComponent(query)}`);
+    if (res.error) return res;
+    const data = await res.json();
+    return {
+      customers: (data.QueryResponse?.Customer || []).map(c => ({
+        id: c.Id,
+        name: c.DisplayName,
+        balance: c.Balance,
+        email: c.PrimaryEmailAddr?.Address,
+        phone: c.PrimaryPhone?.FreeFormNumber,
+      })),
+    };
+  }
+
+  throw new Error(`Unknown quickbooks tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -2801,7 +2970,8 @@ export async function POST(request) {
         safeGet(() => getGoogleToken(userId, "gmail"), "gmail"),
         safeGet(() => getGoogleToken(userId, "google_drive"), "google_drive"),
         safeGet(getFitbitToken, "fitbit"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getQuickBooksToken, "quickbooks"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -2850,7 +3020,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -2864,6 +3034,7 @@ export async function POST(request) {
         { ref: "gcalToken", val: gcalToken },
         { ref: "gmailToken", val: gmailToken }, { ref: "gdriveToken", val: gdriveToken },
         { ref: "fitbitToken", val: fitbitToken },
+        { ref: "qbToken", val: qbToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -2883,6 +3054,7 @@ export async function POST(request) {
             else if (s.ref === "gmailToken") gmailToken = null;
             else if (s.ref === "gdriveToken") gdriveToken = null;
             else if (s.ref === "fitbitToken") fitbitToken = null;
+            else if (s.ref === "qbToken") qbToken = null;
           }
         }
       }
@@ -3167,6 +3339,7 @@ Never skip the preview step. The user must see and approve changes before they g
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
       gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
+      qbToken && "QuickBooks",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -3244,6 +3417,7 @@ Never skip the preview step. The user must see and approve changes before they g
       gmail: () => gmailToken ? GMAIL_TOOLS : [],
       google_drive: () => gdriveToken ? DRIVE_TOOLS : [],
       fitbit: () => fitbitToken ? FITBIT_TOOLS : [],
+      quickbooks: () => qbToken ? QUICKBOOKS_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -3301,6 +3475,7 @@ Never skip the preview step. The user must see and approve changes before they g
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
         gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
+        quickbooks: !!qbToken,
       },
       kbIncluded,
       kbExcluded,
@@ -3591,6 +3766,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // QuickBooks tools
+              if (block.name.startsWith("qb_") && qbToken) {
+                try {
+                  const result = await withTimeout(() => executeQBTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
