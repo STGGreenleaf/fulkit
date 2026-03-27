@@ -2333,6 +2333,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
   });
   // Adaptive quality — auto-reduce detail if fps drops below threshold
   const perfRef = useRef({ frameTimes: [], quality: 1.0, checkInterval: 0 });
+  const lastFrameRef = useRef(0);
 
   // Envelope — same as terrain
   useEffect(() => {
@@ -2408,6 +2409,9 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
     function draw(ts) {
       if (!running) return;
       animRef.current = requestAnimationFrame(draw);
+      // Frame limit ~30fps — saves battery on fullscreen viz
+      if (ts - lastFrameRef.current < 32) return;
+      lastFrameRef.current = ts;
 
       const noise2D = noiseRef.current;
       const k = kineticRef.current;
@@ -2722,7 +2726,8 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
         }
 
         let faces = icoFaces;
-        for (let sub = 0; sub < 2; sub++) {
+        const subdivisions = Q < 0.5 ? 1 : 2; // adaptive: 80 vs 320 faces
+        for (let sub = 0; sub < subdivisions; sub++) {
           const newFaces = [];
           for (const [a,b,c] of faces) {
             const ab = getMid(a,b), bc = getMid(b,c), ca = getMid(c,a);
@@ -2813,7 +2818,7 @@ function OrbVisualizer({ isPlaying, trackId, trackTitle, trackArtist, progress, 
 
         const noise2D = noiseRef.current;
         const cx = w / 2, cy = h / 2;
-        const SEGS = 164;
+        const SEGS = Math.max(60, Math.round(164 * Q)); // adaptive segment count
         const innerR = dim * 0.10;
         const outerR = dim * 0.30;
         const midR = (innerR + outerR) / 2;
