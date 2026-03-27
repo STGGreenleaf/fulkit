@@ -279,7 +279,7 @@ const SOURCE_DESCRIPTIONS = {
   },
   dropbox: {
     subtitle: "Your files, connected.",
-    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox.",
+    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox. Note: Dropbox may show a security warning during connect \u2014 this is normal for new apps and disappears once our verification is approved.",
     gives: "File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what\u2019s in it.",
     tryPrompt: "Find my budget spreadsheet in Dropbox\u201D\n\u201CWhat\u2019s in my project folder?",
     linkLabel: "dropbox.com",
@@ -2218,7 +2218,7 @@ function SourcesTab() {
                     <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                       <DrawerItem index={0} visible={googleExpanded}>
                         <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)" }}>
-                          Your Google services, connected individually. Each one has its own consent {"\u2014"} Calendar doesn{"\u2019"}t see your email, Gmail doesn{"\u2019"}t touch your files. Gmail is read-only {"\u2014"} F{"\u00FC"}lkit can search and read threads to answer your questions, but it never sends, deletes, or modifies emails. Connect only what you want.
+                          Your Google services, connected individually. Each one has its own consent {"\u2014"} Calendar doesn{"\u2019"}t see your email, Gmail doesn{"\u2019"}t touch your files. Gmail is read-only {"\u2014"} F{"\u00FC"}lkit can search and read threads to answer your questions, but it never sends, deletes, or modifies emails. Connect only what you want. Note: Google may show an {"\u201C"}unverified app{"\u201D"} warning during connect {"\u2014"} this is normal while our verification is being reviewed and is safe to proceed.
                         </div>
                       </DrawerItem>
                       <DrawerItem index={1} visible={googleExpanded}>
@@ -2737,7 +2737,7 @@ function SourcesTab() {
                 <Drawer open={dropboxExpanded}>
                   {richDrawerContent({
                     expanded: dropboxExpanded,
-                    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox.",
+                    description: "Dropbox stores your documents, spreadsheets, and files in the cloud. Connecting it means F\u00FClkit can search your files, read their content, and surface what you need in conversation \u2014 without opening Dropbox. Note: Dropbox may show a security warning during connect \u2014 this is normal for new apps and disappears once our verification is approved.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "File search across your entire Dropbox, read text-based files (markdown, code, CSVs), and surface content in chat. Ask about a file and get what\u2019s in it.",
                     tryPrompt: "Find my budget spreadsheet in Dropbox\u201D\n\u201CWhat\u2019s in my project folder?",
