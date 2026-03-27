@@ -2642,6 +2642,9 @@ async function executeReadwiseTool(name, input, userId) {
   throw new Error(`Unknown readwise tool: ${name}`);
 }
 
+// Geocode cache — locations don't move, cache aggressively
+const _geocodeCache = new Map();
+
 // ─── INVISIBLE INTELLIGENCE — server-side world knowledge, no user action needed ───
 // These tools are always available. Chappie decides when to call them.
 // No cards, no connect flow, no "Powered by" attribution. Just smarter answers.
@@ -2732,6 +2735,30 @@ const WORLD_TOOLS = [
       required: ["query"],
     },
   },
+  {
+    name: "world_define",
+    description: "Look up a word — definition, pronunciation, synonyms, antonyms, etymology, usage examples. Use when the user asks about a word, is writing/editing, or uses a word that might benefit from clarification.",
+    input_schema: {
+      type: "object",
+      properties: {
+        word: { type: "string", description: "The word to define" },
+      },
+      required: ["word"],
+    },
+  },
+  {
+    name: "world_geocode",
+    description: "Convert a place name to coordinates, or coordinates to a place name. Use when you need location data for weather, sun, or air quality lookups.",
+    input_schema: {
+      type: "object",
+      properties: {
+        place: { type: "string", description: "Place name to geocode (e.g. 'Zion National Park')" },
+        latitude: { type: "number", description: "Latitude for reverse geocode" },
+        longitude: { type: "number", description: "Longitude for reverse geocode" },
+      },
+      required: [],
+    },
+  },
 ];
 
 // Resolve user location: memory → IP geolocation → fallback
@@ -2741,9 +2768,18 @@ async function resolveLocation(input, userId, request) {
   // If Chappie provided coordinates or city, use those
   if (lat && lng) return { lat, lng };
   if (city) {
-    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+    const cacheKey = city.toLowerCase().trim();
+    const cached = _geocodeCache.get(cacheKey);
+    if (cached) return { lat: cached.latitude, lng: cached.longitude };
+    const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
+      headers: { "User-Agent": "Fulkit/1.0 (fulkit.app)" }, signal: AbortSignal.timeout(3000),
+    });
     const geoData = await geo.json();
-    if (geoData.results?.[0]) return { lat: geoData.results[0].latitude, lng: geoData.results[0].longitude };
+    if (geoData[0]) {
+      const result = { latitude: parseFloat(geoData[0].lat), longitude: parseFloat(geoData[0].lon) };
+      _geocodeCache.set(cacheKey, result);
+      return { lat: result.latitude, lng: result.longitude };
+    }
   }
 
   // Check user memories for saved location
@@ -2757,9 +2793,19 @@ async function resolveLocation(input, userId, request) {
         .limit(1)
         .abortSignal(AbortSignal.timeout(2000));
       if (mems?.[0]?.value) {
-        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(mems[0].value)}&count=1`);
+        const memCity = mems[0].value;
+        const cacheKey = memCity.toLowerCase().trim();
+        const cached = _geocodeCache.get(cacheKey);
+        if (cached) return { lat: cached.latitude, lng: cached.longitude };
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(memCity)}&format=json&limit=1`, {
+          headers: { "User-Agent": "Fulkit/1.0 (fulkit.app)" }, signal: AbortSignal.timeout(2000),
+        });
         const geoData = await geo.json();
-        if (geoData.results?.[0]) return { lat: geoData.results[0].latitude, lng: geoData.results[0].longitude };
+        if (geoData[0]) {
+          const result = { latitude: parseFloat(geoData[0].lat), longitude: parseFloat(geoData[0].lon) };
+          _geocodeCache.set(cacheKey, result);
+          return { lat: result.latitude, lng: result.longitude };
+        }
       }
     } catch { /* proceed to IP fallback */ }
   }
@@ -2870,6 +2916,60 @@ async function executeWorldTool(name, input, userId, request) {
     const res = await fetch(`https://api.currentsapi.services/v1/search?keywords=${encodeURIComponent(input.query)}&language=en&page_size=${limit}&apiKey=${key}`);
     const data = await res.json();
     return { articles: (data.news || []).map(a => ({ title: a.title, description: a.description?.slice(0, 200), source: a.author, published: a.published, url: a.url })) };
+  }
+
+  if (name === "world_define") {
+    const word = (input.word || "").trim().toLowerCase();
+    if (!word) return { error: "Word required" };
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if (!res.ok) return { error: `No definition found for "${word}"` };
+    const data = await res.json();
+    const entry = data[0];
+    return {
+      word: entry.word,
+      phonetic: entry.phonetic || entry.phonetics?.[0]?.text,
+      meanings: (entry.meanings || []).map(m => ({
+        partOfSpeech: m.partOfSpeech,
+        definitions: m.definitions?.slice(0, 3).map(d => ({ definition: d.definition, example: d.example })),
+        synonyms: m.synonyms?.slice(0, 5),
+        antonyms: m.antonyms?.slice(0, 5),
+      })),
+      origin: entry.origin,
+    };
+  }
+
+  if (name === "world_geocode") {
+    // Forward geocode: place name → coordinates
+    if (input.place) {
+      // Check cache first
+      const cacheKey = input.place.toLowerCase().trim();
+      const cached = _geocodeCache.get(cacheKey);
+      if (cached) return cached;
+
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input.place)}&format=json&limit=1`, {
+        headers: { "User-Agent": "Fulkit/1.0 (fulkit.app)" },
+        signal: AbortSignal.timeout(3000),
+      });
+      const data = await res.json();
+      if (data[0]) {
+        const result = { place: data[0].display_name, latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon), type: data[0].type };
+        _geocodeCache.set(cacheKey, result);
+        return result;
+      }
+      return { error: `Could not find "${input.place}"` };
+    }
+
+    // Reverse geocode: coordinates → place name
+    if (input.latitude && input.longitude) {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${input.latitude}&lon=${input.longitude}&format=json`, {
+        headers: { "User-Agent": "Fulkit/1.0 (fulkit.app)" },
+        signal: AbortSignal.timeout(3000),
+      });
+      const data = await res.json();
+      return { place: data.display_name, latitude: input.latitude, longitude: input.longitude };
+    }
+
+    return { error: "Provide a place name or coordinates" };
   }
 
   throw new Error(`Unknown world tool: ${name}`);
