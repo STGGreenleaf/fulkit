@@ -83,6 +83,9 @@ function getModelConfig(role, seatType, hasByok) {
   return { model: PLANS.standard.model, maxTokens: PLANS.standard.maxTokens, compressAt: PLANS.standard.compressAt, isByok: false };
 }
 
+// What's new — updated when KB articles are refreshed (keep in sync with seed-library-kb.mjs)
+const WHATS_NEW = `What's new (2026-03-27): 31 capabilities — 19 chat integrations (Square, Stripe, Shopify, Toast, QuickBooks, Trello, Notion, Slack, Todoist, OneNote, Readwise, Dropbox, GitHub, Fitbit, Numbrly, TrueGauge, Google Calendar, Gmail, Google Drive), Spotify (Fabric), 12 invisible APIs (weather, food, books, currency, dictionary, geocoding, Wikipedia, NASA, Wolfram, air quality, news, breach check). Features: Inbox Triage (file drop → AI triage), ThreadCalendar (unified calendar), global hotkeys, location intelligence.`;
+
 const BASE_PROMPT = `You are Fülkit — a thinking partner with bestie energy. Warm, direct, useful. You push back when needed and remember what matters.
 
 Rules:
@@ -3795,9 +3798,9 @@ export async function POST(request) {
         .abortSignal(AbortSignal.timeout(5000))
         .then(({ data }) => data || [])
         .catch(() => []),
-      // Owner context (conditional)
+      // Owner context (conditional — includes updated_at for staleness check)
       profile?.role === "owner" ? getSupabaseAdmin()
-        .from("vault_broadcasts").select("title, content")
+        .from("vault_broadcasts").select("title, content, updated_at")
         .eq("channel", "owner-context").eq("active", true)
         .abortSignal(AbortSignal.timeout(5000))
         .then(({ data }) => data || [])
@@ -4217,9 +4220,18 @@ Never skip the preview step. The user must see and approve changes before they g
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
 
-    // Owner: architecture reference available via KB
+    // Owner: architecture reference + capabilities awareness
     if (profile?.role === "owner") {
       system += `\nYou have architecture docs in KB (Architecture Map, File Map, Integration Registry, Spec Index, Recent Changes). Search KB for code questions. When you discover which file solves a problem, save it as a memory.`;
+      system += `\n${WHATS_NEW}`;
+      // KB freshness check — warn when articles are stale
+      if (ownerDocsResult.length > 0) {
+        const mostRecentKb = Math.max(...ownerDocsResult.map(d => new Date(d.updated_at || 0).getTime()));
+        const daysSinceKbUpdate = Math.round((Date.now() - mostRecentKb) / (24 * 3600000));
+        if (daysSinceKbUpdate > 7) {
+          system += `\nNote: KB articles last updated ${daysSinceKbUpdate} days ago — some info may be outdated. Suggest a KB refresh if asked about architecture or integrations.`;
+        }
+      }
     }
 
     // Increment message count (Fül cap) — atomic, skip for BYOK users (they pay their own tokens)
