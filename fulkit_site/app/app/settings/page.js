@@ -2333,15 +2333,44 @@ function SourcesTab() {
                   onToggle={() => setQbExpanded(!qbExpanded)}
                 />
                 <Drawer open={qbExpanded}>
-                  {richDrawerContent({
-                    expanded: qbExpanded,
-                    description: "QuickBooks tracks your invoices, expenses, customers, and financial reports. Connecting it means F\u00FClkit sees your P&L, outstanding invoices, and cash position \u2014 so you can ask about your business finances in plain English instead of digging through reports.",
-                    givesLabel: "What this gives F\u00FClkit",
-                    gives: "Profit & Loss statements, balance sheets, invoice status (open, paid, overdue), recent expenses, and customer balances. Ask how the business is doing and get real numbers.",
-                    tryPrompt: "What\u2019s my P&L this month?\u201D\n\u201CWho owes me money?",
-                    linkLabel: "quickbooks.intuit.com",
-                    linkHref: "https://quickbooks.intuit.com",
-                    footer: (
+                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                    <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                      <DrawerItem index={0} visible={qbExpanded}>
+                        <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                          QuickBooks tracks your invoices, expenses, customers, and financial reports. Connecting it means F{"\u00FC"}lkit sees your P&L, outstanding invoices, and cash position {"\u2014"} so you can ask about your business finances in plain English instead of digging through reports.
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={1} visible={qbExpanded}>
+                        <div style={{ borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-3)" }}>
+                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-dim)", marginBottom: "var(--space-1)" }}>
+                            What this gives F{"\u00FC"}lkit
+                          </div>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                            Profit & Loss statements, balance sheets, invoice status (open, paid, overdue), recent expenses, customer balances, and payment history. Ask how the business is doing and get real numbers.
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={2} visible={qbExpanded}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5)" }}>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s my P&L this month?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Who owes me money right now?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Show me expenses over $500 this quarter{"\u201D"}</div>
+                          </div>
+                          <div style={{ borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-1-5)" }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}What{"\u2019"}s my balance sheet look like?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}Any overdue invoices I should follow up on?{"\u201D"}</div>
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontStyle: "italic" }}>{"\u201C"}How much did we spend on supplies this month?{"\u201D"}</div>
+                          </div>
+                        </div>
+                      </DrawerItem>
+                      <DrawerItem index={3} visible={qbExpanded}>
+                        <a href="https://quickbooks.intuit.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: "none", fontFamily: "var(--font-primary)", transition: "color var(--duration-fast) var(--ease-default)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-text-muted)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-dim)"}>
+                          {"\u2197 "}quickbooks.intuit.com
+                        </a>
+                      </DrawerItem>
+                    </div>
+                    <DrawerItem index={4} visible={qbExpanded}>
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                           Connected{qbLastSynced ? ` \u00B7 Last synced ${timeAgo(qbLastSynced)}` : ""}
@@ -2354,8 +2383,8 @@ function SourcesTab() {
                           {qbDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
-                    ),
-                  })}
+                    </DrawerItem>
+                  </div>
                 </Drawer>
               </Card>
             )}
