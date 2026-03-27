@@ -2642,6 +2642,197 @@ async function executeReadwiseTool(name, input, userId) {
   throw new Error(`Unknown readwise tool: ${name}`);
 }
 
+// ─── INVISIBLE INTELLIGENCE — server-side world knowledge, no user action needed ───
+// These tools are always available. Chappie decides when to call them.
+// No cards, no connect flow, no "Powered by" attribution. Just smarter answers.
+
+const WORLD_TOOLS = [
+  {
+    name: "world_weather",
+    description: "Get current weather, forecast, UV index, and air quality for a location. Use when the user mentions weather, outdoor plans, travel, or when environmental context would help.",
+    input_schema: {
+      type: "object",
+      properties: {
+        latitude: { type: "number", description: "Latitude" },
+        longitude: { type: "number", description: "Longitude" },
+        city: { type: "string", description: "City name (used to geocode if lat/lng not available)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "world_sun",
+    description: "Get sunrise, sunset, golden hour, solar noon, and day length for a location and date.",
+    input_schema: {
+      type: "object",
+      properties: {
+        latitude: { type: "number", description: "Latitude" },
+        longitude: { type: "number", description: "Longitude" },
+        date: { type: "string", description: "Date YYYY-MM-DD. Default today." },
+      },
+      required: ["latitude", "longitude"],
+    },
+  },
+  {
+    name: "world_food",
+    description: "Look up nutrition data for a food item — calories, macros, ingredients, allergens. Searches Open Food Facts and USDA.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Food name, product name, or barcode" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "world_book",
+    description: "Look up book metadata — title, author, subjects, cover, publication info. Use when the user mentions a book or reading.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Book title or author name" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "world_currency",
+    description: "Convert between currencies using real-time exchange rates. Use when money, pricing, or international costs come up.",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "Source currency code (e.g. USD, EUR, GBP)" },
+        to: { type: "string", description: "Target currency code" },
+        amount: { type: "number", description: "Amount to convert. Default 1." },
+      },
+      required: ["from", "to"],
+    },
+  },
+  {
+    name: "world_nasa",
+    description: "Get NASA's Astronomy Picture of the Day, or near-earth asteroid data. Use for curiosity, inspiration, or space-related questions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        type: { type: "string", enum: ["apod", "asteroids"], description: "apod = picture of the day, asteroids = near-earth objects" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "world_news",
+    description: "Search current news headlines by topic or keyword. Use when the user asks about current events or when situational awareness would help.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Topic or keyword to search" },
+        limit: { type: "integer", description: "Max articles. Default 5." },
+      },
+      required: ["query"],
+    },
+  },
+];
+
+async function executeWorldTool(name, input) {
+  if (name === "world_weather") {
+    let lat = input.latitude, lng = input.longitude;
+    if (!lat && input.city) {
+      const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(input.city)}&count=1`);
+      const geoData = await geo.json();
+      if (geoData.results?.[0]) { lat = geoData.results[0].latitude; lng = geoData.results[0].longitude; }
+    }
+    if (!lat || !lng) return { error: "Location required" };
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max&timezone=auto&forecast_days=3`);
+    const data = await res.json();
+    return { current: data.current, daily: data.daily, units: data.current_units };
+  }
+
+  if (name === "world_sun") {
+    const date = input.date || new Date().toISOString().slice(0, 10);
+    const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${input.latitude}&lng=${input.longitude}&date=${date}&formatted=0`);
+    const data = await res.json();
+    return data.results || {};
+  }
+
+  if (name === "world_food") {
+    // Try Open Food Facts first
+    const offRes = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(input.query)}&json=1&page_size=3`);
+    const offData = await offRes.json();
+    const offResults = (offData.products || []).map(p => ({
+      name: p.product_name, brand: p.brands, categories: p.categories,
+      calories: p.nutriments?.["energy-kcal_100g"], protein: p.nutriments?.proteins_100g,
+      carbs: p.nutriments?.carbohydrates_100g, fat: p.nutriments?.fat_100g,
+      sugar: p.nutriments?.sugars_100g, fiber: p.nutriments?.fiber_100g,
+      nutriscore: p.nutriscore_grade, ingredients: p.ingredients_text?.slice(0, 200),
+    }));
+    if (offResults.length > 0) return { source: "Open Food Facts", results: offResults };
+
+    // Fallback to USDA
+    const usdaKey = process.env.USDA_API_KEY;
+    if (!usdaKey) return { results: [], message: "No results found" };
+    const usdaRes = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(input.query)}&pageSize=3&api_key=${usdaKey}`);
+    const usdaData = await usdaRes.json();
+    return {
+      source: "USDA",
+      results: (usdaData.foods || []).map(f => ({
+        name: f.description, brand: f.brandName || f.brandOwner,
+        calories: f.foodNutrients?.find(n => n.nutrientName === "Energy")?.value,
+        protein: f.foodNutrients?.find(n => n.nutrientName === "Protein")?.value,
+        fat: f.foodNutrients?.find(n => n.nutrientName === "Total lipid (fat)")?.value,
+        carbs: f.foodNutrients?.find(n => n.nutrientName === "Carbohydrate, by difference")?.value,
+      })),
+    };
+  }
+
+  if (name === "world_book") {
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(input.query)}&limit=3`);
+    const data = await res.json();
+    return {
+      books: (data.docs || []).map(b => ({
+        title: b.title, author: b.author_name?.[0], firstPublished: b.first_publish_year,
+        subjects: b.subject?.slice(0, 5), isbn: b.isbn?.[0], pages: b.number_of_pages_median,
+        cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : null,
+      })),
+    };
+  }
+
+  if (name === "world_currency") {
+    const amount = input.amount || 1;
+    const res = await fetch(`https://api.frankfurter.dev/latest?from=${input.from}&to=${input.to}&amount=${amount}`);
+    const data = await res.json();
+    return { from: input.from, to: input.to, amount, converted: data.rates?.[input.to], date: data.date };
+  }
+
+  if (name === "world_nasa") {
+    const type = input.type || "apod";
+    const nasaKey = process.env.NASA_API_KEY || "DEMO_KEY";
+    if (type === "apod") {
+      const res = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${nasaKey}`);
+      const data = await res.json();
+      return { title: data.title, explanation: data.explanation, url: data.url, date: data.date, mediaType: data.media_type };
+    }
+    if (type === "asteroids") {
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch(`https://api.nasa.gov/neo/rest/v1/feed?start_date=${today}&end_date=${today}&api_key=${nasaKey}`);
+      const data = await res.json();
+      const asteroids = data.near_earth_objects?.[today] || [];
+      return { date: today, count: asteroids.length, closest: asteroids.slice(0, 3).map(a => ({ name: a.name, diameter_m: a.estimated_diameter?.meters?.estimated_diameter_max, velocity_kph: a.close_approach_data?.[0]?.relative_velocity?.kilometers_per_hour, miss_distance_km: a.close_approach_data?.[0]?.miss_distance?.kilometers, hazardous: a.is_potentially_hazardous_asteroid })) };
+    }
+    return { error: "Unknown NASA type" };
+  }
+
+  if (name === "world_news") {
+    const limit = Math.min(input.limit || 5, 10);
+    const key = process.env.CURRENTS_API_KEY;
+    if (!key) return { articles: [], message: "News API not configured" };
+    const res = await fetch(`https://api.currentsapi.services/v1/search?keywords=${encodeURIComponent(input.query)}&language=en&page_size=${limit}&apiKey=${key}`);
+    const data = await res.json();
+    return { articles: (data.news || []).map(a => ({ title: a.title, description: a.description?.slice(0, 200), source: a.author, published: a.published, url: a.url })) };
+  }
+
+  throw new Error(`Unknown world tool: ${name}`);
+}
+
 // Action list tools — Claude can create, query, and update user actions
 const ACTIONS_TOOLS = [
   {
@@ -3881,6 +4072,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
       ...(userId ? KB_TOOLS : []),
+      ...WORLD_TOOLS,
       ...integrationTools,
     ];
     const toolSchemaTokens = allTools.length > 0 ? Math.ceil(JSON.stringify(allTools).length / 4) : 0;
@@ -4203,6 +4395,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("trello_") && trelloToken) {
                 try {
                   const result = await withTimeout(() => executeTrelloTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // World tools (invisible intelligence — always available)
+              if (block.name.startsWith("world_")) {
+                try {
+                  const result = await withTimeout(() => executeWorldTool(block.name, block.input || {}));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
