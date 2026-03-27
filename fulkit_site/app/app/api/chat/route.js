@@ -2662,15 +2662,16 @@ const WORLD_TOOLS = [
   },
   {
     name: "world_sun",
-    description: "Get sunrise, sunset, golden hour, solar noon, and day length for a location and date.",
+    description: "Get sunrise, sunset, golden hour, solar noon, and day length for a location and date. Location auto-detected if not provided.",
     input_schema: {
       type: "object",
       properties: {
-        latitude: { type: "number", description: "Latitude" },
-        longitude: { type: "number", description: "Longitude" },
+        latitude: { type: "number", description: "Latitude. Optional — auto-detected." },
+        longitude: { type: "number", description: "Longitude. Optional — auto-detected." },
+        city: { type: "string", description: "City name. Optional — auto-detected." },
         date: { type: "string", description: "Date YYYY-MM-DD. Default today." },
       },
-      required: ["latitude", "longitude"],
+      required: [],
     },
   },
   {
@@ -2733,23 +2734,64 @@ const WORLD_TOOLS = [
   },
 ];
 
-async function executeWorldTool(name, input) {
-  if (name === "world_weather") {
-    let lat = input.latitude, lng = input.longitude;
-    if (!lat && input.city) {
-      const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(input.city)}&count=1`);
-      const geoData = await geo.json();
-      if (geoData.results?.[0]) { lat = geoData.results[0].latitude; lng = geoData.results[0].longitude; }
+// Resolve user location: memory → IP geolocation → fallback
+async function resolveLocation(input, userId, request) {
+  let lat = input.latitude, lng = input.longitude, city = input.city;
+
+  // If Chappie provided coordinates or city, use those
+  if (lat && lng) return { lat, lng };
+  if (city) {
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+    const geoData = await geo.json();
+    if (geoData.results?.[0]) return { lat: geoData.results[0].latitude, lng: geoData.results[0].longitude };
+  }
+
+  // Check user memories for saved location
+  if (userId) {
+    try {
+      const { data: mems } = await getSupabaseAdmin()
+        .from("memories")
+        .select("key, value")
+        .eq("user_id", userId)
+        .ilike("key", "%location%")
+        .limit(1)
+        .abortSignal(AbortSignal.timeout(2000));
+      if (mems?.[0]?.value) {
+        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(mems[0].value)}&count=1`);
+        const geoData = await geo.json();
+        if (geoData.results?.[0]) return { lat: geoData.results[0].latitude, lng: geoData.results[0].longitude };
+      }
+    } catch { /* proceed to IP fallback */ }
+  }
+
+  // IP geolocation fallback (city-level, no permission needed)
+  try {
+    const ip = request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || request?.headers?.get("x-real-ip");
+    if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+      const ipRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(2000) });
+      const ipData = await ipRes.json();
+      if (ipData.latitude && ipData.longitude) return { lat: ipData.latitude, lng: ipData.longitude };
     }
-    if (!lat || !lng) return { error: "Location required" };
+  } catch { /* no location available */ }
+
+  return null;
+}
+
+async function executeWorldTool(name, input, userId, request) {
+  if (name === "world_weather") {
+    const loc = await resolveLocation(input, userId, request);
+    if (!loc) return { error: "Location required — try telling me where you are" };
+    const { lat, lng } = loc;
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max&timezone=auto&forecast_days=3`);
     const data = await res.json();
     return { current: data.current, daily: data.daily, units: data.current_units };
   }
 
   if (name === "world_sun") {
+    const loc = await resolveLocation(input, userId, request);
+    if (!loc) return { error: "Location required" };
     const date = input.date || new Date().toISOString().slice(0, 10);
-    const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${input.latitude}&lng=${input.longitude}&date=${date}&formatted=0`);
+    const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${loc.lat}&lng=${loc.lng}&date=${date}&formatted=0`);
     const data = await res.json();
     return data.results || {};
   }
@@ -4405,7 +4447,7 @@ Never skip the preview step. The user must see and approve changes before they g
               // World tools (invisible intelligence — always available)
               if (block.name.startsWith("world_")) {
                 try {
-                  const result = await withTimeout(() => executeWorldTool(block.name, block.input || {}));
+                  const result = await withTimeout(() => executeWorldTool(block.name, block.input || {}, userId, request));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
