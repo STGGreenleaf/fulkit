@@ -1833,9 +1833,9 @@ function SourcesTab() {
           {SOURCE_LOGOS[src.id] || <Zap size={14} strokeWidth={1.8} />}
         </div>
         <div style={{ textAlign: "left", flex: 1 }}>
-          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>{src.name}</div>
-          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
-            {isReal ? src.cat : isOnWaitlist ? "On the list" : src.cat}
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", textDecoration: isReal ? "none" : "line-through" }}>{src.name}</div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textDecoration: isReal ? "none" : "line-through" }}>
+            {isReal ? src.cat : isOnWaitlist ? "On the list" : "Coming soon"}
           </div>
         </div>
         {!isReal && (
@@ -2600,33 +2600,11 @@ function SourcesTab() {
       {/* All other sources */}
       {(moreCards.length > 0 || moreTiles.length > 0) && (() => {
         const q = searchMore.toLowerCase().trim();
-        const filteredCards = q ? moreCards.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q)) : moreCards;
+        const filteredCards = moreCards;
         const filteredTiles = q ? moreTiles.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q)) : moreTiles;
         return (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-            <SectionTitle style={{ marginBottom: 0, flex: 1 }}>More</SectionTitle>
-            <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-              <Search size={13} strokeWidth={2} style={{ position: "absolute", left: "var(--space-2-5)", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
-              <input
-                type="text"
-                placeholder="Search integrations..."
-                value={searchMore}
-                onChange={(e) => setSearchMore(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-1-5) var(--space-2-5) var(--space-1-5) var(--space-8)",
-                  fontSize: "var(--font-size-xs)",
-                  fontFamily: "var(--font-primary)",
-                  color: "var(--color-text)",
-                  background: "var(--color-bg-elevated)",
-                  border: "1px solid var(--color-border-light)",
-                  borderRadius: "var(--radius-sm)",
-                  outline: "none",
-                }}
-              />
-            </div>
-          </div>
+          <SectionTitle>More</SectionTitle>
 
           {/* Real integrations — expandable swivel cards */}
           {filteredCards.length > 0 && (
@@ -2745,7 +2723,27 @@ function SourcesTab() {
             </div>
           )}
 
-          {/* Non-real sources — flat grid tiles with waitlist */}
+          {/* Search + upcoming integrations */}
+          <div style={{ position: "relative", marginBottom: "var(--space-3)", marginTop: filteredCards.length > 0 ? "var(--space-4)" : 0 }}>
+            <Search size={13} strokeWidth={2} style={{ position: "absolute", left: "var(--space-2-5)", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-dim)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Search upcoming integrations..."
+              value={searchMore}
+              onChange={(e) => setSearchMore(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "var(--space-2) var(--space-2-5) var(--space-2) var(--space-8)",
+                fontSize: "var(--font-size-xs)",
+                fontFamily: "var(--font-primary)",
+                color: "var(--color-text)",
+                background: "var(--color-bg-elevated)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-sm)",
+                outline: "none",
+              }}
+            />
+          </div>
           {filteredTiles.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
               {filteredTiles.map(sourceButton)}
