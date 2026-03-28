@@ -746,7 +746,7 @@ function SpendModeratorSection({ period }) {
     }).catch(() => {});
   };
 
-  if (loading && !data) return null;
+  if (loading && !data) return <div style={{ minHeight: 120 }} />;
   if (!data) return null;
 
   const { summary, previous, flags } = data;
@@ -1429,14 +1429,14 @@ function RadioTab() {
 
   if (loading && signals.length === 0) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)" }}>
+      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)", minHeight: 400 }}>
         <LoadingMark size={32} />
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={{ minHeight: 400 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
         <div style={TAB_TITLE}>Signal Radio</div>
