@@ -455,7 +455,9 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          The average American spends $219 a month on subscriptions. This is&nbsp;${fulkitPrice}.
+          The average American spends $219 a month
+          <br />
+          on subscriptions. This is&nbsp;${fulkitPrice}.
         </h2>
 
         {/* Abstract receipt — fragmentation vs one surface */}
