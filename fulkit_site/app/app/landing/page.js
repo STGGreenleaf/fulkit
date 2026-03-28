@@ -20,16 +20,19 @@ const features = [
   { title: "Fabric", desc: "Integrated music player with real-time visualization. B-Side is your record store guy \u2014 built in, opinionated, and better than your algorithm." },
 ];
 
+const COMPETITORS = ["ChatGPT", "Claude", "Notion", "Obsidian", "Todoist", "Otter.ai", "Spotify", "Slack", "Google Cal", "QuickBooks", "F\u00FClkit"];
+const CK = ["chatgpt", "claude", "notion", "obsidian", "todoist", "otter", "spotify", "slack", "gcal", "quickbooks", "fulkit"];
 const grid = [
-  { feature: "AI that knows your notes", obsidian: false, notion: "partial", chatgpt: false, claude: false, fulkit: true },
-  { feature: "Proactive suggestions", obsidian: false, notion: false, chatgpt: false, claude: false, fulkit: true },
-  { feature: "Voice mode (no transcript)", obsidian: false, notion: false, chatgpt: "partial", claude: false, fulkit: true },
-  { feature: "Task extraction from notes", obsidian: false, notion: false, chatgpt: false, claude: false, fulkit: true },
-  { feature: "Document triage", obsidian: false, notion: false, chatgpt: "partial", claude: "partial", fulkit: true },
-  { feature: "Learns your preferences", obsidian: false, notion: false, chatgpt: "partial", claude: "partial", fulkit: true },
-  { feature: "No vendor lock-in", obsidian: true, notion: false, chatgpt: false, claude: false, fulkit: true },
-  { feature: "Beautiful cross-device UI", obsidian: false, notion: true, chatgpt: true, claude: true, fulkit: true },
-  { feature: "Bank-vault encryption at rest", obsidian: false, notion: false, chatgpt: false, claude: false, fulkit: true },
+  { feature: "AI that knows your history", chatgpt: "partial", claude: "partial", notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Voice \u2192 auto-filed notes", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: "partial", spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Proactive suggestions", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Tasks from conversations", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Drop any file \u2192 summary", chatgpt: "partial", claude: "partial", notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Search by meaning", chatgpt: false, claude: false, notion: "partial", obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Business + health + calendar in chat", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "Integrated music player", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: false, spotify: true, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "End-to-end encryption (3 modes)", chatgpt: false, claude: false, notion: false, obsidian: "partial", todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
+  { feature: "All of the above for $9/mo", chatgpt: false, claude: false, notion: false, obsidian: false, todoist: false, otter: false, spotify: false, slack: false, gcal: false, quickbooks: false, fulkit: true },
 ];
 
 function GridCell({ value }) {
@@ -753,56 +756,51 @@ export default function Landing() {
             Nobody else lives here.
           </h2>
 
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table
             style={{
               width: "100%",
               borderCollapse: "collapse",
               fontSize: "var(--font-size-base)",
+              minWidth: 700,
             }}
           >
             <thead>
-              <tr
-                style={{
-                  borderBottom: "2px solid var(--color-text)",
-                }}
-              >
-                <th
-                  style={{
-                    padding: "var(--space-3) 0",
-                    textAlign: "left",
-                    fontWeight: "var(--font-weight-medium)",
-                    color: "var(--color-text-muted)",
-                    fontSize: "var(--font-size-xs)",
-                    textTransform: "uppercase",
-                    letterSpacing: "var(--letter-spacing-wider)",
-                  }}
-                >
-                  Feature
-                </th>
-                {["Obsidian", "Notion", "ChatGPT", "Claude", "Fülkit"].map(
-                  (name) => (
+              <tr style={{ borderBottom: "2px solid var(--color-text)" }}>
+                <th style={{ padding: "0 0 var(--space-3) 0", textAlign: "left", verticalAlign: "bottom" }}></th>
+                {COMPETITORS.map((name, ci) => {
+                  const isFulkit = name === "F\u00FClkit";
+                  return (
                     <th
                       key={name}
                       style={{
-                        padding: "var(--space-3) var(--space-2)",
+                        padding: 0,
                         textAlign: "center",
-                        fontWeight:
-                          name === "Fülkit"
-                            ? "var(--font-weight-black)"
-                            : "var(--font-weight-medium)",
-                        fontSize: "var(--font-size-xs)",
-                        textTransform: "uppercase",
-                        letterSpacing: "var(--letter-spacing-wider)",
-                        color:
-                          name === "Fülkit"
-                            ? "var(--color-text)"
-                            : "var(--color-text-muted)",
+                        verticalAlign: "bottom",
+                        height: 120,
+                        position: "relative",
                       }}
                     >
-                      {name}
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: 8,
+                          left: "50%",
+                          transformOrigin: "bottom left",
+                          transform: "rotate(-50deg) translateX(-50%)",
+                          whiteSpace: "nowrap",
+                          fontSize: "var(--font-size-xs)",
+                          fontWeight: isFulkit ? "var(--font-weight-black)" : "var(--font-weight-medium)",
+                          textTransform: "uppercase",
+                          letterSpacing: "var(--letter-spacing-wider)",
+                          color: isFulkit ? "var(--color-text)" : "var(--color-text-muted)",
+                        }}
+                      >
+                        {name}
+                      </div>
                     </th>
-                  )
-                )}
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -811,33 +809,36 @@ export default function Landing() {
                   key={i}
                   style={{
                     borderBottom: "1px solid var(--color-border-light)",
+                    ...(i === grid.length - 1 ? { borderBottom: "2px solid var(--color-text)" } : {}),
                   }}
                 >
                   <td
                     style={{
-                      padding: "var(--space-3) 0",
-                      color: "var(--color-text-secondary)",
+                      padding: "var(--space-3) var(--space-3) var(--space-3) 0",
+                      color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)",
+                      fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {row.feature}
                   </td>
-                  {["obsidian", "notion", "chatgpt", "claude", "fulkit"].map(
-                    (key) => (
-                      <td
-                        key={key}
-                        style={{
-                          padding: "var(--space-3) var(--space-2)",
-                          textAlign: "center",
-                        }}
-                      >
-                        <GridCell value={row[key]} />
-                      </td>
-                    )
-                  )}
+                  {CK.map((key) => (
+                    <td
+                      key={key}
+                      style={{
+                        padding: "var(--space-3) var(--space-1)",
+                        textAlign: "center",
+                        ...(key === "fulkit" ? { background: "var(--color-bg-alt)" } : {}),
+                      }}
+                    >
+                      <GridCell value={row[key]} />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </section>
 
       {/* ─── PRICING ─── */}
