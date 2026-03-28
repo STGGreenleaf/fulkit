@@ -726,7 +726,7 @@ export default function Landing() {
         <section
           style={{
             padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
-            maxWidth: isMobile ? "none" : 900,
+            maxWidth: isMobile ? "none" : 1000,
             margin: "0 auto",
           }}
         >
@@ -762,7 +762,8 @@ export default function Landing() {
               width: "100%",
               borderCollapse: "collapse",
               fontSize: "var(--font-size-base)",
-              minWidth: 700,
+              minWidth: 800,
+              tableLayout: "fixed",
             }}
           >
             <thead>
@@ -788,7 +789,6 @@ export default function Landing() {
                         verticalAlign: "bottom",
                         height: 100,
                         position: "relative",
-                        width: 44,
                       }}
                     >
                       <div
@@ -824,10 +824,9 @@ export default function Landing() {
                 >
                   <td
                     style={{
-                      padding: "var(--space-3) var(--space-1) var(--space-3) 0",
+                      padding: "var(--space-3) var(--space-2) var(--space-3) 0",
                       color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)",
                       fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
-                      whiteSpace: "nowrap",
                     }}
                   >
                     {row.feature}
