@@ -746,7 +746,7 @@ function SpendModeratorSection({ period }) {
     }).catch(() => {});
   };
 
-  if (loading && !data) return <div style={{ minHeight: 120 }} />;
+  if (loading && !data) return <div style={{ minHeight: 44, marginBottom: "var(--space-5)" }} />;
   if (!data) return null;
 
   const { summary, previous, flags } = data;
@@ -1429,8 +1429,18 @@ function RadioTab() {
 
   if (loading && signals.length === 0) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12)", minHeight: 400 }}>
-        <LoadingMark size={32} />
+      <div style={{ minHeight: 400 }}>
+        {/* Reserve header row height */}
+        <div style={{ height: 32, marginBottom: "var(--space-5)" }} />
+        {/* Reserve SpendModerator height */}
+        <div style={{ height: 44, marginBottom: "var(--space-5)" }} />
+        {/* Reserve KPI tiles height */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+          {[0,1,2].map(i => <div key={i} style={{ height: 56, background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)" }} />)}
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-6)" }}>
+          <LoadingMark size={32} />
+        </div>
       </div>
     );
   }

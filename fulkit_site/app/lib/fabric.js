@@ -234,6 +234,7 @@ export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const pathname = usePathname();
   const onFabricPage = pathname === "/fabric" || pathname === "/fabricproto";
+  const onPublicPage = ["/landing", "/about", "/login", "/privacy", "/terms", "/wtf"].includes(pathname);
 
   const [connected, setConnected] = useState(false);
   const [connectedProviders, setConnectedProviders] = useState({});
@@ -366,7 +367,7 @@ export function FabricProvider({ children }) {
 
   // Check connection status
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || onPublicPage) return;
     apiFetch("/api/fabric/status").then((data) => {
       if (data) {
         // YouTube is always available — no OAuth needed
@@ -384,18 +385,18 @@ export function FabricProvider({ children }) {
       setConnectedProviders({ youtube: true });
       setStatusChecked(true);
     });
-  }, [accessToken, apiFetch]);
+  }, [accessToken, apiFetch, onPublicPage]);
 
   // Load thumbs-down list from Supabase
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || onPublicPage) return;
     apiFetch("/api/fabric/thumbsdown").then((data) => {
       if (Array.isArray(data)) {
         const keys = new Set(data.map(d => d.track_key));
         setThumbsDownSet(keys);
       }
     }).catch(() => {});
-  }, [accessToken, apiFetch]);
+  }, [accessToken, apiFetch, onPublicPage]);
 
   // Fetch playlists from Supabase (works regardless of source connection)
   useEffect(() => {
@@ -1741,7 +1742,7 @@ export function FabricProvider({ children }) {
 
   // Fetch published sets on mount — auto-restore missing personal sets from crowned crates
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || onPublicPage) return;
     apiFetch("/api/fabric/featured").then((data) => {
       if (!data?.crates) return;
       const map = {};
@@ -1870,7 +1871,7 @@ export function FabricProvider({ children }) {
       persistSets(next);
       return next;
     });
-  }, [accessToken, apiFetch]);
+  }, [accessToken, apiFetch, onPublicPage]);
 
   const publishSet = useCallback(async (setId) => {
     const set = setsData.sets.find(s => s.id === setId);
