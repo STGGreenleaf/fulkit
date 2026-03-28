@@ -11,30 +11,16 @@ import { useIsMobile } from "../../lib/use-mobile";
 const fulkitPrice = 9;
 
 const features = [
-  {
-    title: "AI Chat",
-    desc: "A bestie that knows everything you've saved. No more catching AI up to speed.",
-  },
-  {
-    title: "The Hum",
-    desc: "Talk to a presence, not a transcript. Voice capture that files your thoughts silently.",
-  },
-  {
-    title: "Whispers",
-    desc: "Proactive suggestions that drift in and fade out. Like a text from a friend who pays attention.",
-  },
-  {
-    title: "Action List",
-    desc: "AI-generated to-dos from your notes. No manual entry. Just do.",
-  },
-  {
-    title: "Inbox Triage",
-    desc: "Drop any file — PDF, image, text. AI reads it, files it, pulls action items, finds related notes.",
-  },
-  {
-    title: "Quick Capture",
-    desc: "Floating button, text or voice. Thought to saved in 2 seconds. AI files it for you.",
-  },
+  { title: "Memory", desc: "Every conversation builds on the last. No blank pages. No catching up.", contrast: "\u201C71% of users quit an app within 90 days.\u201D Not this one." },
+  { title: "Voice", desc: "Talk to an orb. It listens, files, extracts. No transcript. No editing anxiety.", contrast: "Others show you live typing and call it voice mode." },
+  { title: "Whispers", desc: "Suggestions drift in before you ask. Like a text from a friend who pays attention." },
+  { title: "Triage", desc: "Drop any file \u2014 PDF, image, doc. Summary and action items in seconds." },
+  { title: "Actions", desc: "Tasks generated from your conversations. No manual entry. No checkboxes to maintain.", contrast: "Others make you type every to-do by hand." },
+  { title: "Search", desc: "Ask for \u201Cthat thing from February.\u201D It finds it. Not by keywords \u2014 by meaning." },
+  { title: "Awareness", desc: "Weather, time zones, nutrition, currency, air quality. You don\u2019t set it up. You don\u2019t turn it on. It just knows." },
+  { title: "Fabric", desc: "Free music player. Real-time visualization. Your songs have a shape \u2014 no two look the same.", contrast: "Others charge $11/mo and give you an algorithm." },
+  { title: "B-Side", desc: "A record store clerk who lives in your app. Ask for jazz. He won\u2019t give you a playlist. He\u2019ll give you a pressing." },
+  { title: "Vault", desc: "Three storage modes. Local, encrypted, or managed. Your data. Your rules. Your call.", contrast: "Others don\u2019t give you a choice." },
 ];
 
 const grid = [
@@ -620,7 +606,7 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          Your notes finally talk back.
+          The full kit.
         </h2>
 
         <div
@@ -671,6 +657,19 @@ export default function Landing() {
               >
                 {f.desc}
               </div>
+              {f.contrast && (
+                <div
+                  style={{
+                    fontSize: "var(--font-size-base)",
+                    color: "var(--color-text-muted)",
+                    fontStyle: "italic",
+                    lineHeight: "var(--line-height-relaxed)",
+                    marginTop: "var(--space-2)",
+                  }}
+                >
+                  {f.contrast}
+                </div>
+              )}
             </div>
           ))}
         </div>
