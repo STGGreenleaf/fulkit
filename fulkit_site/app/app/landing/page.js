@@ -394,20 +394,6 @@ export default function Landing() {
           >
             You capture everything and retrieve nothing.
           </h2>
-          <p
-            style={{
-              fontSize: "var(--font-size-base)",
-              color: "var(--color-text-secondary)",
-              lineHeight: "var(--line-height-relaxed)",
-              marginBottom: "var(--space-10)",
-              textAlign: "center",
-              maxWidth: 560,
-              margin: "0 auto var(--space-10)",
-            }}
-          >
-            You save things to never look at them again. Eight apps, eight logins,
-            eight places your ideas go to die. Your notes are a graveyard.
-          </p>
           <div
             style={{
               display: "flex",
@@ -416,14 +402,15 @@ export default function Landing() {
               borderLeft: "2px solid var(--color-border)",
               paddingLeft: "var(--space-5)",
               maxWidth: 560,
-              margin: "0 auto",
+              margin: "0 auto var(--space-10)",
             }}
           >
             {[
-              "I have 12 apps open and none of them talk to each other.",
-              "I spend the first 3 messages catching ChatGPT up to speed. Every. Single. Time.",
-              "I saved something important last week. I have no idea where.",
-            ].map((quote, i) => (
+              "87 apps installed. 3 actually used. The rest is a graveyard with a subscription fee.",
+              "$219 a month on subscriptions \u2014 2.5\u00D7 more than you think you\u2019re paying.",
+              "42% of people forgot they were still being charged.",
+              "22% are actively looking for something more integrated.",
+            ].map((stat, i) => (
               <p
                 key={i}
                 style={{
@@ -434,10 +421,32 @@ export default function Landing() {
                   fontStyle: "italic",
                 }}
               >
-                "{quote}"
+                {stat}
               </p>
             ))}
           </div>
+          <p
+            style={{
+              fontSize: "var(--font-size-base)",
+              color: "var(--color-text-secondary)",
+              lineHeight: "var(--line-height-relaxed)",
+              textAlign: "center",
+              maxWidth: 560,
+              margin: "0 auto var(--space-4)",
+              fontWeight: "var(--font-weight-medium)",
+            }}
+          >
+            You{"\u2019"}re not disorganized. You{"\u2019"}re paying to be.
+          </p>
+          <p
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-dim)",
+              textAlign: "center",
+            }}
+          >
+            Quokka Labs, C+R Research, CNET, SQ Magazine {"\u2014"} 2025
+          </p>
         </section>
       </div>
 
