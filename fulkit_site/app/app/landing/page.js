@@ -310,8 +310,8 @@ export default function Landing() {
         >
           {[
             "A full kit \u2014 everything you need, nothing you\u00A0don\u2019t.",
-            "A feeling \u2014 a tool designed to feel right.",
-            "Your new bestie \u2014 the last app you\u2019ll ever\u00A0need.",
+            "A feeling \u2014 the one where you don\u2019t have to explain\u00A0yourself.",
+            "Your new bestie \u2014 one surface, nothing else\u00A0open.",
           ].map((def, i) => (
             <div
               key={i}
@@ -341,33 +341,21 @@ export default function Landing() {
             <span style={{ fontWeight: "var(--font-weight-semibold)" }}>Origin:</span> German. fühl (to feel) + kit (a set of tools).
           </div>
           <div style={{ marginTop: "var(--space-1)" }}>
-            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>See also:</span> the only app that knows what you saved last Tuesday.
+            <span style={{ fontWeight: "var(--font-weight-semibold)" }}>See also:</span> the app that texts you first.
           </div>
         </div>
 
         <p
           style={{
             fontSize: "var(--font-size-base)",
-            fontWeight: "var(--font-weight-medium)",
-            color: "var(--color-text-secondary)",
+            fontStyle: "italic",
+            color: "var(--color-text-dim)",
             lineHeight: "var(--line-height-relaxed)",
-            maxWidth: 720,
-            marginBottom: isMobile ? "var(--space-1)" : "var(--space-3)",
-          }}
-        >
-          One app. One bestie. Everything else is noise.
-        </p>
-        <p
-          style={{
-            fontSize: "var(--font-size-base)",
-            fontWeight: "var(--font-weight-normal)",
-            color: "var(--color-text-secondary)",
-            lineHeight: "var(--line-height-relaxed)",
-            maxWidth: 480,
+            maxWidth: 600,
             marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
-          A friend with benefits — and the benefits are&nbsp;real.
+          {"\u201C"}I have one app open. You have twelve. We are not the&nbsp;same.{"\u201D"}
         </p>
         <CTAButton />
       </section>
