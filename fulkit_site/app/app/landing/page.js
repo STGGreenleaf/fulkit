@@ -784,19 +784,20 @@ export default function Landing() {
                       key={name}
                       style={{
                         padding: 0,
-                        textAlign: "center",
+                        textAlign: "left",
                         verticalAlign: "bottom",
-                        height: 120,
+                        height: 100,
                         position: "relative",
+                        width: 44,
                       }}
                     >
                       <div
                         style={{
                           position: "absolute",
-                          bottom: 8,
-                          left: "50%",
+                          bottom: 0,
+                          left: 4,
                           transformOrigin: "bottom left",
-                          transform: "rotate(-50deg) translateX(-50%)",
+                          transform: "rotate(-55deg)",
                           whiteSpace: "nowrap",
                           fontSize: "var(--font-size-sm)",
                           fontWeight: isFulkit ? "var(--font-weight-black)" : "var(--font-weight-medium)",
