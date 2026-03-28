@@ -120,7 +120,7 @@ export default function About() {
             background: "var(--color-accent)",
             color: "var(--color-text-inverse)",
             borderRadius: "var(--radius-sm)",
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             fontWeight: "var(--font-weight-semibold)",
             fontFamily: "var(--font-primary)",
             textAlign: "center",
@@ -181,7 +181,7 @@ export default function About() {
         >
           <div
             style={{
-              fontSize: "var(--font-size-sm)",
+              fontSize: "var(--font-size-base)",
               color: "var(--color-text-secondary)",
               lineHeight: "var(--line-height-relaxed)",
               fontStyle: "italic",
@@ -254,9 +254,8 @@ export default function About() {
         <div
           style={{
             fontSize: "var(--font-size-2xl)",
-            fontStyle: "italic",
-            fontWeight: "var(--font-weight-normal)",
-            color: "var(--color-text-secondary)",
+            fontWeight: "var(--font-weight-black)",
+            color: "var(--color-text)",
             marginBottom: "var(--space-16)",
           }}
         >
@@ -271,7 +270,7 @@ export default function About() {
             background: "var(--color-accent)",
             color: "var(--color-text-inverse)",
             borderRadius: "var(--radius-sm)",
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             fontWeight: "var(--font-weight-semibold)",
             fontFamily: "var(--font-primary)",
             textAlign: "center",
