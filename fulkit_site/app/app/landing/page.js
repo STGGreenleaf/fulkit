@@ -101,7 +101,7 @@ function PricingGrid({ isMobile }) {
   return (
     <>
       <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", textAlign: "center", marginBottom: "var(--space-6)" }}>
-        {PLANS.trial.durationDays} days free. {PLANS.trial.fulTotal} messages. See what F&uuml;lkit does for you.
+        {PLANS.trial.durationDays} days free. No credit card. {PLANS.trial.fulTotal} messages.
       </div>
       <div style={{ textAlign: "center" }}>
         <div style={toggleStyle}>
@@ -896,10 +896,7 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          Friends get benefits. Every friend who joins earns you $1/mo off your subscription.{" "}
-          <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-secondary)" }}>
-            {REFERRALS.freeAtStandard} friends = free forever.
-          </span>
+          ${TIERS.standard.price}/mo. Or $0/mo with {REFERRALS.freeAtStandard} friends. Your move.
         </p>
       </section>
       </div>
