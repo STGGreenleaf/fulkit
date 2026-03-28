@@ -794,9 +794,9 @@ export default function Landing() {
                         style={{
                           position: "absolute",
                           bottom: 0,
-                          left: "50%",
-                          transformOrigin: "bottom center",
-                          transform: "rotate(-55deg) translateX(-50%)",
+                          left: 22,
+                          transformOrigin: "bottom left",
+                          transform: "rotate(-55deg)",
                           whiteSpace: "nowrap",
                           fontSize: "var(--font-size-sm)",
                           fontWeight: isFulkit ? "var(--font-weight-black)" : "var(--font-weight-medium)",
