@@ -944,7 +944,7 @@ export default function Landing() {
             margin: "0 auto var(--space-12)",
           }}
         >
-          Your data is yours. We encrypt it, we lock it down, and we wrote the receipts so you can check.
+          We don{"\u2019"}t read your notes. We encrypt them so we can{"\u2019"}t.
         </p>
 
         <div
@@ -1002,6 +1002,8 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
+          Other apps ask you to trust them. We ask you to verify us.
+          <br />
           Read the full architecture →{" "}
           <Link
             href="/security"
