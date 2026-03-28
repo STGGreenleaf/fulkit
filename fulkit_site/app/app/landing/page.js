@@ -678,13 +678,16 @@ export default function Landing() {
             gap: "0",
           }}
         >
-          {features.map((f, i) => (
+          {features.map((f, i) => {
+            const isLastOdd = i === features.length - 1 && features.length % 2 === 1 && !isMobile;
+            return (
             <div
               key={i}
               style={{
                 padding: "var(--space-6) var(--space-6) var(--space-6) 0",
                 borderTop: "1px solid var(--color-border)",
                 ...(i % 2 === 1 ? { paddingLeft: "var(--space-6)" } : {}),
+                ...(isLastOdd ? { gridColumn: "1 / -1", maxWidth: "50%", margin: "0 auto", padding: "var(--space-6)", textAlign: "center" } : {}),
               }}
             >
               <div
@@ -733,7 +736,8 @@ export default function Landing() {
                 </div>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       </section>
       </div>
