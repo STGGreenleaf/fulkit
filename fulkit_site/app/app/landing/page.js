@@ -726,7 +726,7 @@ export default function Landing() {
         <section
           style={{
             padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
-            maxWidth: isMobile ? "none" : 1000,
+            maxWidth: isMobile ? "none" : 900,
             margin: "0 auto",
           }}
         >
@@ -762,8 +762,7 @@ export default function Landing() {
               width: "100%",
               borderCollapse: "collapse",
               fontSize: "var(--font-size-base)",
-              minWidth: 800,
-              tableLayout: "fixed",
+              minWidth: 700,
             }}
           >
             <thead>
