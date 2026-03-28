@@ -763,13 +763,8 @@ export default function Landing() {
               borderCollapse: "collapse",
               fontSize: "var(--font-size-base)",
               minWidth: 700,
-              tableLayout: "fixed",
             }}
           >
-            <colgroup>
-              <col style={{ width: isMobile ? 180 : "auto" }} />
-              {COMPETITORS.map((_, i) => <col key={i} style={{ width: isMobile ? 52 : undefined }} />)}
-            </colgroup>
             <thead>
               <tr style={{ borderBottom: "2px solid var(--color-text)" }}>
                 <th style={{
@@ -789,20 +784,21 @@ export default function Landing() {
                       key={name}
                       style={{
                         padding: 0,
+                        textAlign: "center",
                         verticalAlign: "bottom",
-                        height: 130,
+                        height: 120,
                         position: "relative",
                       }}
                     >
                       <div
                         style={{
                           position: "absolute",
-                          bottom: 6,
+                          bottom: 8,
                           left: "50%",
                           transformOrigin: "bottom left",
-                          transform: "rotate(-50deg)",
+                          transform: "rotate(-50deg) translateX(-50%)",
                           whiteSpace: "nowrap",
-                          fontSize: "var(--font-size-base)",
+                          fontSize: "var(--font-size-sm)",
                           fontWeight: isFulkit ? "var(--font-weight-black)" : "var(--font-weight-medium)",
                           textTransform: "uppercase",
                           letterSpacing: "var(--letter-spacing-wider)",
@@ -827,9 +823,10 @@ export default function Landing() {
                 >
                   <td
                     style={{
-                      padding: "var(--space-3) var(--space-2) var(--space-3) 0",
+                      padding: "var(--space-3) var(--space-3) var(--space-3) 0",
                       color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)",
                       fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {row.feature}
@@ -838,7 +835,7 @@ export default function Landing() {
                     <td
                       key={key}
                       style={{
-                        padding: "var(--space-3) 0",
+                        padding: "var(--space-3) var(--space-1)",
                         textAlign: "center",
                         ...(key === "fulkit" ? { background: "var(--color-bg-alt)" } : {}),
                       }}
