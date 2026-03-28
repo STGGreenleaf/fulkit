@@ -823,9 +823,10 @@ export default function Landing() {
                 >
                   <td
                     style={{
-                      padding: "var(--space-3) var(--space-2) var(--space-3) 0",
+                      padding: "var(--space-3) var(--space-4) var(--space-3) 0",
                       color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)",
                       fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
+                      width: 280,
                     }}
                   >
                     {row.feature}
