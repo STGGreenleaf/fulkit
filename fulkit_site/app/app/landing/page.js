@@ -592,7 +592,7 @@ export default function Landing() {
             width: "max-content",
           }}
         >
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+          {[...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
             <div
               key={i}
               style={{
@@ -611,7 +611,7 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <style>{`@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }`}</style>
+        <style>{`@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }`}</style>
       </div>
 
       {/* ─── FEATURES ─── */}
