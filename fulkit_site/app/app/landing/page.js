@@ -331,7 +331,7 @@ export default function Landing() {
         <div
           style={{
             fontSize: "var(--font-size-base)",
-            color: "var(--color-text-dim)",
+            color: "var(--color-text-muted)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 640,
             marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
@@ -349,7 +349,7 @@ export default function Landing() {
           style={{
             fontSize: "var(--font-size-lg)",
             fontStyle: "italic",
-            color: "var(--color-text-dim)",
+            color: "var(--color-text-muted)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 640,
             marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
