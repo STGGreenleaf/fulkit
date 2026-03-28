@@ -576,46 +576,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── INTEGRATION TICKER ─── */}
-      <div
-        style={{
-          overflow: "hidden",
-          borderTop: "1px solid var(--color-border-light)",
-          borderBottom: "1px solid var(--color-border-light)",
-          padding: "var(--space-10) 0",
-          background: "var(--color-bg)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-12)",
-            animation: "ticker 40s linear infinite",
-            width: "max-content",
-          }}
-        >
-          {[...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-3)",
-                flexShrink: 0,
-                color: "var(--color-text-muted)",
-                fontSize: "var(--font-size-lg)",
-                fontFamily: "var(--font-primary)",
-                fontWeight: "var(--font-weight-medium)",
-              }}
-            >
-              <span style={{ display: "flex", alignItems: "center", opacity: 0.6 }}>{item.icon}</span>
-              {item.name}
-            </div>
-          ))}
-        </div>
-        <style>{`@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }`}</style>
-      </div>
-
       {/* ─── FEATURES ─── */}
       <div style={{ background: "var(--color-bg-alt)" }}>
       <section
@@ -720,6 +680,47 @@ export default function Landing() {
           })}
         </div>
       </section>
+      </div>
+
+      {/* ─── INTEGRATION TICKER ─── */}
+      <div
+        style={{
+          overflow: "hidden",
+          borderTop: "1px solid var(--color-border-light)",
+          borderBottom: "1px solid var(--color-border-light)",
+          padding: "var(--space-10) 0",
+          background: "var(--color-bg)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-12)",
+            animation: "ticker 60s linear infinite",
+            width: "max-content",
+            willChange: "transform",
+          }}
+        >
+          {[...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-3)",
+                flexShrink: 0,
+                color: "var(--color-text-muted)",
+                fontSize: "var(--font-size-lg)",
+                fontFamily: "var(--font-primary)",
+                fontWeight: "var(--font-weight-medium)",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", opacity: 0.6 }}>{item.icon}</span>
+              {item.name}
+            </div>
+          ))}
+        </div>
+        <style>{`@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }`}</style>
       </div>
 
       {/* ─── COMPETITIVE GRID ─── */}
