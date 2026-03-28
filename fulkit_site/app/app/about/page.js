@@ -240,7 +240,7 @@ export default function About() {
       {/* ─── WYSIWYG ─── */}
       <Section>
         <SectionTitle>What You See Is What You Get</SectionTitle>
-        <Body>You open it. You talk. It already knows. That{"\u2019"}s simplicity at its finest.</Body>
+        <Body>You open it. You talk. It already knows.</Body>
       </Section>
 
       {/* ─── CLOSING ─── */}
@@ -260,7 +260,7 @@ export default function About() {
             marginBottom: "var(--space-16)",
           }}
         >
-          The full kit for your mind.
+          Remember everything. Explain nothing.
         </div>
         <Link
           href="/login"
