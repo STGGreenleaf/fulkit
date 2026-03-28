@@ -1035,23 +1035,17 @@ export default function Landing() {
               marginBottom: "var(--space-5)",
             }}
           >
-            Get Fülkit.
-            <br />
-            <span style={{ fontSize: "var(--font-size-lg)", fontWeight: "var(--font-weight-normal)", color: "var(--color-text-secondary)" }}>
-              The benefits are real.
-            </span>
+            Get F{"\u00FC"}lkit.
           </h2>
           <p
             style={{
-              fontSize: "var(--font-size-base)",
+              fontSize: "var(--font-size-lg)",
               color: "var(--color-text-secondary)",
-              lineHeight: "var(--line-height-relaxed)",
-              maxWidth: 420,
+              fontWeight: "var(--font-weight-medium)",
               marginBottom: "var(--space-8)",
             }}
           >
-            Stop catching AI up to speed. Stop switching between 8 apps.
-            Just open it and talk. It already knows.
+            F{"\u00FC"}lkit all. One app.
           </p>
           <CTAButton />
         </section>
