@@ -80,7 +80,7 @@ export default function About() {
       {/* ─── HERO ─── */}
       <section
         style={{
-          minHeight: isMobile ? "auto" : "78vh",
+          minHeight: isMobile ? "auto" : "72vh",
           display: "flex",
           flexDirection: "column",
           justifyContent: isMobile ? "flex-start" : "center",
