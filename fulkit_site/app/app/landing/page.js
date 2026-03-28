@@ -427,7 +427,7 @@ export default function Landing() {
               <p
                 key={i}
                 style={{
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                   fontWeight: "var(--font-weight-normal)",
                   color: "var(--color-text-muted)",
                   lineHeight: "var(--line-height-relaxed)",
