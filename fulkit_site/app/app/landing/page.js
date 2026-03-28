@@ -498,7 +498,7 @@ export default function Landing() {
           >
             <div
               style={{
-                fontSize: "var(--font-size-2xs)",
+                fontSize: "var(--font-size-xs)",
                 fontWeight: "var(--font-weight-semibold)",
                 textTransform: "uppercase",
                 letterSpacing: "var(--letter-spacing-widest)",
@@ -517,14 +517,14 @@ export default function Landing() {
                   justifyContent: "space-between",
                   alignItems: "baseline",
                   padding: "var(--space-1) 0",
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                 }}
               >
                 <span style={{ color: "var(--color-text-secondary)" }}>
                   {app.name}
                   <span
                     style={{
-                      fontSize: "var(--font-size-2xs)",
+                      fontSize: "var(--font-size-xs)",
                       color: "var(--color-text-dim)",
                       marginLeft: "var(--space-2)",
                       fontFamily: "var(--font-mono)",
@@ -539,7 +539,7 @@ export default function Landing() {
                     fontFamily: "var(--font-mono)",
                     fontWeight: "var(--font-weight-medium)",
                     color: "var(--color-text-muted)",
-                    fontSize: "var(--font-size-xs)",
+                    fontSize: "var(--font-size-base)",
                   }}
                 >
                   ${app.cost}
@@ -559,7 +559,7 @@ export default function Landing() {
               <span
                 style={{
                   fontWeight: "var(--font-weight-bold)",
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                 }}
               >
                 Monthly total
@@ -590,7 +590,7 @@ export default function Landing() {
           >
             <div
               style={{
-                fontSize: "var(--font-size-sm)",
+                fontSize: "var(--font-size-base)",
                 color: "var(--color-text-muted)",
                 marginBottom: "var(--space-2)",
               }}
@@ -629,11 +629,11 @@ export default function Landing() {
                 gap: "var(--space-1)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-sm)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-base)" }}>
                 <span style={{ color: "var(--color-text-muted)" }}>You pay now</span>
                 <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)" }}>${appsTotal}/mo</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-sm)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-base)" }}>
                 <span style={{ color: "var(--color-text-muted)" }}>With Fülkit</span>
                 <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)" }}>${fulkitPrice}/mo</span>
               </div>
@@ -641,7 +641,7 @@ export default function Landing() {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                   fontWeight: "var(--font-weight-bold)",
                   marginTop: "var(--space-2)",
                   paddingTop: "var(--space-2)",
@@ -717,7 +717,7 @@ export default function Landing() {
             >
               <div
                 style={{
-                  fontSize: "var(--font-size-2xs)",
+                  fontSize: "var(--font-size-xs)",
                   fontWeight: "var(--font-weight-semibold)",
                   textTransform: "uppercase",
                   letterSpacing: "var(--letter-spacing-widest)",
@@ -740,7 +740,7 @@ export default function Landing() {
               </div>
               <div
                 style={{
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                   color: "var(--color-text-secondary)",
                   lineHeight: "var(--line-height-relaxed)",
                 }}
@@ -791,7 +791,7 @@ export default function Landing() {
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              fontSize: "var(--font-size-sm)",
+              fontSize: "var(--font-size-base)",
             }}
           >
             <thead>
@@ -913,7 +913,7 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             color: "var(--color-text-muted)",
             marginTop: "var(--space-8)",
             lineHeight: "var(--line-height-relaxed)",
@@ -1009,7 +1009,7 @@ export default function Landing() {
               </div>
               <div
                 style={{
-                  fontSize: "var(--font-size-sm)",
+                  fontSize: "var(--font-size-base)",
                   color: "var(--color-text-secondary)",
                   lineHeight: "var(--line-height-relaxed)",
                 }}
@@ -1022,7 +1022,7 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             color: "var(--color-text-muted)",
             marginTop: "var(--space-8)",
             lineHeight: "var(--line-height-relaxed)",
@@ -1100,7 +1100,7 @@ export default function Landing() {
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             fontWeight: "var(--font-weight-bold)",
             letterSpacing: "var(--letter-spacing-tight)",
           }}
@@ -1161,7 +1161,7 @@ function CTAButton() {
         background: "var(--color-accent)",
         color: "var(--color-text-inverse)",
         borderRadius: "var(--radius-sm)",
-        fontSize: "var(--font-size-sm)",
+        fontSize: "var(--font-size-base)",
         fontWeight: "var(--font-weight-semibold)",
         fontFamily: "var(--font-primary)",
         textAlign: "center",
