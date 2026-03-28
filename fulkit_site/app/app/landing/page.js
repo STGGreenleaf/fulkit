@@ -8,19 +8,7 @@ import { TIERS, CREDITS, REFERRALS } from "../../lib/ful-config";
 import { PLANS } from "../../lib/ful-legend";
 import { useIsMobile } from "../../lib/use-mobile";
 
-const apps = [
-  { name: "Obsidian Sync", cost: 8, replaces: "Notes" },
-  { name: "Notion", cost: 10, replaces: "Docs" },
-  { name: "ChatGPT Plus", cost: 20, replaces: "AI" },
-  { name: "Claude Pro", cost: 20, replaces: "AI" },
-  { name: "Todoist Pro", cost: 5, replaces: "Tasks" },
-  { name: "Otter.ai Pro", cost: 17, replaces: "Voice" },
-  { name: "Day One", cost: 4, replaces: "Journal" },
-  { name: "Readwise Reader", cost: 8, replaces: "Read-later" },
-];
-const appsTotal = apps.reduce((sum, a) => sum + a.cost, 0);
 const fulkitPrice = 9;
-const annualSavings = (appsTotal - fulkitPrice) * 12;
 
 const features = [
   {
@@ -481,12 +469,10 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          You're already paying to get Fülkit.
-          <br />
-          Just not enjoying it.
+          The average American spends $219 a month on subscriptions. This is&nbsp;${fulkitPrice}.
         </h2>
 
-        {/* Receipt + Answer side by side */}
+        {/* Abstract receipt — fragmentation vs one surface */}
         <div
           style={{
             display: "grid",
@@ -497,11 +483,10 @@ export default function Landing() {
             margin: "0 auto",
           }}
         >
-          {/* Left: The receipt */}
+          {/* Left: What $219 buys */}
           <div
             style={{
               borderTop: "2px solid var(--color-text)",
-              borderBottom: "2px solid var(--color-text)",
               padding: "var(--space-4) 0",
             }}
           >
@@ -513,100 +498,71 @@ export default function Landing() {
                 letterSpacing: "var(--letter-spacing-widest)",
                 color: "var(--color-text-dim)",
                 fontFamily: "var(--font-mono)",
-                marginBottom: "var(--space-3)",
+                marginBottom: "var(--space-4)",
               }}
             >
-              Your current stack
+              $219/mo buys you
             </div>
-            {apps.map((app, i) => (
+            {[
+              "Fragmentation",
+              "8+ logins",
+              "42% forgotten charges",
+              "Apps that don\u2019t talk",
+            ].map((line, i) => (
               <div
                 key={i}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  padding: "var(--space-1) 0",
+                  padding: "var(--space-2) 0",
                   fontSize: "var(--font-size-base)",
+                  color: "var(--color-text-secondary)",
+                  borderBottom: i < 3 ? "1px solid var(--color-border-light)" : "none",
                 }}
               >
-                <span style={{ color: "var(--color-text-secondary)" }}>
-                  {app.name}
-                  <span
-                    style={{
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-text-dim)",
-                      marginLeft: "var(--space-2)",
-                      fontFamily: "var(--font-mono)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {app.replaces}
-                  </span>
-                </span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--font-weight-medium)",
-                    color: "var(--color-text-muted)",
-                    fontSize: "var(--font-size-base)",
-                  }}
-                >
-                  ${app.cost}
-                </span>
+                {line}
               </div>
             ))}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                padding: "var(--space-3) 0 0",
-                marginTop: "var(--space-2)",
-                borderTop: "1px dashed var(--color-border)",
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: "var(--font-weight-bold)",
-                  fontSize: "var(--font-size-base)",
-                }}
-              >
-                Monthly total
-              </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: "var(--font-weight-black)",
-                  fontSize: "var(--font-size-base)",
-                  color: "var(--color-error)",
-                  textDecoration: "line-through",
-                  textDecorationThickness: "2px",
-                }}
-              >
-                ${appsTotal}
-              </span>
-            </div>
           </div>
 
-          {/* Right: Fülkit replaces all */}
+          {/* Right: What $9 buys */}
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              height: "100%",
+              borderTop: "2px solid var(--color-text)",
+              padding: "var(--space-4) 0",
             }}
           >
             <div
               style={{
-                fontSize: "var(--font-size-base)",
-                color: "var(--color-text-muted)",
-                marginBottom: "var(--space-2)",
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-widest)",
+                color: "var(--color-text-dim)",
+                fontFamily: "var(--font-mono)",
+                marginBottom: "var(--space-4)",
               }}
             >
-              Fülkit replaces all {apps.length} →
+              ${fulkitPrice}/mo buys you
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
+            {[
+              "One surface",
+              "One login",
+              "Nothing forgotten",
+              "Everything talks",
+            ].map((line, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: "var(--space-2) 0",
+                  fontSize: "var(--font-size-base)",
+                  color: "var(--color-text)",
+                  fontWeight: "var(--font-weight-medium)",
+                  borderBottom: i < 3 ? "1px solid var(--color-border-light)" : "none",
+                }}
+              >
+                {line}
+              </div>
+            ))}
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", marginTop: "var(--space-6)" }}>
               <span
                 style={{
                   fontSize: "clamp(64px, 10vw, 96px)",
@@ -627,47 +583,6 @@ export default function Landing() {
               >
                 /mo
               </span>
-            </div>
-            <div
-              style={{
-                marginTop: "var(--space-8)",
-                borderTop: "1px solid var(--color-border)",
-                paddingTop: "var(--space-4)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-base)" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>You pay now</span>
-                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)" }}>${appsTotal}/mo</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-base)" }}>
-                <span style={{ color: "var(--color-text-muted)" }}>With Fülkit</span>
-                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)" }}>${fulkitPrice}/mo</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--font-size-base)",
-                  fontWeight: "var(--font-weight-bold)",
-                  marginTop: "var(--space-2)",
-                  paddingTop: "var(--space-2)",
-                  borderTop: "1px dashed var(--color-border)",
-                }}
-              >
-                <span style={{ color: "var(--color-success)" }}>You save</span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "var(--font-weight-black)",
-                    color: "var(--color-success)",
-                  }}
-                >
-                  ${annualSavings}/yr
-                </span>
-              </div>
             </div>
           </div>
         </div>
