@@ -161,7 +161,7 @@ export default function About() {
           The umlaut makes it German. The meaning makes it real. The double-take makes it memorable.
         </Body>
         <Body>
-          A tool called {"\u201C"}Productivity Suite 3.0{"\u201D"} gets scrolled past. A tool called <strong>F{"\u00FC"}lkit</strong> gets a reaction. And when someone asks what it means, you get to explain the German design heritage, the feeling philosophy, and the full-kit concept {"\u2014"} all from two syllables.
+          A tool called {"\u201C"}Productivity Suite 3.0{"\u201D"} gets scrolled past. A tool called <strong>F{"\u00FC"}lkit</strong> gets a reaction.
         </Body>
         <Body>The brand is the first magic trick. The benefits are the second.</Body>
       </Section>
@@ -190,10 +190,7 @@ export default function About() {
             You open F{"\u00FC"}lkit on Monday morning and before you type anything, it says: {"\u201C"}Based on your Friday notes, you have 3 action items from the Q2 meeting, your pricing draft is unfinished, and you wanted to follow up with Sarah.{"\u201D"}
           </div>
         </div>
-        <Body>You didn{"\u2019"}t ask. It just knew.</Body>
-        <Body>
-          That{"\u2019"}s not artificial intelligence performing a task. That{"\u2019"}s a tool that <strong>feels</strong> like it knows you. That{"\u2019"}s the <strong>f{"\u00FC"}l</strong> in F{"\u00FC"}lkit.
-        </Body>
+        <Body>You didn{"\u2019"}t ask. It just knew. That{"\u2019"}s the <strong>f{"\u00FC"}l</strong> in F{"\u00FC"}lkit.</Body>
       </Section>
 
       {/* ─── THE WHISPERS ─── */}
@@ -229,78 +226,14 @@ export default function About() {
       {/* ─── THE DESIGN LANGUAGE ─── */}
       <Section>
         <SectionTitle>The Design Language</SectionTitle>
-        <Body>
-          Every visual choice in F{"\u00FC"}lkit traces back to a century of German and Swiss design thinking. This isn{"\u2019"}t aesthetic trend-chasing. It{"\u2019"}s a philosophy.
+        <Body style={{ color: "var(--color-text-dim)", fontStyle: "italic" }}>
+          DIN, 1931. Bauhaus, 1919. Dieter Rams, 1960s. Swiss International, 1950s.
         </Body>
-      </Section>
-
-      {/* ─── DIN ─── */}
-      <Section>
-        <HeritageTitle>DIN</HeritageTitle>
-        <HeritageSubtitle>Deutsches Institut f{"\u00FC"}r Normung, 1931</HeritageSubtitle>
         <Body>
-          Designed for German road signs {"\u2014"} legible at 120 km/h, in rain, at night. F{"\u00FC"}lkit uses DIN because every word on screen should earn its place.
+          A century of German and Swiss design thinking says the same thing: remove everything that isn{"\u2019"}t working. No gradients pretending to be depth. No shadows pretending to be dimension. Every word earns its place. Every pixel has a job.
         </Body>
-      </Section>
-
-      {/* ─── BAUHAUS ─── */}
-      <Section>
-        <HeritageTitle>Bauhaus</HeritageTitle>
-        <HeritageSubtitle>Weimar, 1919</HeritageSubtitle>
         <Body>
-          <em>Form follows function.</em> Decoration without purpose is dishonesty. F{"\u00FC"}lkit has no gradients pretending to be depth, no shadows pretending to be dimension. The interface disappears so the thinking can happen.
-        </Body>
-      </Section>
-
-      {/* ─── DIETER RAMS ─── */}
-      <Section>
-        <HeritageTitle>Dieter Rams</HeritageTitle>
-        <HeritageSubtitle>Braun, 1960s</HeritageSubtitle>
-        <Body>
-          <em>Less, but better.</em> Rams designed the products your grandparents still use. His alarm clocks, his calculators, his radios {"\u2014"} they work the same today as the day they were made. Not because they were trendy. Because they were right.
-        </Body>
-        <Body>Five of his principles read like F{"\u00FC"}lkit{"\u2019"}s manifesto:</Body>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-            padding: isMobile ? "var(--space-4) 0" : "var(--space-8) 0",
-            maxWidth: 600,
-          }}
-        >
-          {[
-            "Good design is innovative.",
-            "Good design makes a product useful.",
-            "Good design is unobtrusive.",
-            "Good design is honest.",
-            "Good design is as little design as possible.",
-          ].map((principle, i) => (
-            <div
-              key={i}
-              style={{
-                fontSize: "var(--font-size-base)",
-                fontWeight: "var(--font-weight-normal)",
-                lineHeight: "var(--line-height-tight)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              {principle}
-            </div>
-          ))}
-        </div>
-        <Body>
-          When in doubt: <em>what would Rams do?</em>
-        </Body>
-        <Body>The answer is always: remove something.</Body>
-      </Section>
-
-      {/* ─── SWISS STYLE ─── */}
-      <Section>
-        <HeritageTitle>Swiss International Style</HeritageTitle>
-        <HeritageSubtitle>Z{"\u00FC"}rich, 1950s</HeritageSubtitle>
-        <Body>
-          Grid systems. Mathematical precision in the service of clarity. F{"\u00FC"}lkit{"\u2019"}s layouts are asymmetric but never arbitrary {"\u2014"} the whitespace is working, the horizontal rules are architecture.
+          You open it and it feels right. You can{"\u2019"}t explain why. That{"\u2019"}s the design working.
         </Body>
       </Section>
 
