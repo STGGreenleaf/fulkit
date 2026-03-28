@@ -223,6 +223,62 @@ export default function About() {
         <Body>You talked. It understood. That{"\u2019"}s the whole point.</Body>
       </Section>
 
+      {/* ─── THE FABRIC ─── */}
+      <Section>
+        <SectionTitle>The Fabric</SectionTitle>
+        <Body>
+          Your work has a soundtrack. Most apps pretend it doesn{"\u2019"}t.
+        </Body>
+        <Body>
+          Fabric is a music player built into F{"\u00FC"}lkit {"\u2014"} not bolted on, not a widget, not a link to somewhere else. Real-time visualization that turns your music into terrain. Every song has a shape. No two look the same.
+        </Body>
+        <Body>
+          And behind the counter, there{"\u2019"}s B-Side {"\u2014"} a record store guy with opinions. He doesn{"\u2019"}t recommend what{"\u2019"}s popular. He recommends what{"\u2019"}s right.
+        </Body>
+      </Section>
+
+      {/* ─── THE SEARCH ─── */}
+      <Section>
+        <SectionTitle>The Search</SectionTitle>
+        <Body>
+          You saved something in February. You don{"\u2019"}t remember the title, the folder, or the exact words. You just remember it was about {"\u201C"}that pricing idea from the investor call.{"\u201D"}
+        </Body>
+        <Body>
+          You ask. F{"\u00FC"}lkit finds it. Not by keywords {"\u2014"} by meaning.
+        </Body>
+        <Body>
+          Drop a PDF, an image, a doc {"\u2014"} F{"\u00FC"}lkit reads it, summarizes it, pulls action items. You don{"\u2019"}t file things. You throw them in. It figures out where they go.
+        </Body>
+      </Section>
+
+      {/* ─── THE AWARENESS ─── */}
+      <Section>
+        <SectionTitle>The Awareness</SectionTitle>
+        <Body>
+          You mention hiking Zion tomorrow. F{"\u00FC"}lkit says it{"\u2019"}s going to cook out there. You didn{"\u2019"}t ask for the weather.
+        </Body>
+        <Body>
+          12 invisible APIs {"\u2014"} weather, air quality, nutrition, currency, time zones, definitions, books. You don{"\u2019"}t set them up. You don{"\u2019"}t turn them on. They{"\u2019"}re just there when the conversation needs them.
+        </Body>
+        <Body>
+          The best features are the ones you never configure.
+        </Body>
+      </Section>
+
+      {/* ─── THE VAULT ─── */}
+      <Section>
+        <SectionTitle>The Vault</SectionTitle>
+        <Body>
+          Most apps ask you to trust them with your data. F{"\u00FC"}lkit asks you how you want to protect it.
+        </Body>
+        <Body>
+          Three modes. Local {"\u2014"} nothing leaves your device. Encrypted {"\u2014"} synced with a passphrase only you know. Managed {"\u2014"} we handle it, locked down with AES-256.
+        </Body>
+        <Body>
+          Your data. Your rules. Your call.
+        </Body>
+      </Section>
+
       {/* ─── THE DESIGN LANGUAGE ─── */}
       <Section>
         <SectionTitle>The Design Language</SectionTitle>
