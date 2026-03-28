@@ -12,7 +12,7 @@ import { TICKER_ITEMS } from "../../lib/integration-ticker";
 const fulkitPrice = 9;
 
 const features = [
-  { title: "Memory & Vault", desc: "Every conversation builds on the last. No blank pages. Three storage modes \u2014 local, encrypted, or managed. Your data. Your rules." },
+  { title: "Memory Vault", desc: "Every conversation builds on the last. No blank pages. Three storage modes \u2014 local, encrypted, or managed. Your data. Your rules." },
   { title: "Voice", desc: "Talk to an orb. It listens, files, extracts. No transcript. No editing anxiety.", contrast: "Others show you live typing and call it voice mode." },
   { title: "Whispers & Actions", desc: "Suggestions drift in before you ask. Tasks generate from your conversations. You think. It organizes." },
   { title: "Search & Triage", desc: "Ask for \u201Cthat thing from February.\u201D Drop a PDF. It finds by meaning. It reads, summarizes, extracts. Not keywords \u2014 understanding." },
