@@ -793,8 +793,8 @@ export default function Landing() {
                       <div
                         style={{
                           position: "absolute",
-                          bottom: 0,
-                          left: 22,
+                          bottom: 5,
+                          left: 32,
                           transformOrigin: "bottom left",
                           transform: "rotate(-55deg)",
                           whiteSpace: "nowrap",
