@@ -605,7 +605,7 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          The full kit.
+          The <span style={{ textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)" }}>full</span> kit.
         </h2>
 
         <div
