@@ -281,7 +281,7 @@ export default function Landing() {
         </h1>
         <div
           style={{
-            fontSize: "var(--font-size-lg)",
+            fontSize: "var(--font-size-xl)",
             fontFamily: "var(--font-mono)",
             color: "var(--color-text-muted)",
             marginBottom: "var(--space-8)",
@@ -291,7 +291,7 @@ export default function Landing() {
         </div>
         <div
           style={{
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             fontStyle: "italic",
             color: "var(--color-text-muted)",
             marginBottom: "var(--space-4)",
@@ -305,7 +305,7 @@ export default function Landing() {
             flexDirection: "column",
             gap: "var(--space-2)",
             marginBottom: "var(--space-8)",
-            maxWidth: 600,
+            maxWidth: 640,
           }}
         >
           {[
@@ -316,7 +316,7 @@ export default function Landing() {
             <div
               key={i}
               style={{
-                fontSize: "var(--font-size-base)",
+                fontSize: "var(--font-size-lg)",
                 lineHeight: "var(--line-height-relaxed)",
                 color: "var(--color-text-secondary)",
               }}
@@ -330,10 +330,10 @@ export default function Landing() {
         </div>
         <div
           style={{
-            fontSize: "var(--font-size-sm)",
+            fontSize: "var(--font-size-base)",
             color: "var(--color-text-dim)",
             lineHeight: "var(--line-height-relaxed)",
-            maxWidth: 600,
+            maxWidth: 640,
             marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
@@ -347,11 +347,11 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: "var(--font-size-base)",
+            fontSize: "var(--font-size-lg)",
             fontStyle: "italic",
             color: "var(--color-text-dim)",
             lineHeight: "var(--line-height-relaxed)",
-            maxWidth: 600,
+            maxWidth: 640,
             marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
