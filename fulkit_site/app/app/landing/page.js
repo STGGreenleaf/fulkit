@@ -12,13 +12,12 @@ import { TICKER_ITEMS } from "../../lib/integration-ticker";
 const fulkitPrice = 9;
 
 const features = [
-  { title: "Memory", desc: "Every conversation builds on the last. No blank pages. No catching up.", contrast: "\u201C71% of users quit an app within 90 days.\u201D Not this one." },
+  { title: "Memory & Vault", desc: "Every conversation builds on the last. No blank pages. Three storage modes \u2014 local, encrypted, or managed. Your data. Your rules." },
   { title: "Voice", desc: "Talk to an orb. It listens, files, extracts. No transcript. No editing anxiety.", contrast: "Others show you live typing and call it voice mode." },
   { title: "Whispers & Actions", desc: "Suggestions drift in before you ask. Tasks generate from your conversations. You think. It organizes." },
   { title: "Search & Triage", desc: "Ask for \u201Cthat thing from February.\u201D Drop a PDF. It finds by meaning. It reads, summarizes, extracts. Not keywords \u2014 understanding." },
   { title: "Awareness", desc: "Weather, time zones, nutrition, currency, air quality. You don\u2019t set it up. You don\u2019t turn it on. It just knows." },
   { title: "Fabric", desc: "Integrated music player with real-time visualization. B-Side is your record store guy \u2014 built in, opinionated, and better than your algorithm." },
-  { title: "Vault", desc: "Three storage modes. Local, encrypted, or managed. Your data. Your rules. Your call.", contrast: "Others don\u2019t give you a choice." },
 ];
 
 const grid = [
