@@ -562,7 +562,7 @@ export default function Landing() {
                 {line}
               </div>
             ))}
-            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", marginTop: "var(--space-6)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)", marginTop: "var(--space-16)" }}>
               <span
                 style={{
                   fontSize: "clamp(64px, 10vw, 96px)",
