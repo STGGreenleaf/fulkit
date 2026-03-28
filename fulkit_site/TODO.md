@@ -87,7 +87,7 @@
 ### Medium (need specific scenario)
 - [x] **3.14** Habit Engine context reduction — ✅ code confirmed: habitConfidence ≥0.6 + frequency ≥3 narrows to one ecosystem's tools only
 - [x] **3.28** Trial user cold start — ✅ code confirmed: ECOSYSTEM_KEYWORDS seeds matching ecosystem at frequency 3 on first message
-- [ ] **4.9** Semantic search accuracy — ask about juice → only juice notes in context. Ask about taxes → context titles change.
+- [x] **4.9** Semantic search accuracy — ask about juice → only juice notes in context. Ask about taxes → context titles change.
 - [x] **4.10** Voyage fallback — ✅ tested, keyword matching works without Voyage key
 - [ ] **6.8** Standard user at 98% usage sees credits + Pro upsell + annual savings
 - [x] **7.6** Retry on 429 — ✅ code confirmed: 3-attempt exponential backoff (1.5s, 3s), streams retry status to client
