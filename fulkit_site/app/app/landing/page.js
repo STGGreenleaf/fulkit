@@ -37,14 +37,14 @@ const grid = [
 
 function GridCell({ value }) {
   if (value === true)
-    return <Check size={14} strokeWidth={2.5} style={{ color: "var(--color-success)" }} />;
+    return <Check size={18} strokeWidth={3} style={{ color: "var(--color-success)" }} />;
   if (value === "partial")
     return (
-      <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-warning)", fontWeight: "var(--font-weight-medium)" }}>
+      <span style={{ fontSize: "var(--font-size-lg)", color: "var(--color-warning)", fontWeight: "var(--font-weight-bold)" }}>
         ~
       </span>
     );
-  return <X size={13} strokeWidth={1.8} style={{ color: "var(--color-text-dim)" }} />;
+  return <X size={16} strokeWidth={2.2} style={{ color: "var(--color-text-dim)" }} />;
 }
 
 function PricingGrid({ isMobile }) {
@@ -763,33 +763,46 @@ export default function Landing() {
               borderCollapse: "collapse",
               fontSize: "var(--font-size-base)",
               minWidth: 700,
+              tableLayout: "fixed",
             }}
           >
+            <colgroup>
+              <col style={{ width: isMobile ? 180 : "auto" }} />
+              {COMPETITORS.map((_, i) => <col key={i} style={{ width: isMobile ? 52 : undefined }} />)}
+            </colgroup>
             <thead>
               <tr style={{ borderBottom: "2px solid var(--color-text)" }}>
-                <th style={{ padding: "0 0 var(--space-3) 0", textAlign: "left", verticalAlign: "bottom" }}></th>
-                {COMPETITORS.map((name, ci) => {
+                <th style={{
+                  padding: "0 0 var(--space-3) 0",
+                  textAlign: "left",
+                  verticalAlign: "bottom",
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-medium)",
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--letter-spacing-wider)",
+                  color: "var(--color-text-muted)",
+                }}>Feature</th>
+                {COMPETITORS.map((name) => {
                   const isFulkit = name === "F\u00FClkit";
                   return (
                     <th
                       key={name}
                       style={{
                         padding: 0,
-                        textAlign: "center",
                         verticalAlign: "bottom",
-                        height: 120,
+                        height: 130,
                         position: "relative",
                       }}
                     >
                       <div
                         style={{
                           position: "absolute",
-                          bottom: 8,
+                          bottom: 6,
                           left: "50%",
                           transformOrigin: "bottom left",
-                          transform: "rotate(-50deg) translateX(-50%)",
+                          transform: "rotate(-50deg)",
                           whiteSpace: "nowrap",
-                          fontSize: "var(--font-size-xs)",
+                          fontSize: "var(--font-size-base)",
                           fontWeight: isFulkit ? "var(--font-weight-black)" : "var(--font-weight-medium)",
                           textTransform: "uppercase",
                           letterSpacing: "var(--letter-spacing-wider)",
@@ -814,10 +827,9 @@ export default function Landing() {
                 >
                   <td
                     style={{
-                      padding: "var(--space-3) var(--space-3) var(--space-3) 0",
+                      padding: "var(--space-3) var(--space-2) var(--space-3) 0",
                       color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)",
                       fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)",
-                      whiteSpace: "nowrap",
                     }}
                   >
                     {row.feature}
@@ -826,7 +838,7 @@ export default function Landing() {
                     <td
                       key={key}
                       style={{
-                        padding: "var(--space-3) var(--space-1)",
+                        padding: "var(--space-3) 0",
                         textAlign: "center",
                         ...(key === "fulkit" ? { background: "var(--color-bg-alt)" } : {}),
                       }}
