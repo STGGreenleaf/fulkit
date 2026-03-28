@@ -35,12 +35,14 @@ export default function Privacy() {
       <DocSection title="Third parties">
         <ul style={{ paddingLeft: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <li>Anthropic (Claude API) — processes your messages, does not retain them</li>
+          <li>Voyage AI — generates note embeddings for semantic search, does not store content</li>
           <li>Supabase — database and authentication hosting</li>
           <li>Vercel — application hosting and serverless functions</li>
           <li>Stripe — payment processing and referral payouts</li>
           <li>Upstash — distributed rate limiting (Redis)</li>
-          <li>Google — OAuth sign-in only</li>
-          <li>Spotify, GitHub, and other integrations — only when connected by you, for the features you enable</li>
+          <li>Google — OAuth sign-in and connected services (Calendar, Gmail, Drive) when enabled by you</li>
+          <li>Spotify, GitHub, Square, Stripe, Shopify, Toast, Trello, Fitbit, QuickBooks, Notion, Dropbox, Slack, OneNote, Todoist, Readwise — only when connected by you, for the features you enable</li>
+          <li>Invisible intelligence APIs (server-side, no user data shared): OpenWeatherMap (weather), WAQI (air quality), USDA &amp; Open Food Facts (nutrition), Open Library (books), Frankfurter (currency), Free Dictionary API, Nominatim (geocoding), Wikipedia, NASA (APOD), Wolfram Alpha, Currents (news), Have I Been Pwned (breach check)</li>
         </ul>
       </DocSection>
 
