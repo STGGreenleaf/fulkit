@@ -510,8 +510,9 @@ export function FabricProvider({ children }) {
       setIsPlaying(false);
 
       // Cue the YouTube video (load without playing) so play works immediately
+      // Only cue real YouTube video IDs (11-char alphanumeric) — slug IDs (btc-*) would error
       const videoId = saved.ytId || saved.trackId;
-      if (videoId && saved.provider !== "spotify") {
+      if (videoId && /^[A-Za-z0-9_-]{10,12}$/.test(videoId) && saved.provider !== "spotify") {
         const startSeconds = (saved.progress > 0.01 && saved.duration) ? saved.progress * saved.duration : 0;
         const preload = () => {
           if (window.__ytEngine?.isReady()) {
