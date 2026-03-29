@@ -1550,6 +1550,12 @@ export function FabricProvider({ children }) {
       return;
     }
 
+    // B-Side tracks (btc-*) are always YouTube — they have no Spotify URI
+    if (track.id?.startsWith("btc-") && window.__ytEngine && track.title) {
+      await resolveAndPlayYT();
+      return;
+    }
+
     // If Spotify isn't connected, fall back to YouTube for ANY track
     const spotifyConnected = connectedProvidersRef.current?.spotify;
     if (!spotifyConnected && window.__ytEngine && track.title) {
@@ -1565,8 +1571,9 @@ export function FabricProvider({ children }) {
       try {
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${cleanTitle(track.title)}`)}&type=track`);
         if (playInFlightRef.current !== requestId) return;
-        if (data?.tracks?.[0]) {
-          const match = data.tracks[0];
+        const spMatch = (data?.results || []).find(r => r.provider === "spotify" && r.uri);
+        if (spMatch) {
+          const match = spMatch;
           uri = match.uri;
           track.uri = uri;
           if (match.source_id) track.id = match.source_id;
@@ -1607,8 +1614,9 @@ export function FabricProvider({ children }) {
     if (!track.art && track.artist && track.title && playInFlightRef.current === requestId) {
       try {
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${cleanTitle(track.title)}`)}&type=track`);
-        if (playInFlightRef.current === requestId && data?.tracks?.[0]?.image) {
-          track.art = data.tracks[0].image;
+        const artMatch = (data?.results || [])[0];
+        if (playInFlightRef.current === requestId && artMatch?.image) {
+          track.art = artMatch.image;
           setCurrentTrack((cur) => (cur && cur.id === track.id) ? { ...cur, art: track.art } : cur);
         }
       } catch {}
