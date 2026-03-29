@@ -7,7 +7,7 @@ export async function POST(request) {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary, spotifyConnected } = await request.json();
+    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary, spotifyConnected, sonosGroups } = await request.json();
     if (!messages?.length) {
       return Response.json({ error: "messages required" }, { status: 400 });
     }
@@ -41,6 +41,9 @@ export async function POST(request) {
       contextParts.push("MUSIC SOURCE: No music service connected. The speakers are off. You're stressed — can't concentrate without something playing. Nudge them to hook up Spotify so the store can open.");
     } else {
       contextParts.push("MUSIC SOURCE: Spotify connected.");
+    }
+    if (sonosGroups?.length) {
+      contextParts.push(`SONOS: Connected. Available rooms: ${sonosGroups.map(g => g.name).join(", ")}. When the user asks to play in a specific room, respond with the room name and the action — the app handles the routing. Example: "Playing in Living Room." or "Volume set to 60 in Kitchen."`);
     }
     if (currentTrack) {
       contextParts.push(`Now playing: "${currentTrack.title}" by ${currentTrack.artist} (${currentTrack.album || "unknown album"}) — the user is already listening to this. NEVER include the currently playing track in your suggestions.`);
