@@ -255,10 +255,10 @@ export default function Landing() {
         </h1>
         <div
           style={{
-            fontSize: "var(--font-size-xl)",
+            fontSize: isMobile ? "var(--font-size-lg)" : "var(--font-size-xl)",
             fontFamily: "var(--font-mono)",
             color: "var(--color-text-muted)",
-            marginBottom: "var(--space-8)",
+            marginBottom: isMobile ? "var(--space-6)" : "var(--space-8)",
           }}
         >
           /{"\u02C8"}f{"\u00FC"}{"\u02D0"}l{"\u00B7"}k{"\u026A"}t/
