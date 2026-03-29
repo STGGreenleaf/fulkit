@@ -238,13 +238,13 @@ export default function Landing() {
           display: "flex",
           flexDirection: "column",
           justifyContent: isMobile ? "flex-start" : "center",
-          padding: isMobile ? "var(--space-10) var(--space-4) var(--space-8)" : "var(--space-24) var(--space-8)",
+          padding: isMobile ? "var(--space-16) var(--space-4) var(--space-8)" : "var(--space-24) var(--space-8)",
           maxWidth: isMobile ? "none" : 900,
         }}
       >
         <h1
           style={{
-            fontSize: isMobile ? "clamp(36px, 8vw, 48px)" : "clamp(48px, 8vw, 96px)",
+            fontSize: "clamp(48px, 8vw, 96px)",
             fontWeight: "var(--font-weight-black)",
             letterSpacing: "-2px",
             lineHeight: "var(--line-height-none)",
@@ -255,10 +255,10 @@ export default function Landing() {
         </h1>
         <div
           style={{
-            fontSize: isMobile ? "var(--font-size-sm)" : "var(--font-size-xl)",
+            fontSize: "var(--font-size-xl)",
             fontFamily: "var(--font-mono)",
             color: "var(--color-text-muted)",
-            marginBottom: isMobile ? "var(--space-4)" : "var(--space-8)",
+            marginBottom: "var(--space-8)",
           }}
         >
           /{"\u02C8"}f{"\u00FC"}{"\u02D0"}l{"\u00B7"}k{"\u026A"}t/
@@ -278,7 +278,7 @@ export default function Landing() {
             display: "flex",
             flexDirection: "column",
             gap: "var(--space-2)",
-            marginBottom: isMobile ? "var(--space-4)" : "var(--space-8)",
+            marginBottom: "var(--space-8)",
             maxWidth: 640,
           }}
         >
@@ -290,7 +290,7 @@ export default function Landing() {
             <div
               key={i}
               style={{
-                fontSize: isMobile ? "var(--font-size-sm)" : "var(--font-size-lg)",
+                fontSize: "var(--font-size-lg)",
                 lineHeight: "var(--line-height-relaxed)",
                 color: "var(--color-text-secondary)",
               }}
@@ -308,7 +308,7 @@ export default function Landing() {
             color: "var(--color-text-muted)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 640,
-            marginBottom: isMobile ? "var(--space-3)" : "var(--space-10)",
+            marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
           <div>
@@ -321,12 +321,12 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: isMobile ? "var(--font-size-sm)" : "var(--font-size-lg)",
+            fontSize: "var(--font-size-lg)",
             fontStyle: "italic",
             color: "var(--color-text-muted)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 640,
-            marginBottom: isMobile ? "var(--space-4)" : "var(--space-10)",
+            marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
           }}
         >
           {"\u201C"}I have one app open. You have twelve. We are not the&nbsp;same.{"\u201D"}
