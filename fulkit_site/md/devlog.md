@@ -3,6 +3,27 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 25 (continued) — 2026-03-29: Sonos + B-Side Sets + Landing Polish + Email
+
+### What shipped (afternoon)
+- **Sonos integration** — SonosProvider (OAuth2, households, groups, playback/volume control), Sources card with disclaimer, B-Side speaker awareness, API routes. Connected to Collin's Sonos account.
+- **B-Side set creation** — "Make me a late night set" → detects intent, parses tracks, creates set, auto-plays first track. Wide intent detection (create/make/build/gimme/whip up/curate/etc).
+- **Landing mobile polish** — hero CTA above fold (definition sizes, pronunciation, spacing), comparison section redesigned (2-col Fülkit + "Can't say the same" 3-col grid with 14 competitors), "This is $9" + "verify us" line breaks.
+- **Welcome email rework** — privacy DNA, feature kit, trial transparency, Fabric line, single source of truth (email-templates.js).
+- **Spotify card upgraded** — full rich drawer with description, 4 examples, MiniPlayer toggle, disconnect.
+- **YouTube studio versions** — search appends "official audio", filters out live/cover/remix/acoustic.
+- **Upsell fix (6.8)** — tier-specific messaging when messages run out (credits, Pro, BYOK).
+- **Owner portal flash** — QuestionsTab module-level cache.
+- **Email default** — preview defaults to Welcome.
+- **Disconnect route** — accepts provider param (was hardcoded to spotify).
+
+### Known issues
+- Fabric search 500s on BPM-polluted queries + B-Side prose as search input
+- Sonos logo may not render on Sources card
+- YouTube API keys may be quota-blocked from bad search queries
+
+---
+
 ## Session 25 — 2026-03-29: Onboarding v3 + Trial Fix + Chat Seeding
 
 ### What shipped

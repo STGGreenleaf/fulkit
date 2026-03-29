@@ -5,6 +5,36 @@
 
 ---
 
+## Session 26 — Next Up
+
+> Carried forward from Session 25 pressure test. Ordered by priority.
+
+### Bugs (fix first)
+- [ ] **Fabric search 500s** — search endpoint crashes on bad queries (prose text, BPM-polluted strings). Should return empty results, not 500. Root cause: precacher sends B-Side prose + BPM-dirty track IDs as search queries.
+- [ ] **B-Side set track IDs include BPM** — track titles like "No Return 110" should be "No Return". Precacher then searches "Massane No Return 110" which fails. Clean BPM from track IDs in set creation AND in the existing precache path.
+- [ ] **Sonos Sources card logo not rendering** — SVG defined in SOURCE_LOGOS but may not be showing. Verify + fix.
+
+### Fabric — B-Side Full Control (started Session 25)
+- [x] B-Side creates sets on request — ✅ intent detection + track parsing + auto-play
+- [ ] **B-Side playback control** — play, pause, skip, volume via text commands
+- [ ] **B-Side search** — "find me some Burial" triggers catalog search
+- [ ] **Sonos speaker picker UI** — speaker icon in Fabric player, room dropdown, route playback
+- [ ] **Sonos controls via B-Side** — "play in living room", "volume 60 in kitchen"
+
+### New Integrations
+- [ ] **Apple Music** — MusicKit JS, Apple Developer account ($99/yr approved), full playback source. Provider + Sources card + client playback.
+- [ ] **Fabric mobile layout** — single-column tab switcher on phones. Needs spec + discussion first.
+
+### Copy & Polish
+- [ ] **Pitches.md audit** — 3 flagged items (stack-problem stats, referral count, SOC 2 language)
+- [ ] **Competitive grid expand** — desktop grid doesn't reflect music, vault, voice moat yet
+
+### Parked (need real users)
+- [ ] 6.1 Personalized upsells from spending patterns
+- [ ] 6.2 Personalized upsells from top ecosystems
+
+---
+
 ## Part 1: What's Next
 
 > The 10 things to build, ordered by impact. Top 3 are non-negotiable before inviting users.
@@ -232,9 +262,9 @@
 - [ ] **Health — Vital Day** (second paid subscription after droplet, see Vital Day checklist below)
 
 ### Tier 2: Extends Fabric
-- [ ] **Sonos** — play Fabric through home speakers. Sonos Control API (OAuth2). Speaker selection/grouping in player UI.
+- [x] **Sonos** — ✅ OAuth connected, SonosProvider built, Sources card live, B-Side speaker awareness, API routes (GET rooms, POST control). Session 25. Speaker picker UI still needed.
 - [ ] **SoundCloud** — multi-source Fabric. Pending Artist Pro + API approval.
-- [ ] **Apple Music** — MusicKit JS. Third Fabric source.
+- [ ] **Apple Music** — MusicKit JS. Third Fabric source. Requires Apple Developer ($99/yr). Collin approved.
 
 ### Tier 3: Business verticals
 - [x] **QuickBooks** — ✅ OAuth + 5 chat tools (P&L, balance sheet, invoices, expenses, customers). Settings card with rich drawer + logo.
