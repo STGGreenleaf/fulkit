@@ -6273,7 +6273,7 @@ function PlaygroundTab() {
   const [multiSel, setMultiSel] = useState([]);
 
   // ── Email preview state ──
-  const [emailTemplate, setEmailTemplate] = useState("added");
+  const [emailTemplate, setEmailTemplate] = useState("welcome");
   const emailIframeRef = useRef(null);
 
   useEffect(() => {
