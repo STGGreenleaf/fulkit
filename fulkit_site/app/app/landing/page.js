@@ -872,11 +872,11 @@ export default function Landing() {
                 ))}
               </tbody>
             </table>
-            <div style={{ marginTop: "var(--space-8)" }}>
+            <div style={{ marginTop: "var(--space-8)", textAlign: "center" }}>
               <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
                 Can{"\u2019"}t say the same.
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-1-5) var(--space-3)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-1-5) var(--space-3)", justifyItems: "center" }}>
                 {["ChatGPT", "Claude", "Gemini", "Notion", "Obsidian", "Evernote", "Apple Notes", "Todoist", "Otter.ai", "Spotify", "Apple Music", "Slack", "Google Cal", "QuickBooks"].map((name) => (
                   <div key={name} style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{name}</div>
                 ))}
@@ -1038,7 +1038,7 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          Other apps ask you to trust them. We ask you to verify us.
+          Other apps ask you to trust them. We ask you to verify&nbsp;us.
           <br />
           Read the full architecture →{" "}
           <Link
