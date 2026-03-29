@@ -4061,6 +4061,23 @@ export async function POST(request) {
       system += `\n\n## User Preferences\n<user-preferences>\n${prefBlock}\n</user-preferences>`;
     }
 
+    // Inject getting-to-know-you hints (first 14 days — fill gaps from slim onboarding)
+    {
+      const prefKeys = new Set((prefs || []).map((p) => p.key));
+      const memKeys = new Set((memories || []).map((m) => m.key));
+      const hints = [];
+      if (!prefKeys.has("location")) hints.push("You don\u2019t know where they\u2019re based yet");
+      if (!prefKeys.has("whisper_focus")) hints.push("You don\u2019t know what falls through the cracks for them");
+      if (!prefKeys.has("boundaries")) hints.push("You haven\u2019t asked about topics to avoid");
+      if (!prefKeys.has("known_people") && !memKeys.has("memory:known_people")) hints.push("You don\u2019t know the important people in their life");
+      if (!prefKeys.has("stress_areas")) hints.push("You don\u2019t know what stresses them out");
+      if (!prefKeys.has("good_day_vision")) hints.push("You haven\u2019t asked what a good day looks like for them");
+
+      if (hints.length > 0) {
+        system += `\n\n## Getting to Know You\nYou're still learning about this person. When it comes up naturally:\n${hints.map((h) => `- ${h}`).join("\n")}\nDon't interrogate. Pick up cues. One discovery question per conversation, max. When you learn something, save it with save_preference or save_memory.`;
+      }
+    }
+
     // Inject persistent memories
     if (memories && memories.length > 0) {
       const memBlock = memories

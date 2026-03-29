@@ -7,7 +7,7 @@ Every friend who joins Fülkit earns you Fül. Stack enough and your subscriptio
 ## How It Works
 
 1. **Share your referral link** — find it in Settings → Referrals
-2. **Friends sign up** — they get a 30-day free trial
+2. **Friends sign up** — they get a 14-day free trial
 3. **You earn Fül** — when their first payment clears, you start earning 100 Fül/month per active referral
 4. **Fül offsets your subscription** — or converts to cash at higher tiers
 

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
+import { PLANS } from "./ful-legend";
 
 const AuthContext = createContext(null);
 
@@ -82,7 +83,8 @@ export function AuthProvider({ children }) {
       if (data.role !== "owner" && tiers.length > 0) {
         const tiersCompleted = progress.filter((p) => p.completed_at).length;
         const currentTier = tiersCompleted + 1;
-        const isOnboardingDone = tiersCompleted >= 5;
+        const totalTiers = tiers.length;
+        const isOnboardingDone = tiersCompleted >= totalTiers;
 
         const trialStarted = data.trial_started_at ? new Date(data.trial_started_at) : null;
         const trialDay = trialStarted
@@ -100,11 +102,12 @@ export function AuthProvider({ children }) {
         }
 
         setOnboardingState({
-          currentTier: Math.min(currentTier, 6),
+          currentTier: Math.min(currentTier, totalTiers + 1),
           tiersCompleted,
+          totalTiers,
           trialDay,
-          trialDaysRemaining: Math.max(0, 30 - trialDay),
-          isInTrial: trialDay <= 30,
+          trialDaysRemaining: Math.max(0, PLANS.trial.durationDays - trialDay),
+          isInTrial: trialDay <= PLANS.trial.durationDays,
           isOnboardingDone,
           tierProgress: progress,
           pendingTrigger,

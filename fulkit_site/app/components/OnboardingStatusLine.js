@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "../lib/auth";
+import { PLANS } from "../lib/ful-legend";
 
 const INTEGRATION_TIPS = {
   square: { name: "Square", try: "\"How did we do today?\"", also: "\"What's our inventory?\"" },
@@ -41,9 +42,9 @@ export default function OnboardingStatusLine() {
   }
 
   if (!onboardingState || onboardingState.isOnboardingDone) return null;
-  if (!onboardingState.isInTrial && onboardingState.tiersCompleted >= 5) return null;
+  if (!onboardingState.isInTrial && onboardingState.isOnboardingDone) return null;
 
-  const { trialDay, tiersCompleted, currentTier, isInTrial } = onboardingState;
+  const { trialDay, tiersCompleted, totalTiers = 1, currentTier, isInTrial } = onboardingState;
 
   const TIER_LABELS = {
     1: "Let's get started",
@@ -54,17 +55,21 @@ export default function OnboardingStatusLine() {
   };
 
   let statusText;
-  if (tiersCompleted >= 5) {
-    const daysLeft = Math.max(0, 30 - trialDay);
-    statusText = `Day ${trialDay} of 30 \u00b7 F\u00fclkit's dialed in. ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to fall in love.`;
+  if (tiersCompleted >= totalTiers) {
+    const daysLeft = Math.max(0, PLANS.trial.durationDays - trialDay);
+    statusText = `Day ${trialDay} of ${PLANS.trial.durationDays} \u00b7 F\u00fclkit's dialed in. ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to fall in love.`;
   } else if (isInTrial) {
-    const label = TIER_LABELS[currentTier] || `Tier ${currentTier} of 5`;
-    statusText = `Day ${trialDay} of 30 \u00b7 ${label} \u2014 Tier ${currentTier} of 5`;
+    const label = TIER_LABELS[currentTier] || `Tier ${currentTier}`;
+    statusText = totalTiers > 1
+      ? `Day ${trialDay} of ${PLANS.trial.durationDays} \u00b7 ${label} \u2014 Tier ${currentTier} of ${totalTiers}`
+      : `Day ${trialDay} of ${PLANS.trial.durationDays} \u00b7 ${label}`;
   } else {
-    statusText = `Tier ${tiersCompleted} of 5 \u00b7 Pick up where you left off?`;
+    statusText = totalTiers > 1
+      ? `Tier ${tiersCompleted} of ${totalTiers} \u00b7 Pick up where you left off?`
+      : `Pick up where you left off?`;
   }
 
-  const progressPct = (tiersCompleted / 5) * 100;
+  const progressPct = (tiersCompleted / totalTiers) * 100;
 
   return (
     <div style={{ marginBottom: "var(--space-3)" }}>

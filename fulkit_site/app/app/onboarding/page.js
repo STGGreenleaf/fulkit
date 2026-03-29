@@ -394,18 +394,19 @@ export default function Onboarding() {
     } else {
       // All tiers complete
       if (user?.id && !user.isNew) {
+        const finalTier = tiers[tiers.length - 1]?.tier_num || 1;
         const { error: profileErr } = await supabase
           .from("profiles")
           .update({
             onboarded: true,
-            current_tier: 5,
+            current_tier: finalTier,
             updated_at: new Date().toISOString(),
           })
           .eq("id", user.id);
         if (profileErr) {
           console.error("[onboarding] profile update failed:", profileErr.message);
           // Retry once — this is critical
-          await supabase.from("profiles").update({ onboarded: true, current_tier: 5, updated_at: new Date().toISOString() }).eq("id", user.id);
+          await supabase.from("profiles").update({ onboarded: true, current_tier: finalTier, updated_at: new Date().toISOString() }).eq("id", user.id);
         }
         fetchProfile(user.id);
         track("onboarding_complete", { tiers_completed: tiers.length });
@@ -564,10 +565,10 @@ export default function Onboarding() {
           Your brain is ready.
         </h1>
         <p style={{ fontSize: "var(--font-size-md)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", maxWidth: 400, marginBottom: "var(--space-8)" }}>
-          I know your name, your people, your priorities, and how you like to work. Let's get to it.
+          I know your name, how you work, and what you need. Let's talk.
         </p>
         <a
-          href="/"
+          href="/chat"
           style={{
             padding: "var(--space-2-5) var(--space-6)",
             background: "var(--color-accent)",
@@ -1081,7 +1082,7 @@ function VaultSetupStep({ onAdvance }) {
             lineHeight: "var(--line-height-relaxed)",
             marginBottom: "var(--space-4)",
           }}>
-            Unzip it wherever you like — Desktop, Documents, Finder favorites. When you&apos;re ready:
+            Unzip it on your Desktop — easiest to find, easiest to use. When you&apos;re ready:
           </p>
           <button
             onClick={() => onAdvance("download")}

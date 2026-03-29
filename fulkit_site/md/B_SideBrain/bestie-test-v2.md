@@ -11,7 +11,7 @@
 
 - Questionnaire is now the product tutorial — not just data collection
 - Every tier ends with a **feature assignment** ("go check your ___")
-- Header status line shows tier progress during 30-day trial
+- Header status line shows tier progress during 14-day trial
 - Privacy/trust language woven INTO questions, not a separate disclosure
 - Multiple choice wherever possible — lower friction, lower guard
 - Filing system is Fülkit's system — Dieter Rams, set it and forget it, not configurable
@@ -24,24 +24,24 @@
 
 ## Header Status Line
 
-The existing credit status line transforms during the 30-day trial into a living progress tracker.
+The existing credit status line transforms during the 14-day trial into a living progress tracker.
 
 ### States
 
 ```
-Day 1:   "Day 1 of 30 · Let's get started — Tier 1 of 5"
-Day 4:   "Day 4 of 30 · Getting to Know You — Tier 2 of 5"
-Day 8:   "Day 8 of 30 · Your brain's taking shape — Tier 3 of 5"
-Day 12:  "Day 12 of 30 · Almost dialed in — Tier 4 of 5"
-Day 15:  "Day 15 of 30 · The deep stuff — Tier 5 of 5"
-Done:    "Day 18 of 30 · Fülkit's dialed in. 12 days to fall in love."
-Post-30: Reverts to credit status line (Fül balance, plan tier)
+Day 1:   "Day 1 of 14 · Let's get started — Tier 1 of 5"
+Day 4:   "Day 4 of 14 · Getting to Know You — Tier 2 of 5"
+Day 8:   "Day 8 of 14 · Your brain's taking shape — Tier 3 of 5"
+Day 12:  "Day 12 of 14 · Almost dialed in — Tier 4 of 5"
+Day 15:  "Day 15 of 14 · The deep stuff — Tier 5 of 5"
+Done:    "Day 18 of 14 · Fülkit's dialed in. 12 days to fall in love."
+Post-14: Reverts to credit status line (Fül balance, plan tier)
 ```
 
 ### Progress bar
 Subtle, beneath the status text. Fills per tier completion (20% per tier). Animates on tier complete. Warm monochrome — uses `var(--color-text-dim)` fill against `var(--color-border-light)` track.
 
-### Incomplete tiers after 30 days
+### Incomplete tiers after 14 days
 Bar stays as a gentle invitation. Nothing locks. Nothing nags. The open loop does the work.
 
 ---
@@ -51,7 +51,7 @@ Bar stays as a gentle invitation. Nothing locks. Nothing nags. The open loop doe
 1. **Users can blitz all 5 tiers in one sitting.** No time gates.
 2. **But they MUST visit the feature they just activated.** Answering questions alone doesn't complete a tier — the feature assignment does. This is the tutorial.
 3. **If they pause mid-tier,** Fülkit nudges at natural moments inside the app — not push notifications. Contextual: "You've got two more in Tier 2 whenever you're ready."
-4. **Periodic reminders** during the 30 days if tiers are incomplete. Friendly, never nagging. Woven into whispers.
+4. **Periodic reminders** during the 14 days if tiers are incomplete. Friendly, never nagging. Woven into whispers.
 5. **"Do it all now" option** always available — a single "Let's do this" button that runs the full questionnaire. But feature assignments still require visiting each area.
 
 ---
@@ -338,12 +338,12 @@ Privacy is not a separate disclosure. It's woven into the questions themselves. 
 
 ### All tiers complete
 ```
-Header: "Day [X] of 30 · Fülkit's dialed in. [Y] days to fall in love."
+Header: "Day [X] of 14 · Fülkit's dialed in. [Y] days to fall in love."
 ```
 Fülkit sends a final whisper:
 > *"Your brain's built. I'll keep learning as we go — but the foundation is solid. You don't need to think about setup anymore. Just use me."*
 
-### Partial completion at day 30
+### Partial completion at day 14
 Progress bar stays. No lockout. No guilt. Just an open loop:
 ```
 Header: "Tier 3 of 5 · Pick up where you left off?"

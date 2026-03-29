@@ -1,0 +1,83 @@
+{
+  "tiers": [
+    {
+      "tier_num": 1,
+      "label": "Let's get you set up",
+      "intro": "Six quick questions. Then we talk.",
+      "trust_line": "Everything you tell me stays in your files unless you decide otherwise. I don\u2019t build a profile on you \u2014 you\u2019re building one for yourself. That\u2019s the deal.",
+      "assignment_copy": null,
+      "primary_destination": null,
+      "secondary_destination": null,
+      "secondary_condition": null,
+      "completion_trigger": null,
+      "questions": [
+        {
+          "id": "q1",
+          "text": "What should I call you?",
+          "why": "Everything starts with a name.",
+          "type": "text_input",
+          "placeholder": "Your name",
+          "skippable": false,
+          "allow_voice": false,
+          "fulkit_action": "create_identity_file",
+          "sort_order": 1
+        },
+        {
+          "id": "q2",
+          "text": "What do you do?",
+          "why": "Shapes how I think about your world.",
+          "type": "multi_select",
+          "options": ["Creative", "Business", "Dev", "Student", "Parent", "Self-employed", "Between things"],
+          "skippable": false,
+          "fulkit_action": "set_work_context",
+          "sort_order": 2
+        },
+        {
+          "id": "q3",
+          "text": "How do you like help?",
+          "why": "Some people want to be asked. Some want results. No wrong answer.",
+          "type": "single_select",
+          "options": ["Ask me \u2014 I like being involved", "Figure it out \u2014 just show me results", "Mix of both"],
+          "skippable": false,
+          "fulkit_action": "set_interaction_style",
+          "sort_order": 3
+        },
+        {
+          "id": "q4",
+          "text": "Morning person or night owl?",
+          "why": "Timing matters. I\u2019ll match your rhythm.",
+          "type": "single_select",
+          "options": ["Early bird", "Night owl", "Depends on the day"],
+          "skippable": false,
+          "fulkit_action": "set_chronotype",
+          "sort_order": 4
+        },
+        {
+          "id": "q5",
+          "text": "Set up your brain.",
+          "why": "A set of folders that F\u00fclkit reads from and writes to. You own every file.",
+          "type": "vault_setup",
+          "skippable": false,
+          "trust_line": "Your vault is just a folder on your computer. Plain markdown files you can open anywhere. We never see it unless you show it to us.",
+          "fulkit_action": "setup_vault",
+          "options": [
+            {"label": "Download F\u00fclkit vault", "value": "download"},
+            {"label": "I have my own folder", "value": "existing"},
+            {"label": "I\u2019ll use F\u00fclkit storage", "value": "fulkit_managed"}
+          ],
+          "sort_order": 5
+        },
+        {
+          "id": "q6",
+          "text": "Want to connect something?",
+          "why": "Optional. Lights up features like Fabric and live data.",
+          "type": "integration_picker",
+          "options": ["Spotify", "Google Calendar", "I'll do this later"],
+          "skippable": true,
+          "fulkit_action": "connect_integration",
+          "sort_order": 6
+        }
+      ]
+    }
+  ]
+}

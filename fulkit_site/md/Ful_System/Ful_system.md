@@ -94,7 +94,7 @@ For power users who consistently drain their tank every month.
 - One referral = one person you personally brought in who is actively paying.
 - Unlimited referrals. No cap. Every referral is net positive for Fülkit.
 - Credits tied to **active** referred users. If they churn, the credit drops.
-- Referral credit kicks in when referred user's **first payment clears** (after 30-day free trial). Trial period = no credit earned.
+- Referral credit kicks in when referred user's **first payment clears** (after 14-day free trial). Trial period = no credit earned.
 
 ### Margin Math
 
@@ -191,7 +191,7 @@ The system is largely self-policing. Here's why:
 
 | Threat | Mitigation |
 |:---|:---|
-| Free trial abuse | 30-day free trial already exists. Referral credit only kicks in when **payment begins** (trial end → first charge). No paid = no credit. |
+| Free trial abuse | 14-day free trial already exists. Referral credit only kicks in when **payment begins** (trial end → first charge). No paid = no credit. |
 | Friendly fraud (sign up, cancel after 1 month) | Credits tied to active users — cancel = credit drops. Self-correcting. |
 | Stolen credit cards | Stripe Radar handles fraud detection. Not our job to build. |
 | Self-referral | Email verification + simple duplicate detection. Low priority. |
@@ -236,7 +236,7 @@ The system is largely self-policing. Here's why:
 - [x] **Product: "Fülkit Standard"** — $9/mo recurring
 - [x] **Product: "Fülkit Pro"** — $15/mo recurring
 - [x] **Product: "Fül Credits"** — $2 per 100 Fül, one-time purchase (repeatable)
-- [ ] **Set up 30-day free trial** on Standard and Pro subscription products
+- [ ] **Set up 14-day free trial** on Standard and Pro subscription products
 - [ ] **Enable Stripe Tax** for automatic sales tax collection (if applicable by state)
 - [x] **Stripe Billing Portal** — users self-manage subscription changes, cancellation, payment method updates via `/api/stripe/portal`
 
