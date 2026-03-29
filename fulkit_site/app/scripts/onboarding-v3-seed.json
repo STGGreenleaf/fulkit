@@ -3,13 +3,8 @@
     {
       "tier_num": 1,
       "label": "Let's get you set up",
-      "intro": "Six quick questions. Then we talk.",
+      "intro": "Nine quick questions. Then we talk.",
       "trust_line": "Everything you tell me stays in your files unless you decide otherwise. I don\u2019t build a profile on you \u2014 you\u2019re building one for yourself. That\u2019s the deal.",
-      "assignment_copy": null,
-      "primary_destination": null,
-      "secondary_destination": null,
-      "secondary_condition": null,
-      "completion_trigger": null,
       "questions": [
         {
           "id": "q1",
@@ -35,7 +30,7 @@
         {
           "id": "q3",
           "text": "How do you like help?",
-          "why": "Some people want to be asked. Some want results. No wrong answer.",
+          "why": "Some people want to be asked. Some want results.",
           "type": "single_select",
           "options": ["Ask me \u2014 I like being involved", "Figure it out \u2014 just show me results", "Mix of both"],
           "skippable": false,
@@ -44,16 +39,49 @@
         },
         {
           "id": "q4",
-          "text": "Morning person or night owl?",
-          "why": "Timing matters. I\u2019ll match your rhythm.",
-          "type": "single_select",
-          "options": ["Early bird", "Night owl", "Depends on the day"],
-          "skippable": false,
-          "fulkit_action": "set_chronotype",
+          "text": "What are you working on right now? Two or three things \u2014 messy is fine.",
+          "why": "This becomes your first set of notes. You\u2019ll see them filed when you\u2019re done.",
+          "type": "text_input",
+          "placeholder": "Whatever\u2019s on your plate...",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "create_first_notes",
           "sort_order": 4
         },
         {
           "id": "q5",
+          "text": "What keeps falling through the cracks?",
+          "why": "This is where I focus. I\u2019ll watch for these.",
+          "type": "multi_select",
+          "options": ["Follow-ups", "Ideas I had but forgot", "Tasks I said I\u2019d do", "Links and articles", "Personal errands", "Projects I started"],
+          "skippable": false,
+          "fulkit_action": "set_whisper_focus",
+          "sort_order": 5
+        },
+        {
+          "id": "q6",
+          "text": "Is there something you\u2019re working toward this year?",
+          "why": "I\u2019ll create a note and a check-in. You\u2019ll find it later.",
+          "type": "text_input",
+          "placeholder": "A goal, a milestone, a target...",
+          "skippable": true,
+          "allow_voice": false,
+          "fulkit_action": "create_goal_note",
+          "sort_order": 6
+        },
+        {
+          "id": "q7",
+          "text": "What\u2019s the thing you keep meaning to get to but never do?",
+          "why": "I won\u2019t plan the whole thing. Just the first move.",
+          "type": "text_input",
+          "placeholder": "That thing you keep putting off...",
+          "skippable": true,
+          "allow_voice": true,
+          "fulkit_action": "create_first_step",
+          "sort_order": 7
+        },
+        {
+          "id": "q8",
           "text": "Set up your brain.",
           "why": "A set of folders that F\u00fclkit reads from and writes to. You own every file.",
           "type": "vault_setup",
@@ -65,17 +93,17 @@
             {"label": "I have my own folder", "value": "existing"},
             {"label": "I\u2019ll use F\u00fclkit storage", "value": "fulkit_managed"}
           ],
-          "sort_order": 5
+          "sort_order": 8
         },
         {
-          "id": "q6",
+          "id": "q9",
           "text": "Want to connect something?",
           "why": "Optional. Lights up features like Fabric and live data.",
           "type": "integration_picker",
-          "options": ["Spotify", "Google Calendar", "I'll do this later"],
+          "options": ["Spotify", "Google Calendar", "Skip for now"],
           "skippable": true,
           "fulkit_action": "connect_integration",
-          "sort_order": 6
+          "sort_order": 9
         }
       ]
     }

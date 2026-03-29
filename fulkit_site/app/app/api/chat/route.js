@@ -4067,7 +4067,6 @@ export async function POST(request) {
       const memKeys = new Set((memories || []).map((m) => m.key));
       const hints = [];
       if (!prefKeys.has("location")) hints.push("You don\u2019t know where they\u2019re based yet");
-      if (!prefKeys.has("whisper_focus")) hints.push("You don\u2019t know what falls through the cracks for them");
       if (!prefKeys.has("boundaries")) hints.push("You haven\u2019t asked about topics to avoid");
       if (!prefKeys.has("known_people") && !memKeys.has("memory:known_people")) hints.push("You don\u2019t know the important people in their life");
       if (!prefKeys.has("stress_areas")) hints.push("You don\u2019t know what stresses them out");
