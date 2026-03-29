@@ -253,9 +253,9 @@ const SOURCE_DESCRIPTIONS = {
   },
   fabric: {
     subtitle: "Your music, in context.",
-    description: "Spotify tracks what you\u2019re listening to, your playlists, and your listening history. Connecting it lets F\u00FClkit weave music into the conversation and control playback from the sidebar.",
-    gives: "Now playing, recently played, playlists, and playback controls. Ask what\u2019s playing or queue something up.",
-    tryPrompt: "What have I been listening to lately?",
+    description: "Spotify connects your library, playlists, and playback to Fabric. Search your music, control what\u2019s playing, build sets, and let B-Side recommend tracks based on what you actually listen to \u2014 not an algorithm.",
+    gives: "Now playing, recently played, your full playlist library, playback controls (play, pause, skip, volume), and listening history for B-Side recommendations. Everything runs through Fabric.",
+    tryPrompt: "What\u2019s playing right now?\u201D\n\u201CPlay something chill\u201D\n\u201CShow me my playlists\u201D\n\u201CWhat have I been listening to lately?",
     linkLabel: "spotify.com",
     linkHref: "https://spotify.com",
   },
@@ -2317,19 +2317,39 @@ function SourcesTab() {
                 <CardHeader
                   logo={SOURCE_LOGOS.fabric}
                   name="Spotify"
-                  subtitle={`${spotifySeats ? `${spotifySeats.used}/${spotifySeats.max} seats · ` : ""}${fabricPlayerEnabled ? "Player active" : "Player off"}`}
+                  subtitle="Your music, in context."
                   isExpanded={fabricExpanded}
                   onToggle={() => setFabricExpanded(!fabricExpanded)}
                 />
                 <Drawer open={fabricExpanded}>
-                  <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
-                    <DrawerItem index={0} visible={fabricExpanded}>
-                      {checkboxRow("Show MiniPlayer in sidebar", fabricPlayerEnabled, toggleFabricPlayer)}
-                    </DrawerItem>
-                    <DrawerItem index={1} visible={fabricExpanded}>
-                      {disconnectFooter(disconnectFabric, fabricDisconnecting)}
-                    </DrawerItem>
-                  </div>
+                  {richDrawerContent({
+                    expanded: fabricExpanded,
+                    description: "Spotify connects your library, playlists, and playback to Fabric. Search your music, control what\u2019s playing, build sets, and let B-Side recommend tracks based on what you actually listen to \u2014 not an algorithm.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Now playing, recently played, your full playlist library, playback controls (play, pause, skip, volume), and listening history for B-Side recommendations. Everything runs through Fabric.",
+                    tryPrompt: "What\u2019s playing right now?\u201D\n\u201CPlay something chill\u201D\n\u201CShow me my playlists\u201D\n\u201CWhat have I been listening to lately?",
+                    linkLabel: "spotify.com",
+                    linkHref: "https://spotify.com",
+                    footer: (
+                      <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
+                        <div style={{ padding: "var(--space-3) var(--space-4)" }}>
+                          {checkboxRow("Show MiniPlayer in sidebar", fabricPlayerEnabled, toggleFabricPlayer)}
+                        </div>
+                        <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                            Connected{spotifySeats ? ` \u00B7 ${spotifySeats.used}/${spotifySeats.max} seats` : ""}
+                          </div>
+                          <button
+                            onClick={disconnectFabric}
+                            disabled={fabricDisconnecting}
+                            style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fabricDisconnecting ? 0.5 : 1 }}
+                          >
+                            {fabricDisconnecting ? "..." : "Disconnect"}
+                          </button>
+                        </div>
+                      </div>
+                    ),
+                  })}
                 </Drawer>
               </Card>
             )}
