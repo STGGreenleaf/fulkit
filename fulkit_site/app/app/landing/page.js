@@ -876,8 +876,8 @@ export default function Landing() {
               <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
                 Can{"\u2019"}t say the same.
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5) var(--space-4)" }}>
-                {COMPETITORS.filter((n) => n !== "F\u00FClkit").map((name) => (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-1-5) var(--space-3)" }}>
+                {["ChatGPT", "Claude", "Gemini", "Notion", "Obsidian", "Evernote", "Apple Notes", "Todoist", "Otter.ai", "Spotify", "Apple Music", "Slack", "Google Cal", "QuickBooks"].map((name) => (
                   <div key={name} style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{name}</div>
                 ))}
               </div>
