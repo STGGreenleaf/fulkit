@@ -3682,12 +3682,18 @@ export async function POST(request) {
 
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
-      const limit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
+      const seatType = profile?.seat_type || "free";
+      const limit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
-        emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: profile?.seat_type, model: config.model, hasByok: config.isByok });
+        emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: seatType, model: config.model, hasByok: config.isByok });
+        const upsell = seatType === "pro"
+          ? "Grab more credits ($2 per 100 messages) or drop in your own API key for unlimited."
+          : seatType === "standard"
+          ? "Upgrade to Pro for 800 messages ($15/mo), grab credits ($2/100), or drop in your own API key for unlimited."
+          : "Upgrade to Standard for 450 messages ($9/mo), grab credits ($2/100), or drop in your own API key for unlimited.";
         return Response.json({
-          error: `You burned through all ${limit} messages this month. Drop in your own API key to keep going — unlimited, no cap.`,
+          error: `You've used all ${limit} messages this month. ${upsell}`,
         }, { status: 429 });
       }
     }
