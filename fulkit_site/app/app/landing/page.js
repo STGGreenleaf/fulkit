@@ -1038,7 +1038,7 @@ export default function Landing() {
             textAlign: "center",
           }}
         >
-          Other apps ask you to trust them. We ask you to verify&nbsp;us.
+          Other apps ask you to trust them.{isMobile ? <br /> : " "}We ask you to verify&nbsp;us.
           <br />
           Read the full architecture →{" "}
           <Link
