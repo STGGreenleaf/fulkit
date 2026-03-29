@@ -457,7 +457,7 @@ export default function Landing() {
         >
           The average American spends $219 a month
           <br />
-          on subscriptions. This is&nbsp;${fulkitPrice}.
+          on subscriptions.{isMobile ? <br /> : " "}This is&nbsp;${fulkitPrice}.
         </h2>
 
         {/* Abstract receipt — fragmentation vs one surface */}
