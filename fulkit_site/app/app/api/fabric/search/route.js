@@ -52,6 +52,8 @@ export async function GET(request) {
 
     return Response.json({ query, type, results: merged.slice(0, limit), sources: results.map(r => r.provider) });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    // Never 500 on bad queries — return empty results so precacher/playTrack degrade gracefully
+    console.error("[fabric/search] Error:", err.message);
+    return Response.json({ query: "", type: "track", results: [], sources: [], error: err.message });
   }
 }

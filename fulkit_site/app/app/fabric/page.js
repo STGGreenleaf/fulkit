@@ -3425,10 +3425,10 @@ export default function FabricPage() {
     });
   }, [playlists, crates]);
 
-  // Column toggles (3-column layout)
+  // Column toggles (3-column layout, single-column on mobile)
   const [showBrowse, setShowBrowse] = useState(true);
-  const [showCrates, setShowCrates] = useState(true);
-  const [showSets, setShowSets] = useState(true);
+  const [showCrates, setShowCrates] = useState(!isMobile);
+  const [showSets, setShowSets] = useState(!isMobile);
 
   // ═══ Centralized Drag Intent ═══
   // Single ref tracks what's being dragged and why. Every drop handler checks
@@ -3440,10 +3440,16 @@ export default function FabricPage() {
   const clearDragIntent = useCallback(() => { dragIntent.current = null; }, []);
   const [dragOverCol, setDragOverCol] = useState(null);
 
+  // On mobile: exclusive tabs (one column at a time). On desktop: independent toggles.
+  const mobileSelect = (id) => {
+    setShowBrowse(id === "browse");
+    setShowCrates(id === "crates");
+    setShowSets(id === "sets");
+  };
   const PANELS = [
-    { id: "browse", label: "Dig", icon: Disc3, active: showBrowse, toggle: () => setShowBrowse((v) => !v) },
-    { id: "crates", label: "Crates", icon: showCrates ? PackageOpen : Box, active: showCrates, toggle: () => setShowCrates((v) => !v) },
-    { id: "sets", label: "Sets", icon: Turntable, active: showSets, toggle: () => setShowSets((v) => !v) },
+    { id: "browse", label: "Dig", icon: Disc3, active: showBrowse, toggle: isMobile ? () => mobileSelect("browse") : () => setShowBrowse((v) => !v) },
+    { id: "crates", label: "Crates", icon: showCrates ? PackageOpen : Box, active: showCrates, toggle: isMobile ? () => mobileSelect("crates") : () => setShowCrates((v) => !v) },
+    { id: "sets", label: "Sets", icon: Turntable, active: showSets, toggle: isMobile ? () => mobileSelect("sets") : () => setShowSets((v) => !v) },
   ];
 
   const colTransition = "flex 300ms ease, min-width 300ms ease, width 300ms ease, opacity 200ms ease, padding 300ms ease";

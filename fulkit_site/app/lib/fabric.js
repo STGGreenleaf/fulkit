@@ -230,6 +230,12 @@ function makePlaylistUri(id, provider = "spotify") {
   return null;
 }
 
+// Strip trailing BPM numbers from track titles (handles already-persisted dirty data)
+function cleanTitle(title) {
+  if (!title) return title;
+  return title.replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").trim();
+}
+
 export function FabricProvider({ children }) {
   const { user, accessToken } = useAuth();
   const pathname = usePathname();
@@ -1106,7 +1112,7 @@ export function FabricProvider({ children }) {
         for (const s of prev.sets) {
           const t = s.tracks.find(t => t.id === trackId);
           if (t?.title) {
-            const q = `${t.artist || ""} ${t.title}`.trim();
+            const q = `${t.artist || ""} ${cleanTitle(t.title)}`.trim();
             apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`).then((data) => {
               const ytMatch = (data?.results || []).find(r => r.provider === "youtube");
               if (!ytMatch) return;
@@ -1517,7 +1523,7 @@ export function FabricProvider({ children }) {
       }
       // Search YouTube for the real video
       try {
-        const q = `${track.artist || ""} ${track.title}`.trim();
+        const q = `${track.artist || ""} ${cleanTitle(track.title)}`.trim();
         console.log("[playTrack] YouTube search:", q);
         const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
         if (playInFlightRef.current !== requestId) return false;
@@ -1556,7 +1562,7 @@ export function FabricProvider({ children }) {
     let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
     if (!uri && track.artist && track.title) {
       try {
-        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${cleanTitle(track.title)}`)}&type=track`);
         if (playInFlightRef.current !== requestId) return;
         if (data?.tracks?.[0]) {
           const match = data.tracks[0];
@@ -1599,7 +1605,7 @@ export function FabricProvider({ children }) {
     // Fetch album art if we don't have it yet
     if (!track.art && track.artist && track.title && playInFlightRef.current === requestId) {
       try {
-        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}&type=track`);
+        const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(`${track.artist} ${cleanTitle(track.title)}`)}&type=track`);
         if (playInFlightRef.current === requestId && data?.tracks?.[0]?.image) {
           track.art = data.tracks[0].image;
           setCurrentTrack((cur) => (cur && cur.id === track.id) ? { ...cur, art: track.art } : cur);
@@ -2127,17 +2133,20 @@ export function FabricProvider({ children }) {
           // Format: - Title [optional BPM number] (following a bold artist)
           if (currentArtist && /^[-–—]\s/.test(l)) {
             const raw = l.replace(/^[-–—]\s*/, "");
-            const title = raw.replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\s*\*?\[.*?\]\*?\s*$/, "").trim();
+            // Strip markers first, then trailing BPM ($ anchor needs markers gone first)
+            const title = raw.replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\s*\*?\[.*?\]\*?\s*$/, "").replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").trim();
             if (title) {
               tracks.push({ id: `btc-${currentArtist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist: currentArtist });
             }
             currentArtist = null; continue;
           }
           // Format: Artist - Title BPM [+] (single line)
+          // Gate: line must end with BPM-like number, or contain [+]/♪ — not just any number mid-sentence
           const sm = l.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+(\d+)\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/);
-          if (sm && /\d+\s*(?:BPM)?|\[\+\]|♪/.test(l)) {
+          if (sm && (/\[\+\]|♪/.test(l) || /\d{2,3}\s*(?:BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/.test(l))) {
             const artist = sm[1].replace(/^\*\*|\*\*$/g, "").trim();
-            const title = sm[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\*\*/g, "").trim();
+            // Strip markers first, then trailing BPM (BPM word optional)
+            const title = sm[2].replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\*\*/g, "").replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").trim();
             if (artist && title && artist.length < 80 && title.length < 80) {
               tracks.push({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist });
             }
