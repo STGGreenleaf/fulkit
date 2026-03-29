@@ -1058,7 +1058,7 @@ export default function Landing() {
       {/* ─── FINAL CTA ─── */}
         <section
           style={{
-            padding: isMobile ? "var(--space-12) var(--space-4)" : "var(--space-24) var(--space-8)",
+            padding: isMobile ? "var(--space-8) var(--space-4)" : "var(--space-24) var(--space-8)",
             maxWidth: isMobile ? "none" : 900,
           }}
         >
