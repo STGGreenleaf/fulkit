@@ -240,6 +240,11 @@ export function FabricProvider({ children }) {
   const [connectedProviders, setConnectedProviders] = useState({});
   const connectedProvidersRef = useRef({});
   useEffect(() => { connectedProvidersRef.current = connectedProviders; }, [connectedProviders]);
+
+  // Sonos speaker state
+  const [sonosGroups, setSonosGroups] = useState([]);
+  const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
+  const [activeSonosGroup, setActiveSonosGroup] = useState(null);
   const [statusChecked, setStatusChecked] = useState(false);
 
   // ── Thumbs Down (permanent rejection) ──
@@ -380,6 +385,18 @@ export function FabricProvider({ children }) {
         setConnectedProviders({ youtube: true });
       }
       setStatusChecked(true);
+      // Fetch Sonos groups if connected
+      if (data?.providers?.sonos) {
+        apiFetch("/api/fabric/sonos").then((sonosData) => {
+          if (sonosData?.groups) {
+            setSonosGroups(sonosData.groups);
+            setSonosHouseholdId(sonosData.householdId);
+            if (sonosData.groups.length > 0 && !activeSonosGroup) {
+              setActiveSonosGroup(sonosData.groups[0].id);
+            }
+          }
+        }).catch(() => {});
+      }
     }).catch(() => {
       setConnected(true);
       setConnectedProviders({ youtube: true });
@@ -2030,6 +2047,7 @@ export function FabricProvider({ children }) {
           bsidesTracks: guyCrate?.tracks || [],
           tasteSummary: buildTasteSummary(),
           spotifyConnected: connected,
+          sonosGroups: sonosGroups.length > 0 ? sonosGroups : undefined,
         }),
       });
 
@@ -2083,7 +2101,16 @@ export function FabricProvider({ children }) {
       setMusicMessages(prev => [...prev, { role: "assistant", content: "Lost the signal. Try again." }]);
     }
     setMusicStreaming(false);
-  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged, buildTasteSummary, guyCrate]);
+  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged, buildTasteSummary, guyCrate, sonosGroups]);
+
+  // Sonos speaker control
+  const sonosControl = useCallback(async (groupId, action, value) => {
+    if (!accessToken) return;
+    return apiFetch("/api/fabric/sonos", {
+      method: "POST",
+      body: JSON.stringify({ groupId, action, value }),
+    });
+  }, [accessToken, apiFetch]);
 
   const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
 
@@ -2162,6 +2189,10 @@ export function FabricProvider({ children }) {
         reconnect,
         reconnectSpotify,
         connectedProviders,
+        sonosGroups,
+        activeSonosGroup,
+        setActiveSonosGroup,
+        sonosControl,
       }}
     >
       <PlaybackEngine connectedProviders={connectedProviders} />
