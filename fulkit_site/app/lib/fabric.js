@@ -2098,20 +2098,45 @@ export function FabricProvider({ children }) {
         return msgs;
       });
 
-      // Parse [SET:name] marker — create set with recommended tracks
-      const setMatch = assistantText.match(/\[SET:(.+?)\]/);
-      if (setMatch) {
-        const setName = setMatch[1].trim();
-        const trackPattern = /^(.+?)\s*[-–—]\s*(.+?)(?:\s+\d+\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/gm;
+      // Auto-create set if user asked for one
+      const userText = text.toLowerCase();
+      const wantsSet = /\b(create|make|build|give me|put together)\b.*\bset\b|\bset\b.*\b(called|named|for)\b/i.test(userText);
+      if (wantsSet && assistantText) {
+        // Extract set name from user message or B-Side's [SET:] marker
+        const markerMatch = assistantText.match(/\[SET:(.+?)\]/);
+        const nameFromUser = userText.match(/set\s+(?:called|named)\s+["']?([^"'\n]+)/i)?.[1]
+          || userText.match(/(?:create|make|build)\s+(?:me\s+)?(?:a\s+)?(.+?)\s+set/i)?.[1]
+          || null;
+        const setName = markerMatch?.[1]?.trim() || nameFromUser?.trim() || "B-Side Set";
+
+        // Parse tracks — handle both "Artist - Title BPM" and "**Artist**\n- Title BPM" formats
         const tracks = [];
-        let m;
-        while ((m = trackPattern.exec(assistantText)) !== null) {
-          const artist = m[1].replace(/^\*\*|\*\*$/g, "").trim();
-          const title = m[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\*\*/g, "").trim();
-          if (artist && title) {
-            tracks.push({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist });
+        const lines = assistantText.split("\n");
+        let currentArtist = null;
+        for (const line of lines) {
+          const l = line.trim();
+          // Format: **Artist**
+          const boldArtist = l.match(/^\*\*(.+?)\*\*$/);
+          if (boldArtist) { currentArtist = boldArtist[1].trim(); continue; }
+          // Format: - Title BPM (following a bold artist)
+          if (currentArtist && l.startsWith("- ")) {
+            const title = l.slice(2).replace(/\s+\d+\s*(?:BPM)?$/i, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").trim();
+            if (title) {
+              tracks.push({ id: `btc-${currentArtist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist: currentArtist });
+              currentArtist = null; continue;
+            }
           }
+          // Format: Artist - Title BPM [+]
+          const inlineMatch = l.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s+\d+\s*BPM)?\s*(?:\[\+\]|♪)?\s*$/);
+          if (inlineMatch && /\d+\s*BPM|\[\+\]|♪/.test(l)) {
+            const artist = inlineMatch[1].replace(/^\*\*|\*\*$/g, "").trim();
+            const title = inlineMatch[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\*\*/g, "").trim();
+            if (artist && title) tracks.push({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist });
+            currentArtist = null; continue;
+          }
+          if (!boldArtist) currentArtist = null;
         }
+
         if (tracks.length > 0) {
           setSetsData((prev) => {
             const id = `set-${Date.now()}`;
