@@ -4,11 +4,13 @@
 import { getSupabaseAdmin } from "./supabase-server";
 import { SpotifyProvider } from "./providers/spotify";
 import { YouTubeProvider } from "./providers/youtube";
+import { SonosProvider } from "./providers/sonos";
 
 // Provider registry — add new providers here
 const PROVIDERS = {
   spotify: SpotifyProvider,
   youtube: YouTubeProvider,
+  sonos: SonosProvider,
 };
 
 // Authenticate user from Bearer token

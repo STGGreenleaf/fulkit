@@ -203,7 +203,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -326,6 +326,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "quickbooks.intuit.com",
     linkHref: "https://quickbooks.intuit.com",
   },
+  sonos: {
+    subtitle: "Your speakers, connected.",
+    description: "Sonos lets you play music through any speaker in your home. Connecting it means Fabric can control playback, pick rooms, and adjust volume \u2014 all from the player. Requires a connected music source like Spotify or Apple Music.",
+    gives: "Speaker selection, room grouping, volume control, and playback status across your Sonos system. Play to your living room, kitchen, or everywhere at once.",
+    tryPrompt: "Play this in the living room",
+    linkLabel: "sonos.com",
+    linkHref: "https://www.sonos.com",
+  },
   fitbit: {
     subtitle: "Your body, in context.",
     description: "Fitbit tracks your activity, sleep, heart rate, and weight every day. Connecting it means F\u00FClkit sees how you slept, how active you were, and how your body is trending \u2014 so it can help you plan around your energy, not just your calendar.",
@@ -344,6 +352,7 @@ const ALL_SOURCES = [
   { id: "trello", name: "Trello", cat: "Project Management" },
   { id: "github", name: "GitHub", cat: "Dev" },
   { id: "fabric", name: "Spotify", cat: "Media" },
+  { id: "sonos", name: "Sonos", cat: "Speakers" },
   { id: "numbrly", name: "Numbrly", cat: "Small Business" },
   { id: "truegauge", name: "TrueGauge", cat: "Profitability Analytics" },
   { id: "obsidian", name: "Obsidian", cat: "Notes" },
