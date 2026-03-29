@@ -22,7 +22,7 @@ export const EMAIL_CONTENTS = {
       <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Notes</strong> \u2014 your vault. Plain files you can open anywhere.</div>
       <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Actions</strong> \u2014 tasks that surface from your conversations automatically.</div>
       <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Threads</strong> \u2014 organized conversations you can pick back up.</div>
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Fabric</strong> \u2014 a music system that actually listens.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Fabric</strong> \u2014 dig, crate, mix, play. No algorithm. No wrapper. Just music.</div>
       <div><strong style="color:#2A2826;">Integrations</strong> \u2014 Spotify, GitHub, Square, Calendar \u2014 your tools, connected.</div>
     </div>
 
