@@ -3,6 +3,35 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 25 — 2026-03-29: Onboarding v3 + Trial Fix + Chat Seeding
+
+### What shipped
+- **Onboarding v3** — 31 questions → 6. Name, work type, help style, chronotype, vault setup, optional integration. All taps except name. 90 seconds to first chat.
+- **Chat seeding** — missing-context hints injected into system prompt. Chappie learns location, interests, goals, stress, boundaries, people naturally over first-week conversations. One discovery question per conversation max. Self-healing (hints disappear as prefs fill in).
+- **Trial duration fix** — 30 → 14 days everywhere. Single source of truth from `PLANS.trial.durationDays` in ful-legend.js. Code (auth.js, OnboardingStatusLine.js) + specs (bestie-test-v2.md, Ful_system.md, Ful_Referrals_User.md) all aligned.
+- **Dynamic tier count** — `tiersCompleted >= 5` hardcodes replaced with `tiersCompleted >= totalTiers` from DB. `totalTiers` added to onboarding state.
+- **Vault download copy** — "Unzip it on your Desktop" instead of "wherever you like."
+- **Post-onboarding redirect** — completion sends user to `/chat` (not `/home`). First thing they see is Chappie greeting them by name.
+- **Owner portal flash fix** — QuestionsTab data cached at module level (`_qTabCache`). No more "Loading..." flash on tab switch.
+- **DB migration** — v3 seed (1 tier, 6 questions) applied to production Supabase. Old tiers archived, old questions unlinked.
+
+### Key decisions
+- Questionnaire = infrastructure + identity only. Personality + depth learned via conversation.
+- Walkthroughs cut from questionnaire — become Chappie's self-guided tour in chat.
+- Fabric mobile deferred — needs spec + dedicated session, not a quick fix.
+
+### Key files modified
+- `app/lib/auth.js` — PLANS import, dynamic trial + tier count
+- `app/components/OnboardingStatusLine.js` — PLANS import, dynamic trial + tier display
+- `app/app/onboarding/page.js` — vault copy, completion redirect, dynamic tier
+- `app/api/chat/route.js` — getting-to-know-you hints block
+- `app/app/owner/page.js` — QuestionsTab module-level cache
+- `app/scripts/onboarding-v3-migration.sql` + `onboarding-v3-seed.json` — DB migration
+- `md/B_SideBrain/bestie-test-v2.md` — all 30→14 refs
+- `md/Ful_System/Ful_system.md` + `Ful_Referrals_User.md` — 30→14
+
+---
+
 ## Session 23 — 2026-03-23: YouTube Playback Fix + Quota Architecture
 
 ### What shipped
