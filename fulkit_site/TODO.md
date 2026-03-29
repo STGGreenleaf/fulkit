@@ -112,28 +112,37 @@
 
 ---
 
-## Fabric Signal Pipeline — Next Steps
+## Droplet Day — When You Subscribe ($12/mo DigitalOcean)
 
-> Pipeline built. Worker running locally. 10/11 tracks analyzed. Real spectral data flowing.
+> Everything below fires in one session. Pipeline is built, worker runs locally, scripts exist.
+> Subscribe → run this list → real spectral data flows → all features upgrade automatically.
 
-### Infrastructure
-- [ ] **Provision DigitalOcean droplet** — $12/mo, 2GB RAM, Basic/Regular SSD. Run `scripts/setup-vps.sh`, copy worker, create `.env`, enable systemd. Runs 24/7 for all users.
-- [ ] **Clean up /recover and /api/recover-sets** — temporary recovery tools, remove when sets are stable
+### Step 1: Provision
+- [ ] Provision DigitalOcean droplet — 2GB RAM, Basic/Regular SSD
+- [ ] Run `scripts/setup-vps.sh`, copy worker, create `.env`, enable systemd
+- [ ] Verify worker starts, processes one test track, writes to `fabric_timelines` table
 
-### Visualization Refinement
-- [ ] **Tune Signal Terrain for real data** — current rendering is heavy. With real timelines flowing, tune amplitude scaling, noise blend, layer rendering to be lighter/snappier. Data does the work, reduce the noise.
-- [ ] **Tune OrbVisualizer (Deep Amoeba)** — same tuning pass for fullscreen viz
-- [ ] **Poster terrain from real data** — currently procedural seed. Could use actual spectral contours from fabric_timelines.
+### Step 2: Wire to Signal Radio
+- [ ] Add worker heartbeat as a signal source — feeds into existing Radio monitoring
+- [ ] Stuck job detection — if no tracks processed in 30min, emit `worker_stall` signal
+- [ ] Processing rate metric — tracks/hour visible in Radio
 
-### Pipeline Hardening
-- [ ] **Batch-queue user library** — on Spotify connect, queue all saved/playlist tracks silently
-- [ ] **YouTube match validation** — add title fuzzy match scoring, reject covers/live versions more aggressively
-- [ ] **Worker monitoring** — heartbeat check, alert on stuck jobs, track processing rate
-- [ ] **Album art cache verification** — old service worker may still be cached, needs manual unregister
+### Step 3: Tune Visuals
+- [ ] Signal Terrain — tune amplitude scaling, noise blend, layer rendering for real spectral data
+- [ ] OrbVisualizer (Deep Amoeba) — same tuning pass for fullscreen viz
+- [ ] Poster terrain — swap procedural seed with actual spectral contours
 
-### Future
-- [ ] **Spectral similarity engine** — use timeline data for texture-matching recommendations (B-Side upgrade)
-- [ ] **Essentia.js client-side** — optional browser analysis for tracks that can't be matched on YouTube
+### Step 4: Pipeline Polish
+- [ ] Analyze on play — when a track plays and has no spectral data, queue it automatically
+- [ ] Album art cache verification — old service worker may still be cached, manual unregister
+
+### Step 5: Future (not day-one)
+- [ ] Spectral similarity engine — texture-matching recommendations (B-Side upgrade)
+- [ ] Essentia.js client-side — optional browser analysis for unmatched tracks
+
+### Already done
+- [x] YouTube match validation — studio versions by default, variants on request (Session 25)
+- [x] Batch-queue rejected — analyze on play, not on connect (design decision Session 25)
 
 ---
 
