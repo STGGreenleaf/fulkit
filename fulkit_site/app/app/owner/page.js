@@ -7090,10 +7090,14 @@ const COMPLETION_TRIGGERS = [
   "used_capture", "visited_action_list", "visited_settings", "visited_bsides",
 ];
 
+// Module-level cache: survives tab switches (mount/unmount) without flash
+let _qTabCache = { tiers: null, questions: null };
+
 function QuestionsTab() {
-  const [tiers, setTiers] = useState([]);
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const hasCached = _qTabCache.tiers !== null;
+  const [tiers, setTiers] = useState(hasCached ? _qTabCache.tiers : []);
+  const [questions, setQuestions] = useState(hasCached ? _qTabCache.questions : []);
+  const [loading, setLoading] = useState(!hasCached);
   const [expandedTiers, setExpandedTiers] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [editingTier, setEditingTier] = useState(null);
@@ -7106,11 +7110,14 @@ function QuestionsTab() {
       supabase.from("onboarding_tiers").select("*").order("sort_order"),
       supabase.from("questions").select("*").order("sort_order"),
     ]);
-    setTiers(t || []);
-    setQuestions(q || []);
-    if (Object.keys(expandedTiers).length === 0 && t?.length) {
+    const newTiers = t || [];
+    const newQuestions = q || [];
+    _qTabCache = { tiers: newTiers, questions: newQuestions };
+    setTiers(newTiers);
+    setQuestions(newQuestions);
+    if (Object.keys(expandedTiers).length === 0 && newTiers.length) {
       const exp = {};
-      t.forEach((tier) => (exp[tier.id] = true));
+      newTiers.forEach((tier) => (exp[tier.id] = true));
       setExpandedTiers(exp);
     }
     setLoading(false);
