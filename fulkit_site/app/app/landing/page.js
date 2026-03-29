@@ -757,6 +757,8 @@ export default function Landing() {
             Nobody else lives here.
           </h2>
 
+          {/* Desktop: full 11-column grid */}
+          {!isMobile && (
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table
             style={{
@@ -849,6 +851,39 @@ export default function Landing() {
             </tbody>
           </table>
           </div>
+          )}
+
+          {/* Mobile: Fülkit-only 2-column + competitor footnote */}
+          {isMobile && (
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-base)" }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid var(--color-text)" }}>
+                  <th style={{ padding: "0 0 var(--space-3) 0", textAlign: "left", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>Feature</th>
+                  <th style={{ padding: "0 0 var(--space-3) 0", textAlign: "center", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-black)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text)" }}>F{"\u00FC"}lkit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grid.map((row, i) => (
+                  <tr key={i} style={{ borderBottom: i === grid.length - 1 ? "2px solid var(--color-text)" : "1px solid var(--color-border-light)" }}>
+                    <td style={{ padding: "var(--space-2-5) var(--space-2) var(--space-2-5) 0", color: i === grid.length - 1 ? "var(--color-text)" : "var(--color-text-secondary)", fontWeight: i === grid.length - 1 ? "var(--font-weight-bold)" : "var(--font-weight-normal)" }}>{row.feature}</td>
+                    <td style={{ padding: "var(--space-2-5) 0", textAlign: "center" }}><GridCell value={row.fulkit} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: "var(--space-8)" }}>
+              <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                Can{"\u2019"}t say the same.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-1-5) var(--space-4)" }}>
+                {COMPETITORS.filter((n) => n !== "F\u00FClkit").map((name) => (
+                  <div key={name} style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)" }}>{name}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
         </section>
 
       {/* ─── PRICING ─── */}
