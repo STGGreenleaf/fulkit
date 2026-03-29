@@ -1916,6 +1916,19 @@ function SourcesTab() {
     }).catch(() => {});
   }
 
+  function connectSonos() {
+    if (accessToken) {
+      window.open("/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
   async function disconnectFitbit() {
     setFitbitDisconnecting(true);
     try {
@@ -1983,6 +1996,7 @@ function SourcesTab() {
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
     if (id === "fitbit") { connectFitbit(); return; }
+    if (id === "sonos") { connectSonos(); return; }
     if (id === "quickbooks") { connectQB(); return; }
     if (id === "obsidian") { connectObsidian(); return; }
     if (id === "notion") { connectNotion(); return; }
@@ -2004,6 +2018,7 @@ function SourcesTab() {
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
     if (id === "fitbit") { disconnectFitbit(); return; }
+    if (id === "sonos") { disconnectSonos(); return; }
     if (id === "quickbooks") { disconnectQB(); return; }
     if (id === "obsidian") { disconnectObsidian(); return; }
     if (id === "notion") { disconnectNotion(); return; }
