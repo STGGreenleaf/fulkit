@@ -115,7 +115,7 @@ export class YouTubeProvider {
 
       const params = new URLSearchParams({
         part: "snippet",
-        q: query + (ytType === "video" ? " music" : ""),
+        q: query + (ytType === "video" ? " official audio" : ""),
         type: ytType,
         maxResults: String(limit),
         key: apiKey,
@@ -137,18 +137,24 @@ export class YouTubeProvider {
       let result;
 
       if (ytType === "video") {
-        result = {
-          tracks: (data.items || []).map(item => ({
-            source_id: item.id.videoId,
-            title: item.snippet.title,
-            artist: item.snippet.channelTitle,
-            album: null,
-            duration_ms: 0,
-            uri: `youtube:video:${item.id.videoId}`,
-            image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || null,
-            provider: "youtube",
-          })),
-        };
+        // Prefer studio versions — skip live/cover/remix unless query asked for it
+        const qLower = query.toLowerCase();
+        const wantsVariant = /\b(live|cover|remix|acoustic|concert)\b/.test(qLower);
+        const variantPattern = /\b(live|cover|remix|acoustic|concert|karaoke)\b/i;
+
+        const allTracks = (data.items || []).map(item => ({
+          source_id: item.id.videoId,
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle,
+          album: null,
+          duration_ms: 0,
+          uri: `youtube:video:${item.id.videoId}`,
+          image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || null,
+          provider: "youtube",
+        }));
+
+        const filtered = wantsVariant ? allTracks : allTracks.filter(t => !variantPattern.test(t.title));
+        result = { tracks: filtered.length > 0 ? filtered : allTracks };
       } else if (ytType === "playlist") {
         result = {
           playlists: (data.items || []).map(item => ({
