@@ -308,7 +308,7 @@ export default function Landing() {
             color: "var(--color-text-muted)",
             lineHeight: "var(--line-height-relaxed)",
             maxWidth: 640,
-            marginBottom: isMobile ? "var(--space-6)" : "var(--space-10)",
+            marginBottom: isMobile ? "var(--space-4)" : "var(--space-10)",
           }}
         >
           <div>
