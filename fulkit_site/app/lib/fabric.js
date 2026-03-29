@@ -2100,7 +2100,7 @@ export function FabricProvider({ children }) {
 
       // Auto-create set if user asked for one
       const userText = text.toLowerCase();
-      const wantsSet = /\b(create|make|build|give me|put together)\b.*\bset\b|\bset\b.*\b(called|named|for)\b/i.test(userText);
+      const wantsSet = /\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b.*\bset\b|\bset\b.*\b(called|named|for|of|with)\b/i.test(userText);
       if (wantsSet && assistantText) {
         // Extract set name from user message or B-Side's [SET:] marker
         const markerMatch = assistantText.match(/\[SET:(.+?)\]/);
