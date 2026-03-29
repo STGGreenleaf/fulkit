@@ -2157,6 +2157,8 @@ export function FabricProvider({ children }) {
             persistSets(next);
             return next;
           });
+          // Auto-play the first track
+          setTimeout(() => playTrack(tracks[0]), 500);
         }
       }
     } catch (e) {
