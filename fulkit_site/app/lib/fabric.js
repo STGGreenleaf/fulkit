@@ -2088,7 +2088,7 @@ export function FabricProvider({ children }) {
         }
       }
 
-      // Finalize — remove streaming flag
+      // Finalize — remove streaming flag + check for set creation
       setMusicMessages(prev => {
         const msgs = [...prev];
         const last = msgs[msgs.length - 1];
@@ -2097,6 +2097,33 @@ export function FabricProvider({ children }) {
         }
         return msgs;
       });
+
+      // Parse [SET:name] marker — create set with recommended tracks
+      const setMatch = assistantText.match(/\[SET:(.+?)\]/);
+      if (setMatch) {
+        const setName = setMatch[1].trim();
+        const trackPattern = /^(.+?)\s*[-–—]\s*(.+?)(?:\s+\d+\s*BPM)?\s*(?:\[\+\]|♪)?\s*(?:\*?\[.*?\]\*?)?\s*$/gm;
+        const tracks = [];
+        let m;
+        while ((m = trackPattern.exec(assistantText)) !== null) {
+          const artist = m[1].replace(/^\*\*|\*\*$/g, "").trim();
+          const title = m[2].replace(/\s+\d+\s*BPM.*$/, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\*\*/g, "").trim();
+          if (artist && title) {
+            tracks.push({ id: `btc-${artist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist });
+          }
+        }
+        if (tracks.length > 0) {
+          setSetsData((prev) => {
+            const id = `set-${Date.now()}`;
+            const newSet = { id, name: setName, tracks };
+            const userSets = prev.sets.filter(s => s.source !== "guy");
+            const guySets = prev.sets.filter(s => s.source === "guy");
+            const next = { activeId: id, sets: [newSet, ...userSets, ...guySets] };
+            persistSets(next);
+            return next;
+          });
+        }
+      }
     } catch (e) {
       setMusicMessages(prev => [...prev, { role: "assistant", content: "Lost the signal. Try again." }]);
     }
