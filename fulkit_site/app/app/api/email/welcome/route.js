@@ -25,7 +25,7 @@ export async function POST(request) {
     const { data, error } = await resend.emails.send({
       from: "F\u00fclkit <hello@fulkit.app>",
       to: toEmail,
-      subject: "Welcome to F\u00fclkit \u2014 let\u2019s get started",
+      subject: "Welcome to F\u00fclkit",
       html: buildEmailHtml("welcome", { name: userName }),
     });
 

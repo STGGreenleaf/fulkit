@@ -10,14 +10,27 @@ function cta(href, label) {
 export const EMAIL_CONTENTS = {
   welcome: (name) => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Hey ${name || "there"}.</div>
-    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Welcome to F\u00fclkit. You just got yourself a bestie that remembers everything and never makes you start from zero.</div>
-    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">Get started in 60 seconds</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">You just signed up for a second brain. Here\u2019s what that means.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">F\u00fclkit remembers what you tell it, organizes what you save, and connects the dots you\u2019d miss on your own. It gets sharper every time you use it \u2014 not because we\u2019re training on your data, but because your vault grows.</div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">Your vault, your rules</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">Everything lives in plain markdown files that you own. We can\u2019t read them. We don\u2019t store them. When you talk to F\u00fclkit, your context travels with the message and disappears after. No profile. No shadow copy. You hold every key.</div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">What\u2019s in the kit</div>
     <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">1. Say hey</strong> \u2014 Open chat and talk like you would to a friend.</div>
-      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">2. Drop a note</strong> \u2014 Save an idea, a doc, a thought.</div>
-      <div><strong style="color:#2A2826;">3. Watch it click</strong> \u2014 Ask about something you saved. F\u00fclkit connects the dots.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Chat</strong> \u2014 a thinking partner with your full context loaded.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Notes</strong> \u2014 your vault. Plain files you can open anywhere.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Actions</strong> \u2014 tasks that surface from your conversations automatically.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Threads</strong> \u2014 organized conversations you can pick back up.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Fabric</strong> \u2014 a music system that actually listens.</div>
+      <div><strong style="color:#2A2826;">Integrations</strong> \u2014 Spotify, GitHub, Square, Calendar \u2014 your tools, connected.</div>
     </div>
-    ${cta("https://fulkit.app/chat", "Open F\u00fclkit")}`,
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">14 days. 150 messages. No credit card.</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">That\u2019s your trial. Enough to see if F\u00fclkit thinks the way you do. If it clicks, plans start at $9/mo. If you bring your own API key, the meter disappears entirely.</div>
+
+    ${cta("https://fulkit.app", "Open F\u00fclkit")}
+    <div style="font-size:14px;color:#6B6560;line-height:1.6;">You\u2019re six quick questions away from your first conversation.</div>`,
 
   added: (name, message) => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
