@@ -2102,13 +2102,18 @@ export function FabricProvider({ children }) {
       const userText = text.toLowerCase();
       const wantsSet = /\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b.*\bset\b|\bset\b.*\b(called|named|for|of|with)\b/i.test(userText);
       if (wantsSet && assistantText) {
-        // Extract set name from user message
-        const nameFromUser = userText.match(/set\s+(?:called|named)\s+["']?([^"'\n]+)/i)?.[1]
-          || userText.match(/(?:create|make|build|gimme|gimmie|whip up|throw together|cook up|curate|craft)\s+(?:me\s+)?(?:a\s+)?(.+?)\s+set/i)?.[1]
-          || userText.match(/\bset\b.*?["']([^"']+)["']/)?.[1]
-          || null;
+        // Extract set name: strip the command words, keep the vibe
+        const stripped = text
+          .replace(/\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b/gi, "")
+          .replace(/\b(me|a|an|the|some|my)\b/gi, "")
+          .replace(/\bset\b/gi, "")
+          .replace(/[.!?,]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
         const markerMatch = assistantText.match(/\[SET:(.+?)\]/);
-        const setName = markerMatch?.[1]?.trim() || nameFromUser?.trim() || "B-Side Set";
+        const setName = markerMatch?.[1]?.trim()
+          || (stripped.length > 0 ? stripped.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : null)
+          || "B-Side Set";
 
         // Parse tracks — reuse the same pattern the renderer uses (allMsgSongs)
         const tracks = [];
@@ -2122,7 +2127,7 @@ export function FabricProvider({ children }) {
           // Format: - Title [optional BPM number] (following a bold artist)
           if (currentArtist && /^[-–—]\s/.test(l)) {
             const raw = l.replace(/^[-–—]\s*/, "");
-            const title = raw.replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").trim();
+            const title = raw.replace(/\s+\d{2,3}\s*(?:BPM)?\s*$/i, "").replace(/\s*\[\+\].*$/, "").replace(/\s*♪.*$/, "").replace(/\s*\*?\[.*?\]\*?\s*$/, "").trim();
             if (title) {
               tracks.push({ id: `btc-${currentArtist}-${title}`.toLowerCase().replace(/\s+/g, "-"), title, artist: currentArtist });
             }
