@@ -1213,7 +1213,7 @@ function SourcesTab() {
     if (params.get("gh") === "connected" && accessToken) {
       checkGitHub(accessToken);
     }
-    if (params.get("sp") === "connected") {
+    if (params.get("sp") === "connected" && params.get("fprovider") !== "sonos") {
       setFabricConnected(true);
     }
     if (params.get("sq") === "connected") {
