@@ -46,7 +46,7 @@ export async function GET(request) {
       return NextResponse.redirect(new URL(`/settings/sources?sp=error&reason=token_${result.error}`, request.url));
     }
 
-    const response = NextResponse.redirect(new URL("/settings/sources?sp=connected", request.url));
+    const response = NextResponse.redirect(new URL(`/settings/sources?sp=connected&fprovider=${providerName}`, request.url));
     response.cookies.delete("sp_auth_token");
     return response;
   } catch (err) {
