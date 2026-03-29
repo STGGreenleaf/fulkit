@@ -19,7 +19,7 @@ export const EMAIL_CONTENTS = {
     </div>
     ${cta("https://fulkit.app/chat", "Open F\u00fclkit")}`,
 
-  added: () => `
+  added: (name, message) => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Spotify's developer platform limits how many people can connect at once. We saved your spot.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">In the meantime \u2014 you're not waiting. You're already inside.</div>
@@ -35,14 +35,14 @@ export const EMAIL_CONTENTS = {
     <div style="font-size:16px;font-weight:600;color:#2A2826;margin-bottom:28px;">Go dig.</div>
     ${cta("https://fulkit.app/fabric", "Open Fabric")}`,
 
-  "seat-open": () => `
+  "seat-open": (name, message) => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your Spotify seat is ready.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">A seat opened up. Head to <strong style="color:#2A2826;">Settings \u2192 Sources</strong> and connect your Spotify account.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your existing playlists will sync automatically. Everything you've already built in Fabric \u2014 sets, crates, history \u2014 stays exactly where it is. Spotify just adds another playback source.</div>
     ${cta("https://fulkit.app/settings/sources", "Connect Spotify")}`,
 
-  custom: () => `
-    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Your custom message goes here. Use the Custom template from the Waitlist fold in the Developer tab to send freeform messages.</div>
+  custom: (name, message) => `
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">${message ? message.replace(/\n/g, "<br>") : "Your custom message goes here. Use the Custom template from the Waitlist fold in the Developer tab to send freeform messages."}</div>
     ${cta("https://fulkit.app", "Open F\u00fclkit")}`,
 };
 
@@ -53,9 +53,9 @@ export const EMAIL_FOOTERS = {
   custom: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
 };
 
-export function buildEmailHtml(templateId, { name } = {}) {
+export function buildEmailHtml(templateId, { name, message } = {}) {
   const contentFn = EMAIL_CONTENTS[templateId] || EMAIL_CONTENTS.custom;
-  const content = contentFn(name);
+  const content = contentFn(name, message);
   const footer = EMAIL_FOOTERS[templateId] || EMAIL_FOOTERS.custom;
 
   return `<!DOCTYPE html>

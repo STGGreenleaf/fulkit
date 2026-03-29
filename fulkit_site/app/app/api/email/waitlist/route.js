@@ -42,7 +42,7 @@ export async function POST(request) {
           from: "F\u00fclkit <hello@fulkit.app>",
           to: email,
           subject: subjects[template] || subjects.custom,
-          html: buildEmailHtml(template || "custom"),
+          html: buildEmailHtml(template || "custom", { message }),
         });
         sent++;
       } catch {}
