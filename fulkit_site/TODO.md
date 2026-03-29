@@ -134,7 +134,6 @@
 
 ### Step 4: Pipeline Polish
 - [ ] Analyze on play — when a track plays and has no spectral data, queue it automatically
-- [ ] Album art cache verification — old service worker may still be cached, manual unregister
 
 ### Step 5: Future (not day-one)
 - [ ] Spectral similarity engine — texture-matching recommendations (B-Side upgrade)
@@ -143,6 +142,42 @@
 ### Already done
 - [x] YouTube match validation — studio versions by default, variants on request (Session 25)
 - [x] Batch-queue rejected — analyze on play, not on connect (design decision Session 25)
+- [x] Album art cache — already clean. SW clears all old caches on activate, art uses localStorage not SW cache.
+
+---
+
+## Vital Day — When You Subscribe (Health Aggregator)
+
+> Second paid subscription after Droplet. Vital gives you Whoop, Oura, Strava, Garmin, blood work, and more through one API.
+> Subscribe → run this list → all health integrations light up → notify users.
+
+### Step 1: Provision
+- [ ] Subscribe to Vital — set up API key, configure webhook endpoint
+- [ ] Wire Vital as a single integration (connect/callback/status/disconnect pattern)
+- [ ] Add ECOSYSTEM_KEYWORDS for health: sleep, recovery, heart rate, workout, strain, blood, vitals
+
+### Step 2: Chat Tools
+- [ ] Health summary tool — daily snapshot (sleep, recovery, activity)
+- [ ] Sleep detail tool — sleep stages, duration, quality
+- [ ] Activity tool — workouts, steps, strain
+- [ ] Blood work tool — lab results, trends (Vital-specific)
+- [ ] Heart rate tool — resting, active, variability
+
+### Step 3: Notify Users
+- [ ] Add "Health" integration card to Settings → Sources
+- [ ] Flag existing users — in-app notification that health integrations are live
+- [ ] Email template for health launch (add to email-templates.js)
+
+### Step 4: Supported Providers (via Vital)
+- [ ] Whoop — sleep, recovery, strain, heart rate
+- [ ] Oura — sleep, readiness, heart rate
+- [ ] Strava — runs, rides, workouts
+- [ ] Garmin — activity, sleep, heart rate, stress
+- [ ] Apple Health — via Vital mobile SDK
+- [ ] Blood work — Quest, Labcorp via Vital
+
+### Already done
+- [x] Fitbit — live, direct OAuth, not dependent on Vital
 
 ---
 
@@ -193,12 +228,8 @@
 ### Tier 1: Everyone
 - [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
 - [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
-- [ ] **Health — direct integrations** (Terra/Vital too expensive pre-launch, going direct):
-  - [ ] Whoop — sleep, recovery, strain, heart rate. Free OAuth2.
-  - [x] Fitbit — ✅ OAuth + 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
-  - [ ] Oura — sleep, readiness, heart rate. Free OAuth2.
-  - [ ] Strava — runs, rides, workouts. Free OAuth2.
-  - [ ] Garmin — activity, sleep, heart rate, stress. OAuth 1.0a (harder).
+- [x] **Fitbit** — ✅ OAuth + 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
+- [ ] **Health — Vital Day** (second paid subscription after droplet, see Vital Day checklist below)
 
 ### Tier 2: Extends Fabric
 - [ ] **Sonos** — play Fabric through home speakers. Sonos Control API (OAuth2). Speaker selection/grouping in player UI.
