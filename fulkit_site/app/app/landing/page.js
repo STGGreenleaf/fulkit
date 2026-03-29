@@ -290,7 +290,7 @@ export default function Landing() {
             <div
               key={i}
               style={{
-                fontSize: "var(--font-size-lg)",
+                fontSize: isMobile ? "var(--font-size-base)" : "var(--font-size-lg)",
                 lineHeight: "var(--line-height-relaxed)",
                 color: "var(--color-text-secondary)",
               }}
