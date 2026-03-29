@@ -333,9 +333,9 @@ const SOURCE_DESCRIPTIONS = {
   },
   sonos: {
     subtitle: "Your speakers, connected.",
-    description: "Sonos lets you play music through any speaker in your home. Connecting it means Fabric can control playback, pick rooms, and adjust volume \u2014 all from the player. Requires a connected music source like Spotify or Apple Music.",
-    gives: "Speaker selection, room grouping, volume control, and playback status across your Sonos system. Play to your living room, kitchen, or everywhere at once.",
-    tryPrompt: "Play this in the living room",
+    description: "Sonos plays music through every room in your home. Connecting it means Fabric can pick which speakers to play on, control volume per room, and group rooms together \u2014 all without opening the Sonos app. Requires a connected music source like Spotify or Apple Music.",
+    gives: "Room selection, speaker grouping, per-room volume, and playback control across your entire Sonos system. Tell B-Side where to play and he\u2019ll route it.",
+    tryPrompt: "Play this in the living room\u201D\n\u201CVolume to 40 in the kitchen\u201D\n\u201CPlay everywhere\u201D\n\u201CWhat rooms do I have?",
     linkLabel: "sonos.com",
     linkHref: "https://www.sonos.com",
   },
@@ -1136,6 +1136,10 @@ function SourcesTab() {
   const [fitbitExpanded, setFitbitExpanded] = useState(false);
   const [fitbitLastSynced, setFitbitLastSynced] = useState(null);
   const [fitbitDisconnecting, setFitbitDisconnecting] = useState(false);
+  const [sonosConnected, setSonosConnected] = useState(false);
+  const [sonosExpanded, setSonosExpanded] = useState(false);
+  const [sonosLastSynced, setSonosLastSynced] = useState(null);
+  const [sonosDisconnecting, setSonosDisconnecting] = useState(false);
 
   const [qbConnected, setQbConnected] = useState(false);
   const [qbExpanded, setQbExpanded] = useState(false);
@@ -1236,6 +1240,9 @@ function SourcesTab() {
     if (params.get("fb") === "connected") {
       setFitbitConnected(true);
     }
+    if (params.get("sp") === "connected") {
+      setSonosConnected(true);
+    }
     if (params.get("qb") === "connected") {
       setQbConnected(true);
     }
@@ -1301,6 +1308,7 @@ function SourcesTab() {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
+        if (fabric.providers?.sonos) setSonosConnected(true);
       }
       if (numbrly) { setNumbrlyConnected(numbrly.connected); if (numbrly.lastSynced) setNumbrlyLastSynced(numbrly.lastSynced); }
       if (tg) { setTgConnected(tg.connected); if (tg.lastSynced) setTgLastSynced(tg.lastSynced); }
@@ -1920,6 +1928,19 @@ function SourcesTab() {
     setFitbitDisconnecting(false);
   }
 
+  async function disconnectSonos() {
+    setSonosDisconnecting(true);
+    try {
+      await fetch("/api/fabric/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "sonos" }),
+      });
+      setSonosConnected(false);
+    } catch {}
+    setSonosDisconnecting(false);
+  }
+
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
@@ -1932,6 +1953,7 @@ function SourcesTab() {
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
     ...(fitbitConnected ? ["fitbit"] : []),
+    ...(sonosConnected ? ["sonos"] : []),
     ...(qbConnected ? ["quickbooks"] : []),
     ...(obsidianConnected ? ["obsidian"] : []),
     ...(notionConnected ? ["notion"] : []),
@@ -1941,7 +1963,7 @@ function SourcesTab() {
     ...(todoistConnected ? ["todoist"] : []),
     ...(readwiseConnected ? ["readwise"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -2134,7 +2156,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || qbConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || sonosConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || qbConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -2658,6 +2680,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fitbitDisconnecting ? 0.5 : 1 }}
                         >
                           {fitbitDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Sonos — connected */}
+            {sonosConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.sonos}
+                  name="Sonos"
+                  subtitle="Your speakers, connected."
+                  isExpanded={sonosExpanded}
+                  onToggle={() => setSonosExpanded(!sonosExpanded)}
+                />
+                <Drawer open={sonosExpanded}>
+                  {richDrawerContent({
+                    expanded: sonosExpanded,
+                    description: SOURCE_DESCRIPTIONS.sonos.description,
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: SOURCE_DESCRIPTIONS.sonos.gives,
+                    tryPrompt: SOURCE_DESCRIPTIONS.sonos.tryPrompt,
+                    linkLabel: SOURCE_DESCRIPTIONS.sonos.linkLabel,
+                    linkHref: SOURCE_DESCRIPTIONS.sonos.linkHref,
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{sonosLastSynced ? ` \u00B7 Last synced ${timeAgo(sonosLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectSonos}
+                          disabled={sonosDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: sonosDisconnecting ? 0.5 : 1 }}
+                        >
+                          {sonosDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),
