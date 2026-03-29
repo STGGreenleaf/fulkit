@@ -1918,13 +1918,13 @@ function SourcesTab() {
 
   function connectSonos() {
     if (accessToken) {
-      window.open("/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(accessToken), "_blank");
+      window.location.href = "/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(accessToken);
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.open("/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(token), "_blank");
+        window.location.href = "/api/fabric/connect?provider=sonos&token=" + encodeURIComponent(token);
       }
     }).catch(() => {});
   }
