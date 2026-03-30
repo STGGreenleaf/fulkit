@@ -290,10 +290,8 @@ export default function Hum() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [
-            { role: "system", content: "You are in voice mode (The Hum). Execute commands immediately — never ask for confirmation. Respond in 1-2 short sentences max. Be warm but brief. Never repeat back full details of what was asked. Good: \"Done, meeting added for tomorrow at 11.\" Bad: \"I've scheduled a meeting for Tuesday, April 1st, 2026 at 11:00 AM. Would you like me to add any notes?\"" },
-            ...messagesRef.current,
-          ],
+          messages: messagesRef.current,
+          context: [{ title: "Voice Mode", content: "User is speaking via The Hum (voice mode). Execute commands immediately — never ask for confirmation. Respond in 1-2 short sentences max. Be warm but brief. Never repeat back full details. Good: \"Done, meeting added.\" Bad: \"I've scheduled a meeting for Tuesday, April 1st at 11:00 AM. Would you like me to add notes?\"" }],
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
         signal: controller.signal,
@@ -627,27 +625,28 @@ export default function Hum() {
         )}
 
         <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
-          {/* End session */}
+          {/* End session — outline style */}
           <button
             onClick={endSession}
             style={{
               width: 48,
               height: 48,
               borderRadius: "var(--radius-full)",
-              background: mode === "idle" ? "var(--color-border)" : "var(--color-bg-inverse)",
+              background: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              border: "none",
+              border: "1px solid var(--color-border)",
               transition: `all var(--duration-slow) var(--ease-default)`,
+              opacity: mode === "idle" ? 0.4 : 0.7,
             }}
             title="End session"
           >
-            <X size={18} strokeWidth={2} color={mode === "idle" ? "var(--color-text-muted)" : "var(--color-text-inverse)"} />
+            <X size={18} strokeWidth={1.8} color="var(--color-text-muted)" />
           </button>
 
-          {/* Main mic button */}
+          {/* Main mic button — Fülkit Black, no red */}
           <button
             onClick={handleMicTap}
             disabled={!supported || mode === "thinking" || mode === "speaking"}
@@ -655,14 +654,13 @@ export default function Hum() {
               width: 64,
               height: 64,
               borderRadius: "var(--radius-full)",
-              background: mode === "listening" ? "var(--color-error)" : "var(--color-bg-inverse)",
+              background: "var(--color-bg-inverse)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: mode === "thinking" || mode === "speaking" ? "wait" : "pointer",
               border: "none",
               transition: `all var(--duration-slow) var(--ease-default)`,
-              boxShadow: mode === "listening" ? "0 0 20px rgba(196, 59, 46, 0.3)" : "var(--shadow-none)",
               opacity: mode === "thinking" || mode === "speaking" ? 0.5 : 1,
             }}
             title={mode === "idle" ? "Start talking" : mode === "listening" ? "Stop and send" : "Processing..."}
@@ -674,25 +672,25 @@ export default function Hum() {
             )}
           </button>
 
-          {/* Go back / cancel */}
+          {/* Go back / cancel — outline style */}
           <button
             onClick={goBack}
             style={{
               width: 48,
               height: 48,
               borderRadius: "var(--radius-full)",
-              background: mode === "idle" ? "var(--color-border)" : "var(--color-bg-inverse)",
+              background: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              border: "none",
+              border: "1px solid var(--color-border)",
               transition: `all var(--duration-slow) var(--ease-default)`,
-              opacity: mode === "idle" ? 0.4 : 1,
+              opacity: mode === "idle" ? 0.4 : 0.7,
             }}
             title={mode === "speaking" ? "Stop speaking" : mode === "thinking" ? "Cancel" : "Back"}
           >
-            <ArrowLeft size={18} strokeWidth={2} color={mode === "idle" ? "var(--color-text-muted)" : "var(--color-text-inverse)"} />
+            <ArrowLeft size={18} strokeWidth={1.8} color="var(--color-text-muted)" />
           </button>
         </div>
       </div>
