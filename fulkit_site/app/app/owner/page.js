@@ -6458,6 +6458,44 @@ function PlaygroundTab() {
       {/* ═══ POSTER PREVIEW ═══ */}
       <PosterPreview openSections={openSections} toggle={toggle} FOLD={FOLD} FOLD_BTN={FOLD_BTN} FOLD_LABEL={FOLD_LABEL} />
 
+      {/* ═══ GROWTH MESSAGES ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("growth")} style={FOLD_BTN}>
+          <Megaphone size={14} color="var(--color-text-dim)" />
+          <span style={FOLD_LABEL}>Growth Messages</span>
+          {openSections.growth ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.growth && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {[
+              { label: "Trial ending (3 days left)", text: "3 days left on your trial — subscribe to keep everything", context: "Chat banner, trial users only" },
+              { label: "Trial expired", text: "Your 14 days are up. Everything you built is still here. Subscribe to pick up where you left off.", context: "Chat input replaced, trial users" },
+              { label: "Soft warning", text: "X messages left this month", context: "Chat banner, subtle" },
+              { label: "Heads up — Free", text: "X messages left — subscribe to keep everything you've built", context: "Chat banner, free users" },
+              { label: "Heads up — Standard", text: `X messages left — ${CREDITS.amount} more for ${CREDITS.priceLabel} · Pro: ${TIERS.pro.messages} msgs + longer responses — ${TIERS.pro.priceLabel} · annual saves $18/yr`, context: "Chat banner, Standard users" },
+              { label: "Heads up — Pro", text: `X messages left — ${CREDITS.amount} more for ${CREDITS.priceLabel} · annual saves $30/yr`, context: "Chat banner, Pro users" },
+              { label: "Last message", text: "last message this cycle — make it count", context: "Chat banner, all paid tiers" },
+              { label: "Capped — Free", text: `That's a wrap for this month. Everything you've built is still here. → Start with ${TIERS.standard.label} — ${TIERS.standard.priceLabel}`, context: "Chat input replaced" },
+              { label: "Capped — Standard", text: `That's a wrap for this month. → Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel} · Go Pro — ${TIERS.pro.messages} messages — ${TIERS.pro.priceLabel} · Or bring your own key — unlimited`, context: "Chat input replaced" },
+              { label: "Capped — Pro", text: `That's a wrap for this month. → Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel} · Or bring your own key — unlimited`, context: "Chat input replaced" },
+              { label: "API 429 — Free", text: `You've used all messages this month. Upgrade to Standard for ${TIERS.standard.messages} messages (${TIERS.standard.priceLabel}), grab credits (${CREDITS.priceLabel}/${CREDITS.amount}), or drop in your own API key for unlimited.`, context: "Server response" },
+              { label: "API 429 — Standard", text: `You've used all messages this month. Upgrade to Pro for ${TIERS.pro.messages} messages (${TIERS.pro.priceLabel}), grab credits (${CREDITS.priceLabel}/${CREDITS.amount}), or drop in your own API key for unlimited.`, context: "Server response" },
+              { label: "API 429 — Pro", text: `You've used all messages this month. Grab more credits (${CREDITS.priceLabel} per ${CREDITS.amount} messages) or drop in your own API key for unlimited.`, context: "Server response" },
+              { label: "Referral", text: `${REFERRALS.freeAtStandard} friends = free forever.`, context: "Pitch / landing" },
+            ].map((msg, i) => (
+              <div key={i} style={{ borderBottom: i < 13 ? "1px solid var(--color-border-light)" : "none", paddingBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{msg.label}</span>
+                  <CopyButton text={msg.text} label="Copy" />
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{msg.text}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{msg.context}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ═══ QUICK PREVIEWS ═══ */}
       <div style={FOLD}>
         <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
