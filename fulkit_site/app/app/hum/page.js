@@ -261,6 +261,26 @@ export default function Hum() {
     setMode("listening");
   }, [supported]);
 
+  // Warm confirmation tone — instant feedback on stop
+  const playConfirmTone = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const play = (freq, start, dur) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+      play(520, 0, 0.12);
+      play(660, 0.08, 0.15);
+    } catch {}
+  }, []);
+
   // ─── Voice: stop listening → send to AI ───
   const stopListening = useCallback(async () => {
     if (recognitionRef.current) {
@@ -274,6 +294,7 @@ export default function Hum() {
       return;
     }
 
+    playConfirmTone();
     setMode("thinking");
 
     // Add to conversation history
