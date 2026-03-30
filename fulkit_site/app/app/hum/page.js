@@ -520,7 +520,7 @@ export default function Hum() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         overflow: "hidden",
         position: "relative",
         userSelect: "none",
@@ -532,14 +532,11 @@ export default function Hum() {
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
       `}</style>
 
-      {/* Top: Status */}
+      {/* Status label */}
       <div
         style={{
-          position: "absolute",
-          top: "var(--space-6)",
-          left: 0,
-          right: 0,
           textAlign: "center",
+          padding: "var(--space-3) 0",
           animation: "fadeIn 0.8s 0.3s both",
         }}
       >
@@ -572,15 +569,14 @@ export default function Hum() {
 
       {/* No transcript or response text — just the orb */}
 
-      {/* Bottom: Controls */}
+      {/* Controls */}
       <div
         style={{
-          position: "absolute",
-          bottom: "var(--space-10)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "var(--space-4)",
+          gap: "var(--space-3)",
+          paddingBottom: "var(--space-6)",
           animation: "fadeIn 0.6s 0.8s both",
         }}
       >
