@@ -11,6 +11,7 @@
 
 ### Bugs (fix first)
 - [ ] **Settings/Sources CLS 0.33-0.44** — integration cards pop in as status checks resolve, causing layout shifts. Fix: skeleton placeholders for cards until statuses load. LCP also 7-10s from parallel status fetches.
+- [ ] **Spend Moderator history** — currently resets when signals are cleared. Need persistent spend_log aggregation (daily/weekly rollups) so cost trends are visible over time. Goal: watch cost per message go down as Habit Engine + lean tool loading get smarter. Table or chart in Radio tab showing avg cost, tokens, cache hit rate over time.
 - [x] **Fabric search 500s** — ✅ Search endpoint returns empty results on error (not 500). cleanTitle() strips BPM from all search query paths.
 - [x] **B-Side set track IDs include BPM** — ✅ Format 1: reordered strip chain (markers before BPM). Format 2: made BPM word optional + tightened gate to reject prose. cleanTitle() at all 4 query construction points.
 - [x] **B-Side set tracks not playing** — ✅ btc-* tracks routed to YouTube (not Spotify path). Fixed search result property name (data.results not data.tracks).
