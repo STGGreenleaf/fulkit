@@ -2039,6 +2039,41 @@ export function FabricProvider({ children }) {
     setMusicMessages(newMessages);
     setMusicStreaming(true);
 
+    // ── Instant playback controls — execute before B-Side responds ──
+    const cmd = text.trim().toLowerCase();
+    // Pause: "pause", "stop", "hold on" (but not "stop recommending..." or "don't stop")
+    if (/^(pause|stop|hold on|freeze)(\s+(it|the music|that|playback))?[.!]?$/i.test(cmd)) {
+      pause();
+    }
+    // Resume: "play", "resume", "unpause", "keep going", "hit it" (but not "play some X")
+    else if (/^(play|resume|unpause|keep going|hit it|go)(\s+(it|the music|that))?[.!]?$/i.test(cmd)) {
+      play();
+    }
+    // Skip: "skip", "next", "skip this", "next track"
+    else if (/^(skip|next)(\s+(this|it|track|song|one))?[.!]?$/i.test(cmd)) {
+      skip();
+    }
+    // Previous: "previous", "go back", "last track"
+    else if (/^(previous|prev|go back|back)(\s+(track|song|one))?[.!]?$/i.test(cmd)) {
+      prev();
+    }
+    // Volume set: "volume 40", "vol to 60", "turn it up to 80", "set volume 50"
+    else if (/\b(?:volume|vol)\b.*?\b(\d{1,3})\b/i.test(cmd) || /\bturn\s+it\s+(?:up|down)\s+to\s+(\d{1,3})\b/i.test(cmd)) {
+      const m = cmd.match(/\b(\d{1,3})\b/);
+      if (m) setVolume(parseInt(m[1], 10));
+    }
+    // Volume relative: "louder", "turn it up", "quieter", "turn it down"
+    else if (/\b(louder|turn\s*(it\s+)?up)\b/i.test(cmd)) {
+      setVolume(Math.min(100, volume + 15));
+    }
+    else if (/\b(quieter|softer|turn\s*(it\s+)?down)\b/i.test(cmd)) {
+      setVolume(Math.max(0, volume - 15));
+    }
+    // Mute: "mute", "silence"
+    else if (/^(mute|silence)(\s+(it|the music))?[.!]?$/i.test(cmd)) {
+      setVolume(0);
+    }
+
     try {
       const res = await fetch("/api/fabric/chat", {
         method: "POST",
@@ -2175,7 +2210,7 @@ export function FabricProvider({ children }) {
       setMusicMessages(prev => [...prev, { role: "assistant", content: "Lost the signal. Try again." }]);
     }
     setMusicStreaming(false);
-  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged, buildTasteSummary, guyCrate, sonosGroups]);
+  }, [musicMessages, musicStreaming, accessToken, currentTrack, audioFeatures, flagged, buildTasteSummary, guyCrate, sonosGroups, play, pause, skip, prev, setVolume, volume]);
 
   // Sonos speaker control
   const sonosControl = useCallback(async (groupId, action, value) => {
