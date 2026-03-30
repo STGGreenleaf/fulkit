@@ -19,11 +19,18 @@ export class SonosProvider {
     this.userId = userId;
   }
 
-  // ═══ Capabilities ═══
-  // Sonos is a speaker controller, not a music source — no search/library
+  // ═══ Capability stubs ═══
+  // Sonos is a speaker controller, not a music source.
+  // These no-ops prevent crashes when routes iterate all connected providers.
   async search() { return { tracks: [] }; }
   async getPlaylists() { return []; }
+  async getPlaylistTracks() { return []; }
+  async getPlaylistRaw() { return null; }
   async getNowPlaying() { return { isPlaying: false, track: null }; }
+  async getDevices() { return []; }
+  async transferPlayback() { return { ok: true }; }
+  makeTrackUri() { return null; }
+  makePlaylistUri() { return null; }
 
   // ═══ Auth ═══
 
