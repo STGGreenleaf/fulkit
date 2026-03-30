@@ -1,26 +1,24 @@
 # Last Session
 
-**Date**: 2026-03-29 (Session 26)
-**Scope**: Fabric search bugs, Spotify independence sweep, B-Side controls, Sonos speaker picker
+**Date**: 2026-03-29 (Session 26, marathon)
+**Scope**: Fabric bugs, Spotify independence, B-Side controls, Sonos picker, Strava integration
 
 **Shipped**:
-- Search 500s + BPM-dirty track IDs fixed (cleanTitle, strip order, prose gate)
-- Resume cue fix (validate YouTube ID before cueing)
-- Sonos crashing all searches (missing .search() method — full stubs added)
-- Fabric independence: 13 files, Spotify demoted to plugin (routing by track.provider, defaults removed, API routes accept provider, ecosystem renamed to "fabric")
+- Search 500s + BPM-dirty track IDs + resume cue + Sonos crashing searches — all fixed
+- Fabric independence: 13 files, Spotify demoted to plugin (routing by track.provider)
 - B-Side playback control: play/pause/skip/prev/volume/mute via text, instant execution
-- B-Side set intent: now matches "mix", "playlist", "sets" (plural), numbered lists
-- B-Side exclusion list restructured per-set + taste anchors reframed
-- Sonos speaker picker UI: speaker icon in both transport bars, dropdown with rooms, offline fallback, B-Side room routing via text
+- B-Side set creation: matches mix/playlist/sets, numbered lists, structured exclusion list
+- Sonos speaker picker UI: both transport bars, room routing via B-Side text, offline fallback
 - Provider sweep: full stubs on Sonos, seat limits per-provider
+- Strava integration: full OAuth, 3 chat tools, Settings card, webhook endpoint, API review submitted
 
 **Carry forward — NEXT**:
-1. **Road test** — B-Side controls, set creation, Sonos picker (Collin testing tomorrow)
-2. **Apple Music** — MusicKit JS provider
-3. **Sonos logo verify** — SVG in Sources card, needs visual check
+1. **Strava API review** — submitted, 7-10 business days (webhook ID 337803)
+2. **Road test** — B-Side controls, set creation, Sonos picker (when on home network)
+3. **Apple Music** — MusicKit JS provider (paused, needs Apple Developer key)
 4. **Pitches.md audit** — 3 flagged items
-5. **Competitive grid expand**
+5. **Sonos logo verify** — SVG in Sources card
 
 **Known issues**:
-- Sonos logo in Sources may not render (needs visual verify)
 - Google verification pending (4-6 weeks)
+- Strava limited to 1 athlete until API review approved
