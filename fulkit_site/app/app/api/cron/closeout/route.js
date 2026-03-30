@@ -10,14 +10,14 @@ import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import { squareFetch } from "../../../../lib/square-server";
 import { getTrueGaugeToken, truegaugeFetch } from "../../../../lib/truegauge";
 
-function todayCT() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+function todayMST() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 }
 
-function yesterdayCT() {
+function yesterdayMST() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  return d.toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 }
 
 async function getSquareDailySales(userId, date) {
@@ -67,10 +67,10 @@ export async function GET(request) {
 
     if (!owner) return Response.json({ processed: 0 });
 
-    const today = todayCT();
-    const yesterday = yesterdayCT();
-    const hourCT = new Date().toLocaleString("en-US", { timeZone: "America/Chicago", hour: "numeric", hour12: false });
-    const isMorning = parseInt(hourCT) < 12;
+    const today = todayMST();
+    const yesterday = yesterdayMST();
+    const hourMST = new Date().toLocaleString("en-US", { timeZone: "America/Denver", hour: "numeric", hour12: false });
+    const isMorning = parseInt(hourMST) < 12;
 
     // Check the relevant date
     const checkDate = isMorning ? yesterday : today;
