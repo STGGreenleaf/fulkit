@@ -6274,8 +6274,6 @@ function PlaygroundTab() {
 
   // ── Email preview state ──
   const [emailTemplate, setEmailTemplate] = useState("welcome");
-  // ── Pitches state ──
-  const [pgPitchCat, setPgPitchCat] = useState("All");
   const emailIframeRef = useRef(null);
 
   useEffect(() => {
@@ -6459,41 +6457,6 @@ function PlaygroundTab() {
 
       {/* ═══ POSTER PREVIEW ═══ */}
       <PosterPreview openSections={openSections} toggle={toggle} FOLD={FOLD} FOLD_BTN={FOLD_BTN} FOLD_LABEL={FOLD_LABEL} />
-
-      {/* ═══ PITCHES ═══ */}
-      <div style={FOLD}>
-        <button onClick={() => toggle("pitches")} style={FOLD_BTN}>
-          <Speech size={14} color="var(--color-text-dim)" />
-          <span style={FOLD_LABEL}>Pitches</span>
-          {openSections.pitches ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
-        </button>
-        {openSections.pitches && (
-          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)" }}>
-            <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
-              {["All", ...PITCH_CATEGORIES].map(cat => (
-                <button key={cat} onClick={() => setPgPitchCat(cat)} style={{
-                  padding: "3px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-                  background: pgPitchCat === cat ? "var(--color-text)" : "transparent",
-                  color: pgPitchCat === cat ? "var(--color-bg)" : "var(--color-text-dim)",
-                  fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer",
-                }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <div style={{ maxHeight: 500, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
-              {PITCHES.filter(p => pgPitchCat === "All" || p.cat === pgPitchCat).map((p, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", padding: "var(--space-2)", borderBottom: "1px solid var(--color-border-light)" }}>
-                  <div style={{ flex: 1, fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>
-                    {p.text}
-                  </div>
-                  <CopyButton text={p.text} label="Copy" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* ═══ QUICK PREVIEWS ═══ */}
       <div style={FOLD}>
