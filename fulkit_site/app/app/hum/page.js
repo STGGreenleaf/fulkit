@@ -253,34 +253,16 @@ export default function Hum() {
     };
 
     recognition.onend = () => {
-      // Only auto-process if we were still in listening mode (not manually stopped)
-      recognitionRef.current = null;
+      // Browser killed the session (silence timeout) — restart if still in listening mode
+      if (recognitionRef.current === recognition) {
+        try { recognition.start(); } catch { recognitionRef.current = null; }
+      }
     };
 
     recognition.start();
     recognitionRef.current = recognition;
     setMode("listening");
   }, [supported]);
-
-  // Warm confirmation tone — instant feedback on stop
-  const playConfirmTone = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const play = (freq, start, dur) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + dur);
-      };
-      play(520, 0, 0.12);
-      play(660, 0.08, 0.15);
-    } catch {}
-  }, []);
 
   // ─── Voice: stop listening → send to AI ───
   const stopListening = useCallback(async () => {
@@ -295,7 +277,6 @@ export default function Hum() {
       return;
     }
 
-    playConfirmTone();
     setMode("thinking");
 
     // Add to conversation history
@@ -371,7 +352,7 @@ export default function Hum() {
       setResponse("Couldn\u2019t reach the server.");
       speakTextRef.current("Couldn\u2019t reach the server.");
     }
-  }, [authFetch, playConfirmTone]);
+  }, [authFetch]);
 
   // ─── Voice: TTS via OpenAI (alloy), falls back to browser speech ───
   const speakText = useCallback(async (text) => {
