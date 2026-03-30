@@ -6,7 +6,7 @@ export async function GET(request) {
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
-  const providerName = url.searchParams.get("provider") || "spotify";
+  const providerName = url.searchParams.get("provider") || "youtube";
   const provider = getProvider(userId, providerName);
   if (!provider) return Response.json({ error: "Unknown provider" }, { status: 400 });
   const result = await provider.getNowPlaying();

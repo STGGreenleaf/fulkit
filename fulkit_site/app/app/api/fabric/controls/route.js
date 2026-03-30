@@ -5,7 +5,7 @@ export async function POST(request) {
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { action, value, provider: providerName } = await request.json();
-  const provider = getProvider(userId, providerName || "spotify");
+  const provider = getProvider(userId, providerName || "youtube");
   if (!provider) return Response.json({ error: "Unknown provider" }, { status: 400 });
   const result = await provider.control(action, value);
 

@@ -3631,7 +3631,7 @@ export default function FabricPage() {
     }
   }, [crates, featuredCratesRef]);
 
-  // Import a Spotify playlist as a crate
+  // Import a playlist as a crate (works with any provider)
   const importPlaylist = useCallback(async (pl) => {
     if (!accessToken || importing) return;
     setImporting(pl.id);
@@ -5712,7 +5712,7 @@ export default function FabricPage() {
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>
                     {playlists.length > 0
                       ? "Import a playlist to get started"
-                      : "Connect music in Settings \u2192 Sources"
+                      : "Search for music or create a set to get started"
                     }
                   </div>
                   {playlists.length > 0 && (
@@ -5735,7 +5735,7 @@ export default function FabricPage() {
                       }}
                     >
                       <Download size={10} strokeWidth={2} />
-                      Browse Spotify Playlists
+                      Browse Playlists
                     </button>
                   )}
                 </div>
@@ -5957,7 +5957,7 @@ export default function FabricPage() {
                     justifyContent: "space-between",
                     flexShrink: 0,
                   }}>
-                    <Label>Spotify Playlists</Label>
+                    <Label>Playlists</Label>
                     <button
                       onClick={() => setShowSpotifyBrowser(false)}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--color-text-muted)" }}
