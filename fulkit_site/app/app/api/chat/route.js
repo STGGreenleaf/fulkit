@@ -2,7 +2,7 @@ export const maxDuration = 120; // seconds — prevent Vercel from killing long 
 
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../lib/supabase-server";
-import { getGitHubToken, githubFetch } from "../../../lib/github";
+import { getGitHubToken, githubFetch, githubWrite, githubPost } from "../../../lib/github";
 import { getNumbrlyToken, numbrlyFetch } from "../../../lib/numbrly";
 import { getTrueGaugeToken, truegaugeFetch } from "../../../lib/truegauge";
 import { getSquareToken, squareFetch } from "../../../lib/square-server";
@@ -3426,6 +3426,170 @@ async function executeAutomationTool(name, input, userId, admin, timezone) {
   throw new Error(`Unknown automation tool: ${name}`);
 }
 
+// Dev tools — owner-only. Code read/write, commits, branches, PRs, issues.
+// NEVER loaded for non-owner users. Invisible to the product.
+const DEV_TOOLS = [
+  {
+    name: "dev_write_file",
+    description: "Create or update a file in a GitHub repo. Auto-commits. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        path: { type: "string", description: "File path in repo (e.g. app/lib/utils.js)" },
+        content: { type: "string", description: "Full file content" },
+        message: { type: "string", description: "Commit message" },
+        branch: { type: "string", description: "Branch name (default: main)" },
+      },
+      required: ["repo", "path", "content", "message"],
+    },
+  },
+  {
+    name: "dev_create_branch",
+    description: "Create a new branch from main (or specified base). Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        branch: { type: "string", description: "New branch name" },
+        from: { type: "string", description: "Base branch (default: main)" },
+      },
+      required: ["repo", "branch"],
+    },
+  },
+  {
+    name: "dev_create_issue",
+    description: "Create a GitHub issue. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        title: { type: "string", description: "Issue title" },
+        body: { type: "string", description: "Issue body (markdown)" },
+        labels: { type: "array", items: { type: "string" }, description: "Labels (optional)" },
+      },
+      required: ["repo", "title"],
+    },
+  },
+  {
+    name: "dev_create_pr",
+    description: "Create a pull request. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        title: { type: "string", description: "PR title" },
+        body: { type: "string", description: "PR description (markdown)" },
+        head: { type: "string", description: "Source branch" },
+        base: { type: "string", description: "Target branch (default: main)" },
+      },
+      required: ["repo", "title", "head"],
+    },
+  },
+  {
+    name: "dev_list_commits",
+    description: "List recent commits on a branch. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        branch: { type: "string", description: "Branch (default: main)" },
+        count: { type: "number", description: "How many commits (default 10, max 30)" },
+      },
+      required: ["repo"],
+    },
+  },
+  {
+    name: "dev_search_code",
+    description: "Search code content across a repo (grep-like). Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        query: { type: "string", description: "Search query (searches file content via GitHub)" },
+      },
+      required: ["repo", "query"],
+    },
+  },
+];
+
+async function executeDevTool(name, input, userId, ghToken) {
+  if (!ghToken) throw new Error("GitHub not connected");
+
+  if (name === "dev_write_file") {
+    const { repo, path, content, message, branch } = input;
+    // Get existing file SHA if updating
+    let sha;
+    try {
+      const existing = await githubFetch(ghToken, `/repos/${repo}/contents/${path}${branch ? `?ref=${branch}` : ""}`);
+      sha = existing.sha;
+    } catch {} // File doesn't exist yet — that's fine
+
+    const result = await githubWrite(ghToken, `/repos/${repo}/contents/${path}`, {
+      message,
+      content: Buffer.from(content).toString("base64"),
+      branch: branch || "main",
+      ...(sha ? { sha } : {}),
+    });
+    return { committed: true, sha: result.commit?.sha?.slice(0, 7), path, message };
+  }
+
+  if (name === "dev_create_branch") {
+    const { repo, branch, from } = input;
+    const base = await githubFetch(ghToken, `/repos/${repo}/git/ref/heads/${from || "main"}`);
+    const result = await githubPost(ghToken, `/repos/${repo}/git/refs`, {
+      ref: `refs/heads/${branch}`,
+      sha: base.object.sha,
+    });
+    return { created: true, branch, sha: result.object?.sha?.slice(0, 7) };
+  }
+
+  if (name === "dev_create_issue") {
+    const { repo, title, body, labels } = input;
+    const result = await githubPost(ghToken, `/repos/${repo}/issues`, {
+      title, body: body || "", labels: labels || [],
+    });
+    return { created: true, number: result.number, url: result.html_url };
+  }
+
+  if (name === "dev_create_pr") {
+    const { repo, title, body, head, base } = input;
+    const result = await githubPost(ghToken, `/repos/${repo}/pulls`, {
+      title, body: body || "", head, base: base || "main",
+    });
+    return { created: true, number: result.number, url: result.html_url };
+  }
+
+  if (name === "dev_list_commits") {
+    const { repo, branch, count } = input;
+    const n = Math.min(count || 10, 30);
+    const commits = await githubFetch(ghToken, `/repos/${repo}/commits?sha=${branch || "main"}&per_page=${n}`);
+    return {
+      commits: commits.map(c => ({
+        sha: c.sha?.slice(0, 7),
+        message: c.commit?.message?.split("\n")[0],
+        author: c.commit?.author?.name,
+        date: c.commit?.author?.date,
+      })),
+    };
+  }
+
+  if (name === "dev_search_code") {
+    const { repo, query } = input;
+    const result = await githubFetch(ghToken, `/search/code?q=${encodeURIComponent(query)}+repo:${repo}&per_page=10`);
+    return {
+      matches: (result.items || []).map(item => ({
+        path: item.path,
+        name: item.name,
+        url: item.html_url,
+      })),
+      total: result.total_count || 0,
+    };
+  }
+
+  throw new Error(`Unknown dev tool: ${name}`);
+}
+
 // Memory tools — Claude can save/list/forget facts about the user
 const MEMORY_TOOLS = [
   {
@@ -4617,6 +4781,7 @@ Never skip the preview step. The user must see and approve changes before they g
     const allTools = [
       ...(userId ? ACTIONS_TOOLS : []),
       ...(userId ? AUTOMATION_TOOLS : []),
+      ...(userId && profile?.role === "owner" && ghToken ? DEV_TOOLS : []),
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
@@ -4806,6 +4971,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("actions_") && userId) {
                 try {
                   const result = await withTimeout(() => executeActionTool(block.name, block.input || {}, userId, conversationId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Dev tools — owner only (dev_write_file, dev_create_branch, etc.)
+              if (block.name.startsWith("dev_") && userId && profile?.role === "owner") {
+                try {
+                  const result = await withTimeout(() => executeDevTool(block.name, block.input || {}, userId, ghToken));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

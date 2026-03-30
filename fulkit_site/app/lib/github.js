@@ -27,6 +27,43 @@ export async function githubFetch(token, endpoint) {
   return res.json();
 }
 
+// GitHub write operations (owner-only dev tools)
+export async function githubWrite(token, endpoint, body) {
+  const res = await fetch(`https://api.github.com${endpoint}`, {
+    method: body ? "PUT" : "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "Fulkit",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `GitHub API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function githubPost(token, endpoint, body) {
+  const res = await fetch(`https://api.github.com${endpoint}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "Fulkit",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `GitHub API error: ${res.status}`);
+  }
+  return res.json();
+}
+
 // Authenticate user from Bearer token, returns userId or null
 export async function authenticateUser(request) {
   const authHeader = request.headers.get("authorization");
