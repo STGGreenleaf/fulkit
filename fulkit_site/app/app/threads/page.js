@@ -960,7 +960,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                             boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
                           }}
                         >
-                          <v.Icon size={12} strokeWidth={1.8} />
+                          <v.Icon size={isMobile ? TAB_ICON_SIZE : 12} strokeWidth={1.8} />
                           {!compactMode && v.label}
                         </button>
                       </Tooltip>
@@ -1064,7 +1064,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                           boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
                         }}
                       >
-                        <v.Icon size={12} strokeWidth={1.8} />
+                        <v.Icon size={isMobile ? TAB_ICON_SIZE : 12} strokeWidth={1.8} />
                       </button>
                     </Tooltip>
                   );

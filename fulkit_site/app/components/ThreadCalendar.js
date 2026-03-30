@@ -146,6 +146,7 @@ export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNo
       <div style={{
         display: "flex",
         alignItems: "center",
+        justifyContent: "center",
         gap: "var(--space-3)",
         marginBottom: "var(--space-4)",
       }}>
