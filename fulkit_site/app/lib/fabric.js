@@ -397,14 +397,21 @@ export function FabricProvider({ children }) {
       // Fetch Sonos groups if connected
       if (data?.providers?.sonos) {
         apiFetch("/api/fabric/sonos").then((sonosData) => {
-          if (sonosData?.groups) {
+          if (sonosData?.groups?.length) {
             setSonosGroups(sonosData.groups);
             setSonosHouseholdId(sonosData.householdId);
-            if (sonosData.groups.length > 0 && !activeSonosGroup) {
+            if (!activeSonosGroup) {
               setActiveSonosGroup(sonosData.groups[0].id);
             }
+          } else {
+            // Sonos connected but no groups reachable (off-network) — show picker with offline state
+            const offlineGroups = [{ id: "sonos-offline", name: "Sonos (offline)", playerIds: [], coordinatorId: null }];
+            setSonosGroups(offlineGroups);
           }
-        }).catch(() => {});
+        }).catch(() => {
+          // API failed — still show picker so user knows Sonos is connected
+          setSonosGroups([{ id: "sonos-offline", name: "Sonos (offline)", playerIds: [], coordinatorId: null }]);
+        });
       }
     }).catch(() => {
       setConnected(true);
