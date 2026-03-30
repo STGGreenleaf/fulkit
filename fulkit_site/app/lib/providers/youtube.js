@@ -101,7 +101,7 @@ export class YouTubeProvider {
     const keys = _getApiKeys();
     if (!keys.length) return { error: "YouTube API key not configured" };
 
-    const ytType = type === "track" ? "video" : type === "playlist" ? "playlist" : "video";
+    const ytType = type === "track" ? "video" : (type === "playlist" || type === "album") ? "playlist" : "video";
 
     // ── Cache check (saves 100 quota units per hit) ──
     const cKey = _cacheKey(query, ytType, limit);
@@ -115,7 +115,7 @@ export class YouTubeProvider {
 
       const params = new URLSearchParams({
         part: "snippet",
-        q: query + (ytType === "video" ? " official audio" : ""),
+        q: query + (ytType === "video" ? " official audio" : type === "album" ? " album" : ""),
         type: ytType,
         maxResults: String(limit),
         key: apiKey,
@@ -155,6 +155,18 @@ export class YouTubeProvider {
 
         const filtered = wantsVariant ? allTracks : allTracks.filter(t => !variantPattern.test(t.title));
         result = { tracks: filtered.length > 0 ? filtered : allTracks };
+      } else if (ytType === "playlist" && type === "album") {
+        result = {
+          albums: (data.items || []).map(item => ({
+            id: item.id.playlistId,
+            name: item.snippet.title,
+            artist: item.snippet.channelTitle?.replace(/ - Topic$/, "") || "Unknown",
+            image: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || null,
+            year: null,
+            trackCount: 0,
+            provider: "youtube",
+          })),
+        };
       } else if (ytType === "playlist") {
         result = {
           playlists: (data.items || []).map(item => ({

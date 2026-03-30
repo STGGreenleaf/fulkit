@@ -36,14 +36,23 @@ export async function GET(request) {
       return Response.json({ tracks: [] });
     }
 
-    // ── Album tracks (Spotify-specific) ──
+    // ── Album tracks (Spotify album or YouTube playlist-as-album) ──
     if (albumId) {
       const connected = await getConnectedProviders(userId);
+      // Try Spotify first
       const spotify = connected.spotify;
       if (spotify && typeof spotify.getAlbum === "function") {
         try {
           const data = await spotify.getAlbum(albumId);
-          return Response.json(data);
+          if (data.tracks?.length > 0) return Response.json(data);
+        } catch {}
+      }
+      // Fall back to YouTube playlist tracks (albums from YouTube are playlists)
+      const youtube = getProvider(userId, "youtube");
+      if (youtube && typeof youtube.getPlaylistTracks === "function") {
+        try {
+          const tracks = await youtube.getPlaylistTracks(albumId);
+          if (tracks?.length > 0) return Response.json({ tracks });
         } catch {}
       }
       return Response.json({ tracks: [] });
