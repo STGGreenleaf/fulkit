@@ -2273,14 +2273,25 @@ function SourcesTab() {
           <button onClick={() => setConnectError(null)} style={{ background: "none", border: "none", color: "var(--color-error)", cursor: "pointer", padding: "var(--space-1)", lineHeight: 0 }}><X size={14} /></button>
         </div>
       )}
-      {/* Disconnect purge prompt — shows when any disconnect is triggered */}
-      {disconnectConfirm && !disconnectConfirm._fromFooter && (
+      {/* Disconnect purge prompt — fixed overlay */}
+      {disconnectConfirm && (
         <div style={{
-          marginBottom: "var(--space-4)",
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
           padding: "var(--space-4)",
-          background: "var(--color-bg-alt)",
+        }}>
+        <div style={{
+          padding: "var(--space-4)",
+          background: "var(--color-bg)",
           border: "1px solid var(--color-border-light)",
           borderRadius: "var(--radius-md)",
+          maxWidth: 400,
+          width: "100%",
         }}>
           <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-2)" }}>
             Disconnect {disconnectConfirm.id}?
@@ -2314,6 +2325,7 @@ function SourcesTab() {
               Disconnect + purge data
             </button>
           </div>
+        </div>
         </div>
       )}
 
