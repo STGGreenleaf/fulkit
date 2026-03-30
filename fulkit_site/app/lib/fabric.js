@@ -251,6 +251,8 @@ export function FabricProvider({ children }) {
   const [sonosGroups, setSonosGroups] = useState([]);
   const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
   const [activeSonosGroup, setActiveSonosGroup] = useState(null);
+  const activeSonosGroupRef = useRef(null);
+  useEffect(() => { activeSonosGroupRef.current = activeSonosGroup; }, [activeSonosGroup]);
   const [statusChecked, setStatusChecked] = useState(false);
 
   // ── Thumbs Down (permanent rejection) ──
@@ -797,7 +799,14 @@ export function FabricProvider({ children }) {
     volumeLockedUntil.current = Date.now() + 5000;
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
-      // YouTube or no Spotify: set volume directly on iframe
+      // Sonos: route volume to active room
+      if (activeSonosGroupRef.current) {
+        apiFetch("/api/fabric/sonos", {
+          method: "POST",
+          body: JSON.stringify({ groupId: activeSonosGroupRef.current, action: "volume", value: v }),
+        });
+      }
+      // YouTube: set volume directly on iframe
       const useYT = currentTrack?.provider !== "spotify";
       if (useYT && window.__ytEngine) {
         window.__ytEngine.setVolume(v);
@@ -2076,6 +2085,29 @@ export function FabricProvider({ children }) {
       setVolume(0);
     }
 
+    // Sonos room routing: "play in living room", "volume 60 in kitchen"
+    if (sonosGroups?.length > 0) {
+      for (const g of sonosGroups) {
+        const roomPattern = new RegExp(`\\b${g.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+        if (roomPattern.test(cmd)) {
+          // Set active room
+          setActiveSonosGroup(g.id);
+          // Check for volume command with room name
+          const volMatch = cmd.match(/\bvolume\s+(\d{1,3})\b/i) || cmd.match(/\b(\d{1,3})\s*%?\s+in\b/i);
+          if (volMatch) {
+            sonosControlRef.current?.(g.id, "volume", parseInt(volMatch[1], 10));
+          }
+          // Check for play/pause in room
+          if (/\b(play|resume)\b/i.test(cmd) && !/\bplay\s+(me|some|a)\b/i.test(cmd)) {
+            sonosControlRef.current?.(g.id, "play");
+          } else if (/\b(pause|stop)\b/i.test(cmd)) {
+            sonosControlRef.current?.(g.id, "pause");
+          }
+          break;
+        }
+      }
+    }
+
     try {
       const res = await fetch("/api/fabric/chat", {
         method: "POST",
@@ -2228,6 +2260,8 @@ export function FabricProvider({ children }) {
       body: JSON.stringify({ groupId, action, value }),
     });
   }, [accessToken, apiFetch]);
+  const sonosControlRef = useRef(sonosControl);
+  useEffect(() => { sonosControlRef.current = sonosControl; }, [sonosControl]);
 
   const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
 
