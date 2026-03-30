@@ -112,6 +112,7 @@ export default function Hum() {
   const maxTimerRef = useRef(null);
 
   const MAX_RECORDING_SECONDS = 60;
+  const audioCtxRef = useRef(null);
 
   // Check browser support (MediaRecorder is universal)
   useEffect(() => {
@@ -266,6 +267,14 @@ export default function Hum() {
 
   // ─── Voice: stop recording → transcribe via Whisper → send to AI ───
   const stopListening = useCallback(async () => {
+    // Unlock AudioContext during user gesture (mobile autoplay policy)
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+
     // Clear safety timer
     if (maxTimerRef.current) { clearTimeout(maxTimerRef.current); maxTimerRef.current = null; }
 
@@ -402,21 +411,24 @@ export default function Hum() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.audio) {
-          const dataUrl = `data:audio/mpeg;base64,${data.audio}`;
-          const audio = new Audio(dataUrl);
+        if (data.audio && audioCtxRef.current) {
+          const binaryStr = atob(data.audio);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
-          audio.onended = () => {
+          const ctx = audioCtxRef.current;
+          const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+
+          source.onended = () => {
             utteranceRef.current = null;
             setMode("idle");
           };
-          audio.onerror = () => {
-            utteranceRef.current = null;
-            setMode("idle");
-          };
 
-          utteranceRef.current = audio;
-          await audio.play();
+          utteranceRef.current = source;
+          source.start(0);
           return;
         }
         ttsError = `No audio in response. Size: ${data.size || 0}`;
@@ -475,8 +487,7 @@ export default function Hum() {
       recorderRef.current = null;
     }
     if (utteranceRef.current) {
-      if (utteranceRef.current instanceof Audio) utteranceRef.current.pause();
-      else window.speechSynthesis.cancel();
+      try { utteranceRef.current.stop ? utteranceRef.current.stop() : window.speechSynthesis.cancel(); } catch {}
       utteranceRef.current = null;
     }
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
@@ -489,8 +500,7 @@ export default function Hum() {
   const goBack = useCallback(() => {
     if (mode === "speaking") {
       if (utteranceRef.current) {
-        if (utteranceRef.current instanceof Audio) utteranceRef.current.pause();
-        else window.speechSynthesis.cancel();
+        try { utteranceRef.current.stop ? utteranceRef.current.stop() : window.speechSynthesis.cancel(); } catch {}
         utteranceRef.current = null;
       }
       setMode("idle");
