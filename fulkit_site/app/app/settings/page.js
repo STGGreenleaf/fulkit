@@ -44,7 +44,7 @@ import { useVaultContext } from "../../lib/vault";
 import { supabase } from "../../lib/supabase";
 import { TIERS, SEAT_LIMITS, PLAN_LABELS, PLAN_PRICES, CREDITS, REFERRALS } from "../../lib/ful-config";
 import { useIsMobile } from "../../lib/use-mobile";
-import { SettingsSkeleton } from "../../components/Skeleton";
+import Skeleton, { SettingsSkeleton } from "../../components/Skeleton";
 
 const TABS = [
   { id: "account", label: "Account", icon: User },
@@ -2263,8 +2263,25 @@ function SourcesTab() {
         </div>
       )}
 
+      {/* Loading skeletons — reserve space while status checks run */}
+      {!statusReady && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+          {[1, 2, 3].map(i => (
+            <Card key={i} style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)" }}>
+                <Skeleton width={16} height={16} circle />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width={80} height={13} style={{ marginBottom: 4 }} />
+                  <Skeleton width={140} height={10} />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* No sources connected */}
-      {!hasConnected && (
+      {statusReady && !hasConnected && (
         <div
           style={{
             padding: "var(--space-4) var(--space-5)",
@@ -2281,10 +2298,10 @@ function SourcesTab() {
         </div>
       )}
 
-      {/* Connected sources — hidden until status checks complete to prevent CLS */}
-      {hasConnected && (
+      {/* Connected sources */}
+      {statusReady && hasConnected && (
         <>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)", opacity: statusReady ? 1 : 0, transition: "opacity var(--duration-normal) var(--ease-default)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
             {/* GitHub */}
             {githubConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
