@@ -3880,7 +3880,7 @@ export async function POST(request) {
 
     // Voice mode — use Sonnet for faster first-token response (brief replies don't need Opus)
     if (voiceMode && config.model.includes("opus")) {
-      config.model = "claude-sonnet-4-6-20250514";
+      config.model = "claude-sonnet-4-6";
       config.maxTokens = 4096;
     }
 
