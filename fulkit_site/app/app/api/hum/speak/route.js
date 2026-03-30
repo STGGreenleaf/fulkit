@@ -39,7 +39,7 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         model: "tts-1",
-        voice: "alloy",
+        voice: "onyx",
         input: clean,
       }),
     });
