@@ -388,7 +388,6 @@ const ALL_SOURCES = [
   { id: "fitbit", name: "Fitbit", cat: "Health" },
   { id: "strava", name: "Strava", cat: "Health" },
   { id: "oura", name: "Oura", cat: "Health" },
-  { id: "strava", name: "Strava", cat: "Health" },
   { id: "garmin", name: "Garmin", cat: "Health" },
 ];
 
