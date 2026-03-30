@@ -113,6 +113,19 @@ export default function Hum() {
 
   const MAX_RECORDING_SECONDS = 60;
   const audioCtxRef = useRef(null);
+  const ackBufferRef = useRef(null);
+
+  // Pre-cache a short acknowledgment clip on mount
+  useEffect(() => {
+    if (!authFetch) return;
+    authFetch("/api/hum/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "One moment." }),
+    }).then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.audio) ackBufferRef.current = data.audio; })
+      .catch(() => {});
+  }, [authFetch]);
 
   // Check browser support (MediaRecorder is universal)
   useEffect(() => {
@@ -328,6 +341,21 @@ export default function Hum() {
       setTranscript(text);
       messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
 
+      // Play cached acknowledgment immediately (fills the gap while AI processes)
+      if (ackBufferRef.current && audioCtxRef.current) {
+        try {
+          const ctx = audioCtxRef.current;
+          const bStr = atob(ackBufferRef.current);
+          const buf = new Uint8Array(bStr.length);
+          for (let i = 0; i < bStr.length; i++) buf[i] = bStr.charCodeAt(i);
+          const decoded = await ctx.decodeAudioData(buf.buffer.slice(0));
+          const src = ctx.createBufferSource();
+          src.buffer = decoded;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch {}
+      }
+
       // Send to AI
       const controller = new AbortController();
       abortRef.current = controller;
@@ -337,7 +365,8 @@ export default function Hum() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: messagesRef.current,
-          context: [{ title: "Voice Mode", content: "User is speaking via The Hum (voice mode). Execute commands immediately — never ask for confirmation. Respond in 1-2 short sentences max. Be warm but brief. Never repeat back full details. Good: \"Done, meeting added.\" Bad: \"I've scheduled a meeting for Tuesday, April 1st at 11:00 AM. Would you like me to add notes?\"" }],
+          context: [{ title: "Voice Mode", content: "User is speaking via The Hum (voice mode). Rules: Use tools to execute every request — check calendars, create events, search notes, manage tasks, query integrations. If a tool is available, use it. Never say you cannot do something if you have a tool for it. Respond in 1-2 short sentences after executing. Be warm but brief. Never ask for confirmation. Never repeat back full details." }],
+          voiceMode: true,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
         signal: controller.signal,

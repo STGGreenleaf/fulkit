@@ -3876,6 +3876,13 @@ export async function POST(request) {
 
     const body = await request.json();
     const { messages, context: rawContext = [], timezone: rawTz, chapterSummaries: rawChapters, conversationId: rawConvId } = body;
+    const voiceMode = !!body.voiceMode;
+
+    // Voice mode — use Sonnet for faster first-token response (brief replies don't need Opus)
+    if (voiceMode && config.model.includes("opus")) {
+      config.model = "claude-sonnet-4-6-20250514";
+      config.maxTokens = 4096;
+    }
 
     // Input size limits — prevent abuse
     if (!Array.isArray(messages) || messages.length > 100) {
