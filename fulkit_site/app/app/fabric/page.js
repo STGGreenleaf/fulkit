@@ -3883,6 +3883,38 @@ export default function FabricPage() {
                 <button onClick={() => setVisualizing(true)} title="Fullscreen visualizer" style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
                   <Maximize2 size={12} strokeWidth={2.2} color="var(--color-text-muted)" />
                 </button>
+                {/* Sonos speaker picker (mini) */}
+                {sonosGroups?.length > 0 && (
+                  <div style={{ position: "relative" }}>
+                    <button
+                      onClick={() => setSpeakerPickerOpen(v => !v)}
+                      title={activeSonosGroup ? `Playing in: ${sonosGroups.find(g => g.id === activeSonosGroup)?.name || "Sonos"}` : "Choose speaker"}
+                      style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: activeSonosGroup ? "var(--color-text)" : "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+                    >
+                      <Speaker size={12} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-bg)" : "var(--color-text-muted)"} />
+                    </button>
+                    {speakerPickerOpen && (
+                      <div style={{
+                        position: "absolute", bottom: 36, right: 0,
+                        background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
+                        borderRadius: "var(--radius-md)", padding: "var(--space-2)",
+                        minWidth: 160, zIndex: 100, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", padding: "var(--space-1) var(--space-2)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Speakers</div>
+                        <button onClick={() => { setActiveSonosGroup(null); setSpeakerPickerOpen(false); }} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-2)", background: !activeSonosGroup ? "var(--color-bg-hover)" : "transparent", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontFamily: "var(--font-primary)", fontSize: "var(--font-size-sm)", color: "var(--color-text)", textAlign: "left" }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: !activeSonosGroup ? "var(--color-text)" : "transparent", border: "1px solid var(--color-text-dim)", flexShrink: 0 }} />
+                          This device
+                        </button>
+                        {sonosGroups.map(g => (
+                          <button key={g.id} onClick={() => { setActiveSonosGroup(g.id); setSpeakerPickerOpen(false); }} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-2)", background: activeSonosGroup === g.id ? "var(--color-bg-hover)" : "transparent", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontFamily: "var(--font-primary)", fontSize: "var(--font-size-sm)", color: "var(--color-text)", textAlign: "left" }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: activeSonosGroup === g.id ? "var(--color-text)" : "transparent", border: "1px solid var(--color-text-dim)", flexShrink: 0 }} />
+                            {g.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
             </div>
