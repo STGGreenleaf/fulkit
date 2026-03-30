@@ -56,7 +56,7 @@ export async function GET(request) {
           user_id: userId,
           provider: "strava",
           access_token: encryptToken(tokenData.access_token),
-          scope: tokenData.scope || SCOPES || "",
+          scope: tokenData.scope || "read,activity:read_all",
           metadata: encryptMeta({
             refresh_token: tokenData.refresh_token,
             expires_at: tokenData.expires_at * 1000, // Strava returns unix seconds
