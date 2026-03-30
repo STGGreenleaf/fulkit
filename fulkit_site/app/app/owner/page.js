@@ -750,7 +750,7 @@ function SpendModeratorSection({ period }) {
   if (loading && !data) return <div style={{ minHeight: 44, marginBottom: "var(--space-5)" }} />;
   if (!data) return null;
 
-  const { summary, previous, flags } = data;
+  const { summary, previous, flags, history } = data;
   const hasFlags = flags.length > 0;
   const totalFlags = flags.reduce((sum, f) => sum + f.count, 0);
 
@@ -902,6 +902,133 @@ function SpendModeratorSection({ period }) {
               </div>
             ))}
           </div>
+
+          {/* Trend chart — persistent history that survives signal purges */}
+          {history && history.length >= 2 && (() => {
+            const W = 520, H = 120, PAD = { top: 16, right: 12, bottom: 24, left: 48 };
+            const chartW = W - PAD.left - PAD.right;
+            const chartH = H - PAD.top - PAD.bottom;
+            const days = history;
+            const maxCost = Math.max(...days.map(d => d.totalCost), 0.01);
+            const maxMsgs = Math.max(...days.map(d => d.messages), 1);
+
+            const x = (i) => PAD.left + (i / (days.length - 1)) * chartW;
+            const yCost = (v) => PAD.top + chartH - (v / maxCost) * chartH;
+            const yMsgs = (v) => PAD.top + chartH - (v / maxMsgs) * chartH;
+
+            // Area path for daily cost
+            const costArea = days.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${yCost(d.totalCost).toFixed(1)}`).join(" ")
+              + ` L${x(days.length - 1).toFixed(1)},${(PAD.top + chartH).toFixed(1)} L${x(0).toFixed(1)},${(PAD.top + chartH).toFixed(1)} Z`;
+
+            // Line path for messages
+            const msgsLine = days.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${yMsgs(d.messages).toFixed(1)}`).join(" ");
+
+            // Y-axis labels (cost)
+            const costTicks = [0, maxCost / 2, maxCost];
+            // X-axis labels (dates)
+            const xLabels = days.length <= 7 ? days : days.filter((_, i) => i === 0 || i === days.length - 1 || i === Math.floor(days.length / 2));
+
+            // Cache efficiency dots
+            const cacheDots = days.filter(d => d.cacheEfficiency !== null);
+
+            return (
+              <div style={{
+                marginBottom: "var(--space-4)",
+                background: "var(--color-bg-alt)",
+                borderRadius: "var(--radius-sm)",
+                padding: "var(--space-2) var(--space-3)",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: "var(--space-1)",
+                }}>
+                  <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)" }}>
+                    30-Day Trend
+                  </span>
+                  <div style={{ display: "flex", gap: "var(--space-3)", fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 1, background: "var(--color-text-muted)", opacity: 0.3, display: "inline-block" }} /> Cost
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <span style={{ width: 8, height: 2, background: "var(--color-text)", display: "inline-block" }} /> Messages
+                    </span>
+                    {cacheDots.length > 0 && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-success, #48bb78)", display: "inline-block" }} /> Cache %
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+                  {/* Grid lines */}
+                  {costTicks.map((tick, i) => (
+                    <line key={i} x1={PAD.left} x2={W - PAD.right} y1={yCost(tick)} y2={yCost(tick)}
+                      stroke="var(--color-border-light)" strokeWidth={0.5} strokeDasharray={i === 0 ? "none" : "2,2"} />
+                  ))}
+
+                  {/* Cost area */}
+                  <path d={costArea} fill="var(--color-text-muted)" opacity={0.15} />
+                  <path d={costArea.split(" L" + x(days.length - 1).toFixed(1) + ",")[0]}
+                    fill="none" stroke="var(--color-text-muted)" strokeWidth={1.5} opacity={0.5} />
+
+                  {/* Messages line */}
+                  <path d={msgsLine} fill="none" stroke="var(--color-text)" strokeWidth={1.5} opacity={0.8} />
+
+                  {/* Cache efficiency dots */}
+                  {cacheDots.map((d) => {
+                    const i = days.indexOf(d);
+                    const dotY = PAD.top + chartH - (d.cacheEfficiency / 100) * chartH;
+                    return (
+                      <circle key={d.date} cx={x(i)} cy={dotY} r={2.5}
+                        fill={d.cacheEfficiency >= 60 ? "var(--color-success, #48bb78)" : d.cacheEfficiency >= 30 ? "var(--color-warning, #b7791f)" : "var(--color-error, #e53e3e)"}
+                        opacity={0.7} />
+                    );
+                  })}
+
+                  {/* Data point dots for cost */}
+                  {days.map((d, i) => (
+                    <circle key={d.date} cx={x(i)} cy={yCost(d.totalCost)} r={2}
+                      fill="var(--color-text-muted)" opacity={0.6} />
+                  ))}
+
+                  {/* Y-axis labels */}
+                  {costTicks.filter(t => t > 0).map((tick) => (
+                    <text key={tick} x={PAD.left - 6} y={yCost(tick) + 3}
+                      textAnchor="end" fontSize={8} fontFamily="var(--font-mono)"
+                      fill="var(--color-text-dim)">
+                      ${tick < 1 ? tick.toFixed(2) : tick.toFixed(1)}
+                    </text>
+                  ))}
+
+                  {/* X-axis date labels */}
+                  {xLabels.map((d) => {
+                    const i = days.indexOf(d);
+                    const label = d.date.slice(5); // MM-DD
+                    return (
+                      <text key={d.date} x={x(i)} y={H - 4}
+                        textAnchor="middle" fontSize={8} fontFamily="var(--font-mono)"
+                        fill="var(--color-text-dim)">
+                        {label}
+                      </text>
+                    );
+                  })}
+                </svg>
+
+                {/* Summary row beneath chart */}
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
+                  marginTop: "var(--space-1)", paddingTop: "var(--space-1)",
+                  borderTop: "1px solid var(--color-border-light)",
+                }}>
+                  <span>30d total: <b style={{ color: "var(--color-text-muted)" }}>${days.reduce((s, d) => s + d.totalCost, 0).toFixed(2)}</b></span>
+                  <span>{days.reduce((s, d) => s + d.messages, 0)} messages</span>
+                  <span>avg: <b style={{ color: "var(--color-text-muted)" }}>${(days.reduce((s, d) => s + d.totalCost, 0) / Math.max(days.reduce((s, d) => s + d.messages, 0), 1)).toFixed(4)}</b>/msg</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Token breakdown table */}
           <div style={{

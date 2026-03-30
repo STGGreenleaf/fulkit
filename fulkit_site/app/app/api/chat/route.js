@@ -5184,6 +5184,17 @@ Never skip the preview step. The user must see and approve changes before they g
             // Log every message cost
             emitServerSignal(userId, "spend_log", "info", spendMeta);
 
+            // Persistent daily rollup (survives signal purge)
+            getSupabaseAdmin().rpc("upsert_spend_rollup", {
+              p_cost: spendMeta.cost,
+              p_input: spendMeta.inputTokens || 0,
+              p_output: spendMeta.outputTokens || 0,
+              p_cache_creation: spendMeta.cacheCreation || 0,
+              p_cache_read: spendMeta.cacheRead || 0,
+              p_compressed: spendMeta.wasCompressed ? 1 : 0,
+              p_flags: 0,
+            }).then(() => {}).catch(() => {});
+
             // Pattern detection flags
             const flags = [];
             const isSonnet = config.model.includes("sonnet");
@@ -5237,6 +5248,14 @@ Never skip the preview step. The user must see and approve changes before they g
 
             for (const flag of flags) {
               emitServerSignal(userId, "spend_flag", "warning", flag);
+            }
+
+            // Increment flag count in daily rollup
+            if (flags.length > 0) {
+              getSupabaseAdmin().rpc("upsert_spend_rollup", {
+                p_cost: 0, p_input: 0, p_output: 0, p_cache_creation: 0, p_cache_read: 0,
+                p_compressed: 0, p_flags: flags.length,
+              }).then(() => {}).catch(() => {});
             }
           } catch {}
 

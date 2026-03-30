@@ -106,8 +106,9 @@ export async function GET(request) {
     const since = new Date(Date.now() - hours * 3600000).toISOString();
     const prevSince = new Date(Date.now() - hours * 2 * 3600000).toISOString();
 
-    // Fetch current + previous period logs, spend flags, and audit flags — all in parallel
-    const [logsRes, prevLogsRes, flagsRes, auditRes] = await Promise.all([
+    // Fetch current + previous period logs, spend flags, audit flags, and rollup history — all in parallel
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    const [logsRes, prevLogsRes, flagsRes, auditRes, rollupRes] = await Promise.all([
       admin.from("user_events").select("meta, created_at")
         .eq("event", "signal:spend_log").gte("created_at", since)
         .order("created_at", { ascending: false }).limit(500),
@@ -120,6 +121,9 @@ export async function GET(request) {
       admin.from("user_events").select("meta, created_at")
         .eq("event", "signal:audit_flag").gte("created_at", since)
         .order("created_at", { ascending: false }).limit(100),
+      admin.from("spend_rollups").select("*")
+        .gte("date", thirtyDaysAgo)
+        .order("date", { ascending: true }),
     ]);
 
     const summary = aggregateLogs(logsRes.data || []);
@@ -146,7 +150,22 @@ export async function GET(request) {
 
     const flags = Array.from(flagMap.values()).sort((a, b) => b.count - a.count);
 
-    return Response.json({ summary, previous, flags });
+    // Build history with derived fields
+    const history = (rollupRes.data || []).map(r => {
+      const cacheTotal = (r.cache_read || 0) + (r.cache_creation || 0);
+      return {
+        date: r.date,
+        totalCost: parseFloat(r.total_cost) || 0,
+        messages: r.messages || 0,
+        avgCost: r.messages > 0 ? Math.round(parseFloat(r.total_cost) / r.messages * 10000) / 10000 : 0,
+        maxCost: parseFloat(r.max_cost) || 0,
+        cacheEfficiency: cacheTotal > 0 ? Math.round((r.cache_read || 0) / cacheTotal * 100) : null,
+        flagCount: r.flag_count || 0,
+        compressions: r.compressions || 0,
+      };
+    });
+
+    return Response.json({ summary, previous, flags, history });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
