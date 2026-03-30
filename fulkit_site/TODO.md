@@ -10,13 +10,16 @@
 > Carried forward from Session 25 pressure test. Ordered by priority.
 
 ### Bugs (fix first)
-- [ ] **Fabric search 500s** — search endpoint crashes on bad queries (prose text, BPM-polluted strings). Should return empty results, not 500. Root cause: precacher sends B-Side prose + BPM-dirty track IDs as search queries.
-- [ ] **B-Side set track IDs include BPM** — track titles like "No Return 110" should be "No Return". Precacher then searches "Massane No Return 110" which fails. Clean BPM from track IDs in set creation AND in the existing precache path.
-- [ ] **Sonos Sources card logo not rendering** — SVG defined in SOURCE_LOGOS but may not be showing. Verify + fix.
+- [x] **Fabric search 500s** — ✅ Search endpoint returns empty results on error (not 500). cleanTitle() strips BPM from all search query paths.
+- [x] **B-Side set track IDs include BPM** — ✅ Format 1: reordered strip chain (markers before BPM). Format 2: made BPM word optional + tightened gate to reject prose. cleanTitle() at all 4 query construction points.
+- [x] **B-Side set tracks not playing** — ✅ btc-* tracks routed to YouTube (not Spotify path). Fixed search result property name (data.results not data.tracks).
+- [x] **Resume cue error** — ✅ Validate YouTube video ID before cueing (skip btc-* slugs).
+- [x] **Fabric independence sweep** — ✅ Spotify is a plugin, not the system. 13 files, 37 instances fixed. Provider routing by track.provider, defaults removed, API routes accept provider param.
+- [ ] **Sonos Sources card logo not rendering** — SVG looks correct in code. Needs visual verify in prod.
 
 ### Fabric — B-Side Full Control (started Session 25)
 - [x] B-Side creates sets on request — ✅ intent detection + track parsing + auto-play
-- [ ] **B-Side playback control** — play, pause, skip, volume via text commands
+- [x] **B-Side playback control** — ✅ play/pause/skip/prev/volume/mute via text. Instant execution, B-Side responds with flavor.
 - [ ] **B-Side search** — "find me some Burial" triggers catalog search
 - [ ] **Sonos speaker picker UI** — speaker icon in Fabric player, room dropdown, route playback
 - [ ] **Sonos controls via B-Side** — "play in living room", "volume 60 in kitchen"

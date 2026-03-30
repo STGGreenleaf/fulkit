@@ -1,27 +1,24 @@
 # Last Session
 
-**Date**: 2026-03-29 (Session 25, marathon)
-**Scope**: Onboarding v3, trial fix, landing mobile, welcome email, Sonos, B-Side sets, Spotify card, YouTube studio, upsell fix
+**Date**: 2026-03-29 (Session 26)
+**Scope**: Fabric search bugs, Spotify independence sweep, B-Side playback control
 
 **Shipped**:
-- Onboarding: 31→9 questions, chat seeding, 14-day trial, redirect to /chat
-- Landing: hero above fold, mobile comparison (2-col Fülkit + "Can't say the same"), line breaks
-- Welcome email: reworked with privacy DNA, feature kit, trial details. Single source of truth.
-- Sonos: provider, OAuth connected, Sources card, B-Side awareness, API routes
-- B-Side: creates sets on request (detect intent, parse tracks, auto-play)
-- YouTube: studio versions default, live/cover filtered
-- Spotify: full rich drawer card in Sources
-- Upsell: tier-specific messaging (credits, Pro, BYOK)
+- Search 500s fixed (empty results on error, cleanTitle at all query points)
+- BPM-dirty track IDs fixed (strip order, prose gate, Format 2 cleanup)
+- Resume cue fix (validate YouTube ID before cueing)
+- Fabric independence: 13 files, Spotify demoted to plugin (routing by track.provider, defaults removed, API routes accept provider param, ecosystem renamed to "fabric")
+- B-Side playback control: play/pause/skip/prev/volume/mute via text commands, instant execution
+- B-Side persona updated: Fabric is the system, store always open, control docs
 
-**Carry forward — NEXT SESSION (Session 26)**:
-1. **Fabric search 500s** — precacher sends prose + BPM-dirty queries. Fix search endpoint + clean track IDs.
-2. **Apple Music** — MusicKit JS provider, Apple Developer account approved ($99/yr).
-3. **B-Side full control** — playback, search, volume, Sonos routing via text.
-4. **Sonos speaker picker** — UI button in Fabric player.
-5. **Fabric mobile** — needs spec + discussion.
-6. **Pitches.md audit** — 3 flagged items.
+**Carry forward — NEXT**:
+1. **B-Side search** — "find me some Burial" triggers catalog search
+2. **Sonos speaker picker UI** — speaker icon in Fabric player
+3. **Sonos controls via B-Side** — "play in living room"
+4. **Apple Music** — MusicKit JS provider
+5. **Sonos logo verify** — SVG looks correct, needs visual check
+6. **Pitches.md audit** — 3 flagged items
 
 **Known issues**:
-- Search 500s from BPM-dirty precache queries (not quota — endpoint crashing)
-- Sonos logo may not render
+- Sonos logo may not render (needs visual verify)
 - Google verification pending (4-6 weeks)
