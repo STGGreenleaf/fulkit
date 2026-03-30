@@ -809,9 +809,7 @@ function ThreadsContent({ initialFolder, initialView }) {
               );
             })}
 
-            {/* Tools — add folder, search, view toggle */}
-            <div style={{ flex: isMobile ? "1 1 100%" : 1, display: "flex", alignItems: "center", gap: "var(--space-2)", ...(isMobile ? { paddingBottom: "var(--space-2)" } : {}) }}>
-              {/* Add folder */}
+            {/* Add folder — belongs with bucket tabs */}
               {addingFolder ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
                   <input
@@ -871,12 +869,14 @@ function ThreadsContent({ initialFolder, initialView }) {
                 </Tooltip>
               )}
 
-              {/* Spacer — push search + view toggle to the right */}
-              <div style={{ marginLeft: "auto" }} />
+            {/* Row 2 on mobile: search + view toggle sharing one line */}
+            {!isMobile && <div style={{ marginLeft: "auto" }} />}
+            <div style={{ ...(isMobile ? { flex: "1 1 100%", paddingBottom: "var(--space-2)" } : {}), display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {isMobile && <div style={{ marginLeft: "auto" }} />}
 
               {/* Search */}
               {searchOpen ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)", flex: isMobile ? "1 1 auto" : "none", minWidth: 0 }}>
                   <Search size={12} strokeWidth={2} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
                   <input
                     ref={searchRef}
@@ -886,9 +886,10 @@ function ThreadsContent({ initialFolder, initialView }) {
                     onKeyDown={(e) => {
                       if (e.key === "Escape") { setSearchQuery(""); setSearchOpen(false); }
                     }}
-                    placeholder="Search threads..."
+                    placeholder="Search..."
                     style={{
-                      width: 140,
+                      width: isMobile ? "100%" : 140,
+                      minWidth: 0,
                       fontSize: "var(--font-size-xs)",
                       fontFamily: "var(--font-primary)",
                       background: "transparent",
@@ -900,7 +901,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   />
                   <button
                     onClick={() => { setSearchQuery(""); setSearchOpen(false); }}
-                    style={{ display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)" }}
+                    style={{ display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--color-text-muted)", flexShrink: 0 }}
                   >
                     <X size={10} strokeWidth={2} />
                   </button>
@@ -935,6 +936,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                 borderRadius: "var(--radius-md)",
                 padding: 2,
                 gap: 1,
+                flexShrink: 0,
               }}>
                 {VIEWS.map((v) => {
                   const isActive = view === v.key;
@@ -946,7 +948,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                           display: "flex",
                           alignItems: "center",
                           gap: "var(--space-1)",
-                          padding: "var(--space-1) var(--space-2)",
+                          padding: isMobile ? "var(--space-1) var(--space-1-5)" : "var(--space-1) var(--space-2)",
                           border: "none",
                           outline: "none",
                           background: isActive ? "var(--color-bg-elevated)" : "transparent",
@@ -961,7 +963,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                         }}
                       >
                         <v.Icon size={12} strokeWidth={1.8} />
-                        {!compactMode && v.label}
+                        {!compactMode && !isMobile && v.label}
                       </button>
                     </Tooltip>
                   );
