@@ -103,17 +103,20 @@ export default function Hum() {
   const [transcript, setTranscript] = useState("");
   const [response, setResponse] = useState("");
   const [supported, setSupported] = useState(true);
-  const recognitionRef = useRef(null);
+  const recorderRef = useRef(null);
+  const chunksRef = useRef([]);
   const utteranceRef = useRef(null);
   const messagesRef = useRef([]);
   const abortRef = useRef(null);
-  const transcriptRef = useRef("");
   const speakTextRef = useRef(null);
+  const maxTimerRef = useRef(null);
 
-  // Check browser support
+  const MAX_RECORDING_SECONDS = 60;
+
+  // Check browser support (MediaRecorder is universal)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setSupported("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+    setSupported(typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
   }, []);
 
   const getConfig = useCallback(() => CONFIGS[mode], [mode]);
@@ -226,63 +229,97 @@ export default function Hum() {
     return () => cancelAnimationFrame(animRef.current);
   }, [getConfig]);
 
-  // ─── Voice: start listening ───
-  const startListening = useCallback(() => {
+  // ─── Voice: start recording (MediaRecorder — silent, no browser sounds) ───
+  const startListening = useCallback(async () => {
     if (!supported) return;
     setShowHint(false);
     setTranscript("");
     setResponse("");
-    transcriptRef.current = "";
+    chunksRef.current = [];
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4" });
 
-    recognition.onresult = (e) => {
-      const text = Array.from(e.results).map((r) => r[0].transcript).join("");
-      setTranscript(text);
-      transcriptRef.current = text;
-    };
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
 
-    recognition.onerror = (e) => {
-      if (e.error === "no-speech" || e.error === "aborted") return;
-      console.warn("[hum] recognition error:", e.error);
+      recorder.start();
+      recorderRef.current = recorder;
+      setMode("listening");
+
+      // Safety cap — auto-stop after MAX_RECORDING_SECONDS
+      maxTimerRef.current = setTimeout(() => {
+        if (recorderRef.current?.state === "recording") {
+          stopListeningRef.current();
+        }
+      }, MAX_RECORDING_SECONDS * 1000);
+    } catch (err) {
+      console.warn("[hum] mic error:", err.message);
       setMode("idle");
-    };
-
-    recognition.onend = () => {
-      // Browser killed the session (silence timeout) — restart if still in listening mode
-      if (recognitionRef.current === recognition) {
-        try { recognition.start(); } catch { recognitionRef.current = null; }
-      }
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-    setMode("listening");
+    }
   }, [supported]);
 
-  // ─── Voice: stop listening → send to AI ───
+  // Ref for stopListening so the timer can call it
+  const stopListeningRef = useRef(null);
+
+  // ─── Voice: stop recording → transcribe via Whisper → send to AI ───
   const stopListening = useCallback(async () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+    // Clear safety timer
+    if (maxTimerRef.current) { clearTimeout(maxTimerRef.current); maxTimerRef.current = null; }
+
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state !== "recording") {
+      setMode("idle");
+      return;
     }
 
-    const text = transcriptRef.current;
-    if (!text.trim()) {
+    // Stop recording and collect audio
+    const audioBlob = await new Promise((resolve) => {
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
+        // Stop all mic tracks
+        recorder.stream.getTracks().forEach(t => t.stop());
+        resolve(blob);
+      };
+      recorder.stop();
+    });
+    recorderRef.current = null;
+
+    if (audioBlob.size < 1000) { // Too small = no real audio
       setMode("idle");
       return;
     }
 
     setMode("thinking");
 
-    // Add to conversation history
-    messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
-
     try {
+      // Transcribe via Whisper
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      const txRes = await authFetch("/api/hum/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!txRes.ok) {
+        console.warn("[hum] transcribe failed:", txRes.status);
+        setMode("idle");
+        return;
+      }
+
+      const { text } = await txRes.json();
+      if (!text?.trim()) {
+        setMode("idle");
+        return;
+      }
+
+      setTranscript(text);
+      messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
+
+      // Send to AI
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -298,7 +335,6 @@ export default function Hum() {
       });
 
       if (!res.ok) {
-        setResponse("Sorry, something went wrong.");
         speakTextRef.current("Sorry, something went wrong.");
         return;
       }
@@ -337,11 +373,8 @@ export default function Hum() {
       }
 
       abortRef.current = null;
-
-      // Add assistant response to history
       messagesRef.current = [...messagesRef.current, { role: "assistant", content: fullResponse }];
 
-      // Speak the response
       if (fullResponse.trim()) {
         speakTextRef.current(fullResponse);
       } else {
@@ -349,8 +382,7 @@ export default function Hum() {
       }
     } catch (err) {
       if (err.name === "AbortError") return;
-      console.warn("[hum] chat error:", err.message);
-      setResponse("Couldn\u2019t reach the server.");
+      console.warn("[hum] error:", err.message);
       speakTextRef.current("Couldn\u2019t reach the server.");
     }
   }, [authFetch]);
@@ -409,8 +441,9 @@ export default function Hum() {
     }
   }, [authFetch]);
 
-  // Keep ref in sync so stopListening can call it without circular deps
+  // Keep refs in sync
   speakTextRef.current = speakText;
+  stopListeningRef.current = stopListening;
 
   // ─── Controls ───
   const handleMicTap = useCallback(() => {
@@ -429,20 +462,18 @@ export default function Hum() {
 
   const router = useRouter();
   const endSession = useCallback(() => {
-    // Stop everything
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+    if (maxTimerRef.current) { clearTimeout(maxTimerRef.current); maxTimerRef.current = null; }
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stream.getTracks().forEach(t => t.stop());
+      recorderRef.current.stop();
+      recorderRef.current = null;
     }
     if (utteranceRef.current) {
       if (utteranceRef.current instanceof Audio) utteranceRef.current.pause();
       else window.speechSynthesis.cancel();
       utteranceRef.current = null;
     }
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     setMode("idle");
     setTranscript("");
     setResponse("");
@@ -458,15 +489,14 @@ export default function Hum() {
       }
       setMode("idle");
     } else if (mode === "thinking") {
-      if (abortRef.current) {
-        abortRef.current.abort();
-        abortRef.current = null;
-      }
+      if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
       setMode("idle");
     } else if (mode === "listening") {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
+      if (maxTimerRef.current) { clearTimeout(maxTimerRef.current); maxTimerRef.current = null; }
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stream.getTracks().forEach(t => t.stop());
+        recorderRef.current.stop();
+        recorderRef.current = null;
       }
       setTranscript("");
       setMode("idle");
@@ -583,7 +613,7 @@ export default function Hum() {
             textAlign: "center",
             maxWidth: 260,
           }}>
-            Voice requires Chrome, Safari, or Edge.
+            Voice requires a browser with microphone access.
           </div>
         )}
 
