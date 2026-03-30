@@ -3782,7 +3782,7 @@ function SectionDivider({ label, right }) {
       display: "flex",
       alignItems: "center",
       gap: "var(--space-2)",
-      padding: "var(--space-4) 0 var(--space-2) 0",
+      padding: "var(--space-6) 0 var(--space-3) 0",
     }}>
       <span style={{
         fontFamily: "var(--font-mono)",
