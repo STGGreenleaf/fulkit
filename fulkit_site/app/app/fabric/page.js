@@ -3891,11 +3891,11 @@ export default function FabricPage() {
                       title={activeSonosGroup ? `Playing in: ${sonosGroups.find(g => g.id === activeSonosGroup)?.name || "Sonos"}` : "Choose speaker"}
                       style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
                     >
-                      <Speaker size={12} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-text)" : "var(--color-text-muted)"} />
+                      <Speaker size={12} strokeWidth={2} color={activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
-                        position: "absolute", bottom: 36, right: 0,
+                        position: "absolute", top: 32, right: 0,
                         background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
                         borderRadius: "var(--radius-md)", padding: "var(--space-2)",
                         minWidth: 160, zIndex: 100, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -4185,11 +4185,11 @@ export default function FabricPage() {
                         cursor: "pointer", padding: 0, outline: "none",
                       }}
                     >
-                      <Speaker size={14} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-text)" : "var(--color-text-muted)"} />
+                      <Speaker size={14} strokeWidth={2} color={activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
-                        position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)",
+                        position: "absolute", top: 38, left: 0,
                         background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
                         borderRadius: "var(--radius-md)", padding: "var(--space-2)",
                         minWidth: 160, zIndex: 100,
