@@ -3889,9 +3889,9 @@ export default function FabricPage() {
                     <button
                       onClick={() => setSpeakerPickerOpen(v => !v)}
                       title={activeSonosGroup ? `Playing in: ${sonosGroups.find(g => g.id === activeSonosGroup)?.name || "Sonos"}` : "Choose speaker"}
-                      style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: activeSonosGroup ? "var(--color-text)" : "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+                      style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
                     >
-                      <Speaker size={12} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-bg)" : "var(--color-text-muted)"} />
+                      <Speaker size={12} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-text)" : "var(--color-text-muted)"} />
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
@@ -4179,13 +4179,13 @@ export default function FabricPage() {
                       title={activeSonosGroup ? `Playing in: ${sonosGroups.find(g => g.id === activeSonosGroup)?.name || "Sonos"}` : "Choose speaker"}
                       style={{
                         width: 32, height: 32, borderRadius: "var(--radius-full)",
-                        background: activeSonosGroup ? "var(--color-text)" : "transparent",
-                        border: `1px solid ${activeSonosGroup ? "var(--color-text)" : "var(--color-border)"}`,
+                        background: "transparent",
+                        border: "1px solid transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         cursor: "pointer", padding: 0, outline: "none",
                       }}
                     >
-                      <Speaker size={14} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-bg)" : "var(--color-text-muted)"} />
+                      <Speaker size={14} strokeWidth={2.2} color={activeSonosGroup ? "var(--color-text)" : "var(--color-text-muted)"} />
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
