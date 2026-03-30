@@ -527,33 +527,6 @@ export default function Hum() {
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
       `}</style>
 
-      {/* Top-left branding */}
-      <Link
-        href="/"
-        style={{
-          position: "absolute",
-          top: "var(--space-6)",
-          left: "var(--space-8)",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          animation: "fadeInSlow 1s 0.5s both",
-          textDecoration: "none",
-        }}
-      >
-        <LogoMark size={22} />
-        <span
-          style={{
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-semibold)",
-            color: "var(--color-text)",
-            letterSpacing: "var(--letter-spacing-tight)",
-          }}
-        >
-          F{"\u00FC"}lkit
-        </span>
-      </Link>
-
       {/* Top: Status */}
       <div
         style={{
