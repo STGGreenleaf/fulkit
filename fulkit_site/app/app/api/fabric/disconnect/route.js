@@ -6,7 +6,8 @@ export async function DELETE(request) {
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
-  const provider = body.provider || "spotify";
+  const provider = body.provider;
+  if (!provider) return Response.json({ error: "provider required" }, { status: 400 });
 
   const { error } = await getSupabaseAdmin()
     .from("integrations")

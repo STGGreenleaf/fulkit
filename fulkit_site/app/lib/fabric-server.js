@@ -23,8 +23,8 @@ export async function authenticateUser(request) {
   return user.id;
 }
 
-// Get a specific provider instance by name
-export function getProvider(userId, providerName = "spotify") {
+// Get a specific provider instance by name — caller must specify provider
+export function getProvider(userId, providerName) {
   const Provider = PROVIDERS[providerName];
   if (!Provider) return null;
   return new Provider(userId);
@@ -48,19 +48,22 @@ export async function getConnectedProviders(userId) {
 
 // Get the provider for a specific track (by its provider field)
 export function getTrackProvider(userId, track) {
-  return getProvider(userId, track?.provider || "spotify");
+  return getProvider(userId, track?.provider || "youtube");
 }
 
-// ═══ Backward compatibility ═══
-// These wrap the Spotify provider for routes that haven't been updated yet.
-// Will be removed once all routes use provider methods directly.
+// ═══ Spotify-specific helpers (legacy) ═══
+// Explicitly Spotify — used by routes that are inherently Spotify-only.
 
-export async function getFabricToken(userId) {
+export async function getSpotifyToken(userId) {
   const provider = getProvider(userId, "spotify");
   return provider._getIntegration();
 }
 
-export async function fabricFetch(userId, endpoint, options = {}) {
+export async function spotifyFetch(userId, endpoint, options = {}) {
   const provider = getProvider(userId, "spotify");
   return provider._fetch(endpoint, options);
 }
+
+// Backward-compat aliases — remove when all call sites migrate
+export const getFabricToken = getSpotifyToken;
+export const fabricFetch = spotifyFetch;

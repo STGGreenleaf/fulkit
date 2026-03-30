@@ -229,7 +229,7 @@ const ECOSYSTEM_KEYWORDS = {
   trello: ["board", "cards", "tasks", "project", "kanban", "backlog", "sprint", "trello"],
   numbrly: ["margin", "cost", "vendor", "build", "recipe", "food cost", "pricing", "numbrly"],
   notes: ["notes", "vault", "journal", "ideas", "writing", "document"],
-  spotify: ["music", "playlist", "song", "album", "artist", "listening", "spotify"],
+  fabric: ["music", "playlist", "song", "album", "artist", "listening", "spotify", "fabric", "sonos"],
   truegauge: ["profit", "pace", "cash", "expenses", "revenue", "financial", "truegauge"],
   github: ["code", "repo", "commit", "github", "pull request", "branch", "merge", "deploy", "push"],
   shopify: ["shopify", "storefront", "ecommerce", "shipping", "fulfillment"],

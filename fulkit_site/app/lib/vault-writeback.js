@@ -55,7 +55,7 @@ export function detectEcosystem(text) {
   if (lower.match(/\b(board|card|trello|sprint|backlog|kanban)\b/)) return "trello";
   if (lower.match(/\b(margin|cost|vendor|component|composite|numbrly)\b/)) return "numbrly";
   if (lower.match(/\b(pace|cash|expense|revenue|truegauge|profit)\b/)) return "truegauge";
-  if (lower.match(/\b(playlist|track|song|album|spotify|music|fabric)\b/)) return "spotify";
+  if (lower.match(/\b(playlist|track|song|album|spotify|music|fabric|sonos)\b/)) return "fabric";
   if (lower.match(/\b(charge|subscription|invoice|payout|stripe)\b/)) return "stripe";
   if (lower.match(/\b(repo|commit|pull.?request|branch|github)\b/)) return "github";
   return null;

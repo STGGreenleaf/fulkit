@@ -20,14 +20,15 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { playlistId, name, description } = body;
+    const { playlistId, name, description, provider: providerName } = body;
+    const sourceName = providerName || "spotify";
 
     if (!playlistId) {
       return Response.json({ error: "playlistId required" }, { status: 400 });
     }
 
     // Fetch playlist via provider
-    const provider = getProvider(userId, "spotify");
+    const provider = getProvider(userId, sourceName);
     const playlist = await provider.getPlaylistRaw(playlistId);
     if (!playlist) {
       return Response.json({ error: "Failed to fetch playlist" }, { status: 400 });
@@ -40,7 +41,7 @@ export async function POST(request) {
         user_id: userId,
         name: name || playlist.name || "Featured",
         description: description || playlist.description || null,
-        source: "spotify",
+        source: sourceName,
         source_playlist_id: playlistId,
         status: "active",
         visibility: "featured",
@@ -93,7 +94,7 @@ export async function POST(request) {
       for (const row of fabricInserts) {
         await db
           .from("fabric_tracks")
-          .upsert({ ...row, provider: "spotify" }, { onConflict: "source_id,provider", ignoreDuplicates: true });
+          .upsert({ ...row, provider: sourceName }, { onConflict: "source_id,provider", ignoreDuplicates: true });
       }
     }
 

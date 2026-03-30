@@ -7,7 +7,7 @@ export async function POST(request) {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { trackId, timeline, resolution_ms, snapshot_count, duration_s } = await request.json();
+    const { trackId, provider: trackProvider, timeline, resolution_ms, snapshot_count, duration_s } = await request.json();
     if (!trackId || !timeline || !timeline.length) {
       return Response.json({ error: "trackId and timeline required" }, { status: 400 });
     }
@@ -25,7 +25,7 @@ export async function POST(request) {
       // Create a minimal track entry — client-side thumbprint for an unknown track
       const { data: created } = await db
         .from("fabric_tracks")
-        .insert({ source_id: trackId, provider: "spotify", status: "complete", analyzed_at: new Date().toISOString(), analysis_version: 2 })
+        .insert({ source_id: trackId, provider: trackProvider || "youtube", status: "complete", analyzed_at: new Date().toISOString(), analysis_version: 2 })
         .select("id")
         .single();
       track = created;

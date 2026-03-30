@@ -220,12 +220,12 @@ function makeHistoryDefaults() {
 }
 
 // URI helpers — build provider-specific URIs from track data
-function makeTrackUri(id, provider = "spotify") {
+function makeTrackUri(id, provider) {
   if (provider === "spotify") return `spotify:track:${id}`;
   return null;
 }
 
-function makePlaylistUri(id, provider = "spotify") {
+function makePlaylistUri(id, provider) {
   if (provider === "spotify") return `spotify:playlist:${id}`;
   return null;
 }
@@ -284,7 +284,7 @@ export function FabricProvider({ children }) {
         for (const s of parsed.sets || []) {
           for (const t of s.tracks || []) {
             if (!t.provider) {
-              // Spotify IDs are 22-char base62; everything else is YouTube
+              // Only tag as spotify if ID matches Spotify's 22-char base62 format; default is youtube
               t.provider = /^[A-Za-z0-9]{22}$/.test(t.id) ? "spotify" : "youtube";
               patched = true;
             }
@@ -368,8 +368,9 @@ export function FabricProvider({ children }) {
   const pollSuppressedUntil = useRef(0);
   const playInFlightRef = useRef(null);
 
-  // Reconnect: redirect to provider OAuth
-  const reconnect = useCallback((providerName = "spotify") => {
+  // Reconnect: redirect to provider OAuth — caller must specify which provider
+  const reconnect = useCallback((providerName) => {
+    if (!providerName) { console.warn("[fabric] reconnect called without provider"); return; }
     if (!accessToken) return;
     window.location.href = `/api/fabric/connect?token=${accessToken}&provider=${providerName}`;
   }, [accessToken]);
@@ -526,11 +527,11 @@ export function FabricProvider({ children }) {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll now playing every 4s when Spotify is connected (only on fabric page or if already playing)
-  // YouTube tracks don't need polling — state is managed client-side
-  const hasSpotify = connectedProvidersRef.current?.spotify;
+  // Poll now playing every 4s when a polling-capable provider is connected
+  // YouTube/Sonos manage state client-side — only Spotify needs server polling
+  const hasPollingProvider = connectedProvidersRef.current?.spotify;
   useEffect(() => {
-    if (!hasSpotify || !accessToken) return;
+    if (!hasPollingProvider || !accessToken) return;
     if (!onFabricPage && !isPlaying) return;
 
     let failCount = 0;
@@ -622,12 +623,12 @@ export function FabricProvider({ children }) {
     const interval = onFabricPage ? 4000 : 30000;
     pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [hasSpotify, accessToken, apiFetch, onFabricPage, isPlaying]);
+  }, [hasPollingProvider, accessToken, apiFetch, onFabricPage, isPlaying]);
 
   // YouTube progress poll — read iframe state for time/duration + detect track end
   // Runs whenever we have a YouTube track (not gated on isPlaying — needs to detect end)
   useEffect(() => {
-    const isYT = currentTrack?.provider === "youtube" || (currentTrack && !connectedProvidersRef.current?.spotify);
+    const isYT = currentTrack?.provider !== "spotify";
     if (!isYT || !window.__ytEngine || !currentTrack) return;
 
     let ended = false;
@@ -696,7 +697,7 @@ export function FabricProvider({ children }) {
   // Smooth progress interpolation between Spotify polls
   useEffect(() => {
     if (!isPlaying || !currentTrack?.duration) return;
-    const isYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    const isYT = currentTrack?.provider !== "spotify";
     if (isYT) return; // YouTube handles its own progress above
     const interval = setInterval(() => {
       setProgress((p) => {
@@ -710,7 +711,7 @@ export function FabricProvider({ children }) {
   // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
     // YouTube or no Spotify: control via iframe engine
-    const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    const useYT = currentTrack?.provider !== "spotify";
     if (useYT && window.__ytEngine) {
       if (action === "play") {
         // If no video is loaded (e.g. after resume from refresh), load it via playTrack
@@ -797,7 +798,7 @@ export function FabricProvider({ children }) {
     clearTimeout(volumeTimer.current);
     volumeTimer.current = setTimeout(() => {
       // YouTube or no Spotify: set volume directly on iframe
-      const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+      const useYT = currentTrack?.provider !== "spotify";
       if (useYT && window.__ytEngine) {
         window.__ytEngine.setVolume(v);
         return;
@@ -835,7 +836,7 @@ export function FabricProvider({ children }) {
     setProgress(fraction);
     pollSuppressedUntil.current = Date.now() + 2000;
     // YouTube: seek via iframe engine
-    const useYT = currentTrack?.provider === "youtube" || !connectedProvidersRef.current?.spotify;
+    const useYT = currentTrack?.provider !== "spotify";
     if (useYT && window.__ytEngine) {
       const state = window.__ytEngine.getState?.();
       const durationMs = state?.duration || (currentTrack.duration ? currentTrack.duration * 1000 : 0);
@@ -1544,28 +1545,19 @@ export function FabricProvider({ children }) {
       }
     };
 
-    // YouTube tracks: route directly
-    if (track.provider === "youtube") {
+    // Route by provider — Spotify is just one plugin, YouTube is the universal engine
+    if (track.provider !== "spotify") {
+      // Everything non-Spotify routes through YouTube (the universal fallback)
       await resolveAndPlayYT();
       return;
     }
 
-    // B-Side tracks (btc-*) are always YouTube — they have no Spotify URI
-    if (track.id?.startsWith("btc-") && window.__ytEngine && track.title) {
+    // Spotify path: resolve URI and play via Spotify SDK
+    // If Spotify isn't actually connected, fall through to YouTube
+    if (!connectedProvidersRef.current?.spotify && window.__ytEngine && track.title) {
       await resolveAndPlayYT();
       return;
     }
-
-    // If Spotify isn't connected, fall back to YouTube for ANY track
-    const spotifyConnected = connectedProvidersRef.current?.spotify;
-    if (!spotifyConnected && window.__ytEngine && track.title) {
-      const played = await resolveAndPlayYT();
-      if (played) return;
-      // If YouTube search failed too, nothing to do
-      return;
-    }
-
-    // Spotify path: resolve URI and play via API
     let uri = track.uri || (track.id.startsWith("btc-") ? null : makeTrackUri(track.id, track.provider));
     if (!uri && track.artist && track.title) {
       try {
@@ -2061,7 +2053,7 @@ export function FabricProvider({ children }) {
           setTracks: flagged,
           bsidesTracks: guyCrate?.tracks || [],
           tasteSummary: buildTasteSummary(),
-          spotifyConnected: connected,
+          connectedProviders: Object.keys(connectedProvidersRef.current || {}),
           sonosGroups: sonosGroups.length > 0 ? sonosGroups : undefined,
         }),
       });

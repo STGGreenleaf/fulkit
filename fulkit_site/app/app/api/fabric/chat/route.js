@@ -7,7 +7,7 @@ export async function POST(request) {
     const userId = await authenticateUser(request);
     if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary, spotifyConnected, sonosGroups } = await request.json();
+    const { messages, currentTrack, audioFeatures, setTracks, bsidesTracks, tasteSummary, connectedProviders, spotifyConnected, sonosGroups } = await request.json();
     if (!messages?.length) {
       return Response.json({ error: "messages required" }, { status: 400 });
     }
@@ -37,10 +37,12 @@ export async function POST(request) {
 
     // Build dynamic context block (same shape as before)
     const contextParts = [];
-    if (!spotifyConnected) {
-      contextParts.push("MUSIC SOURCE: No music service connected. The speakers are off. You're stressed — can't concentrate without something playing. Nudge them to hook up Spotify so the store can open.");
+    // Music is always available via YouTube. Spotify/Sonos are optional upgrades.
+    const providers = connectedProviders || (spotifyConnected ? ["spotify"] : []);
+    if (providers.includes("spotify")) {
+      contextParts.push("MUSIC SOURCE: Spotify connected — full catalog available with rich playback.");
     } else {
-      contextParts.push("MUSIC SOURCE: Spotify connected.");
+      contextParts.push("MUSIC SOURCE: YouTube (always available). Suggest connecting Spotify for richer playback if it comes up naturally — don't push it.");
     }
     if (sonosGroups?.length) {
       contextParts.push(`SONOS: Connected. Available rooms: ${sonosGroups.map(g => g.name).join(", ")}. When the user asks to play in a specific room, respond with the room name and the action — the app handles the routing. Example: "Playing in Living Room." or "Volume set to 60 in Kitchen."`);

@@ -1433,7 +1433,8 @@ function SourcesTab() {
     try {
       await fetch("/api/fabric/disconnect", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "spotify" }),
       });
       setFabricConnected(false);
     } catch {}
