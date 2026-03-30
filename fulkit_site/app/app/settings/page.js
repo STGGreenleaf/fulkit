@@ -2124,17 +2124,65 @@ function SourcesTab() {
   );
 
   // Shared disconnect footer
-  const disconnectFooter = (onClick, loading) => (
-    <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end" }}>
-      <button
-        onClick={onClick}
-        disabled={loading}
-        style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
-      >
-        {loading ? "..." : "Disconnect"}
-      </button>
-    </div>
-  );
+  const [disconnectConfirm, setDisconnectConfirm] = useState(null); // { id, onDisconnect }
+
+  const disconnectFooter = (onClick, loading, sourceId) => {
+    const isConfirming = disconnectConfirm?.id === sourceId;
+
+    if (isConfirming) {
+      return (
+        <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-relaxed)" }}>
+            Disconnect this source? Your existing data (notes, conversations, history) stays unless you choose to purge.
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setDisconnectConfirm(null)}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { setDisconnectConfirm(null); onClick(); }}
+              disabled={loading}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)", cursor: "pointer" }}
+            >
+              Disconnect, keep data
+            </button>
+            <button
+              onClick={async () => {
+                setDisconnectConfirm(null);
+                // Purge integration-specific data, then disconnect
+                try {
+                  await fetch(`/api/integrations/purge?source=${sourceId}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                  });
+                } catch {}
+                onClick();
+              }}
+              disabled={loading}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-error)", borderRadius: "var(--radius-sm)", color: "var(--color-error)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)", cursor: "pointer" }}
+            >
+              Disconnect + purge data
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={() => setDisconnectConfirm({ id: sourceId, onDisconnect: onClick })}
+          disabled={loading}
+          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
+        >
+          {loading ? "..." : "Disconnect"}
+        </button>
+      </div>
+    );
+  };
 
   const timeAgo = (iso) => {
     if (!iso) return null;
@@ -2373,7 +2421,7 @@ function SourcesTab() {
                       );
                     })}
                     <DrawerItem index={githubRepos.length} visible={githubExpanded}>
-                      {disconnectFooter(disconnectGitHub, githubDisconnecting)}
+                      {disconnectFooter(disconnectGitHub, githubDisconnecting, "github")}
                     </DrawerItem>
                   </div>
                 </Drawer>
@@ -3228,7 +3276,7 @@ function SourcesTab() {
                   <Drawer open={isExpanded}>
                     <div style={{ borderTop: "1px solid var(--color-border-light)" }}>
                       <DrawerItem index={0} visible={isExpanded}>
-                        {disconnectFooter(() => disconnect(src.id), false)}
+                        {disconnectFooter(() => disconnect(src.id), false, src.id)}
                       </DrawerItem>
                     </div>
                   </Drawer>
