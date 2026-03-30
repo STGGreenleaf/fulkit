@@ -112,7 +112,7 @@ export default function Dashboard() {
       });
   }, [user]);
 
-  // Fetch whispers (proactive suggestions from Claude)
+  // Fetch whispers (proactive suggestions from Claude) + closeout whisper
   useEffect(() => {
     if (!accessToken) return;
     fetch("/api/whispers", {
@@ -121,7 +121,17 @@ export default function Dashboard() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.whispers) setWhispers(data.whispers); })
       .catch(() => {});
-  }, [accessToken]);
+    // Closeout whisper (from cron)
+    supabase.from("preferences").select("value").eq("user_id", user?.id).eq("key", "closeout_whisper").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          try {
+            const co = JSON.parse(data.value);
+            if (co.text) setWhispers(prev => [co.text, ...(prev || [])]);
+          } catch {}
+        }
+      });
+  }, [accessToken, user?.id]);
 
   const messagesUsed = profile?.messages_this_month || 0;
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;

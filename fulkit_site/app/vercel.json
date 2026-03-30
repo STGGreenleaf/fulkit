@@ -16,6 +16,14 @@
     {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/closeout",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/cron/closeout",
+      "schedule": "0 14 * * *"
     }
   ]
 }
