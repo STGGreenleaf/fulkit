@@ -341,8 +341,9 @@ export default function Hum() {
       setTranscript(text);
       messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
 
-      // Play cached acknowledgment immediately (fills the gap while AI processes)
+      // Brief pause before acknowledgment — don't cut off the user's last word
       if (ackBufferRef.current && audioCtxRef.current) {
+        await new Promise(r => setTimeout(r, 800));
         try {
           const ctx = audioCtxRef.current;
           const bStr = atob(ackBufferRef.current);
