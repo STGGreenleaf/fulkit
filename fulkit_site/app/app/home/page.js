@@ -170,9 +170,12 @@ export default function Dashboard() {
                 </h1>
                 <div style={{ flex: 1, minWidth: 0, marginBottom: 10 }}>
                   <div style={{
-                    width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
-                    textAlign: "right",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "baseline",
+                    gap: 4,
                     marginBottom: 2,
+                    whiteSpace: "nowrap",
                   }}>
                     <span style={{
                       fontSize: 9,
@@ -369,8 +372,9 @@ export default function Dashboard() {
                         justifyContent: isMobile ? "center" : "flex-start",
                         gap: "var(--space-2)",
                         padding: isMobile ? "var(--space-3)" : "var(--space-3) var(--space-4)",
-                        background: "var(--color-accent)",
-                        color: "var(--color-text-inverse)",
+                        background: "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border-light)",
+                        color: "var(--color-text)",
                         borderRadius: "var(--radius-md)",
                         fontSize: "var(--font-size-sm)",
                         fontWeight: "var(--font-weight-semibold)",
