@@ -182,6 +182,12 @@ const SOURCE_LOGOS = {
       <circle cx="17.5" cy="11" r="1.8" opacity="0.5"/>
     </svg>
   ),
+  strava: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <polygon points="12,4 6,20 9.6,20 12,14.4 14.4,20 18,20" opacity="0.5"/>
+      <polygon points="12,10 14.4,20 18,20 12,4" />
+    </svg>
+  ),
   whoop: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M2 7l3.5 10h1.5L9.5 10 12 17h1.5L16 10l2.5 7H20L22 7h-2.5l-1.5 6-2.5-6h-1.5L12 13 9.5 7H8L5.5 13 4 7H2z"/>
@@ -208,7 +214,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -347,6 +353,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "fitbit.com",
     linkHref: "https://www.fitbit.com",
   },
+  strava: {
+    subtitle: "Your training, in context.",
+    description: "Strava tracks your runs, rides, swims, and workouts with GPS, pace, heart rate, and elevation. Connecting it means F\u00FClkit sees your training history and can help you plan around your fitness, track progress, and spot trends.",
+    gives: "Recent activities with distance, pace, splits, heart rate, elevation gain, and suffer score. All-time and year-to-date stats across runs, rides, and swims. Ask about your last run or how your training is going.",
+    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat\u2019s my mileage this year?",
+    linkLabel: "strava.com",
+    linkHref: "https://www.strava.com",
+  },
 };
 
 const ALL_SOURCES = [
@@ -372,6 +386,7 @@ const ALL_SOURCES = [
   { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
   { id: "whoop", name: "Whoop", cat: "Health" },
   { id: "fitbit", name: "Fitbit", cat: "Health" },
+  { id: "strava", name: "Strava", cat: "Health" },
   { id: "oura", name: "Oura", cat: "Health" },
   { id: "strava", name: "Strava", cat: "Health" },
   { id: "garmin", name: "Garmin", cat: "Health" },
@@ -1136,6 +1151,10 @@ function SourcesTab() {
   const [fitbitExpanded, setFitbitExpanded] = useState(false);
   const [fitbitLastSynced, setFitbitLastSynced] = useState(null);
   const [fitbitDisconnecting, setFitbitDisconnecting] = useState(false);
+  const [stravaConnected, setStravaConnected] = useState(false);
+  const [stravaExpanded, setStravaExpanded] = useState(false);
+  const [stravaLastSynced, setStravaLastSynced] = useState(null);
+  const [stravaDisconnecting, setStravaDisconnecting] = useState(false);
   const [sonosConnected, setSonosConnected] = useState(false);
   const [sonosExpanded, setSonosExpanded] = useState(false);
   const [sonosLastSynced, setSonosLastSynced] = useState(null);
@@ -1297,6 +1316,7 @@ function SourcesTab() {
       check("/api/google/gmail/status"),
       check("/api/google/drive/status"),
       check("/api/health/fitbit/status"),
+      check("/api/health/strava/status"),
       check("/api/quickbooks/status"),
       check("/api/notion/status"),
       check("/api/dropbox/status"),
@@ -1304,7 +1324,7 @@ function SourcesTab() {
       check("/api/onenote/status"),
       check("/api/todoist/status"),
       check("/api/readwise/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, qb, notion, dropbox, slack, onenote, todoist, readwise]) => {
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
@@ -1321,6 +1341,7 @@ function SourcesTab() {
       if (gmail) { setGmailConnected(gmail.connected); }
       if (gdrive) { setGdriveConnected(gdrive.connected); }
       if (fitbit) { setFitbitConnected(fitbit.connected); if (fitbit.lastSynced) setFitbitLastSynced(fitbit.lastSynced); }
+      if (strava) { setStravaConnected(strava.connected); if (strava.lastSynced) setStravaLastSynced(strava.lastSynced); }
       if (qb) { setQbConnected(qb.connected); if (qb.lastSynced) setQbLastSynced(qb.lastSynced); }
       if (notion) { setNotionConnected(notion.connected); if (notion.lastSynced) setNotionLastSynced(notion.lastSynced); }
       if (dropbox) { setDropboxConnected(dropbox.connected); if (dropbox.lastSynced) setDropboxLastSynced(dropbox.lastSynced); }
@@ -1942,6 +1963,31 @@ function SourcesTab() {
     setFitbitDisconnecting(false);
   }
 
+  function connectStrava() {
+    if (accessToken) {
+      window.open("/api/health/strava/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (token) {
+        window.open("/api/health/strava/connect?token=" + encodeURIComponent(token), "_blank");
+      }
+    }).catch(() => {});
+  }
+
+  async function disconnectStrava() {
+    setStravaDisconnecting(true);
+    try {
+      await fetch("/api/health/strava/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setStravaConnected(false);
+    } catch {}
+    setStravaDisconnecting(false);
+  }
+
   async function disconnectSonos() {
     setSonosDisconnecting(true);
     try {
@@ -1967,6 +2013,7 @@ function SourcesTab() {
     ...(toastConnected ? ["toast"] : []),
     ...(trelloConnected ? ["trello"] : []),
     ...(fitbitConnected ? ["fitbit"] : []),
+    ...(stravaConnected ? ["strava"] : []),
     ...(sonosConnected ? ["sonos"] : []),
     ...(qbConnected ? ["quickbooks"] : []),
     ...(obsidianConnected ? ["obsidian"] : []),
@@ -1977,7 +2024,7 @@ function SourcesTab() {
     ...(todoistConnected ? ["todoist"] : []),
     ...(readwiseConnected ? ["readwise"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -1997,6 +2044,7 @@ function SourcesTab() {
     if (id === "toast") { connectToast(); return; }
     if (id === "trello") { connectTrello(); return; }
     if (id === "fitbit") { connectFitbit(); return; }
+    if (id === "strava") { connectStrava(); return; }
     if (id === "sonos") { connectSonos(); return; }
     if (id === "quickbooks") { connectQB(); return; }
     if (id === "obsidian") { connectObsidian(); return; }
@@ -2019,6 +2067,7 @@ function SourcesTab() {
     if (id === "toast") { disconnectToast(); return; }
     if (id === "trello") { disconnectTrello(); return; }
     if (id === "fitbit") { disconnectFitbit(); return; }
+    if (id === "strava") { disconnectStrava(); return; }
     if (id === "sonos") { disconnectSonos(); return; }
     if (id === "quickbooks") { disconnectQB(); return; }
     if (id === "obsidian") { disconnectObsidian(); return; }
@@ -2172,7 +2221,7 @@ function SourcesTab() {
     );
   };
 
-  const hasConnected = githubConnected || fabricConnected || sonosConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || qbConnected || connectedSources.length > 0;
+  const hasConnected = githubConnected || fabricConnected || sonosConnected || numbrlyConnected || tgConnected || squareConnected || shopifyConnected || stripeConnected || toastConnected || gcalConnected || gmailConnected || gdriveConnected || fitbitConnected || stravaConnected || qbConnected || connectedSources.length > 0;
 
   return (
     <div>
@@ -2716,6 +2765,44 @@ function SourcesTab() {
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fitbitDisconnecting ? 0.5 : 1 }}
                         >
                           {fitbitDisconnecting ? "..." : "Disconnect"}
+                        </button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Strava — connected */}
+            {stravaConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader
+                  logo={SOURCE_LOGOS.strava}
+                  name="Strava"
+                  subtitle="Your training, in context."
+                  isExpanded={stravaExpanded}
+                  onToggle={() => setStravaExpanded(!stravaExpanded)}
+                />
+                <Drawer open={stravaExpanded}>
+                  {richDrawerContent({
+                    expanded: stravaExpanded,
+                    description: "Strava tracks your runs, rides, swims, and workouts with GPS, pace, heart rate, and elevation. Connecting it means F\u00FClkit sees your training history and can help you plan around your fitness, track progress, and spot trends.",
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: "Recent activities with distance, pace, splits, heart rate, elevation gain, and suffer score. All-time and year-to-date stats across runs, rides, and swims. Ask about your last run or how your training is going.",
+                    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat\u2019s my mileage this year?",
+                    linkLabel: "strava.com",
+                    linkHref: "https://www.strava.com",
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
+                          Connected{stravaLastSynced ? ` \u00B7 Last synced ${timeAgo(stravaLastSynced)}` : ""}
+                        </div>
+                        <button
+                          onClick={disconnectStrava}
+                          disabled={stravaDisconnecting}
+                          style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: stravaDisconnecting ? 0.5 : 1 }}
+                        >
+                          {stravaDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
                     ),

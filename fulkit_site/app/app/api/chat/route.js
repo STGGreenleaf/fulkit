@@ -12,6 +12,7 @@ import { getToastToken, toastFetch } from "../../../lib/toast-server";
 import { getTrelloToken, trelloFetch } from "../../../lib/trello-server";
 import { getGoogleToken, googleFetch } from "../../../lib/google-server";
 import { getFitbitToken, fitbitFetch } from "../../../lib/fitbit-server";
+import { getStravaToken, stravaFetch } from "../../../lib/strava-server";
 import { getQuickBooksToken, qbFetch } from "../../../lib/quickbooks-server";
 import { getNotionToken, notionFetch } from "../../../lib/notion-server";
 import { getDropboxToken, dropboxFetch } from "../../../lib/dropbox-server";
@@ -239,6 +240,7 @@ const ECOSYSTEM_KEYWORDS = {
   gmail: ["email", "inbox", "gmail", "mail", "message from", "reply", "sent", "unread"],
   google_drive: ["drive", "document", "spreadsheet", "google doc", "google sheet", "slides", "file on drive", "shared with me"],
   fitbit: ["fitbit", "steps", "sleep", "heart rate", "activity", "workout", "calories", "weight", "health", "recovery", "resting heart"],
+  strava: ["strava", "run", "ride", "cycling", "marathon", "pace", "splits", "training", "mileage", "elevation", "segment"],
   quickbooks: ["quickbooks", "accounting", "invoice", "expense", "profit", "loss", "p&l", "balance sheet", "accounts receivable", "payable", "tax"],
   notion: ["notion", "page", "database", "wiki", "workspace"],
   dropbox: ["dropbox", "file", "folder", "shared folder", "upload"],
@@ -2104,6 +2106,137 @@ async function executeFitbitTool(name, input, userId) {
   throw new Error(`Unknown fitbit tool: ${name}`);
 }
 
+// Strava tools — activities, stats, weekly summary
+const STRAVA_TOOLS = [
+  {
+    name: "strava_recent_activities",
+    description: "Get the user's recent Strava activities — runs, rides, swims, hikes with distance, time, pace, elevation, heart rate.",
+    input_schema: {
+      type: "object",
+      properties: {
+        count: { type: "number", description: "Number of activities to return. Default 10, max 30." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "strava_activity_detail",
+    description: "Get detailed info about a specific Strava activity — splits, laps, heart rate, elevation profile, suffer score.",
+    input_schema: {
+      type: "object",
+      properties: {
+        activity_id: { type: "number", description: "The Strava activity ID." },
+      },
+      required: ["activity_id"],
+    },
+  },
+  {
+    name: "strava_athlete_stats",
+    description: "Get the user's all-time and year-to-date Strava stats — total runs, rides, swims, distance, elevation, time.",
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+];
+
+function formatStravaActivity(a) {
+  const distKm = (a.distance / 1000).toFixed(2);
+  const distMi = (a.distance / 1609.34).toFixed(2);
+  const movingMins = Math.round(a.moving_time / 60);
+  const paceMinPerMi = a.distance > 0 ? (a.moving_time / 60) / (a.distance / 1609.34) : null;
+  const paceStr = paceMinPerMi ? `${Math.floor(paceMinPerMi)}:${String(Math.round((paceMinPerMi % 1) * 60)).padStart(2, "0")}/mi` : null;
+  return {
+    id: a.id,
+    type: a.type,
+    name: a.name,
+    date: a.start_date_local?.slice(0, 10),
+    distance: `${distMi} mi (${distKm} km)`,
+    movingTime: `${movingMins} min`,
+    pace: paceStr,
+    elevationGain: a.total_elevation_gain ? `${Math.round(a.total_elevation_gain * 3.281)} ft` : null,
+    avgHeartRate: a.average_heartrate ? Math.round(a.average_heartrate) : null,
+    maxHeartRate: a.max_heartrate ? Math.round(a.max_heartrate) : null,
+    calories: a.calories || null,
+    sufferScore: a.suffer_score || null,
+  };
+}
+
+async function executeStravaTool(name, input, userId) {
+  if (name === "strava_recent_activities") {
+    const count = Math.min(input.count || 10, 30);
+    const res = await stravaFetch(userId, `/athlete/activities?per_page=${count}`);
+    if (res.error) return res;
+    const data = await res.json();
+    return { activities: (data || []).map(formatStravaActivity) };
+  }
+
+  if (name === "strava_activity_detail") {
+    const res = await stravaFetch(userId, `/activities/${input.activity_id}`);
+    if (res.error) return res;
+    const a = await res.json();
+    const detail = formatStravaActivity(a);
+    // Add splits if available
+    if (a.splits_standard?.length) {
+      detail.splits = a.splits_standard.map((s, i) => ({
+        mile: i + 1,
+        time: `${Math.floor(s.moving_time / 60)}:${String(s.moving_time % 60).padStart(2, "0")}`,
+        pace: s.moving_time > 0 && s.distance > 0 ? `${Math.floor((s.moving_time / 60) / (s.distance / 1609.34))}:${String(Math.round(((s.moving_time / 60) / (s.distance / 1609.34) % 1) * 60)).padStart(2, "0")}/mi` : null,
+        elevationDiff: s.elevation_difference ? `${Math.round(s.elevation_difference * 3.281)} ft` : null,
+        avgHR: s.average_heartrate ? Math.round(s.average_heartrate) : null,
+      }));
+    }
+    if (a.laps?.length > 1) {
+      detail.laps = a.laps.map((l, i) => ({
+        lap: i + 1,
+        name: l.name,
+        distance: `${(l.distance / 1609.34).toFixed(2)} mi`,
+        time: `${Math.floor(l.moving_time / 60)}:${String(l.moving_time % 60).padStart(2, "0")}`,
+        avgHR: l.average_heartrate ? Math.round(l.average_heartrate) : null,
+      }));
+    }
+    detail.description = a.description || null;
+    detail.gear = a.gear?.name || null;
+    return detail;
+  }
+
+  if (name === "strava_athlete_stats") {
+    // Need athlete ID first
+    const meRes = await stravaFetch(userId, "/athlete");
+    if (meRes.error) return meRes;
+    const me = await meRes.json();
+    const res = await stravaFetch(userId, `/athletes/${me.id}/stats`);
+    if (res.error) return res;
+    const s = await res.json();
+    const fmt = (totals) => ({
+      count: totals.count,
+      distance: `${(totals.distance / 1609.34).toFixed(1)} mi`,
+      movingTime: `${Math.round(totals.moving_time / 3600)} hrs`,
+      elevation: `${Math.round(totals.elevation_gain * 3.281)} ft`,
+    });
+    return {
+      allTime: {
+        runs: fmt(s.all_run_totals || {}),
+        rides: fmt(s.all_ride_totals || {}),
+        swims: fmt(s.all_swim_totals || {}),
+      },
+      ytd: {
+        runs: fmt(s.ytd_run_totals || {}),
+        rides: fmt(s.ytd_ride_totals || {}),
+        swims: fmt(s.ytd_swim_totals || {}),
+      },
+      recent: {
+        runs: fmt(s.recent_run_totals || {}),
+        rides: fmt(s.recent_ride_totals || {}),
+        swims: fmt(s.recent_swim_totals || {}),
+      },
+    };
+  }
+
+  throw new Error(`Unknown strava tool: ${name}`);
+}
+
 // QuickBooks tools — P&L, invoices, expenses, customers, balance
 const QUICKBOOKS_TOOLS = [
   {
@@ -3858,6 +3991,7 @@ export async function POST(request) {
         safeGet(() => getGoogleToken(userId, "gmail"), "gmail"),
         safeGet(() => getGoogleToken(userId, "google_drive"), "google_drive"),
         safeGet(getFitbitToken, "fitbit"),
+        safeGet(getStravaToken, "strava"),
         safeGet(getQuickBooksToken, "quickbooks"),
         safeGet(getNotionToken, "notion"),
         safeGet(getDropboxToken, "dropbox"),
@@ -3914,7 +4048,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -3927,7 +4061,7 @@ export async function POST(request) {
         { ref: "trelloToken", val: trelloToken }, { ref: "ghToken", val: ghToken },
         { ref: "gcalToken", val: gcalToken },
         { ref: "gmailToken", val: gmailToken }, { ref: "gdriveToken", val: gdriveToken },
-        { ref: "fitbitToken", val: fitbitToken },
+        { ref: "fitbitToken", val: fitbitToken }, { ref: "stravaToken", val: stravaToken },
         { ref: "qbToken", val: qbToken },
         { ref: "notionToken", val: notionToken },
         { ref: "dropboxToken", val: dropboxToken }, { ref: "slackToken", val: slackToken },
@@ -4258,7 +4392,7 @@ Never skip the preview step. The user must see and approve changes before they g
       nblKey && "Numbrly", tgKey && "TrueGauge", sqToken && "Square",
       shopifyToken && "Shopify", stripeToken && "Stripe", toastToken && "Toast",
       trelloToken && "Trello", ghToken && "GitHub", gcalToken && "Google Calendar",
-      gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit",
+      gmailToken && "Gmail", gdriveToken && "Google Drive", fitbitToken && "Fitbit", stravaToken && "Strava",
       qbToken && "QuickBooks", notionToken && "Notion",
       dropboxToken && "Dropbox", slackToken && "Slack",
       onenoteToken && "OneNote", todoistToken && "Todoist", readwiseToken && "Readwise",
@@ -4348,6 +4482,7 @@ Never skip the preview step. The user must see and approve changes before they g
       gmail: () => gmailToken ? GMAIL_TOOLS : [],
       google_drive: () => gdriveToken ? DRIVE_TOOLS : [],
       fitbit: () => fitbitToken ? FITBIT_TOOLS : [],
+      strava: () => stravaToken ? STRAVA_TOOLS : [],
       quickbooks: () => qbToken ? QUICKBOOKS_TOOLS : [],
       notion: () => notionToken ? NOTION_TOOLS : [],
       dropbox: () => dropboxToken ? DROPBOX_TOOLS : [],
@@ -4429,7 +4564,7 @@ Never skip the preview step. The user must see and approve changes before they g
         numbrly: !!nblKey, truegauge: !!tgKey, square: !!sqToken,
         shopify: !!shopifyToken, stripe: !!stripeToken, toast: !!toastToken,
         trello: !!trelloToken, github: !!ghToken, google_calendar: !!gcalToken,
-        gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken,
+        gmail: !!gmailToken, google_drive: !!gdriveToken, fitbit: !!fitbitToken, strava: !!stravaToken,
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
         onenote: !!onenoteToken, todoist: !!todoistToken, readwise: !!readwiseToken,
@@ -4822,6 +4957,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("fitbit_") && fitbitToken) {
                 try {
                   const result = await withTimeout(() => executeFitbitTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Strava tools
+              if (block.name.startsWith("strava_") && stravaToken) {
+                try {
+                  const result = await withTimeout(() => executeStravaTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
