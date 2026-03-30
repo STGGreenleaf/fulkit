@@ -3650,13 +3650,14 @@ const MANUAL_SECTIONS = {
     ],
   },
   fabric: {
-    name: "Spotify",
+    name: "Fabric",
     categories: [
       {
         label: "What you can ask",
         commands: [
           { example: "What's playing?", description: "Current track and playback status" },
-          { example: "Show me my playlists", description: "Your Spotify playlists" },
+          { example: "Search for Radiohead", description: "Search across all connected music sources" },
+          { example: "Show me my playlists", description: "Your playlists from any connected source" },
         ],
       },
     ],
@@ -3734,15 +3735,16 @@ const MANUAL_BLUEPRINT = [
   { num: "01", label: "TALK", desc: "One chat. Say what you need.", examples: ["\u201CHow did we do today?\u201D", "\u201CSave this recipe.\u201D", "\u201CPlay something chill.\u201D"] },
   { num: "02", label: "REMEMBER", desc: "Notes, memories, semantic search.", examples: ["\u201CSave this\u201D \u2014 F\u00fclkit distills it.", "\u201CWhat did I save about\u2026\u201D \u2014 meaning, not keywords."] },
   { num: "03", label: "ACT", desc: "Actions + Threads.", examples: ["\u201CRemind me to\u2026\u201D \u2192 tracked action.", "\u201CTrack this\u201D \u2192 kanban card."] },
-  { num: "04", label: "LISTEN", desc: "The Hum. Voice \u2192 understanding.", examples: ["Talk to a presence, not a form.", "No visible transcript. You flow."] },
-  { num: "05", label: "PROTECT", desc: "Three vault modes. Your data, your rules.", vaultModes: true },
+  { num: "04", label: "LISTEN", desc: "The Hum. Voice \u2192 understanding.", examples: ["Talk to the orb, not a form.", "\u201CClose out the day.\u201D \u201CCheck my calendar.\u201D", "No transcript on screen. Just you and the orb."] },
+  { num: "05", label: "AUTOMATE", desc: "Schedule recurring tasks. Your routines, on autopilot.", examples: ["\u201CEvery day at 4pm, close out my Square.\u201D", "\u201CRemind me every Monday to review my P&L.\u201D", "Whispers appear on your dashboard when it\u2019s time."] },
+  { num: "06", label: "PROTECT", desc: "Three vault modes. Your data, your rules.", vaultModes: true },
 ];
 
 const ALL_INTEGRATIONS = [
   { id: "square", name: "Square", summary: "POS, inventory, orders, customers" },
   { id: "truegauge", name: "TrueGauge", summary: "Pace, cash, expenses, alerts" },
   { id: "github", name: "GitHub", summary: "Commits, issues, repo structure" },
-  { id: "fabric", name: "Spotify", summary: "Playback, playlists, search" },
+  { id: "fabric", name: "Fabric", summary: "Music playback, search, playlists \u2014 any source" },
   { id: "numbrly", name: "Numbrly", summary: "Margins, vendor costs, components" },
   { id: "shopify", name: "Shopify", summary: "Products, orders, fulfillment" },
   { id: "stripe", name: "Stripe", summary: "Revenue, payments, disputes" },
@@ -3754,6 +3756,8 @@ const GETTING_STARTED = [
   { step: "1", action: "Say something", desc: "Open chat. Talk naturally \u2014 no menus, no commands." },
   { step: "2", action: "Save your first note", desc: "\u201CSave this\u201D \u2014 F\u00fclkit distills it to what matters." },
   { step: "3", action: "Pick your vault", desc: "Settings \u2192 Vault. Local, encrypted, or managed. You choose." },
+  { step: "4", action: "Try The Hum", desc: "Tap the orb. Talk. No text on screen \u2014 just voice in, voice out." },
+  { step: "5", action: "Automate something", desc: "\u201CEvery day at 4pm, pull my sales.\u201D F\u00fclkit remembers so you don\u2019t have to." },
 ];
 
 const QUICK_REFERENCE = [
