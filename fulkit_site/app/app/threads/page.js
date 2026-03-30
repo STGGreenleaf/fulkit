@@ -602,6 +602,7 @@ function ThreadsContent({ initialFolder, initialView }) {
           {/* Tab bar: folder tabs left, view toggle + actions right */}
           <div style={{
             display: "flex",
+            flexWrap: isMobile ? "wrap" : "nowrap",
             alignItems: "center",
             gap: "var(--space-1)",
             padding: isMobile ? "0 var(--space-3)" : "0 var(--space-6)",
@@ -809,7 +810,7 @@ function ThreadsContent({ initialFolder, initialView }) {
             })}
 
             {/* Tools — add folder, search, view toggle */}
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <div style={{ flex: isMobile ? "1 1 100%" : 1, display: "flex", alignItems: "center", gap: "var(--space-2)", ...(isMobile ? { paddingBottom: "var(--space-2)" } : {}) }}>
               {/* Add folder */}
               {addingFolder ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)", padding: "2px var(--space-2)" }}>

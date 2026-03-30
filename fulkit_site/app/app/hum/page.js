@@ -386,7 +386,8 @@ export default function Hum() {
         await audio.play();
         return;
       }
-      console.warn("[hum] TTS API failed:", res.status);
+      const errBody = await res.text().catch(() => "");
+      console.warn("[hum] TTS API failed:", res.status, errBody);
     } catch (err) {
       console.warn("[hum] TTS error:", err.message);
     }
