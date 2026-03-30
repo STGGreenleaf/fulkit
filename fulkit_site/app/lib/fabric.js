@@ -1530,7 +1530,6 @@ export function FabricProvider({ children }) {
       // If track has a precached YouTube video ID, play directly — zero quota
       // Art is handled by the single art resolution effect — not here
       if (track.ytId) {
-        console.log("[playTrack] Using precached ytId:", track.ytId);
         window.__ytEngine.play(track.ytId);
         return true;
       }
@@ -1564,9 +1563,7 @@ export function FabricProvider({ children }) {
 
     // Route by provider — Spotify is just one plugin, YouTube is the universal engine
     if (track.provider !== "spotify") {
-      console.log("[playTrack] Routing to YouTube:", track.id, "provider:", track.provider, "ytId:", track.ytId, "title:", track.title);
-      const played = await resolveAndPlayYT();
-      console.log("[playTrack] resolveAndPlayYT result:", played);
+      await resolveAndPlayYT();
       return;
     }
 
@@ -2184,7 +2181,6 @@ export function FabricProvider({ children }) {
       // Auto-create set if user asked for one
       const userText = text.toLowerCase();
       const wantsSet = /\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b.*\b(sets?|mix|playlist)\b|\b(sets?|mix|playlist)\b.*\b(called|named|for|of|with)\b|\bput\s+(it|them)\s+in\s+(sets?|a set)\b/i.test(userText);
-      console.log(`[fabric] Set intent: wantsSet=${wantsSet}, userText="${userText}", responseLines=${assistantText?.split("\\n").length || 0}`);
       if (wantsSet && assistantText) {
         // Extract set name: strip the command words, keep the vibe
         const stripped = text
@@ -2236,9 +2232,6 @@ export function FabricProvider({ children }) {
         }
 
         console.log(`[fabric] Set creation: "${setName}" with ${tracks.length} tracks from "${text}"`);
-        if (tracks.length === 0) {
-          console.log("[fabric] No tracks parsed. First 5 lines of response:", assistantText.split("\n").slice(0, 5));
-        }
         if (tracks.length > 0) {
           setSetsData((prev) => {
             const id = `set-${Date.now()}`;
