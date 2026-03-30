@@ -3703,9 +3703,9 @@ const MANUAL_SECTIONS = {
         label: "What you can do",
         commands: [
           { example: "3 tropical, 12 ginger shots, 0 orange", description: "Update inventory counts — preview before confirm" },
-          { example: "86 chia pudding", description: "Mark an item sold out (coming soon)" },
-          { example: "Bump acai bowl to $14", description: "Change item pricing (coming soon)" },
-          { example: "Invoice Matt $150 for catering", description: "Create an invoice (coming soon)" },
+          { example: "86 chia pudding", description: "Mark an item sold out \u2014 sets inventory to 0" },
+          { example: "Bump acai bowl to $14", description: "Change item pricing with preview/confirm" },
+          { example: "Invoice Matt $150 for catering", description: "Create a draft invoice (or send immediately)" },
         ],
       },
     ],

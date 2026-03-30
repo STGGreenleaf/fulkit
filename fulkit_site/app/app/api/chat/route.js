@@ -228,7 +228,7 @@ function compressConversation(messages, maxTokens = 80000, chapterSummaries = nu
 
 // Ecosystem keyword map — used for tool gating and Habit Engine cold-start seeding
 const ECOSYSTEM_KEYWORDS = {
-  square: ["inventory", "shop", "store", "orders", "catalog", "customers", "sales", "pos", "checkout", "square", "close out", "closeout", "close the day", "end of day"],
+  square: ["inventory", "shop", "store", "orders", "catalog", "customers", "sales", "pos", "checkout", "square", "close out", "closeout", "close the day", "end of day", "86", "sold out", "unavailable", "price", "invoice", "bump"],
   trello: ["board", "cards", "tasks", "project", "kanban", "backlog", "sprint", "trello"],
   numbrly: ["margin", "cost", "vendor", "build", "recipe", "food cost", "pricing", "numbrly"],
   notes: ["notes", "vault", "journal", "ideas", "writing", "document"],
@@ -740,6 +740,49 @@ const SQUARE_TOOLS = [
       required: ["preview_id"],
     },
   },
+  {
+    name: "square_86",
+    description: "86 an item — mark it sold out by setting inventory to 0. Say '86 chia pudding'. Optionally set a restore time.",
+    input_schema: {
+      type: "object",
+      properties: {
+        item: { type: "string", description: "Item name to 86 (e.g. 'Chia Pudding', 'Tropical Smoothie')" },
+        restore_at: { type: "string", description: "Optional: when to auto-restore (e.g. 'tomorrow 5pm'). Creates an automation." },
+        preview: { type: "boolean", description: "Preview before executing (default true)" },
+        preview_id: { type: "string", description: "Confirm a previous 86 preview" },
+      },
+      required: ["item"],
+    },
+  },
+  {
+    name: "square_price_change",
+    description: "Change an item's price. Say 'bump acai to $14'. Shows current → new price for confirmation.",
+    input_schema: {
+      type: "object",
+      properties: {
+        item: { type: "string", description: "Item name to reprice" },
+        price: { type: "number", description: "New price in dollars (e.g. 14.00)" },
+        preview: { type: "boolean", description: "Preview before executing (default true)" },
+        preview_id: { type: "string", description: "Confirm a previous price change preview" },
+      },
+      required: ["item", "price"],
+    },
+  },
+  {
+    name: "square_create_invoice",
+    description: "Create an invoice. Say 'invoice Matt $150 for catering'. Creates as draft unless send=true.",
+    input_schema: {
+      type: "object",
+      properties: {
+        customer_name: { type: "string", description: "Customer name to look up" },
+        amount: { type: "number", description: "Total amount in dollars" },
+        description: { type: "string", description: "Line item description (e.g. 'Catering for event')" },
+        due_date: { type: "string", description: "Due date YYYY-MM-DD (default: 30 days from now)" },
+        send: { type: "boolean", description: "Send immediately (default false = draft)" },
+      },
+      required: ["customer_name", "amount", "description"],
+    },
+  },
 ];
 
 // Execute a Square tool call
@@ -1048,7 +1091,227 @@ async function executeSquareTool(toolName, input, userId, userToday) {
     }
     case "square_confirm": {
       if (!input.preview_id) return { error: "No preview_id provided" };
+      // Check if it's a price change preview or inventory preview
+      const preview = await sqGetPreview(input.preview_id, userId);
+      if (!preview) return { error: "Preview expired or not found. Please start over." };
+      if (preview.type === "price_change") {
+        // Execute price change
+        const res = await squareFetch(userId, "/catalog/batch-upsert", {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: `fulkit_price_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, objects: preview.objects }),
+        });
+        if (res.error) return { error: res.error };
+        const data = await res.json();
+        await sqConsumePreview(input.preview_id);
+        return { status: "confirmed", updated: preview.objects.length, items: preview.items };
+      }
+      // Default: inventory update
       return executeSquareTool("square_inventory_update", { preview_id: input.preview_id }, userId, userToday);
+    }
+    case "square_86": {
+      // Confirm a previous 86 preview
+      if (input.preview_id) {
+        return executeSquareTool("square_confirm", { preview_id: input.preview_id }, userId, userToday);
+      }
+
+      const itemName = (input.item || "").trim();
+      if (!itemName) return { error: "Item name required" };
+
+      // Search catalog for the item
+      const searchRes = await squareFetch(userId, "/catalog/search", {
+        method: "POST",
+        body: JSON.stringify({ object_types: ["ITEM"], query: { text_query: { keywords: [itemName] } } }),
+      });
+      if (searchRes.error) return { error: searchRes.error };
+      const searchData = await searchRes.json();
+      const items = searchData.objects || [];
+      if (items.length === 0) return { error: `No item found matching "${itemName}"` };
+
+      const item = items[0];
+      const variations = item.item_data?.variations || [];
+      if (variations.length === 0) return { error: "Item has no variations to 86" };
+
+      // Get location
+      const locRes = await squareFetch(userId, "/locations");
+      if (locRes.error) return { error: locRes.error };
+      const locData = await locRes.json();
+      const locationId = locData.locations?.[0]?.id;
+      if (!locationId) return { error: "No Square location found" };
+
+      const changes = variations.map(v => ({
+        name: `${item.item_data.name} — ${v.item_variation_data?.name || "Default"}`,
+        catalog_object_id: v.id,
+        quantity: 0,
+      }));
+
+      if (input.preview === false) {
+        // Direct push
+        const batchChanges = changes.map(c => ({
+          type: "PHYSICAL_COUNT",
+          physical_count: {
+            catalog_object_id: c.catalog_object_id,
+            location_id: locationId,
+            quantity: "0",
+            state: "IN_STOCK",
+            occurred_at: new Date().toISOString(),
+          },
+        }));
+        const res = await squareFetch(userId, "/inventory/changes/batch-create", {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: `fulkit_86_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, changes: batchChanges }),
+        });
+        if (res.error) return { error: res.error };
+        return { status: "confirmed", item: item.item_data.name, message: `${item.item_data.name} is 86'd.` };
+      }
+
+      // Preview mode
+      const previewId = await sqStorePreview(userId, { changes, location_id: locationId });
+      return { status: "preview", preview_id: previewId, item: item.item_data.name, changes, message: `86 ${item.item_data.name}? This sets inventory to 0.` };
+    }
+    case "square_price_change": {
+      if (input.preview_id) {
+        return executeSquareTool("square_confirm", { preview_id: input.preview_id }, userId, userToday);
+      }
+
+      const itemName = (input.item || "").trim();
+      const newPrice = input.price;
+      if (!itemName || !newPrice) return { error: "Item name and price required" };
+
+      // Search catalog
+      const searchRes = await squareFetch(userId, "/catalog/search", {
+        method: "POST",
+        body: JSON.stringify({ object_types: ["ITEM"], query: { text_query: { keywords: [itemName] } }, include_related_objects: true }),
+      });
+      if (searchRes.error) return { error: searchRes.error };
+      const searchData = await searchRes.json();
+      const items = searchData.objects || [];
+      if (items.length === 0) return { error: `No item found matching "${itemName}"` };
+
+      const item = items[0];
+      const variations = item.item_data?.variations || [];
+      if (variations.length === 0) return { error: "Item has no variations to reprice" };
+
+      const newPriceCents = Math.round(newPrice * 100);
+      const updatedObjects = [];
+      const previewItems = [];
+
+      for (const v of variations) {
+        const currentPrice = v.item_variation_data?.price_money?.amount || 0;
+        previewItems.push({
+          name: `${item.item_data.name} — ${v.item_variation_data?.name || "Default"}`,
+          current: `$${(currentPrice / 100).toFixed(2)}`,
+          new: `$${newPrice.toFixed(2)}`,
+        });
+        updatedObjects.push({
+          type: "ITEM_VARIATION",
+          id: v.id,
+          version: v.version,
+          item_variation_data: {
+            ...v.item_variation_data,
+            item_id: item.id,
+            price_money: { amount: newPriceCents, currency: "USD" },
+          },
+        });
+      }
+
+      if (input.preview === false) {
+        const res = await squareFetch(userId, "/catalog/batch-upsert", {
+          method: "POST",
+          body: JSON.stringify({ idempotency_key: `fulkit_price_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, objects: updatedObjects }),
+        });
+        if (res.error) return { error: res.error };
+        return { status: "confirmed", items: previewItems };
+      }
+
+      const previewId = await sqStorePreview(userId, { type: "price_change", objects: updatedObjects, items: previewItems });
+      return { status: "preview", preview_id: previewId, item: item.item_data.name, changes: previewItems };
+    }
+    case "square_create_invoice": {
+      const { customer_name, amount, description, due_date, send } = input;
+      if (!customer_name || !amount || !description) return { error: "Customer name, amount, and description required" };
+
+      // Search customer
+      const custRes = await squareFetch(userId, "/customers/search", {
+        method: "POST",
+        body: JSON.stringify({ query: { filter: { fuzzy: { display_name: { fuzzy: customer_name } } } }, limit: 1 }),
+      });
+      // Fallback: simple text search
+      let customerId = null;
+      if (!custRes.error) {
+        const custData = await custRes.json();
+        customerId = custData.customers?.[0]?.id;
+      }
+
+      // Get location
+      const locRes = await squareFetch(userId, "/locations");
+      if (locRes.error) return { error: locRes.error };
+      const locData = await locRes.json();
+      const locationId = locData.locations?.[0]?.id;
+      if (!locationId) return { error: "No Square location found" };
+
+      const dueAt = due_date || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+      const amountCents = Math.round(amount * 100);
+
+      // Create order first (invoices require an order)
+      const orderRes = await squareFetch(userId, "/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          order: {
+            location_id: locationId,
+            ...(customerId ? { customer_id: customerId } : {}),
+            line_items: [{
+              name: description,
+              quantity: "1",
+              base_price_money: { amount: amountCents, currency: "USD" },
+            }],
+          },
+          idempotency_key: `fulkit_inv_order_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        }),
+      });
+      if (orderRes.error) return { error: orderRes.error };
+      const orderData = await orderRes.json();
+      const orderId = orderData.order?.id;
+      if (!orderId) return { error: "Failed to create order for invoice" };
+
+      // Create invoice
+      const invoiceRes = await squareFetch(userId, "/invoices", {
+        method: "POST",
+        body: JSON.stringify({
+          invoice: {
+            location_id: locationId,
+            order_id: orderId,
+            primary_recipient: customerId ? { customer_id: customerId } : undefined,
+            payment_requests: [{
+              request_type: "BALANCE",
+              due_date: dueAt,
+            }],
+            delivery_method: send ? "EMAIL" : "SHARE_MANUALLY",
+            title: description,
+          },
+          idempotency_key: `fulkit_invoice_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        }),
+      });
+      if (invoiceRes.error) return { error: invoiceRes.error };
+      const invData = await invoiceRes.json();
+      const invoice = invData.invoice;
+
+      // Publish if send=true
+      if (send && invoice?.id) {
+        await squareFetch(userId, `/invoices/${invoice.id}/publish`, {
+          method: "POST",
+          body: JSON.stringify({ version: invoice.version, idempotency_key: `fulkit_inv_pub_${Date.now()}` }),
+        });
+      }
+
+      return {
+        created: true,
+        invoice_id: invoice?.id,
+        status: send ? "sent" : "draft",
+        amount: `$${amount.toFixed(2)}`,
+        due: dueAt,
+        customer: customer_name,
+        description,
+      };
     }
     default:
       return { error: "Unknown Square tool" };
