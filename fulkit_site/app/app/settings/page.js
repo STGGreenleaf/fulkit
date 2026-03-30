@@ -1258,6 +1258,9 @@ function SourcesTab() {
     if (params.get("fb") === "connected") {
       setFitbitConnected(true);
     }
+    if (params.get("strava") === "connected") {
+      setStravaConnected(true);
+    }
     if (params.get("sp") === "connected" && params.get("fprovider") === "sonos") {
       setSonosConnected(true);
     }
