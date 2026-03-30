@@ -115,16 +115,37 @@ export default function Hum() {
   const audioCtxRef = useRef(null);
   const ackBufferRef = useRef(null);
 
-  // Pre-cache a short acknowledgment clip on mount
+  const ACK_PHRASES = [
+    "One moment.",
+    "Let me take a look.",
+    "Let me look into it.",
+    "Give me just a sec.",
+    "Researching now.",
+    "I'm on it.",
+    "Looking now.",
+    "On it.",
+    "Let me check.",
+    "One sec.",
+  ];
+  const ackCacheRef = useRef([]);
+
+  // Pre-cache acknowledgment clips on mount (random variety)
   useEffect(() => {
     if (!authFetch) return;
-    authFetch("/api/hum/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: "One moment." }),
-    }).then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.audio) ackBufferRef.current = data.audio; })
-      .catch(() => {});
+    // Cache 3 random phrases
+    const picks = ACK_PHRASES.sort(() => Math.random() - 0.5).slice(0, 3);
+    Promise.all(picks.map(phrase =>
+      authFetch("/api/hum/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: phrase }),
+      }).then(r => r.ok ? r.json() : null)
+        .then(data => data?.audio || null)
+        .catch(() => null)
+    )).then(results => {
+      ackCacheRef.current = results.filter(Boolean);
+      if (ackCacheRef.current.length > 0) ackBufferRef.current = ackCacheRef.current[0];
+    });
   }, [authFetch]);
 
   // Check browser support (MediaRecorder is universal)
@@ -342,6 +363,11 @@ export default function Hum() {
       messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
 
       // Brief pause before acknowledgment — don't cut off the user's last word
+      // Rotate through cached clips so it never sounds the same twice
+      if (ackCacheRef.current.length > 0) {
+        const idx = Math.floor(Math.random() * ackCacheRef.current.length);
+        ackBufferRef.current = ackCacheRef.current[idx];
+      }
       if (ackBufferRef.current && audioCtxRef.current) {
         await new Promise(r => setTimeout(r, 800));
         try {
