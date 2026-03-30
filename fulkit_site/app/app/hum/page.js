@@ -108,6 +108,7 @@ export default function Hum() {
   const messagesRef = useRef([]);
   const abortRef = useRef(null);
   const transcriptRef = useRef("");
+  const speakTextRef = useRef(null);
 
   // Check browser support
   useEffect(() => {
@@ -316,7 +317,7 @@ export default function Hum() {
 
       if (!res.ok) {
         setResponse("Sorry, something went wrong.");
-        speakText("Sorry, something went wrong.");
+        speakTextRef.current("Sorry, something went wrong.");
         return;
       }
 
@@ -360,7 +361,7 @@ export default function Hum() {
 
       // Speak the response
       if (fullResponse.trim()) {
-        speakText(fullResponse);
+        speakTextRef.current(fullResponse);
       } else {
         setMode("idle");
       }
@@ -368,13 +369,15 @@ export default function Hum() {
       if (err.name === "AbortError") return;
       console.warn("[hum] chat error:", err.message);
       setResponse("Couldn\u2019t reach the server.");
-      speakText("Couldn\u2019t reach the server.");
+      speakTextRef.current("Couldn\u2019t reach the server.");
     }
-  }, [authFetch]);
+  }, [authFetch, playConfirmTone]);
 
-  // ─── Voice: TTS via OpenAI (alloy) ───
+  // ─── Voice: TTS via OpenAI (alloy), falls back to browser speech ───
   const speakText = useCallback(async (text) => {
     setMode("speaking");
+
+    // Try OpenAI TTS first
     try {
       const res = await authFetch("/api/hum/speak", {
         method: "POST",
@@ -382,35 +385,49 @@ export default function Hum() {
         body: JSON.stringify({ text }),
       });
 
-      if (!res.ok) {
-        console.warn("[hum] TTS failed:", res.status);
-        setMode("idle");
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          utteranceRef.current = null;
+          setMode("idle");
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          utteranceRef.current = null;
+          setMode("idle");
+        };
+
+        utteranceRef.current = audio;
+        await audio.play();
         return;
       }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        utteranceRef.current = null;
-        setMode("idle");
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        utteranceRef.current = null;
-        setMode("idle");
-      };
-
-      utteranceRef.current = audio;
-      audio.play();
+      console.warn("[hum] TTS API failed:", res.status);
     } catch (err) {
       console.warn("[hum] TTS error:", err.message);
+    }
+
+    // Fallback: browser SpeechSynthesis
+    try {
+      const clean = text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
+        .replace(/`(.+?)`/g, "$1").replace(/#{1,6}\s/g, "").replace(/\n+/g, " ");
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.onend = () => { utteranceRef.current = null; setMode("idle"); };
+      utterance.onerror = () => { utteranceRef.current = null; setMode("idle"); };
+      utteranceRef.current = utterance;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } catch {
       utteranceRef.current = null;
       setMode("idle");
     }
   }, [authFetch]);
+
+  // Keep ref in sync so stopListening can call it without circular deps
+  speakTextRef.current = speakText;
 
   // ─── Controls ───
   const handleMicTap = useCallback(() => {
@@ -435,7 +452,8 @@ export default function Hum() {
       recognitionRef.current = null;
     }
     if (utteranceRef.current) {
-      utteranceRef.current.pause();
+      if (utteranceRef.current instanceof Audio) utteranceRef.current.pause();
+      else window.speechSynthesis.cancel();
       utteranceRef.current = null;
     }
     if (abortRef.current) {
@@ -450,7 +468,11 @@ export default function Hum() {
 
   const goBack = useCallback(() => {
     if (mode === "speaking") {
-      if (utteranceRef.current) { utteranceRef.current.pause(); utteranceRef.current = null; }
+      if (utteranceRef.current) {
+        if (utteranceRef.current instanceof Audio) utteranceRef.current.pause();
+        else window.speechSynthesis.cancel();
+        utteranceRef.current = null;
+      }
       setMode("idle");
     } else if (mode === "thinking") {
       if (abortRef.current) {
