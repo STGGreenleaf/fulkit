@@ -58,27 +58,34 @@ export async function POST(request) {
       if (audioFeatures.valence != null) parts.push(`valence ${audioFeatures.valence}/100`);
       if (parts.length) contextParts.push(`Audio: ${parts.join(", ")}`);
     }
-    // Build "do NOT re-recommend" list from all sources
+    // Build exclusion context — structured per-set so B-Side sees exactly what the user already owns
     const doNotRecommend = new Set();
+    const ownedSections = [];
     if (setTracks?.length) {
-      const setList = setTracks.slice(0, 10).map(t => `${t.artist} - ${t.title}`).join(", ");
-      contextParts.push(`User's active set (${setTracks.length} tracks): ${setList}${setTracks.length > 10 ? "..." : ""}`);
+      const list = setTracks.slice(0, 15).map(t => `${t.artist} - ${t.title}`);
       setTracks.forEach(t => doNotRecommend.add(`${t.artist} - ${t.title}`));
+      ownedSections.push(`Main Set (${setTracks.length}): ${list.join(", ")}${setTracks.length > 15 ? "..." : ""}`);
     }
     if (bsidesTracks?.length) {
+      const list = bsidesTracks.slice(0, 15).map(t => `${t.artist} - ${t.title}`);
       bsidesTracks.forEach(t => doNotRecommend.add(`${t.artist} - ${t.title}`));
+      ownedSections.push(`B-Sides Crate (${bsidesTracks.length}): ${list.join(", ")}${bsidesTracks.length > 15 ? "..." : ""}`);
     }
     if (tasteSummary?.setContents?.length) {
-      tasteSummary.setContents.forEach(s => s.tracks?.forEach(t => doNotRecommend.add(t)));
+      for (const s of tasteSummary.setContents) {
+        if (!s.tracks?.length) continue;
+        s.tracks.forEach(t => doNotRecommend.add(t));
+        ownedSections.push(`"${s.name}" (${s.tracks.length}): ${s.tracks.slice(0, 15).join(", ")}${s.tracks.length > 15 ? "..." : ""}`);
+      }
     }
-    if (doNotRecommend.size > 0) {
-      contextParts.push(`ALREADY IN LIBRARY — do NOT re-recommend these (${doNotRecommend.size} tracks): ${[...doNotRecommend].slice(0, 40).join(", ")}${doNotRecommend.size > 40 ? "..." : ""}`);
+    if (ownedSections.length > 0) {
+      contextParts.push(`⛔ TRACKS THE USER ALREADY OWNS — recommending ANY of these is lazy. Dig deeper.\n${ownedSections.join("\n")}`);
     }
     // Taste profile — engagement signals from recommendation history
     if (tasteSummary) {
       const tp = [];
       if (tasteSummary.favorites?.length) {
-        tp.push(`Favorites: ${tasteSummary.favorites.map(f => `${f.artist} - ${f.title} (score: ${f.score})`).join(", ")}`);
+        tp.push(`Taste anchors (use as LAUNCHPAD to find NEW tracks, never re-recommend these): ${tasteSummary.favorites.map(f => `${f.artist} - ${f.title}`).join(", ")}`);
       }
       if (tasteSummary.passes?.length) {
         tp.push(`Passes (avoid similar): ${tasteSummary.passes.map(p => `${p.artist} - ${p.title}`).join(", ")}`);
