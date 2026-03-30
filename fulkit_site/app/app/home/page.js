@@ -121,15 +121,19 @@ export default function Dashboard() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.whispers) setWhispers(data.whispers); })
       .catch(() => {});
-    // Closeout whisper (from cron)
-    supabase.from("preferences").select("value").eq("user_id", user?.id).eq("key", "closeout_whisper").maybeSingle()
+    // Closeout + automation whispers (from crons)
+    supabase.from("preferences").select("key, value").eq("user_id", user?.id)
+      .or("key.eq.closeout_whisper,key.like.automation_whisper:%")
       .then(({ data }) => {
-        if (data?.value) {
+        if (!data?.length) return;
+        const extras = [];
+        for (const row of data) {
           try {
-            const co = JSON.parse(data.value);
-            if (co.text) setWhispers(prev => [co.text, ...(prev || [])]);
+            const parsed = JSON.parse(row.value);
+            if (parsed.text) extras.push(parsed.text);
           } catch {}
         }
+        if (extras.length > 0) setWhispers(prev => [...extras, ...(prev || [])]);
       });
   }, [accessToken, user?.id]);
 
