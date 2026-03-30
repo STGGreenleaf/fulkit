@@ -357,7 +357,7 @@ const SOURCE_DESCRIPTIONS = {
     subtitle: "Your training, in context.",
     description: "Strava tracks your runs, rides, swims, and workouts with GPS, pace, heart rate, and elevation. Connecting it means F\u00FClkit sees your training history and can help you plan around your fitness, track progress, and spot trends.",
     gives: "Recent activities with distance, pace, splits, heart rate, elevation gain, and suffer score. All-time and year-to-date stats across runs, rides, and swims. Ask about your last run or how your training is going.",
-    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat\u2019s my mileage this year?",
+    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat's my mileage this year?\u201D",
     linkLabel: "strava.com",
     linkHref: "https://www.strava.com",
   },
@@ -2791,7 +2791,7 @@ function SourcesTab() {
                     description: "Strava tracks your runs, rides, swims, and workouts with GPS, pace, heart rate, and elevation. Connecting it means F\u00FClkit sees your training history and can help you plan around your fitness, track progress, and spot trends.",
                     givesLabel: "What this gives F\u00FClkit",
                     gives: "Recent activities with distance, pace, splits, heart rate, elevation gain, and suffer score. All-time and year-to-date stats across runs, rides, and swims. Ask about your last run or how your training is going.",
-                    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat\u2019s my mileage this year?",
+                    tryPrompt: "\u201CHow was my last run?\u201D\n\u201CWhat's my mileage this year?\u201D",
                     linkLabel: "strava.com",
                     linkHref: "https://www.strava.com",
                     footer: (
