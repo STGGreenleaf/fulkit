@@ -3522,7 +3522,7 @@ export default function FabricPage() {
     setDiscoveryLoading(false);
   }, [accessToken, discoveryLoading]);
 
-  // Search — direct Spotify search (artist + albums)
+  // Search — provider-agnostic (artist + albums + playlists + tracks)
   const runSearch = useCallback(async (query) => {
     if (!accessToken || searchLoading || !query.trim()) return;
     setSearchLoading(true);
@@ -3530,22 +3530,31 @@ export default function FabricPage() {
     setShowAllAlbums(false);
     try {
       const headers = { Authorization: `Bearer ${accessToken}` };
-      const [artistRes, albumRes, playlistRes] = await Promise.all([
-        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=artist`, { headers }),
-        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=album`, { headers }),
-        fetch(`/api/fabric/search?q=${encodeURIComponent(query)}&type=playlist`, { headers }),
+      const q = encodeURIComponent(query);
+      const [artistRes, albumRes, playlistRes, trackRes] = await Promise.all([
+        fetch(`/api/fabric/search?q=${q}&type=artist`, { headers }),
+        fetch(`/api/fabric/search?q=${q}&type=album`, { headers }),
+        fetch(`/api/fabric/search?q=${q}&type=playlist`, { headers }),
+        fetch(`/api/fabric/search?q=${q}&type=track&limit=10`, { headers }),
       ]);
-      const [artistData, albumData, playlistData] = await Promise.all([artistRes.json(), albumRes.json(), playlistRes.json()]);
+      const [artistData, albumData, playlistData, trackData] = await Promise.all([
+        artistRes.json(), albumRes.json(), playlistRes.json(), trackRes.json(),
+      ]);
       const artist = artistData.artists?.[0] || null;
 
-      // If we found an artist, fetch their top tracks
+      // If we found a Spotify artist, fetch their top tracks
       let topTracks = [];
       if (artist?.id) {
         try {
-          const ttRes = await fetch(`/api/fabric/search?type=top-tracks&artist_id=${artist.id}`, { headers });
+          const ttRes = await fetch(`/api/fabric/search?type=top-tracks&artist_id=${artist.id}&q=${q}`, { headers });
           const ttData = await ttRes.json();
           topTracks = ttData.tracks || [];
         } catch {}
+      }
+
+      // Fallback: if no top tracks from artist lookup, use track search results
+      if (topTracks.length === 0) {
+        topTracks = trackData.tracks || trackData.results || [];
       }
 
       setSearchResults({
