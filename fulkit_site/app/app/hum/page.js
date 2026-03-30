@@ -87,7 +87,7 @@ function smoothNoise(x, y, z) {
 }
 
 export default function Hum() {
-  const { authFetch } = useAuth();
+  const { authFetch, profile } = useAuth();
   const track = useTrack();
   useEffect(() => { track("page_view", { feature: "hum" }); }, []);
   useOnboardingTrigger("hum");
@@ -115,6 +115,7 @@ export default function Hum() {
   const audioCtxRef = useRef(null);
   const ackBufferRef = useRef(null);
 
+  const firstName = profile?.display_name?.split(" ")[0] || "";
   const ACK_PHRASES = [
     "One moment.",
     "Let me take a look.",
@@ -126,14 +127,34 @@ export default function Hum() {
     "On it.",
     "Let me check.",
     "One sec.",
+    "Got it.",
+    "Heard you.",
+    "Working on it.",
+    "Let me pull that up.",
+    "Checking now.",
+    "Right away.",
+    "Say less.",
+    "I got you.",
+    "Pulling that up now.",
+    "Let me see.",
+    ...(firstName ? [
+      `One moment, ${firstName}.`,
+      `On it, ${firstName}.`,
+      `Let me check, ${firstName}.`,
+      `Got it, ${firstName}.`,
+      `Give me a sec, ${firstName}.`,
+      `Looking into it, ${firstName}.`,
+      `I got you, ${firstName}.`,
+      `Right away, ${firstName}.`,
+    ] : []),
   ];
   const ackCacheRef = useRef([]);
 
   // Pre-cache acknowledgment clips on mount (random variety)
   useEffect(() => {
     if (!authFetch) return;
-    // Cache 3 random phrases
-    const picks = ACK_PHRASES.sort(() => Math.random() - 0.5).slice(0, 3);
+    // Cache 5 random phrases
+    const picks = [...ACK_PHRASES].sort(() => Math.random() - 0.5).slice(0, 5);
     Promise.all(picks.map(phrase =>
       authFetch("/api/hum/speak", {
         method: "POST",
