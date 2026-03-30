@@ -359,14 +359,36 @@ export default function Hum() {
     setMode("thinking");
 
     try {
-      // Transcribe via Whisper
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
+      // Play acknowledgment + transcribe in parallel (saves ~2s)
+      const playAck = async () => {
+        if (ackCacheRef.current.length > 0) {
+          const idx = Math.floor(Math.random() * ackCacheRef.current.length);
+          ackBufferRef.current = ackCacheRef.current[idx];
+        }
+        if (ackBufferRef.current && audioCtxRef.current) {
+          await new Promise(r => setTimeout(r, 500));
+          try {
+            const ctx = audioCtxRef.current;
+            const bStr = atob(ackBufferRef.current);
+            const buf = new Uint8Array(bStr.length);
+            for (let i = 0; i < bStr.length; i++) buf[i] = bStr.charCodeAt(i);
+            const decoded = await ctx.decodeAudioData(buf.buffer.slice(0));
+            const src = ctx.createBufferSource();
+            src.buffer = decoded;
+            src.connect(ctx.destination);
+            src.start(0);
+          } catch {}
+        }
+      };
 
-      const txRes = await authFetch("/api/hum/transcribe", {
-        method: "POST",
-        body: formData,
-      });
+      const transcribe = async () => {
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+        return authFetch("/api/hum/transcribe", { method: "POST", body: formData });
+      };
+
+      // Fire both at once
+      const [, txRes] = await Promise.all([playAck(), transcribe()]);
 
       if (!txRes.ok) {
         console.warn("[hum] transcribe failed:", txRes.status);
@@ -382,27 +404,6 @@ export default function Hum() {
 
       setTranscript(text);
       messagesRef.current = [...messagesRef.current, { role: "user", content: text }];
-
-      // Brief pause before acknowledgment — don't cut off the user's last word
-      // Rotate through cached clips so it never sounds the same twice
-      if (ackCacheRef.current.length > 0) {
-        const idx = Math.floor(Math.random() * ackCacheRef.current.length);
-        ackBufferRef.current = ackCacheRef.current[idx];
-      }
-      if (ackBufferRef.current && audioCtxRef.current) {
-        await new Promise(r => setTimeout(r, 800));
-        try {
-          const ctx = audioCtxRef.current;
-          const bStr = atob(ackBufferRef.current);
-          const buf = new Uint8Array(bStr.length);
-          for (let i = 0; i < bStr.length; i++) buf[i] = bStr.charCodeAt(i);
-          const decoded = await ctx.decodeAudioData(buf.buffer.slice(0));
-          const src = ctx.createBufferSource();
-          src.buffer = decoded;
-          src.connect(ctx.destination);
-          src.start(0);
-        } catch {}
-      }
 
       // Send to AI — trim history to last 10 messages to stay fast
       const trimmed = messagesRef.current.slice(-10);
