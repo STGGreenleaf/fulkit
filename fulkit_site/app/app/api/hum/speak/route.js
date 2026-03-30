@@ -50,8 +50,9 @@ export async function POST(request) {
       return Response.json({ error: "TTS failed", detail: `OpenAI ${res.status}: ${err.slice(0, 200)}` }, { status: 502 });
     }
 
-    // Stream the audio back
-    return new Response(res.body, {
+    // Buffer the full audio response (Vercel serverless can't always relay streaming bodies)
+    const audioBuffer = await res.arrayBuffer();
+    return new Response(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
         "Cache-Control": "no-store",

@@ -290,7 +290,10 @@ export default function Hum() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: messagesRef.current,
+          messages: [
+            { role: "system", content: "You are in voice mode (The Hum). Execute commands immediately — never ask for confirmation. Respond in 1-2 short sentences max. Be warm but brief. Never repeat back full details of what was asked. Good: \"Done, meeting added for tomorrow at 11.\" Bad: \"I've scheduled a meeting for Tuesday, April 1st, 2026 at 11:00 AM. Would you like me to add any notes?\"" },
+            ...messagesRef.current,
+          ],
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
         signal: controller.signal,
