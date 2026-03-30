@@ -395,7 +395,7 @@ export function FabricProvider({ children }) {
       }
       setStatusChecked(true);
       // Fetch Sonos groups if connected
-      if (data?.providers?.sonos) {
+      if ("sonos" in (data?.providers || {})) {
         apiFetch("/api/fabric/sonos").then((sonosData) => {
           if (sonosData?.groups?.length) {
             setSonosGroups(sonosData.groups);
