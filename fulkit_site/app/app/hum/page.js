@@ -439,14 +439,7 @@ export default function Hum() {
     }
   }, [mode]);
 
-  // Subtitle text based on mode
-  const subtitle = mode === "listening" && transcript
-    ? transcript
-    : mode === "thinking"
-    ? transcript || "Processing..."
-    : mode === "speaking" && response
-    ? response.length > 200 ? response.slice(0, 200) + "..." : response
-    : "tap the orb to talk";
+  // No text on screen during conversation — the orb is the interface
 
   return (
     <AuthGuard>
@@ -535,31 +528,7 @@ export default function Hum() {
         />
       </div>
 
-      {/* Subtitle / transcript / response */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 140,
-          left: "var(--space-8)",
-          right: "var(--space-8)",
-          textAlign: "center",
-          maxHeight: 80,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: mode === "idle" ? "var(--color-text-dim)" : "var(--color-text-muted)",
-            fontWeight: "var(--font-weight-normal)",
-            lineHeight: "var(--line-height-relaxed)",
-            fontStyle: mode === "listening" ? "italic" : "normal",
-            transition: "all var(--duration-normal) var(--ease-default)",
-          }}
-        >
-          {subtitle}
-        </div>
-      </div>
+      {/* No transcript or response text — just the orb */}
 
       {/* Bottom: Controls */}
       <div
