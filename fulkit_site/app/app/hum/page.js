@@ -351,36 +351,45 @@ export default function Hum() {
     }
   }, [authFetch]);
 
-  // ─── Voice: TTS ───
-  const speakText = useCallback((text) => {
+  // ─── Voice: TTS via OpenAI (alloy) ───
+  const speakText = useCallback(async (text) => {
     setMode("speaking");
-    // Strip markdown formatting for cleaner speech
-    const clean = text
-      .replace(/\*\*(.+?)\*\*/g, "$1")
-      .replace(/\*(.+?)\*/g, "$1")
-      .replace(/`(.+?)`/g, "$1")
-      .replace(/#{1,6}\s/g, "")
-      .replace(/\[(.+?)\]\(.+?\)/g, "$1")
-      .replace(/\n{2,}/g, ". ")
-      .replace(/\n/g, " ");
+    try {
+      const res = await authFetch("/api/hum/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+      if (!res.ok) {
+        console.warn("[hum] TTS failed:", res.status);
+        setMode("idle");
+        return;
+      }
 
-    utterance.onend = () => {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        utteranceRef.current = null;
+        setMode("idle");
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        utteranceRef.current = null;
+        setMode("idle");
+      };
+
+      utteranceRef.current = audio;
+      audio.play();
+    } catch (err) {
+      console.warn("[hum] TTS error:", err.message);
       utteranceRef.current = null;
       setMode("idle");
-    };
-    utterance.onerror = () => {
-      utteranceRef.current = null;
-      setMode("idle");
-    };
-
-    utteranceRef.current = utterance;
-    window.speechSynthesis.cancel(); // Clear any queued speech
-    window.speechSynthesis.speak(utterance);
-  }, []);
+    }
+  }, [authFetch]);
 
   // ─── Controls ───
   const handleMicTap = useCallback(() => {
@@ -405,7 +414,7 @@ export default function Hum() {
       recognitionRef.current = null;
     }
     if (utteranceRef.current) {
-      window.speechSynthesis.cancel();
+      utteranceRef.current.pause();
       utteranceRef.current = null;
     }
     if (abortRef.current) {
@@ -420,8 +429,7 @@ export default function Hum() {
 
   const goBack = useCallback(() => {
     if (mode === "speaking") {
-      window.speechSynthesis.cancel();
-      utteranceRef.current = null;
+      if (utteranceRef.current) { utteranceRef.current.pause(); utteranceRef.current = null; }
       setMode("idle");
     } else if (mode === "thinking") {
       if (abortRef.current) {
