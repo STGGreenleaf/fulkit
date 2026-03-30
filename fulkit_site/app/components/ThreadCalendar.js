@@ -67,12 +67,13 @@ function toDateString(date) {
 }
 
 
-export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNote, onAddNote, compact }) {
+export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNote, onAddNote, compact, isMobile }) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [dragNoteId, setDragNoteId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
+  const [focusedDay, setFocusedDay] = useState(null); // date string for day detail view
   const dragGhost = useRef(null);
   const dragNodeRef = useRef(null);
 
@@ -211,6 +212,7 @@ export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNo
                 return (
                   <div
                     key={di}
+                    onClick={() => isMobile && setFocusedDay(key)}
                     onDoubleClick={() => handleDayDoubleClick(date)}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -296,6 +298,90 @@ export default function ThreadCalendar({ notes, selectedId, onSelect, onUpdateNo
           ))}
         </div>
       </div>
+
+      {/* Day detail — mobile tap to zoom */}
+      {focusedDay && (() => {
+        const dayNotes = notesByDate[focusedDay] || [];
+        const [y, m, d] = focusedDay.split("-").map(Number);
+        const focusDate = new Date(y, m, d);
+        const dayLabel = focusDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+        return (
+          <div style={{
+            borderTop: "1px solid var(--color-border-light)",
+            paddingTop: "var(--space-3)",
+            marginTop: "var(--space-2)",
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "var(--space-3)",
+            }}>
+              <span style={{
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-semibold)",
+                color: "var(--color-text)",
+              }}>
+                {dayLabel}
+              </span>
+              <button
+                onClick={() => setFocusedDay(null)}
+                style={{
+                  display: "flex", background: "none", border: "none", cursor: "pointer",
+                  padding: "var(--space-1)", color: "var(--color-text-muted)",
+                }}
+              >
+                <ChevronLeft size={14} strokeWidth={2} />
+              </button>
+            </div>
+            {dayNotes.length === 0 ? (
+              <div style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-dim)",
+                fontStyle: "italic",
+                padding: "var(--space-2) 0",
+              }}>
+                Nothing scheduled
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                {dayNotes.map((note) => {
+                  const isExternal = note._external;
+                  const urgency = isExternal ? null : getUrgency(note.due_date);
+                  const SourceIcon = note.source === "google_calendar" ? Calendar : note.source === "trello" ? Trello : null;
+                  return (
+                    <button
+                      key={note.id}
+                      onClick={() => onSelect(note.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-2)",
+                        width: "100%",
+                        padding: "var(--space-2-5) var(--space-3)",
+                        background: String(note.id) === String(selectedId) ? "var(--color-bg-alt)" : "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border-light)",
+                        borderRadius: 0,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        fontSize: "var(--font-size-xs)",
+                        fontFamily: "var(--font-primary)",
+                        color: isExternal ? "var(--color-text-muted)" : "var(--color-text)",
+                      }}
+                    >
+                      {SourceIcon ? <SourceIcon size={12} strokeWidth={1.8} style={{ flexShrink: 0 }} /> : <UrgencyMeter urgency={urgency} />}
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{note.title}</span>
+                      {note.due_time && (
+                        <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", flexShrink: 0 }}>{note.due_time}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Unscheduled — draggable */}
       {unscheduled.length > 0 && (

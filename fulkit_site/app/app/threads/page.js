@@ -1256,6 +1256,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                   onUpdateNote={updateNote}
                   onAddNote={addNote}
                   compact={compactMode}
+                  isMobile={isMobile}
                 />
                 {selectedNote && (
                   <div style={{
