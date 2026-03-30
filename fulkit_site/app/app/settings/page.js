@@ -2492,7 +2492,7 @@ function SourcesTab() {
                             Connected{spotifySeats ? ` \u00B7 ${spotifySeats.used}/${spotifySeats.max} seats` : ""}
                           </div>
                           <button
-                            onClick={disconnectFabric}
+                            onClick={() => disconnect("fabric")}
                             disabled={fabricDisconnecting}
                             style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fabricDisconnecting ? 0.5 : 1 }}
                           >
@@ -2596,7 +2596,7 @@ function SourcesTab() {
                           Connected{numbrlyLastSynced ? ` \u00B7 Last synced ${timeAgo(numbrlyLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectNumbrly}
+                          onClick={() => disconnect("numbrly")}
                           disabled={numbrlyDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: numbrlyDisconnecting ? 0.5 : 1 }}
                         >
@@ -2634,7 +2634,7 @@ function SourcesTab() {
                           Connected{tgLastSynced ? ` \u00B7 Last synced ${timeAgo(tgLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectTrueGauge}
+                          onClick={() => disconnect("truegauge")}
                           disabled={tgDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: tgDisconnecting ? 0.5 : 1 }}
                         >
@@ -2672,7 +2672,7 @@ function SourcesTab() {
                           Connected{squareLastSynced ? ` \u00B7 Last synced ${timeAgo(squareLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectSquare}
+                          onClick={() => disconnect("square")}
                           disabled={squareDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: squareDisconnecting ? 0.5 : 1 }}
                         >
@@ -2710,7 +2710,7 @@ function SourcesTab() {
                           Connected{shopifyLastSynced ? ` \u00B7 Last synced ${timeAgo(shopifyLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectShopify}
+                          onClick={() => disconnect("shopify")}
                           disabled={shopifyDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: shopifyDisconnecting ? 0.5 : 1 }}
                         >
@@ -2748,7 +2748,7 @@ function SourcesTab() {
                           Connected{stripeLastSynced ? ` \u00B7 Last synced ${timeAgo(stripeLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectStripe}
+                          onClick={() => disconnect("stripe")}
                           disabled={stripeDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: stripeDisconnecting ? 0.5 : 1 }}
                         >
@@ -2786,7 +2786,7 @@ function SourcesTab() {
                           Connected{toastLastSynced ? ` \u00B7 Last synced ${timeAgo(toastLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectToast}
+                          onClick={() => disconnect("toast")}
                           disabled={toastDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: toastDisconnecting ? 0.5 : 1 }}
                         >
@@ -2824,7 +2824,7 @@ function SourcesTab() {
                           Connected{trelloLastSynced ? ` \u00B7 Last synced ${timeAgo(trelloLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectTrello}
+                          onClick={() => disconnect("trello")}
                           disabled={trelloDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: trelloDisconnecting ? 0.5 : 1 }}
                         >
@@ -2862,7 +2862,7 @@ function SourcesTab() {
                           Connected{fitbitLastSynced ? ` \u00B7 Last synced ${timeAgo(fitbitLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectFitbit}
+                          onClick={() => disconnect("fitbit")}
                           disabled={fitbitDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: fitbitDisconnecting ? 0.5 : 1 }}
                         >
@@ -2900,7 +2900,7 @@ function SourcesTab() {
                           Connected{stravaLastSynced ? ` \u00B7 Last synced ${timeAgo(stravaLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectStrava}
+                          onClick={() => disconnect("strava")}
                           disabled={stravaDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: stravaDisconnecting ? 0.5 : 1 }}
                         >
@@ -2938,7 +2938,7 @@ function SourcesTab() {
                           Connected{sonosLastSynced ? ` \u00B7 Last synced ${timeAgo(sonosLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectSonos}
+                          onClick={() => disconnect("sonos")}
                           disabled={sonosDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: sonosDisconnecting ? 0.5 : 1 }}
                         >
@@ -3005,7 +3005,7 @@ function SourcesTab() {
                           Connected{qbLastSynced ? ` \u00B7 Last synced ${timeAgo(qbLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectQB}
+                          onClick={() => disconnect("quickbooks")}
                           disabled={qbDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: qbDisconnecting ? 0.5 : 1 }}
                         >
@@ -3051,7 +3051,7 @@ function SourcesTab() {
                             {obsidianImporting ? "Importing..." : "Re-import"}
                           </button>
                           <button
-                            onClick={disconnectObsidian}
+                            onClick={() => disconnect("obsidian")}
                             style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
                           >
                             Disconnect
@@ -3089,7 +3089,7 @@ function SourcesTab() {
                           Connected{notionLastSynced ? ` \u00B7 Last synced ${timeAgo(notionLastSynced)}` : ""}
                         </div>
                         <button
-                          onClick={disconnectNotion}
+                          onClick={() => disconnect("notion")}
                           disabled={notionDisconnecting}
                           style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: notionDisconnecting ? 0.5 : 1 }}
                         >
@@ -3153,7 +3153,7 @@ function SourcesTab() {
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                           Connected{dropboxLastSynced ? ` \u00B7 Last synced ${timeAgo(dropboxLastSynced)}` : ""}
                         </div>
-                        <button onClick={disconnectDropbox} disabled={dropboxDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: dropboxDisconnecting ? 0.5 : 1 }}>
+                        <button onClick={() => disconnect("dropbox")} disabled={dropboxDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: dropboxDisconnecting ? 0.5 : 1 }}>
                           {dropboxDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
@@ -3214,7 +3214,7 @@ function SourcesTab() {
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>
                           Connected{slackLastSynced ? ` \u00B7 Last synced ${timeAgo(slackLastSynced)}` : ""}
                         </div>
-                        <button onClick={disconnectSlack} disabled={slackDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: slackDisconnecting ? 0.5 : 1 }}>
+                        <button onClick={() => disconnect("slack")} disabled={slackDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: slackDisconnecting ? 0.5 : 1 }}>
                           {slackDisconnecting ? "..." : "Disconnect"}
                         </button>
                       </div>
@@ -3240,7 +3240,7 @@ function SourcesTab() {
                     footer: (
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected</div>
-                        <button onClick={disconnectReadwise} disabled={readwiseDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: readwiseDisconnecting ? 0.5 : 1 }}>{readwiseDisconnecting ? "..." : "Disconnect"}</button>
+                        <button onClick={() => disconnect("readwise")} disabled={readwiseDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: readwiseDisconnecting ? 0.5 : 1 }}>{readwiseDisconnecting ? "..." : "Disconnect"}</button>
                       </div>
                     ),
                   })}
@@ -3264,7 +3264,7 @@ function SourcesTab() {
                     footer: (
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{onenoteLastSynced ? ` \u00B7 Last synced ${timeAgo(onenoteLastSynced)}` : ""}</div>
-                        <button onClick={disconnectOnenote} disabled={onenoteDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: onenoteDisconnecting ? 0.5 : 1 }}>{onenoteDisconnecting ? "..." : "Disconnect"}</button>
+                        <button onClick={() => disconnect("onenote")} disabled={onenoteDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: onenoteDisconnecting ? 0.5 : 1 }}>{onenoteDisconnecting ? "..." : "Disconnect"}</button>
                       </div>
                     ),
                   })}
@@ -3288,7 +3288,7 @@ function SourcesTab() {
                     footer: (
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{todoistLastSynced ? ` \u00B7 Last synced ${timeAgo(todoistLastSynced)}` : ""}</div>
-                        <button onClick={disconnectTodoist} disabled={todoistDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: todoistDisconnecting ? 0.5 : 1 }}>{todoistDisconnecting ? "..." : "Disconnect"}</button>
+                        <button onClick={() => disconnect("todoist")} disabled={todoistDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: todoistDisconnecting ? 0.5 : 1 }}>{todoistDisconnecting ? "..." : "Disconnect"}</button>
                       </div>
                     ),
                   })}
