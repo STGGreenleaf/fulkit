@@ -1514,6 +1514,7 @@ export function FabricProvider({ children }) {
       // If track has a precached YouTube video ID, play directly — zero quota
       // Art is handled by the single art resolution effect — not here
       if (track.ytId) {
+        console.log("[playTrack] Using precached ytId:", track.ytId);
         window.__ytEngine.play(track.ytId);
         return true;
       }
@@ -1547,8 +1548,9 @@ export function FabricProvider({ children }) {
 
     // Route by provider — Spotify is just one plugin, YouTube is the universal engine
     if (track.provider !== "spotify") {
-      // Everything non-Spotify routes through YouTube (the universal fallback)
-      await resolveAndPlayYT();
+      console.log("[playTrack] Routing to YouTube:", track.id, "provider:", track.provider, "ytId:", track.ytId, "title:", track.title);
+      const played = await resolveAndPlayYT();
+      console.log("[playTrack] resolveAndPlayYT result:", played);
       return;
     }
 
