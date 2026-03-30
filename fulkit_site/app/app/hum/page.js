@@ -23,7 +23,7 @@ const CONFIGS = {
     intensity: 0.7,
     speed: 0.02,
     baseRadius: 0.28,
-    color: [240, 240, 235],
+    color: [190, 188, 182],
     pulseSpeed: 0.03,
     noiseScale: 3.5,
   },
