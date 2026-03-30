@@ -404,7 +404,8 @@ export default function Hum() {
         } catch {}
       }
 
-      // Send to AI
+      // Send to AI — trim history to last 10 messages to stay fast
+      const trimmed = messagesRef.current.slice(-10);
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -412,7 +413,7 @@ export default function Hum() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: messagesRef.current,
+          messages: trimmed,
           context: [{ title: "Voice Mode", content: "User is speaking via The Hum (voice mode). Rules: Use tools to execute every request — check calendars, create events, search notes, manage tasks, query integrations. If a tool is available, use it. Never say you cannot do something if you have a tool for it. Respond in 1-2 short sentences after executing. Be warm but brief. Never ask for confirmation. Never repeat back full details." }],
           voiceMode: true,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -478,7 +479,6 @@ export default function Hum() {
     setMode("speaking");
 
     // Try OpenAI TTS first
-    let ttsError = null;
     try {
       const res = await authFetch("/api/hum/speak", {
         method: "POST",
@@ -508,21 +508,14 @@ export default function Hum() {
           source.start(0);
           return;
         }
-        ttsError = `No audio in response. Size: ${data.size || 0}`;
       }
-      const errBody = await res.text().catch(() => "");
-      console.warn("[hum] TTS API failed:", res.status, errBody);
-      // Diagnostic: speak the error so we can hear what's wrong
-      ttsError = `TTS failed. Status ${res.status}. ${errBody.slice(0, 100)}`;
     } catch (err) {
       console.warn("[hum] TTS error:", err.message);
-      ttsError = `TTS error. ${err.message}`;
     }
 
-    // Fallback: browser SpeechSynthesis (speaks error if TTS failed, otherwise speaks response)
+    // Fallback: browser SpeechSynthesis
     try {
-      const fallbackText = ttsError || text;
-      const clean = fallbackText.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
+      const clean = text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
         .replace(/`(.+?)`/g, "$1").replace(/#{1,6}\s/g, "").replace(/\n+/g, " ");
       const utterance = new SpeechSynthesisUtterance(clean);
       utterance.onend = () => { utteranceRef.current = null; setMode("idle"); };
