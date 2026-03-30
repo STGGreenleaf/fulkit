@@ -34,12 +34,12 @@
 - `memory-detail-alt`: "Every conversation starts from you."
 
 ### Pricing & Value
-- `stack-problem`: "10 apps. $88/month." `[!] actually 8 apps, $92`
+- `stack-problem`: "8 apps. $92/month."
 - `stack-solution`: "Or Fülkit. $9."
 - `stack-reframe`: "You're already paying for Fülkit. Just not enjoying it."
-- `stack-receipt`: "You're paying for 10 apps / You need 1 app" `[!] 8 apps, $92`
+- `stack-receipt`: "You're paying for 8 apps / You need 1 app"
 - `pricing-philosophy`: "Fair. Not infinite."
-- `referral`: "7 friends = free forever." `[!] actually 9 refs for Standard`
+- `referral`: "9 friends = free forever."
 
 ### Bestie / Positioning
 - `bestie-contrast`: "A chatbot waits for instructions. A bestie anticipates."
@@ -61,14 +61,14 @@
 - `whispers-contrast`: "Most apps notify. Fülkit whispers."
 - `whispers-principle`: "Zurückhaltung — restraint."
 - `whispers-description`: "Proactive suggestions that drift in and fade out. Like a text from a friend who pays attention."
-- `capture-pitch`: "Global shortcut. Thought to saved in 2 seconds." `[planned]`
-- `triage-pitch`: "Drop a doc. Get a summary and action items in seconds." `[planned]`
+- `capture-pitch`: "Global shortcut. Thought to saved in 2 seconds."
+- `triage-pitch`: "Drop a doc. Get a summary and action items in seconds."
 - `actions-pitch`: "AI-generated to-dos from your notes. No manual entry. Just do."
 
 ### Problem / Pain
 - `problem-core`: "You capture everything and retrieve nothing."
-- `problem-stat-1`: "Only 15% of saved knowledge is ever found again." `[!] unsourced on landing`
-- `problem-stat-2`: "You spend 3.6 hours a day searching for information." `[!] unsourced`
+- `problem-stat-1`: "Only 15% of saved knowledge is ever found again." `[unsourced — don't use without citation]`
+- `problem-stat-2`: "You spend 3.6 hours a day searching for information." `[unsourced — don't use without citation]`
 - `problem-graveyard`: "Your notes are a graveyard."
 - `problem-quote-1`: "I have 12 apps open and none of them talk to each other."
 - `problem-quote-2`: "I spend the first 3 messages catching ChatGPT up to speed. Every. Single. Time."
@@ -83,7 +83,7 @@
 - `trust-vault`: "We built the vault before we built the product."
 - `trust-yours`: "Your data is yours."
 - `trust-aes`: "AES-256-GCM. Same standard as banks and governments."
-- `trust-soc2`: "SOC 2 controls — built in from day one." `[!] controls exist, not certified`
+- `trust-soc2`: "SOC 2 controls — built in from day one, certification pending."
 - `trust-rls`: "Your data is isolated at the database level."
 - `trust-delete`: "Delete everything. Atomic cascade, scoped by you."
 
