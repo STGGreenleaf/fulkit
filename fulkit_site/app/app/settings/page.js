@@ -2058,28 +2058,19 @@ function SourcesTab() {
     if (id === "readwise") { setReadwiseExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
+  const disconnectMap = {
+    github: disconnectGitHub, fabric: disconnectFabric, numbrly: disconnectNumbrly,
+    truegauge: disconnectTrueGauge, square: disconnectSquare, shopify: disconnectShopify,
+    stripe: disconnectStripe, toast: disconnectToast, trello: disconnectTrello,
+    fitbit: disconnectFitbit, strava: disconnectStrava, sonos: disconnectSonos,
+    quickbooks: disconnectQB, obsidian: disconnectObsidian, notion: disconnectNotion,
+    dropbox: disconnectDropbox, slack: disconnectSlack, onenote: disconnectOnenote,
+    todoist: disconnectTodoist, readwise: disconnectReadwise,
+  };
   const disconnect = (id) => {
-    if (id === "github") { disconnectGitHub(); return; }
-    if (id === "fabric") { disconnectFabric(); return; }
-    if (id === "numbrly") { disconnectNumbrly(); return; }
-    if (id === "truegauge") { disconnectTrueGauge(); return; }
-    if (id === "square") { disconnectSquare(); return; }
-    if (id === "shopify") { disconnectShopify(); return; }
-    if (id === "stripe") { disconnectStripe(); return; }
-    if (id === "toast") { disconnectToast(); return; }
-    if (id === "trello") { disconnectTrello(); return; }
-    if (id === "fitbit") { disconnectFitbit(); return; }
-    if (id === "strava") { disconnectStrava(); return; }
-    if (id === "sonos") { disconnectSonos(); return; }
-    if (id === "quickbooks") { disconnectQB(); return; }
-    if (id === "obsidian") { disconnectObsidian(); return; }
-    if (id === "notion") { disconnectNotion(); return; }
-    if (id === "dropbox") { disconnectDropbox(); return; }
-    if (id === "slack") { disconnectSlack(); return; }
-    if (id === "onenote") { disconnectOnenote(); return; }
-    if (id === "todoist") { disconnectTodoist(); return; }
-    if (id === "readwise") { disconnectReadwise(); return; }
-    setConnected((prev) => prev.filter((x) => x !== id));
+    // Show purge prompt instead of immediately disconnecting
+    const fn = disconnectMap[id] || (() => setConnected((prev) => prev.filter((x) => x !== id)));
+    setDisconnectConfirm({ id, onDisconnect: fn });
   };
 
   // Shared checkbox row
@@ -2282,6 +2273,50 @@ function SourcesTab() {
           <button onClick={() => setConnectError(null)} style={{ background: "none", border: "none", color: "var(--color-error)", cursor: "pointer", padding: "var(--space-1)", lineHeight: 0 }}><X size={14} /></button>
         </div>
       )}
+      {/* Disconnect purge prompt — shows when any disconnect is triggered */}
+      {disconnectConfirm && !disconnectConfirm._fromFooter && (
+        <div style={{
+          marginBottom: "var(--space-4)",
+          padding: "var(--space-4)",
+          background: "var(--color-bg-alt)",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "var(--radius-md)",
+        }}>
+          <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-2)" }}>
+            Disconnect {disconnectConfirm.id}?
+          </div>
+          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", marginBottom: "var(--space-3)", lineHeight: "var(--line-height-relaxed)" }}>
+            Your existing data (notes, conversations, history) stays unless you choose to purge.
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+            <button
+              onClick={() => setDisconnectConfirm(null)}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { const fn = disconnectConfirm.onDisconnect; setDisconnectConfirm(null); fn(); }}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)", cursor: "pointer" }}
+            >
+              Disconnect, keep data
+            </button>
+            <button
+              onClick={async () => {
+                const fn = disconnectConfirm.onDisconnect;
+                const src = disconnectConfirm.id;
+                setDisconnectConfirm(null);
+                try { await fetch(`/api/integrations/purge?source=${src}`, { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); } catch {}
+                fn();
+              }}
+              style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-error)", borderRadius: "var(--radius-sm)", color: "var(--color-error)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)", cursor: "pointer" }}
+            >
+              Disconnect + purge data
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Connected header — always visible */}
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
         <SectionTitle style={{ marginBottom: 0 }}>Connected</SectionTitle>
