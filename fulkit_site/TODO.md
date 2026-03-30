@@ -21,8 +21,8 @@
 - [x] B-Side creates sets on request — ✅ intent detection + track parsing + auto-play
 - [x] **B-Side playback control** — ✅ play/pause/skip/prev/volume/mute via text. Instant execution, B-Side responds with flavor.
 - [ ] **B-Side search** — "find me some Burial" triggers catalog search
-- [ ] **Sonos speaker picker UI** — speaker icon in Fabric player, room dropdown, route playback
-- [ ] **Sonos controls via B-Side** — "play in living room", "volume 60 in kitchen"
+- [x] **Sonos speaker picker UI** — ✅ Speaker icon in both transport bars, dropdown with rooms + "This device", offline fallback when off-network, volume routes to active room.
+- [x] **Sonos controls via B-Side** — ✅ "play in living room", "volume 60 in kitchen", "pause in bedroom" — instant execution via text, room matched from connected groups.
 
 ### New Integrations
 - [ ] **Apple Music** — MusicKit JS, Apple Developer account ($99/yr approved), full playback source. Provider + Sources card + client playback.
