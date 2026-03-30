@@ -29,6 +29,7 @@ export async function GET(request) {
 
     for (const [name, provider] of Object.entries(connected)) {
       if (name === "youtube") continue;
+      if (typeof provider.search !== "function") continue; // skip non-searchable providers (e.g. Sonos)
       searches.push(
         provider.search(query, type, limit)
           .then(r => ({ provider: name, ...r }))
