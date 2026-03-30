@@ -4077,6 +4077,7 @@ function ManualTab() {
       </div>
 
       {/* Quick Reference */}
+      <div style={{ marginTop: "var(--space-6)" }} />
       <SectionDivider label="Quick Reference" />
       <div style={{
         display: "grid",
