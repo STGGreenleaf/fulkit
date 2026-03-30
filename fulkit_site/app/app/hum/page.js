@@ -392,6 +392,7 @@ export default function Hum() {
     setMode("speaking");
 
     // Try OpenAI TTS first
+    let ttsError = null;
     try {
       const res = await authFetch("/api/hum/speak", {
         method: "POST",
@@ -421,13 +422,17 @@ export default function Hum() {
       }
       const errBody = await res.text().catch(() => "");
       console.warn("[hum] TTS API failed:", res.status, errBody);
+      // Diagnostic: speak the error so we can hear what's wrong
+      ttsError = `TTS failed. Status ${res.status}. ${errBody.slice(0, 100)}`;
     } catch (err) {
       console.warn("[hum] TTS error:", err.message);
+      ttsError = `TTS error. ${err.message}`;
     }
 
-    // Fallback: browser SpeechSynthesis
+    // Fallback: browser SpeechSynthesis (speaks error if TTS failed, otherwise speaks response)
     try {
-      const clean = text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
+      const fallbackText = ttsError || text;
+      const clean = fallbackText.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
         .replace(/`(.+?)`/g, "$1").replace(/#{1,6}\s/g, "").replace(/\n+/g, " ");
       const utterance = new SpeechSynthesisUtterance(clean);
       utterance.onend = () => { utteranceRef.current = null; setMode("idle"); };
