@@ -1964,13 +1964,13 @@ function SourcesTab() {
 
   function connectStrava() {
     if (accessToken) {
-      window.open("/api/health/strava/connect?token=" + encodeURIComponent(accessToken), "_blank");
+      window.location.href = "/api/health/strava/connect?token=" + encodeURIComponent(accessToken);
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
       const token = data?.session?.access_token;
       if (token) {
-        window.open("/api/health/strava/connect?token=" + encodeURIComponent(token), "_blank");
+        window.location.href = "/api/health/strava/connect?token=" + encodeURIComponent(token);
       }
     }).catch(() => {});
   }
