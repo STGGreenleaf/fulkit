@@ -41,6 +41,7 @@ export async function POST(request) {
         model: "tts-1",
         voice: "onyx",
         input: clean,
+        response_format: "mp3",
       }),
     });
 

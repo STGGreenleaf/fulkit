@@ -401,7 +401,8 @@ export default function Hum() {
       });
 
       if (res.ok) {
-        const blob = await res.blob();
+        const rawBlob = await res.blob();
+        const blob = new Blob([rawBlob], { type: "audio/mpeg" });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
 
