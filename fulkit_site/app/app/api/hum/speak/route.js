@@ -51,14 +51,14 @@ export async function POST(request) {
       return Response.json({ error: "TTS failed", detail: `OpenAI ${res.status}: ${err.slice(0, 200)}` }, { status: 502 });
     }
 
-    // Buffer the full audio response (Vercel serverless can't always relay streaming bodies)
+    // Return base64-encoded audio as JSON (avoids binary/MIME issues on Vercel)
     const audioBuffer = await res.arrayBuffer();
-    return new Response(audioBuffer, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "no-store",
-      },
-    });
+    const bytes = new Uint8Array(audioBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64 = Buffer.from(audioBuffer).toString("base64");
+
+    return Response.json({ audio: b64, format: "mp3", size: audioBuffer.byteLength });
   } catch (err) {
     console.error("[hum/speak] Error:", err.message);
     return Response.json({ error: "Internal error", detail: err.message }, { status: 500 });

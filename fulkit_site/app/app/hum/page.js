@@ -401,33 +401,25 @@ export default function Hum() {
       });
 
       if (res.ok) {
-        const buf = await res.arrayBuffer();
-        // Convert to base64 data URL — more reliable across browsers than blob URLs
-        const bytes = new Uint8Array(buf);
-        let binary = "";
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const b64 = btoa(binary);
-        const dataUrl = `data:audio/mpeg;base64,${b64}`;
-        const audio = new Audio(dataUrl);
+        const data = await res.json();
+        if (data.audio) {
+          const dataUrl = `data:audio/mpeg;base64,${data.audio}`;
+          const audio = new Audio(dataUrl);
 
-        audio.onended = () => {
-          utteranceRef.current = null;
-          setMode("idle");
-        };
-        audio.onerror = (e) => {
-          console.warn("[hum] audio play error:", e, "size:", buf.byteLength);
-          ttsError = `Audio error. Size: ${buf.byteLength} bytes.`;
-          utteranceRef.current = null;
-        };
+          audio.onended = () => {
+            utteranceRef.current = null;
+            setMode("idle");
+          };
+          audio.onerror = () => {
+            utteranceRef.current = null;
+            setMode("idle");
+          };
 
-        utteranceRef.current = audio;
-        try {
+          utteranceRef.current = audio;
           await audio.play();
           return;
-        } catch (playErr) {
-          console.warn("[hum] play failed:", playErr.message, "size:", buf.byteLength);
-          ttsError = `Play failed. ${playErr.message}. Size: ${buf.byteLength}`;
         }
+        ttsError = `No audio in response. Size: ${data.size || 0}`;
       }
       const errBody = await res.text().catch(() => "");
       console.warn("[hum] TTS API failed:", res.status, errBody);
