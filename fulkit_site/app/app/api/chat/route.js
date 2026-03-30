@@ -3511,6 +3511,37 @@ const DEV_TOOLS = [
       required: ["repo", "query"],
     },
   },
+  {
+    name: "dev_deploy_status",
+    description: "Get latest Vercel deployment status, URL, and build info. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        count: { type: "number", description: "Number of deployments to show (default 3, max 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "dev_deploy_logs",
+    description: "Get Vercel function/runtime logs — errors, slow functions, recent invocations. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        since: { type: "string", description: "ISO timestamp to start from (default: last hour)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "dev_redeploy",
+    description: "Trigger a fresh Vercel deployment from the latest commit. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 async function executeDevTool(name, input, userId, ghToken) {
@@ -3585,6 +3616,73 @@ async function executeDevTool(name, input, userId, ghToken) {
       })),
       total: result.total_count || 0,
     };
+  }
+
+  // ── Vercel tools ──
+  const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
+  const VERCEL_PROJECT = "app"; // Fulkit site project name
+
+  const vercelFetch = async (endpoint) => {
+    const res = await fetch(`https://api.vercel.com${endpoint}`, {
+      headers: { Authorization: `Bearer ${VERCEL_TOKEN}` },
+    });
+    if (!res.ok) throw new Error(`Vercel API ${res.status}`);
+    return res.json();
+  };
+
+  if (name === "dev_deploy_status") {
+    if (!VERCEL_TOKEN) throw new Error("VERCEL_TOKEN not configured");
+    const n = Math.min(input.count || 3, 10);
+    const data = await vercelFetch(`/v6/deployments?projectId=prj_mhKPtr9BlETPO4aEPLAb5QIAHdoy&limit=${n}`);
+    return {
+      deployments: (data.deployments || []).map(d => ({
+        id: d.uid?.slice(0, 8),
+        state: d.state || d.readyState,
+        url: d.url ? `https://${d.url}` : null,
+        created: d.created ? new Date(d.created).toISOString() : null,
+        source: d.meta?.githubCommitMessage?.split("\n")[0] || null,
+      })),
+    };
+  }
+
+  if (name === "dev_deploy_logs") {
+    if (!VERCEL_TOKEN) throw new Error("VERCEL_TOKEN not configured");
+    const since = input.since || new Date(Date.now() - 3600000).toISOString();
+    // Get latest deployment ID first
+    const deps = await vercelFetch(`/v6/deployments?projectId=prj_mhKPtr9BlETPO4aEPLAb5QIAHdoy&limit=1`);
+    const depId = deps.deployments?.[0]?.uid;
+    if (!depId) throw new Error("No deployments found");
+    const logs = await vercelFetch(`/v2/deployments/${depId}/events?since=${new Date(since).getTime()}&limit=50`);
+    return {
+      deployment: depId.slice(0, 8),
+      events: (Array.isArray(logs) ? logs : []).slice(-20).map(e => ({
+        type: e.type,
+        text: e.text || e.payload?.text || "",
+        date: e.date ? new Date(e.date).toISOString() : null,
+      })),
+    };
+  }
+
+  if (name === "dev_redeploy") {
+    if (!VERCEL_TOKEN) throw new Error("VERCEL_TOKEN not configured");
+    const res = await fetch("https://api.vercel.com/v13/deployments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${VERCEL_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: VERCEL_PROJECT,
+        project: "prj_mhKPtr9BlETPO4aEPLAb5QIAHdoy",
+        gitSource: { type: "github", repo: "STGGreenleaf/fulkit", ref: "main" },
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Redeploy failed: ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    return { triggered: true, id: data.id?.slice(0, 8), url: data.url ? `https://${data.url}` : null };
   }
 
   throw new Error(`Unknown dev tool: ${name}`);
