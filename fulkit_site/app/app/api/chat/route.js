@@ -2157,6 +2157,7 @@ function formatStravaActivity(a) {
     pace: paceStr,
     elevationGain: a.total_elevation_gain ? `${Math.round(a.total_elevation_gain * 3.281)} ft` : null,
     avgHeartRate: a.average_heartrate ? Math.round(a.average_heartrate) : null,
+    stravaUrl: `https://www.strava.com/activities/${a.id}`,
     maxHeartRate: a.max_heartrate ? Math.round(a.max_heartrate) : null,
     calories: a.calories || null,
     sufferScore: a.suffer_score || null,
