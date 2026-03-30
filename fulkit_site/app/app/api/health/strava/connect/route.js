@@ -48,7 +48,7 @@ export async function GET(request) {
       response_type: "code",
       scope: SCOPES,
       state,
-      approval_prompt: "auto",
+      approval_prompt: "force",
     });
 
     return NextResponse.redirect(`https://www.strava.com/oauth/authorize?${params.toString()}`);

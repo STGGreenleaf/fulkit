@@ -30,6 +30,7 @@ export async function GET(request) {
     }
 
     // Strava uses POST body params for token exchange (not Basic auth)
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/health/strava/callback`;
     const tokenRes = await fetch("https://www.strava.com/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -38,6 +39,7 @@ export async function GET(request) {
         client_secret: process.env.STRAVA_CLIENT_SECRET,
         code,
         grant_type: "authorization_code",
+        redirect_uri: redirectUri,
       }),
     });
 
