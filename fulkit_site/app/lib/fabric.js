@@ -2142,14 +2142,15 @@ export function FabricProvider({ children }) {
 
       // Auto-create set if user asked for one
       const userText = text.toLowerCase();
-      const wantsSet = /\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b.*\bset\b|\bset\b.*\b(called|named|for|of|with)\b/i.test(userText);
+      const wantsSet = /\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b.*\b(sets?|mix|playlist)\b|\b(sets?|mix|playlist)\b.*\b(called|named|for|of|with)\b|\bput\s+(it|them)\s+in\s+(sets?|a set)\b/i.test(userText);
       console.log(`[fabric] Set intent: wantsSet=${wantsSet}, userText="${userText}", responseLines=${assistantText?.split("\\n").length || 0}`);
       if (wantsSet && assistantText) {
         // Extract set name: strip the command words, keep the vibe
         const stripped = text
           .replace(/\b(create|make|build|give me|put together|gimme|gimmie|whip up|throw together|cook up|spin up|drop|produce|materialize|assemble|curate|craft|set me up)\b/gi, "")
+          .replace(/\bput\s+(it|them)\s+in\s+(sets?|a set)\b/gi, "")
           .replace(/\b(me|a|an|the|some|my)\b/gi, "")
-          .replace(/\bset\b/gi, "")
+          .replace(/\b(sets?|mix|playlist)\b/gi, "")
           .replace(/[.!?,]+/g, " ")
           .replace(/\s+/g, " ")
           .trim();
