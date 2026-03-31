@@ -123,7 +123,7 @@ export default function Dashboard() {
       .catch(() => {});
     // Closeout + automation whispers (from crons)
     supabase.from("preferences").select("key, value").eq("user_id", user?.id)
-      .or("key.eq.closeout_whisper,key.eq.standup_whisper,key.like.automation_whisper:%")
+      .or("key.eq.closeout_whisper,key.eq.standup_whisper,key.eq.spotify_watch_whisper,key.like.automation_whisper:%")
       .then(({ data }) => {
         if (!data?.length) return;
         const extras = [];
