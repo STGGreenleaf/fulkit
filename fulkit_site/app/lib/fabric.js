@@ -677,37 +677,55 @@ export function FabricProvider({ children }) {
     return () => clearInterval(interval);
   }, [currentTrack?.id, currentTrack?.provider]);
 
-  // ── Album art resolution — single source of truth ──
-  // Check cache first, fetch on miss, cache forever. Independent of playback paths.
+  // ── Album art engine — fully independent of playback state ──
+  // trackArt is the display URL. It never flickers when currentTrack is replaced.
+  // Keyed on artist+title, not track id (which changes across providers).
+  const [trackArt, setTrackArt] = useState(null);
+  const artKeyRef = useRef(null); // "artist|title" of last resolved art
+
   useEffect(() => {
-    if (!currentTrack?.artist || !currentTrack?.title) return;
-    if (currentTrack.art) {
-      // Art exists — make sure it's cached
-      setCachedArt(currentTrack.artist, currentTrack.title, currentTrack.art);
-      return;
-    }
-    // Check cache
-    const cached = getCachedArt(currentTrack.artist, currentTrack.title);
-    if (cached) {
-      setCurrentTrack(cur => cur?.id === currentTrack.id ? { ...cur, art: cached } : cur);
-      return;
-    }
-    // Fetch and cache — only cache real art, not broken fallback URLs
-    const trackId = currentTrack.id;
-    const ytId = currentTrack.ytId;
-    fetchAlbumArt(currentTrack.artist, currentTrack.title).then(art => {
-      if (art) {
-        setCachedArt(currentTrack.artist, currentTrack.title, art);
-        setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art } : cur);
-      } else if (ytId && /^[A-Za-z0-9_-]{10,12}$/.test(ytId)) {
-        // Only use YouTube thumbnail if ytId is a real video ID
-        const fallback = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
-        setCachedArt(currentTrack.artist, currentTrack.title, fallback);
-        setCurrentTrack(cur => cur?.id === trackId ? { ...cur, art: fallback } : cur);
+    const artist = currentTrack?.artist;
+    const title = currentTrack?.title;
+    if (!artist || !title) { setTrackArt(null); artKeyRef.current = null; return; }
+
+    const key = `${artist.toLowerCase()}|${title.toLowerCase()}`;
+
+    // Same song — if art incoming from track object, upgrade. Otherwise keep what we have.
+    if (key === artKeyRef.current) {
+      if (currentTrack.art && currentTrack.art !== trackArt) {
+        setCachedArt(artist, title, currentTrack.art);
+        setTrackArt(currentTrack.art);
       }
-      // If both fail, leave art empty — don't cache a broken URL
+      return;
+    }
+
+    // New song — resolve in priority order: track object > cache > fetch
+    artKeyRef.current = key;
+
+    if (currentTrack.art) {
+      setCachedArt(artist, title, currentTrack.art);
+      setTrackArt(currentTrack.art);
+      return;
+    }
+    const cached = getCachedArt(artist, title);
+    if (cached) { setTrackArt(cached); return; }
+
+    // Async fetch — keep previous art visible until resolved (no null flash)
+    const ytId = currentTrack.ytId;
+    fetchAlbumArt(artist, title).then(art => {
+      if (artKeyRef.current !== key) return; // stale
+      if (art) {
+        setCachedArt(artist, title, art);
+        setTrackArt(art);
+      } else if (ytId && /^[A-Za-z0-9_-]{10,12}$/.test(ytId)) {
+        const fallback = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+        setCachedArt(artist, title, fallback);
+        setTrackArt(fallback);
+      } else {
+        setTrackArt(null); // truly no art anywhere
+      }
     });
-  }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTrack?.artist, currentTrack?.title, currentTrack?.art]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Smooth progress interpolation between Spotify polls
   useEffect(() => {
@@ -2347,6 +2365,7 @@ export function FabricProvider({ children }) {
         statusChecked,
         isPlaying,
         currentTrack,
+        trackArt,
         queue,
         flagged,
         playlists,
