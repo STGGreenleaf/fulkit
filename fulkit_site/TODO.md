@@ -37,8 +37,8 @@
 - [ ] **Fabric mobile layout** — single-column tab switcher on phones. Needs spec + discussion first.
 
 ### Copy & Polish
-- [ ] **Pitches.md audit** — 3 flagged items (stack-problem stats, referral count, SOC 2 language)
-- [ ] **Competitive grid expand** — desktop grid doesn't reflect music, vault, voice moat yet
+- [x] **Pitches.md audit** — ✅ Verified: stack-problem (8 apps/$92), referral (9 friends), SOC 2 (controls, certification pending) — all accurate.
+- [x] **Competitive grid expand** — ✅ 10-competitor grid (ChatGPT, Claude, Notion, Obsidian, Todoist, Otter.ai, Spotify, Slack, Google Cal, QuickBooks). Covers music, vault/encryption, business+health+calendar.
 
 ### Parked (need real users)
 - [ ] 6.1 Personalized upsells from spending patterns
@@ -113,7 +113,7 @@
 
 ---
 
-## Chappie 2.0 — Verification Queue (126/136 done, 10 remain)
+## Chappie 2.0 — Verification Queue (134/136 done, 2 parked)
 
 > All code shipped. These are production verification tasks. Run in order.
 > Pattern: do the thing → check debug output → confirm it works.
@@ -194,7 +194,7 @@
 
 - [x] **Fitbit** — live, direct OAuth, 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
 - [x] **Strava** — live for Collin, 3 chat tools (activities, stats, recent). API review submitted for 1000-athlete access (7-10 business days).
-- [ ] **Health pitch copy** — add Fitbit + Strava to landing page integrations section. Position: "Your health data in the conversation — sleep, workouts, heart rate. No extra app."
+- [x] **Health pitch copy** — ✅ Fitbit + Strava represented in competitive grid ("Business + health + calendar in chat") and Awareness section. Dedicated pitch section deferred to landing rewrite.
 - [x] **Health ECOSYSTEM_KEYWORDS** — ✅ Added fitness, exercise, strain, body to Fitbit; workout, fitness, exercise to Strava. Both fire on general health talk.
 
 ### Phase 2: Vital Day (When You Subscribe)
@@ -225,25 +225,24 @@
 
 ---
 
-## Public Pages Rewrite — Pre-Work
+## Public Pages Rewrite — ✅ COMPLETE
 
-> The landing, about, and manual pages were authored early. The product has outgrown the copy.
-> Complete these before rewriting body copy. Then circle back for a full rewrite session.
+> Landing, about, and manual pages all rewritten with product substance.
 
 ### Build first (the copy can't be honest until these ship)
 - [x] **Remove planned features from landing** — ✅ Both Inbox Triage and Quick Capture are built and shipped. Updated descriptions to reflect actual functionality.
 - [x] **Remove unsourced stats from landing** — ✅ Replaced "15% / 3.6 hours" with real pain points (eight apps, eight logins).
-- [ ] **Ship remaining business integrations** — Landing page can't sell the ecosystem story until the ecosystem is built. Current: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, Spotify. Add the rest before rewriting.
+- [x] **Ship remaining business integrations** — ✅ 22+ integrations live: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, QuickBooks, Google Calendar, Gmail, Google Drive, Fitbit, Strava, Slack, Notion, Dropbox, OneNote, Todoist, Readwise, Asana, Monday + Spotify/Sonos (Fabric) + 4 social publish.
 - [x] **Spotify Extended Quota** — ✅ Approved, 5-seat cap. Revisit when Spotify lifts.
 
 ### Fix before rewrite
 - [x] **About page (/about) — remove nav frame** — ✅ Already frameless (standalone nav, no sidebar/app chrome). Same structure as /landing.
-- [ ] **Pitches.md audit** — Update `[!]` flagged items: `stack-problem` (8 apps/$92 — verify current), `referral` (9 refs not 7), `trust-soc2` (controls, not certified). Make the copy safe actually safe.
-- [ ] **Competitive grid — expand scope** — Current grid only compares notes/AI tools (Obsidian, Notion, ChatGPT, Claude). Doesn't reflect the real moat: business integrations, music, vault, voice. Redesign to show the full picture once integrations ship.
+- [x] **Pitches.md audit** — ✅ Verified: stack-problem (8 apps/$92), referral (9 friends), SOC 2 (controls, certification pending) — all accurate, no flags remaining.
+- [x] **Competitive grid — expand scope** — ✅ 10-competitor grid (ChatGPT, Claude, Notion, Obsidian, Todoist, Otter.ai, Spotify, Slack, Google Cal, QuickBooks). Covers business+health+calendar, music, vault/encryption.
 
 ### Rewrite scope (do these together in one session)
-- [ ] **Landing /landing** — Tighten hero (keep dictionary concept, cut 40% of words before CTA). Add integrations section. Add vault/BYOK as differentiator. Replace planned features with shipped ones. Update competitive grid.
-- [ ] **About /about** — Keep brand philosophy (ü, name, design heritage) but add product substance. Who built it, what it does, who it's for. Balance manifesto with information.
+- [x] **Landing /landing** — ✅ Dictionary hero (tight), integrations ticker, vault/BYOK section ("We built the vault before we built the product"), Memory Vault feature with 3 modes, competitive grid with 10 competitors.
+- [x] **About /about** — ✅ 11 sections with product substance: The ü, The Name, The Feeling, The Whispers, The Hum, The Fabric, The Search, The Awareness, The Vault, The Design Language, WYSIWYG.
 - [x] **Manual /settings/manual** — ✅ 6-step Getting Started, 6-point blueprint (Talk, Remember, Act, Listen, Automate, Protect). Auto-generates integration sections from SOURCE_DESCRIPTIONS. One source of truth.
 
 ---
@@ -256,43 +255,59 @@
 
 ## Still Open (carried forward)
 
-> Items from earlier phases that are external or infrastructure tasks.
+> External or infrastructure tasks. All either blocked or subscription-gated.
 
-- [ ] Fabric auto-analyze (production) — $5/mo VPS with yt-dlp + ffmpeg
 - [x] Spotify App — Extended Quota Mode ✅ (5-seat cap, revisit when lifted)
-- [ ] Domain verification for Spotify OAuth redirect URI
 - [x] Fabric isolation — provider abstraction complete, DB migration run. Multi-provider ready. Session 22.
-- [ ] SoundCloud API integration (pending Artist Pro + API approval)
+- [ ] Fabric auto-analyze (production) — same as Droplet Day ($12/mo DigitalOcean)
+- [ ] Domain verification for Spotify OAuth redirect URI — admin task, Spotify Dashboard
+- [ ] SoundCloud API integration — pending Artist Pro + API approval
 
 ## Integration Roadmap
 
-> 8 chat sources live (GitHub, Stripe, Shopify, Square, Toast, Trello, Numbrly, TrueGauge) + Spotify (Fabric) + 4 social publish.
-> Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card. ~2-4 hours each.
+> 22 chat sources live + Spotify/Sonos (Fabric) + 4 social publish (Bluesky, Threads, Facebook, Instagram).
+> Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card.
 
 ### Tier 1: Everyone
 - [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
 - [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
+- [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
 - [x] **Fitbit** — ✅ OAuth + 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
 - [x] **Strava** — ✅ OAuth + 3 chat tools (activities, stats, recent). 1000-athlete review submitted.
-- [ ] **Health Phase 2 — Vital Day** (Whoop, Oura, Garmin, blood work — see Health section below)
 
 ### Tier 2: Extends Fabric
-- [x] **Sonos** — ✅ OAuth connected, SonosProvider built, Sources card live, B-Side speaker awareness, API routes (GET rooms, POST control). Session 25. Speaker picker UI still needed.
+- [x] **Sonos** — ✅ OAuth connected, SonosProvider built, Sources card live, B-Side speaker awareness, speaker picker UI (compact + full), per-speaker volume, API routes (GET rooms, POST control). Session 25–28.
 - [ ] **SoundCloud** — multi-source Fabric. Pending Artist Pro + API approval.
 - [ ] **Apple Music** — MusicKit JS. Third Fabric source. Requires Apple Developer ($99/yr). Collin approved.
 
 ### Tier 3: Business verticals
 - [x] **QuickBooks** — ✅ OAuth + 5 chat tools (P&L, balance sheet, invoices, expenses, customers). Settings card with rich drawer + logo.
-- [ ] **Vagaro** — beauty/wellness scheduling + client management. Keywords: appointment, client, booking, salon, vagaro.
-- [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
+- [x] **Stripe** — ✅ OAuth + chat tools (customers, charges, subscriptions, invoices, balance).
+- [x] **Square** — ✅ OAuth + chat tools (orders, inventory, catalog, locations).
+- [x] **Shopify** — ✅ OAuth + chat tools (orders, products, customers, inventory).
+- [x] **Toast** — ✅ POS integration + chat tools.
+- [x] **Numbrly** — ✅ API key auth + chat tools (fulkit_context, query). Cost management platform.
+- [x] **TrueGauge** — ✅ OAuth + chat tools. Profit/pace/cash tracking.
+- [x] **Trello** — ✅ OAuth + chat tools (boards, cards, lists).
 
 ### Tier 4: Productivity
+- [x] **GitHub** — ✅ OAuth + 6 chat tools (write file, branch, issue, PR, commits, code search) + 3 Vercel tools.
 - [x] **Slack** — ✅ OAuth + 3 chat tools (search messages, list channels, channel history). Settings card.
-- [ ] **Linear** — issue tracking for dev teams. Keywords: issue, bug, ticket, linear, sprint.
 - [x] **Notion** — ✅ OAuth + 3 chat tools (search, get page, import to vault). Block → markdown converter.
+- [x] **Asana** — ✅ OAuth + 3 chat tools (tasks, projects, search). Settings card. Session 29.
+- [x] **Monday.com** — ✅ OAuth + 3 chat tools (boards, items, updates). Settings card. Session 29.
+- [x] **Todoist** — ✅ OAuth + chat tools (tasks, projects). Settings card.
+- [x] **Dropbox** — ✅ OAuth + chat tools (files, folders, search). Settings card.
+- [x] **OneNote** — ✅ OAuth + chat tools (notebooks, sections, pages). Settings card.
+- [x] **Readwise** — ✅ API key auth + chat tools (highlights, books). Settings card.
+
+### V2 Integrations
+- [ ] **Health Phase 2 — Vital Day** (Whoop, Oura, Garmin, blood work — see Health section)
+- [ ] **Vagaro** — beauty/wellness scheduling + client management
+- [ ] **Linear** — issue tracking for dev teams
 
 ### Contenders (evaluate later)
-Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, Monday.com, ClickUp, Zoom, Strava, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
+Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, ClickUp, Zoom, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
 
 ---
 

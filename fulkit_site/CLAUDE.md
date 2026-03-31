@@ -100,9 +100,24 @@ This is the most complex file (~3500 lines). The flow:
 | `square-server.js` | Square OAuth + token management |
 | `stripe-server.js` | Stripe OAuth + token management |
 | `toast-server.js` | Toast POS integration |
+| `trello-server.js` | Trello OAuth + token management |
+| `google-server.js` | Google OAuth (Calendar, Gmail, Drive) + token management |
+| `fitbit-server.js` | Fitbit OAuth + token management |
+| `strava-server.js` | Strava OAuth + webhook + token management |
+| `quickbooks-server.js` | QuickBooks OAuth + token management |
+| `notion-server.js` | Notion OAuth + block→markdown converter |
+| `slack-server.js` | Slack OAuth + token management |
+| `dropbox-server.js` | Dropbox OAuth + token management |
+| `onenote-server.js` | OneNote/Microsoft OAuth + token management |
+| `todoist-server.js` | Todoist OAuth + token management |
+| `readwise-server.js` | Readwise API key auth + highlights |
 | `asana-server.js` | Asana OAuth + token refresh + API wrapper |
 | `monday-server.js` | monday.com OAuth + GraphQL API wrapper |
+| `signal.js` | Signal Radio client-side (CWV, error boundary, fetch interceptor) |
+| `signal-server.js` | Signal Radio server-side (emit, query, Spend Moderator) |
+| `email-templates.js` | Welcome + notification email templates (Resend) |
 | `sanitize-emoji.js` | Emoji sanitization for consistent rendering |
+| `providers/` | Fabric playback providers (spotify.js, youtube.js, sonos.js) |
 | `btc/` | B-Side response engine (persona + formatting rules) |
 
 ### API Routes
@@ -119,9 +134,21 @@ This is the most complex file (~3500 lines). The flow:
 | `api/shopify/*` | Shopify OAuth + proxy |
 | `api/stripe/*` | Stripe OAuth + proxy |
 | `api/toast/*` | Toast POS integration |
-| `api/fabric/*` | Spotify OAuth for Signal Terrain |
+| `api/fabric/*` | Fabric OAuth (Spotify) + B-Side chat + search + audio analysis |
+| `api/google/*` | Google OAuth (Calendar, Gmail, Drive — nested under one card) |
+| `api/health/fitbit/*` | Fitbit OAuth + daily/sleep/heart/weight |
+| `api/health/strava/*` | Strava OAuth + activities/stats + webhook |
+| `api/quickbooks/*` | QuickBooks OAuth + P&L/balance/invoices/expenses |
+| `api/notion/*` | Notion OAuth + search/get/import |
+| `api/slack/*` | Slack OAuth + search/channels/history |
+| `api/dropbox/*` | Dropbox OAuth + files/folders/search |
+| `api/onenote/*` | OneNote OAuth + notebooks/sections/pages |
+| `api/todoist/*` | Todoist OAuth + tasks/projects |
+| `api/readwise/*` | Readwise API + highlights/books |
+| `api/trello/*` | Trello OAuth + boards/cards/lists |
 | `api/asana/*` | Asana OAuth (connect/callback/status/disconnect) |
 | `api/monday/*` | monday.com OAuth (connect/callback/status/disconnect) |
+| `api/sonos/*` | Sonos OAuth + rooms/control |
 | `api/owner/spend` | Spend Moderator aggregation (summary + flags + period comparison) |
 | `api/owner/heartbeat` | System health pulse (cost, errors, cache, integrations, doc freshness) |
 | `api/rsg` | Random string generator |
