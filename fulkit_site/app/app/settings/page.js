@@ -101,6 +101,11 @@ const SOURCE_LOGOS = {
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8"/><path d="M8 11h5"/>
     </svg>
   ),
+  apple_music: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.073-.005-.148-.01-.22-.015H6.117c-.12.01-.24.015-.36.021-.57.032-1.137.082-1.68.24-.94.27-1.71.77-2.33 1.49-.35.4-.6.87-.76 1.38-.13.4-.19.82-.22 1.24-.03.25-.04.51-.05.76v11.71c.01.14.02.28.03.42.04.56.09 1.12.26 1.66.3.96.83 1.73 1.59 2.33.49.38 1.04.63 1.65.79.37.1.74.15 1.12.19.29.03.58.04.87.05h11.8c.16-.01.32-.02.48-.03.55-.04 1.1-.09 1.63-.25.97-.3 1.74-.83 2.34-1.59.38-.49.63-1.04.79-1.65.1-.37.15-.74.19-1.12.03-.29.04-.58.05-.88V6.124zm-7.05 4.9l-.01 6.68c0 .47-.08.93-.27 1.36-.29.68-.78 1.1-1.46 1.32-.39.12-.79.19-1.2.2-.56.02-1.06-.12-1.46-.54-.4-.42-.53-.96-.45-1.55.1-.7.51-1.17 1.12-1.46.38-.18.79-.29 1.2-.37.42-.08.84-.15 1.25-.25.26-.07.46-.2.56-.47.06-.15.08-.32.08-.49V9.874c0-.2-.05-.35-.23-.44-.13-.06-.27-.08-.42-.05-.51.1-1.02.21-1.53.31l-3.98.81c-.02 0-.04.01-.06.02-.2.05-.3.17-.33.37-.01.07-.01.14-.01.21v8.27c0 .49-.08.96-.28 1.41-.3.68-.79 1.11-1.48 1.32-.38.12-.78.18-1.18.19-.56.02-1.06-.12-1.46-.54-.4-.42-.54-.96-.45-1.55.1-.69.5-1.16 1.1-1.45.4-.19.82-.3 1.24-.38.4-.08.82-.14 1.22-.24.28-.07.49-.22.58-.51.05-.15.07-.31.07-.47v-7.94c0-.34.08-.63.35-.84.16-.13.35-.2.55-.24l5.77-1.18c.32-.07.64-.13.96-.2.14-.03.28-.01.41.05.21.1.3.26.31.49v5.17z"/>
+    </svg>
+  ),
   sonos: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M6.5 4C4.01 4 2 6.01 2 8.5v7C2 17.99 4.01 20 6.5 20h11c2.49 0 4.5-2.01 4.5-4.5v-7C22 6.01 19.99 4 17.5 4h-11zM8 9.5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5c0 .28-.22.5-.5.5h-2a.5.5 0 01-.5-.5v-5zm5 0c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5c0 .28-.22.5-.5.5h-2a.5.5 0 01-.5-.5v-5z"/>
@@ -353,6 +358,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "fitbit.com",
     linkHref: "https://www.fitbit.com",
   },
+  apple_music: {
+    subtitle: "Your library, your way.",
+    description: "Apple Music brings your full library, playlists, and Apple-curated content into Fabric. Search, play, and build sets from your Apple Music catalog alongside Spotify and YouTube \u2014 all in one place.",
+    gives: "Full library access, playlist browsing, search across Apple\u2019s 100M+ song catalog, and playback control. Everything routes through Fabric.",
+    tryPrompt: "Play my Apple Music library\u201D\n\u201CSearch Apple Music for Radiohead\u201D\n\u201CShow me my Apple playlists",
+    linkLabel: "apple.com/apple-music",
+    linkHref: "https://www.apple.com/apple-music/",
+  },
   strava: {
     subtitle: "Your training, in context.",
     description: "Strava tracks your runs, rides, swims, and workouts with GPS, pace, heart rate, and elevation. Connecting it means F\u00FClkit sees your training history and can help you plan around your fitness, track progress, and spot trends.",
@@ -382,6 +395,7 @@ const ALL_SOURCES = [
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
+  { id: "apple_music", name: "Apple Music", cat: "Media" },
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
   { id: "whoop", name: "Whoop", cat: "Health" },
@@ -2035,7 +2049,9 @@ function SourcesTab() {
   const moreCards = otherSources.filter((s) => REAL_INTEGRATIONS.includes(s.id) && SOURCE_DESCRIPTIONS[s.id]);
   const moreTiles = otherSources.filter((s) => !REAL_INTEGRATIONS.includes(s.id) || !SOURCE_DESCRIPTIONS[s.id]);
 
+  const COMING_SOON = new Set(["apple_music", "linear"]);
   const connect = (id) => {
+    if (COMING_SOON.has(id)) return; // Card visible, connect disabled
     if (id === "github") { connectGitHub(); return; }
     if (id === "fabric") { connectFabric(); return; }
     if (id === "numbrly") { setNumbrlyExpanded(true); return; }
@@ -3562,6 +3578,16 @@ function SourcesTab() {
                                 >
                                   Connect
                                 </button>
+                              </div>
+                            </DrawerItem>
+                          </div>
+                        ) : COMING_SOON.has(src.id) ? (
+                          <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
+                            <DrawerItem index={5} visible={isOpen}>
+                              <div
+                                style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg-alt)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textAlign: "center" }}
+                              >
+                                Coming soon
                               </div>
                             </DrawerItem>
                           </div>
