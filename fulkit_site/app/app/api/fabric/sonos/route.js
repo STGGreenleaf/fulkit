@@ -151,6 +151,59 @@ export async function POST(request) {
     return Response.json({ ok: true, newGroupId: targetGroupId, groups, players, transferred, transferDebug });
   }
 
+  // Transfer Spotify from browser SDK device to Sonos speakers
+  if (action === "transferToSonos") {
+    const { spotifyDeviceId, groupId } = body;
+    if (!spotifyDeviceId || !groupId) {
+      return Response.json({ error: "spotifyDeviceId and groupId required" }, { status: 400 });
+    }
+    let transferred = false;
+    let transferDebug = { spotifyDeviceId, groupId, error: null };
+    const spotify = getProvider(userId, "spotify");
+    if (spotify) {
+      try {
+        // Get Sonos group info to find the coordinator speaker
+        const households = await provider.getHouseholds();
+        const { groups, players } = households.length
+          ? await provider.getGroups(households[0].id)
+          : { groups: [], players: [] };
+        const group = groups.find(g => g.id === groupId);
+        const coordPlayer = players.find(p => p.id === group?.coordinatorId);
+        transferDebug.coordName = coordPlayer?.name || null;
+
+        // Get Spotify devices — SDK device should be in the list
+        const devices = await spotify.getDevices();
+        transferDebug.devices = devices.map(d => ({ name: d.name, type: d.type, id: d.id }));
+
+        // Find the Sonos speaker in Spotify's device list
+        const coordName = coordPlayer?.name?.toLowerCase();
+        let sonosDevice = coordName
+          ? devices.find(d => d.name.toLowerCase() === coordName)
+          : null;
+        if (!sonosDevice) {
+          for (const p of players) {
+            sonosDevice = devices.find(d => d.name.toLowerCase() === p.name.toLowerCase());
+            if (sonosDevice) break;
+          }
+        }
+        if (!sonosDevice) {
+          sonosDevice = devices.find(d => d.type === "Speaker" || d.type === "CastAudio");
+        }
+
+        if (sonosDevice) {
+          await spotify.transferPlayback(sonosDevice.id, true);
+          transferDebug.matchedDevice = sonosDevice.name;
+          transferred = true;
+        } else {
+          transferDebug.error = "No Sonos device found in Spotify device list";
+        }
+      } catch (e) {
+        transferDebug.error = e.message;
+      }
+    }
+    return Response.json({ ok: true, transferred, transferDebug });
+  }
+
   // Per-player volume
   if (action === "playerVolume") {
     const { playerId, volume } = body;

@@ -254,6 +254,7 @@ export function FabricProvider({ children }) {
   const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
   const [activeSonosGroup, setActiveSonosGroup] = useState(null);
   const [sonosStatus, setSonosStatus] = useState(null); // null | "connecting" | "connected" | "failed"
+  const [spotifyDeviceId, setSpotifyDeviceId] = useState(null);
   const activeSonosGroupRef = useRef(null);
   useEffect(() => { activeSonosGroupRef.current = activeSonosGroup; }, [activeSonosGroup]);
   const [statusChecked, setStatusChecked] = useState(false);
@@ -2325,17 +2326,31 @@ export function FabricProvider({ children }) {
   const sonosControlRef = useRef(sonosControl);
   useEffect(() => { sonosControlRef.current = sonosControl; }, [sonosControl]);
 
-  // Create a Sonos group from selected player IDs
-  // Lightweight speaker selection — finds an existing group containing selected players
-  const setSonosSpeakers = useCallback((playerIds) => {
+  // Speaker selection — finds existing group, then transfers Spotify if device is ready
+  const setSonosSpeakers = useCallback(async (playerIds) => {
     if (!playerIds?.length) { setActiveSonosGroup(null); setSonosStatus(null); return; }
     // Find a group that contains at least one selected player
     const match = sonosGroups.find(g => playerIds.some(id => g.playerIds.includes(id)));
     if (match) {
       setActiveSonosGroup(match.id);
-      setSonosStatus("connected");
+      // Transfer Spotify to Sonos if SDK device is registered
+      if (spotifyDeviceId && accessToken) {
+        setSonosStatus("connecting");
+        const res = await apiFetch("/api/fabric/sonos", {
+          method: "POST",
+          body: JSON.stringify({
+            action: "transferToSonos",
+            spotifyDeviceId,
+            groupId: match.id,
+          }),
+        });
+        setSonosStatus(res?.transferred ? "connected" : "failed");
+        if (!res?.transferred) console.warn("[sonos] Transfer debug:", res?.transferDebug);
+      } else {
+        setSonosStatus("connected");
+      }
     }
-  }, [sonosGroups]);
+  }, [sonosGroups, spotifyDeviceId, accessToken, apiFetch]);
 
   // Per-player volume (debounced 400ms)
   const playerVolTimers = useRef({});
@@ -2440,7 +2455,11 @@ export function FabricProvider({ children }) {
         sonosControl,
       }}
     >
-      <PlaybackEngine connectedProviders={connectedProviders} />
+      <PlaybackEngine
+        connectedProviders={connectedProviders}
+        onDeviceReady={(id) => { console.log("[fabric] Spotify device ready:", id); setSpotifyDeviceId(id); }}
+        onDeviceLost={() => { console.log("[fabric] Spotify device lost"); setSpotifyDeviceId(null); }}
+      />
       {children}
     </FabricContext.Provider>
   );
