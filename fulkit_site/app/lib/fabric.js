@@ -2346,31 +2346,25 @@ export function FabricProvider({ children }) {
   const sonosControlRef = useRef(sonosControl);
   useEffect(() => { sonosControlRef.current = sonosControl; }, [sonosControl]);
 
-  // Speaker selection — finds existing group, then transfers Spotify if device is ready
+  // Speaker selection — groups speakers + transfers Spotify playback directly to Sonos
+  // Uses setGroup action which wakes Sonos, finds it in Spotify's device list, and transfers.
+  // No Web Playback SDK needed — Sonos speakers are already Spotify Connect devices.
   const setSonosSpeakers = useCallback(async (playerIds) => {
     if (!playerIds?.length) { setActiveSonosGroup(null); setSonosStatus(null); return; }
-    // Find a group that contains at least one selected player
-    const match = sonosGroups.find(g => playerIds.some(id => g.playerIds.includes(id)));
-    if (match) {
-      setActiveSonosGroup(match.id);
-      // Transfer Spotify to Sonos if SDK device is registered
-      if (spotifyDeviceId && accessToken) {
-        setSonosStatus("connecting");
-        const res = await apiFetch("/api/fabric/sonos", {
-          method: "POST",
-          body: JSON.stringify({
-            action: "transferToSonos",
-            spotifyDeviceId,
-            groupId: match.id,
-          }),
-        });
-        setSonosStatus(res?.transferred ? "connected" : "failed");
-        if (!res?.transferred) console.warn("[sonos] Transfer debug:", res?.transferDebug);
-      } else {
-        setSonosStatus("connected");
-      }
-    }
-  }, [sonosGroups, spotifyDeviceId, accessToken, apiFetch]);
+    if (!sonosHouseholdId || !accessToken) return;
+    setSonosStatus("connecting");
+    const res = await apiFetch("/api/fabric/sonos", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "setGroup",
+        householdId: sonosHouseholdId,
+        playerIds,
+      }),
+    });
+    if (res?.newGroupId) setActiveSonosGroup(res.newGroupId);
+    setSonosStatus(res?.transferred ? "connected" : "failed");
+    if (!res?.transferred) console.warn("[sonos] Transfer debug:", res?.transferDebug);
+  }, [sonosHouseholdId, accessToken, apiFetch]);
 
   // Per-player volume (debounced 400ms)
   const playerVolTimers = useRef({});
