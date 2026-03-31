@@ -3260,6 +3260,7 @@ export default function FabricPage() {
     sonosGroups,
     sonosPlayers,
     sonosVolumes,
+    sonosStatus,
     activeSonosGroup,
     setActiveSonosGroup,
     setSonosSpeakers,
@@ -3920,10 +3921,13 @@ export default function FabricPage() {
                   <div style={{ position: "relative" }}>
                     <button
                       onClick={() => setSpeakerPickerOpen(v => !v)}
-                      title={activeGroupPlayers.length ? `${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : "Choose speakers"}
-                      style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+                      title={sonosStatus === "connected" ? `Connected — ${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : sonosStatus === "connecting" ? "Connecting..." : activeGroupPlayers.length ? `${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : "Choose speakers"}
+                      style={{ width: 28, height: 28, borderRadius: "var(--radius-full)", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, position: "relative" }}
                     >
-                      <Speaker size={12} strokeWidth={2} color={activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
+                      <Speaker size={12} strokeWidth={2} color={sonosStatus === "connected" ? "var(--color-text)" : activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
+                      {sonosStatus && (
+                        <span style={{ position: "absolute", top: 2, right: 2, width: 6, height: 6, borderRadius: "50%", background: sonosStatus === "connected" ? "#6B8E6B" : sonosStatus === "connecting" ? "var(--color-text-dim)" : "#8E6B6B" }} />
+                      )}
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
@@ -3932,7 +3936,14 @@ export default function FabricPage() {
                         borderRadius: "var(--radius-md)", padding: "var(--space-2)",
                         minWidth: 240, zIndex: 100, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                       }}>
-                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", padding: "var(--space-1) var(--space-2)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Speakers</div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-1) var(--space-2)" }}>
+                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Speakers</span>
+                          {sonosStatus && (
+                            <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-primary)", color: sonosStatus === "connected" ? "#6B8E6B" : sonosStatus === "connecting" ? "var(--color-text-dim)" : "#8E6B6B" }}>
+                              {sonosStatus === "connected" ? "Connected" : sonosStatus === "connecting" ? "Connecting..." : "Not routed"}
+                            </span>
+                          )}
+                        </div>
                         <button onClick={() => { setActiveSonosGroup(null); setSpeakerPickerOpen(false); }} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-2)", background: !activeSonosGroup ? "var(--color-bg-hover)" : "transparent", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontFamily: "var(--font-primary)", fontSize: "var(--font-size-sm)", color: "var(--color-text)", textAlign: "left" }}>
                           <span style={{ width: 8, height: 8, borderRadius: "50%", background: !activeSonosGroup ? "var(--color-text)" : "transparent", border: "1px solid var(--color-text-dim)", flexShrink: 0 }} />
                           This device
@@ -4220,16 +4231,19 @@ export default function FabricPage() {
                   <div style={{ position: "relative" }}>
                     <button
                       onClick={() => setSpeakerPickerOpen(v => !v)}
-                      title={activeGroupPlayers.length ? `${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : "Choose speakers"}
+                      title={sonosStatus === "connected" ? `Connected — ${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : sonosStatus === "connecting" ? "Connecting..." : activeGroupPlayers.length ? `${activeGroupPlayers.length} speaker${activeGroupPlayers.length > 1 ? "s" : ""}` : "Choose speakers"}
                       style={{
                         width: 32, height: 32, borderRadius: "var(--radius-full)",
                         background: "transparent",
                         border: "1px solid transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "pointer", padding: 0, outline: "none",
+                        cursor: "pointer", padding: 0, outline: "none", position: "relative",
                       }}
                     >
-                      <Speaker size={14} strokeWidth={2} color={activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
+                      <Speaker size={14} strokeWidth={2} color={sonosStatus === "connected" ? "var(--color-text)" : activeSonosGroup ? "var(--color-text-muted)" : "var(--color-text-dim)"} />
+                      {sonosStatus && (
+                        <span style={{ position: "absolute", top: 3, right: 3, width: 6, height: 6, borderRadius: "50%", background: sonosStatus === "connected" ? "#6B8E6B" : sonosStatus === "connecting" ? "var(--color-text-dim)" : "#8E6B6B" }} />
+                      )}
                     </button>
                     {speakerPickerOpen && (
                       <div style={{
@@ -4239,8 +4253,13 @@ export default function FabricPage() {
                         minWidth: 240, zIndex: 100,
                         boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                       }}>
-                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", padding: "var(--space-1) var(--space-2)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Speakers
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-1) var(--space-2)" }}>
+                          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Speakers</span>
+                          {sonosStatus && (
+                            <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-primary)", color: sonosStatus === "connected" ? "#6B8E6B" : sonosStatus === "connecting" ? "var(--color-text-dim)" : "#8E6B6B" }}>
+                              {sonosStatus === "connected" ? "Connected" : sonosStatus === "connecting" ? "Connecting..." : "Not routed"}
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={() => { setActiveSonosGroup(null); setSpeakerPickerOpen(false); }}

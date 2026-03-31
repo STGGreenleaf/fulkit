@@ -253,6 +253,7 @@ export function FabricProvider({ children }) {
   const [sonosVolumes, setSonosVolumes] = useState({}); // { playerId: volume }
   const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
   const [activeSonosGroup, setActiveSonosGroup] = useState(null);
+  const [sonosStatus, setSonosStatus] = useState(null); // null | "connecting" | "connected" | "failed"
   const activeSonosGroupRef = useRef(null);
   useEffect(() => { activeSonosGroupRef.current = activeSonosGroup; }, [activeSonosGroup]);
   const [statusChecked, setStatusChecked] = useState(false);
@@ -404,9 +405,7 @@ export function FabricProvider({ children }) {
             setSonosPlayers(sonosData.players || []);
             setSonosVolumes(sonosData.volumes || {});
             setSonosHouseholdId(sonosData.householdId);
-            if (!activeSonosGroup) {
-              setActiveSonosGroup(sonosData.groups[0].id);
-            }
+            // Default is "This device" — user explicitly picks Sonos speakers
           } else {
             // Sonos connected but no groups reachable (off-network) — show picker with offline state
             const offlineGroups = [{ id: "sonos-offline", name: "Sonos (offline)", playerIds: [], coordinatorId: null }];
@@ -2324,7 +2323,8 @@ export function FabricProvider({ children }) {
   // Create a Sonos group from selected player IDs
   const setSonosSpeakers = useCallback(async (playerIds) => {
     if (!accessToken || !sonosHouseholdId) return;
-    if (!playerIds?.length) { setActiveSonosGroup(null); return; }
+    if (!playerIds?.length) { setActiveSonosGroup(null); setSonosStatus(null); return; }
+    setSonosStatus("connecting");
     const res = await apiFetch("/api/fabric/sonos", {
       method: "POST",
       body: JSON.stringify({ action: "setGroup", householdId: sonosHouseholdId, playerIds }),
@@ -2333,6 +2333,14 @@ export function FabricProvider({ children }) {
       if (res.groups) setSonosGroups(res.groups);
       if (res.players) setSonosPlayers(res.players);
       if (res.newGroupId) setActiveSonosGroup(res.newGroupId);
+      if (res.transferred) {
+        setSonosStatus("connected");
+      } else {
+        setSonosStatus("failed");
+        console.warn("[sonos] Transfer failed — debug:", res.transferDebug);
+      }
+    } else {
+      setSonosStatus("failed");
     }
   }, [accessToken, sonosHouseholdId, apiFetch]);
 
@@ -2431,6 +2439,7 @@ export function FabricProvider({ children }) {
         sonosGroups,
         sonosPlayers,
         sonosVolumes,
+        sonosStatus,
         activeSonosGroup,
         setActiveSonosGroup,
         setSonosSpeakers,

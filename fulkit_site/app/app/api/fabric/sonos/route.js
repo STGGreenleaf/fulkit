@@ -93,18 +93,24 @@ export async function POST(request) {
 
     // Transfer Spotify playback to a Sonos device
     let transferred = false;
+    let transferDebug = { spotifyDevices: [], coordName: null, matchedDevice: null, error: null };
     const spotify = getProvider(userId, "spotify");
     if (spotify) {
       try {
         const devices = await spotify.getDevices();
+        transferDebug.spotifyDevices = devices.map(d => ({ name: d.name, type: d.type, id: d.id, active: d.is_active }));
+
         // Try coordinator name first
         const targetGroup = groups.find(g => g.id === targetGroupId);
         const coordPlayer = players.find(p => p.id === targetGroup?.coordinatorId);
         const coordName = coordPlayer?.name?.toLowerCase();
+        transferDebug.coordName = coordPlayer?.name || null;
+
         if (coordName) {
           const match = devices.find(d => d.name.toLowerCase() === coordName);
           if (match) {
             await spotify.transferPlayback(match.id, true);
+            transferDebug.matchedDevice = match.name;
             transferred = true;
           }
         }
@@ -114,25 +120,29 @@ export async function POST(request) {
             const match = devices.find(d => d.name.toLowerCase() === p.name.toLowerCase());
             if (match) {
               await spotify.transferPlayback(match.id, true);
+              transferDebug.matchedDevice = match.name;
               transferred = true;
               break;
             }
           }
         }
-        // Last resort: any Sonos-looking device (type "Speaker" or "CastAudio")
+        // Last resort: any Speaker-type device
         if (!transferred) {
           const speaker = devices.find(d => d.type === "Speaker" || d.type === "CastAudio");
           if (speaker) {
             await spotify.transferPlayback(speaker.id, true);
+            transferDebug.matchedDevice = speaker.name;
             transferred = true;
           }
         }
       } catch (e) {
+        transferDebug.error = e.message;
         console.warn("[sonos] Spotify transfer failed:", e.message);
       }
     }
 
-    return Response.json({ ok: true, newGroupId: targetGroupId, groups, players, transferred });
+    console.log("[sonos] setGroup result:", { targetGroupId, transferred, transferDebug });
+    return Response.json({ ok: true, newGroupId: targetGroupId, groups, players, transferred, transferDebug });
   }
 
   // Per-player volume
