@@ -2260,7 +2260,11 @@ function DeveloperTab() {
       borderBottom: "1px solid var(--color-border-light)",
       opacity: b.active ? 1 : 0.5,
     }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <button
+        onClick={() => setEditingBroadcast(editingBroadcast?.id === b.id ? null : b)}
+        style={{ flex: 1, minWidth: 0, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontFamily: "var(--font-primary)" }}
+        title="Edit"
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
           <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {b.title}
@@ -2274,27 +2278,27 @@ function DeveloperTab() {
         <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
           {new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </div>
-      </div>
+      </button>
       <button
         onClick={() => toggleBroadcastActive(b)}
         title={b.active ? "Deactivate" : "Activate"}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", color: "var(--color-text-dim)" }}
       >
-        {b.active ? <Eye size={12} /> : <EyeOff size={12} />}
+        {b.active ? <Eye size={13} /> : <EyeOff size={13} />}
       </button>
       <button
         onClick={() => setEditingBroadcast(editingBroadcast?.id === b.id ? null : b)}
         title="Edit"
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", color: "var(--color-text-dim)" }}
       >
-        <FileText size={12} />
+        <FileText size={13} />
       </button>
       <button
         onClick={() => deleteBroadcast(b.id)}
         title="Delete"
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "var(--color-text-dim)" }}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 6, display: "flex", color: "var(--color-text-dim)" }}
       >
-        <Trash2 size={12} />
+        <Trash2 size={13} />
       </button>
     </div>
   );
