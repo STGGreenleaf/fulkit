@@ -85,10 +85,18 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
       });
 
       player.addListener("authentication_error", ({ message }) => {
-        console.error("[Spotify SDK] Auth error:", message);
-        // Stop reconnect loop — user needs to re-authorize Spotify with streaming scope
+        console.error("[Spotify SDK] Auth error:", message, "— SDK disabled until re-auth");
         authFailedRef.current = true;
+        // Kill everything — remove listeners, disconnect, null out player
+        player.removeListener("ready");
+        player.removeListener("not_ready");
+        player.removeListener("player_state_changed");
+        player.removeListener("authentication_error");
+        player.removeListener("initialization_error");
+        player.removeListener("account_error");
         player.disconnect();
+        playerRef.current = null;
+        deviceIdRef.current = null;
         onDeviceLost?.();
       });
 
