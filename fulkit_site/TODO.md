@@ -29,20 +29,10 @@
 - [x] **Independent art engine** — ✅ Session 28. `trackArt` state decoupled from track object lifecycle. Keyed on artist+title, never flickers on play/skip/provider switch. Cache chain: track → localStorage → iTunes → MusicBrainz → YouTube thumbnail.
 - [x] **Provider-agnostic Sonos routing** — ✅ Session 28. SONOS_PROVIDERS list (Spotify, Apple Music). playTrack resolves through streaming service when Sonos active. Ready for Apple Music.
 - [x] **Spotify/Sonos Settings split** — ✅ Session 28. `spotifyConnected` separate from `fabricConnected`. Spotify card only shows when Spotify actually connected (was: showing when Sonos connected, no way to reconnect).
-- [ ] **Spotify Web Playback SDK scope** — 🔒 BLOCKED. SDK loads, device registers, then `check_scope?scope=web-playback` returns 403. Token has `streaming`, Dashboard has Web Playback SDK enabled, Premium confirmed. Spotify Development Mode platform limitation. Need Extended Quota approval for Web Playback SDK specifically. See `md/spotify-sdk-blocker.md` for details + drafted email.
-- [ ] **Sonos playback handoff** — Blocked by SDK scope above. Transfer chain is built (SDK device → Spotify device list → match Sonos speaker → transfer), just needs the SDK device to stay registered.
-
-### New Integrations
-- [ ] **Apple Music** — MusicKit JS, Apple Developer account ($99/yr approved), full playback source. Provider + Sources card + client playback.
-- [ ] **Fabric mobile layout** — single-column tab switcher on phones. Needs spec + discussion first.
 
 ### Copy & Polish
 - [x] **Pitches.md audit** — ✅ Verified: stack-problem (8 apps/$92), referral (9 friends), SOC 2 (controls, certification pending) — all accurate.
 - [x] **Competitive grid expand** — ✅ 10-competitor grid (ChatGPT, Claude, Notion, Obsidian, Todoist, Otter.ai, Spotify, Slack, Google Cal, QuickBooks). Covers music, vault/encryption, business+health+calendar.
-
-### Parked (need real users)
-- [ ] 6.1 Personalized upsells from spending patterns
-- [ ] 6.2 Personalized upsells from top ecosystems
 
 ---
 
@@ -113,7 +103,7 @@
 
 ---
 
-## Chappie 2.0 — Verification Queue (134/136 done, 2 parked)
+## Chappie 2.0 — Verification Queue ✅ (134/134 visible — 2 parked items moved to Waiting)
 
 > All code shipped. These are production verification tasks. Run in order.
 > Pattern: do the thing → check debug output → confirm it works.
@@ -143,85 +133,9 @@
 - [x] **8.4** Grade: ≥8/10 pass = done — ✅ 25/25 pass, prose retention fix confirmed
 - [x] **8.5** If tuning needed: adjust and re-test — ✅ No tuning needed, all passing
 
-### Parked (need real user data)
-- [ ] **6.1** Personalized upsells from `ful_ledger` spending patterns — needs user history to accumulate
-- [ ] **6.2** Personalized upsells from `user_patterns` top ecosystems — same, lights up naturally
-
 ### Deploy-verify (confirm on next relevant test)
 - [x] **2.7** Open app, check `[chat:debug]` — anchor context reflects recent activity — ✅ Code verified: greeting route builds anchor from recent convos, tasks, integrations, memories
 - [x] **2.8** Ask about a topic NOT in anchor — Claude uses tools to fetch, not hallucinate — ✅ Code verified: core tools (notes search, actions, memory, threads, KB) always registered
-
----
-
-## Droplet Day — When You Subscribe ($12/mo DigitalOcean)
-
-> Everything below fires in one session. Pipeline is built, worker runs locally, scripts exist.
-> Subscribe → run this list → real spectral data flows → all features upgrade automatically.
-
-### Step 1: Provision
-- [ ] Provision DigitalOcean droplet — 2GB RAM, Basic/Regular SSD
-- [ ] Run `scripts/setup-vps.sh`, copy worker, create `.env`, enable systemd
-- [ ] Verify worker starts, processes one test track, writes to `fabric_timelines` table
-
-### Step 2: Wire to Signal Radio
-- [ ] Add worker heartbeat as a signal source — feeds into existing Radio monitoring
-- [ ] Stuck job detection — if no tracks processed in 30min, emit `worker_stall` signal
-- [ ] Processing rate metric — tracks/hour visible in Radio
-
-### Step 3: Tune Visuals
-- [ ] Signal Terrain — tune amplitude scaling, noise blend, layer rendering for real spectral data
-- [ ] OrbVisualizer (Deep Amoeba) — same tuning pass for fullscreen viz
-- [ ] Poster terrain — swap procedural seed with actual spectral contours
-
-### Step 4: Pipeline Polish
-- [ ] Analyze on play — when a track plays and has no spectral data, queue it automatically
-
-### Step 5: Future (not day-one)
-- [ ] Spectral similarity engine — texture-matching recommendations (B-Side upgrade)
-- [ ] Essentia.js client-side — optional browser analysis for unmatched tracks
-
-### Already done
-- [x] YouTube match validation — studio versions by default, variants on request (Session 25)
-- [x] Batch-queue rejected — analyze on play, not on connect (design decision Session 25)
-- [x] Album art cache — already clean. SW clears all old caches on activate, art uses localStorage not SW cache.
-
----
-
-## Health — Two Phases
-
-### Phase 1: Live Now
-> Fitbit + Strava give us a real health story today. Pitch these as live sources.
-
-- [x] **Fitbit** — live, direct OAuth, 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
-- [x] **Strava** — live for Collin, 3 chat tools (activities, stats, recent). API review submitted for 1000-athlete access (7-10 business days).
-- [x] **Health pitch copy** — ✅ Fitbit + Strava represented in competitive grid ("Business + health + calendar in chat") and Awareness section. Dedicated pitch section deferred to landing rewrite.
-- [x] **Health ECOSYSTEM_KEYWORDS** — ✅ Added fitness, exercise, strain, body to Fitbit; workout, fitness, exercise to Strava. Both fire on general health talk.
-
-### Phase 2: Vital Day (When You Subscribe)
-> Vital gives you Whoop, Oura, Garmin, blood work, and more through one API. Second paid subscription after Droplet.
-> Subscribe → run this list → all health integrations light up → notify users.
-
-#### Provision
-- [ ] Subscribe to Vital — set up API key, configure webhook endpoint
-- [ ] Wire Vital as a single integration (connect/callback/status/disconnect pattern)
-- [ ] Expand ECOSYSTEM_KEYWORDS: blood, vitals, readiness, strain score
-
-#### Chat Tools (new via Vital)
-- [ ] Health summary tool — daily snapshot (sleep, recovery, activity) across all providers
-- [ ] Sleep detail tool — sleep stages, duration, quality (Whoop/Oura/Garmin)
-- [ ] Blood work tool — lab results, trends (Quest/Labcorp via Vital)
-
-#### Supported Providers (via Vital)
-- [ ] Whoop — sleep, recovery, strain, heart rate
-- [ ] Oura — sleep, readiness, heart rate
-- [ ] Garmin — activity, sleep, heart rate, stress
-- [ ] Apple Health — via Vital mobile SDK
-- [ ] Blood work — Quest, Labcorp via Vital
-
-#### Notify Users
-- [ ] Add "Health" integration card to Settings → Sources
-- [ ] Flag existing users — in-app notification that health integrations are live
-- [ ] Email template for health launch (add to email-templates.js)
 
 ---
 
@@ -253,15 +167,6 @@
 - [x] **Slow streams (5-6s first token)** — ✅ Session 22: ThinkingIndicator (dots) is intentional design. Lean tool loading reduced request size. Thresholds adjusted.
 - [x] **SVG rage clicks on toolbar buttons** — Lucide SVG icons eating taps on mobile. Fix: pointerEvents:"none" on icons.
 
-## Still Open (carried forward)
-
-> External or infrastructure tasks. All either blocked or subscription-gated.
-
-- [x] Spotify App — Extended Quota Mode ✅ (5-seat cap, revisit when lifted)
-- [x] Fabric isolation — provider abstraction complete, DB migration run. Multi-provider ready. Session 22.
-- [ ] Fabric auto-analyze (production) — same as Droplet Day ($12/mo DigitalOcean)
-- [ ] Domain verification for Spotify OAuth redirect URI — admin task, Spotify Dashboard
-- [ ] SoundCloud API integration — pending Artist Pro + API approval
 
 ## Integration Roadmap
 
@@ -269,16 +174,14 @@
 > Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card.
 
 ### Tier 1: Everyone
-- [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources. Google verification submitted (4-6 weeks).
+- [x] **Google Calendar** — ✅ Full OAuth + 4 chat tools (list, search, create, availability). Nested under Google card in Sources.
 - [x] **Gmail** — ✅ Read-only. Chat tools: gmail_search, gmail_get_thread. OAuth under Google card.
 - [x] **Google Drive** — ✅ Read-only + vault import. Chat tools: drive_search, drive_get_file, drive_import_to_vault. OAuth under Google card.
 - [x] **Fitbit** — ✅ OAuth + 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
-- [x] **Strava** — ✅ OAuth + 3 chat tools (activities, stats, recent). 1000-athlete review submitted.
+- [x] **Strava** — ✅ OAuth + 3 chat tools (activities, stats, recent).
 
 ### Tier 2: Extends Fabric
 - [x] **Sonos** — ✅ OAuth connected, SonosProvider built, Sources card live, B-Side speaker awareness, speaker picker UI (compact + full), per-speaker volume, API routes (GET rooms, POST control). Session 25–28.
-- [ ] **SoundCloud** — multi-source Fabric. Pending Artist Pro + API approval.
-- [ ] **Apple Music** — MusicKit JS. Third Fabric source. Requires Apple Developer ($99/yr). Collin approved.
 
 ### Tier 3: Business verticals
 - [x] **QuickBooks** — ✅ OAuth + 5 chat tools (P&L, balance sheet, invoices, expenses, customers). Settings card with rich drawer + logo.
@@ -301,13 +204,33 @@
 - [x] **OneNote** — ✅ OAuth + chat tools (notebooks, sections, pages). Settings card.
 - [x] **Readwise** — ✅ API key auth + chat tools (highlights, books). Settings card.
 
-### V2 Integrations
-- [ ] **Health Phase 2 — Vital Day** (Whoop, Oura, Garmin, blood work — see Health section)
-- [ ] **Vagaro** — beauty/wellness scheduling + client management
-- [ ] **Linear** — issue tracking for dev teams
-
 ### Contenders (evaluate later)
-Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, ClickUp, Zoom, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
+Vagaro, Linear, Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, ClickUp, Zoom, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
+
+---
+
+## Waiting — V2
+
+> Everything here is either blocked by an external party or gated behind a subscription.
+> Nothing in this section blocks launch. Revisit when the blocker clears.
+
+### Blocked (external — waiting on approval)
+- [ ] **Spotify Web Playback SDK** — 403 on `check_scope?scope=web-playback`. Needs Extended Quota approval for Web Playback specifically. Transfer chain built and ready. See `md/spotify-sdk-blocker.md`.
+- [ ] **Sonos playback handoff** — blocked by Spotify SDK scope above. Code complete, just needs SDK device to register.
+- [ ] **SoundCloud** — pending Artist Pro signup + API approval. Provider abstraction ready.
+- [ ] **Google OAuth verification** — submitted, 4-6 week review. Calendar/Gmail/Drive work for Collin, not public users yet.
+- [ ] **Strava 1000-athlete access** — API review submitted, 7-10 business days. Works for Collin now.
+- [ ] **Spotify domain verification** — admin task, Spotify Developer Dashboard.
+
+### Subscription-gated (flip when ready)
+- [ ] **Droplet Day** ($12/mo DigitalOcean) — spectral analysis pipeline. VPS worker, Signal Terrain tuning, auto-analyze on play. Scripts + worker built, just needs provisioning.
+- [ ] **Vital Day** (Vital API sub) — Whoop, Oura, Garmin, Apple Health, blood work via one API. Chat tools + Settings card + user notifications.
+- [ ] **Apple Music** ($99/yr Apple Developer) — MusicKit JS, third Fabric source. Provider abstraction ready.
+
+### Parked (need real users)
+- [ ] Personalized upsells from spending patterns
+- [ ] Personalized upsells from top ecosystems
+- [ ] Fabric mobile layout — single-column tab switcher, needs spec + discussion
 
 ---
 
