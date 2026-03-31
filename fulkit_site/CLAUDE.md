@@ -100,6 +100,8 @@ This is the most complex file (~3500 lines). The flow:
 | `square-server.js` | Square OAuth + token management |
 | `stripe-server.js` | Stripe OAuth + token management |
 | `toast-server.js` | Toast POS integration |
+| `asana-server.js` | Asana OAuth + token refresh + API wrapper |
+| `monday-server.js` | monday.com OAuth + GraphQL API wrapper |
 | `sanitize-emoji.js` | Emoji sanitization for consistent rendering |
 | `btc/` | B-Side response engine (persona + formatting rules) |
 
@@ -118,6 +120,8 @@ This is the most complex file (~3500 lines). The flow:
 | `api/stripe/*` | Stripe OAuth + proxy |
 | `api/toast/*` | Toast POS integration |
 | `api/fabric/*` | Spotify OAuth for Signal Terrain |
+| `api/asana/*` | Asana OAuth (connect/callback/status/disconnect) |
+| `api/monday/*` | monday.com OAuth (connect/callback/status/disconnect) |
 | `api/owner/spend` | Spend Moderator aggregation (summary + flags + period comparison) |
 | `api/owner/heartbeat` | System health pulse (cost, errors, cache, integrations, doc freshness) |
 | `api/rsg` | Random string generator |
