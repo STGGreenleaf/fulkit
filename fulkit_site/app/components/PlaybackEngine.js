@@ -8,7 +8,10 @@ import YouTubeEngine from "./engines/YouTubeEngine";
 export default function PlaybackEngine({ connectedProviders, onDeviceReady, onDeviceLost }) {
   return (
     <>
-      {connectedProviders?.spotify && (
+      {/* SpotifyEngine disabled — web-playback scope 403 is a Spotify Dashboard issue.
+          Not needed for Sonos (speakers are direct Spotify Connect devices).
+          Re-enable when Dashboard permissions are fixed. */}
+      {false && connectedProviders?.spotify && (
         <SpotifyEngine
           connected={true}
           onDeviceReady={onDeviceReady}
