@@ -2321,28 +2321,16 @@ export function FabricProvider({ children }) {
   useEffect(() => { sonosControlRef.current = sonosControl; }, [sonosControl]);
 
   // Create a Sonos group from selected player IDs
-  const setSonosSpeakers = useCallback(async (playerIds) => {
-    if (!accessToken || !sonosHouseholdId) return;
+  // Lightweight speaker selection — finds an existing group containing selected players
+  const setSonosSpeakers = useCallback((playerIds) => {
     if (!playerIds?.length) { setActiveSonosGroup(null); setSonosStatus(null); return; }
-    setSonosStatus("connecting");
-    const res = await apiFetch("/api/fabric/sonos", {
-      method: "POST",
-      body: JSON.stringify({ action: "setGroup", householdId: sonosHouseholdId, playerIds }),
-    });
-    if (res?.ok) {
-      if (res.groups) setSonosGroups(res.groups);
-      if (res.players) setSonosPlayers(res.players);
-      if (res.newGroupId) setActiveSonosGroup(res.newGroupId);
-      if (res.transferred) {
-        setSonosStatus("connected");
-      } else {
-        setSonosStatus("failed");
-        console.warn("[sonos] Transfer failed — debug:", res.transferDebug);
-      }
-    } else {
-      setSonosStatus("failed");
+    // Find a group that contains at least one selected player
+    const match = sonosGroups.find(g => playerIds.some(id => g.playerIds.includes(id)));
+    if (match) {
+      setActiveSonosGroup(match.id);
+      setSonosStatus("connected");
     }
-  }, [accessToken, sonosHouseholdId, apiFetch]);
+  }, [sonosGroups]);
 
   // Per-player volume (debounced 400ms)
   const playerVolTimers = useRef({});
