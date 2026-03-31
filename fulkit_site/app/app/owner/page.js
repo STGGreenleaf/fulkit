@@ -6445,6 +6445,17 @@ function PlaygroundTab() {
   const [textVal, setTextVal] = useState("");
   const [multiSel, setMultiSel] = useState([]);
 
+  // ── Hidden tips state (persisted) ──
+  const [hiddenTips, setHiddenTips] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("fulkit-hidden-tips")) || []; } catch { return []; }
+  });
+  const toggleTip = (tip) => setHiddenTips(prev => {
+    const next = prev.includes(tip) ? prev.filter(t => t !== tip) : [...prev, tip];
+    try { localStorage.setItem("fulkit-hidden-tips", JSON.stringify(next)); } catch {}
+    return next;
+  });
+
   // ── Email preview state ──
   const [emailTemplate, setEmailTemplate] = useState("welcome");
   const emailIframeRef = useRef(null);
@@ -6778,7 +6789,7 @@ function PlaygroundTab() {
       <div style={FOLD}>
         <button onClick={() => toggle("tooltips")} style={FOLD_BTN}>
           <Zap size={14} color="var(--color-text-dim)" />
-          <span style={FOLD_LABEL}>Tooltips — Did You Know ({DASHBOARD_TIPS.length})</span>
+          <span style={FOLD_LABEL}>Tooltips — Did You Know ({DASHBOARD_TIPS.length - hiddenTips.length} active / {DASHBOARD_TIPS.length} total)</span>
           {openSections.tooltips ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
         </button>
         {openSections.tooltips && (
@@ -6786,15 +6797,23 @@ function PlaygroundTab() {
             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-1)" }}>
               These cycle on the dashboard every 12 seconds. Users can click to skip. Starts at a random tip each visit.
             </div>
-            {DASHBOARD_TIPS.map((tip, i) => (
-              <div key={`tip-${i}`} style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", borderBottom: i < DASHBOARD_TIPS.length - 1 ? "1px solid var(--color-border-light)" : "none", paddingBottom: "var(--space-2)" }}>
-                <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", flexShrink: 0, width: 20, textAlign: "right" }}>{i + 1}.</span>
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
-                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{tip}</span>
-                  <CopyButton text={tip} label="Copy" />
+            {DASHBOARD_TIPS.map((tip, i) => {
+              const hidden = hiddenTips.includes(tip);
+              return (
+                <div key={`tip-${i}`} style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", borderBottom: i < DASHBOARD_TIPS.length - 1 ? "1px solid var(--color-border-light)" : "none", paddingBottom: "var(--space-2)", opacity: hidden ? 0.35 : 1 }}>
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", flexShrink: 0, width: 20, textAlign: "right" }}>{i + 1}.</span>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)", textDecoration: hidden ? "line-through" : "none" }}>{tip}</span>
+                    <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>
+                      {!hidden && <CopyButton text={tip} label="Copy" />}
+                      <button onClick={() => toggleTip(tip)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: hidden ? "var(--color-success)" : "var(--color-text-dim)" }} title={hidden ? "Restore" : "Remove"}>
+                        {hidden ? <RefreshCw size={12} strokeWidth={2} /> : <X size={12} strokeWidth={2} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

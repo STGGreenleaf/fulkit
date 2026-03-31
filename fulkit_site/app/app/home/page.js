@@ -21,7 +21,7 @@ const TIPS = [
   "Drop any file into chat — PDF, CSV, image — Fülkit reads it, triages it, extracts what matters.",
   "Say \"save this\" in chat and Fülkit distills the conversation into a permanent note.",
   "\"86 the green smoothie\" — marks it sold out across Square instantly. No dashboard needed.",
-  "Cmd+K focuses the chat input from anywhere in the app. Fast hands, fast answers.",
+  "Cmd+K snaps your cursor to the chat input — no scrolling, no clicking. Instant typing.",
   "/recall [topic] searches your notes by meaning, not keywords. Semantic, not literal.",
   "\"Watch nytimes.com/tech daily\" — Fülkit whispers you when the page changes.",
   "Say \"standup\" — yesterday's wins, today's calendar, open blockers. One word.",
@@ -87,19 +87,28 @@ export default function Dashboard() {
   const [patterns, setPatterns] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
-  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * TIPS.length));
+  const [activeTips] = useState(() => {
+    if (typeof window === "undefined") return TIPS;
+    try {
+      const hidden = JSON.parse(localStorage.getItem("fulkit-hidden-tips")) || [];
+      const filtered = TIPS.filter(t => !hidden.includes(t));
+      return filtered.length > 0 ? filtered : TIPS;
+    } catch { return TIPS; }
+  });
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * activeTips.length));
   const [tipFade, setTipFade] = useState(1);
 
   useEffect(() => {
+    if (activeTips.length <= 1) return;
     const id = setInterval(() => {
       setTipFade(0);
       setTimeout(() => {
-        setTipIndex(i => (i + 1) % TIPS.length);
+        setTipIndex(i => (i + 1) % activeTips.length);
         setTipFade(1);
       }, 300);
     }, 12000);
     return () => clearInterval(id);
-  }, []);
+  }, [activeTips.length]);
 
   // Trial state — only for non-owner users with onboarding state
   const trialDaysRemaining = onboardingState?.trialDaysRemaining ?? null;
@@ -415,7 +424,7 @@ export default function Dashboard() {
 
               {/* Did you know — cycling tips */}
               <button
-                onClick={() => { setTipFade(0); setTimeout(() => { setTipIndex(i => (i + 1) % TIPS.length); setTipFade(1); }, 200); }}
+                onClick={() => { setTipFade(0); setTimeout(() => { setTipIndex(i => (i + 1) % activeTips.length); setTipFade(1); }, 200); }}
                 style={{
                   display: "flex",
                   alignItems: "flex-start",
@@ -450,7 +459,7 @@ export default function Dashboard() {
                     opacity: tipFade,
                     transition: "opacity 300ms ease",
                   }}>
-                    {TIPS[tipIndex]}
+                    {activeTips[tipIndex]}
                   </div>
                 </div>
               </button>
