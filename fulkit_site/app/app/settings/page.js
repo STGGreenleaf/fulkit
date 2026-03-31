@@ -1487,7 +1487,7 @@ function SourcesTab() {
   async function disconnectFabric() {
     setFabricDisconnecting(true);
     try {
-      await fetch("/api/fabric/disconnect", {
+      await fetch("/api/fabric/disconnect?provider=spotify", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ provider: "spotify" }),
@@ -2026,7 +2026,7 @@ function SourcesTab() {
   async function disconnectSonos() {
     setSonosDisconnecting(true);
     try {
-      await fetch("/api/fabric/disconnect", {
+      await fetch("/api/fabric/disconnect?provider=sonos", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ provider: "sonos" }),
