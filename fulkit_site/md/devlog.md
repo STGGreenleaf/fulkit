@@ -3,6 +3,35 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 28 — 2026-03-31: Sonos Individual Speakers + Art Engine + Spotify SDK
+
+### What shipped
+- **Sonos individual speakers** — Broke "Kitchen + 6" into 8 individually named speakers with checkboxes. Per-speaker volume (−/number/+ stepper via Sonos playerVolume API). Local selection state (instant toggle, no API per click). Default "This device". Connection status indicator (dot on speaker icon + text in dropdown header).
+- **Independent art engine** — `trackArt` state decoupled from `currentTrack` object. Keyed on artist+title, never flickers when playTrack replaces the track object (Sonos routing, provider switch, etc.). Cache chain: track → localStorage → iTunes → MusicBrainz → YouTube thumbnail.
+- **Provider-agnostic Sonos routing** — `SONOS_PROVIDERS` list (Spotify, Apple Music). When Sonos active, `playTrack` resolves through streaming service so audio reaches speakers. Falls back to YouTube (browser only) if track not found on streaming.
+- **Spotify/Sonos Settings split** — `spotifyConnected` separate from `fabricConnected`. Fixed: Spotify card always showed "Connected" when Sonos was connected, with no way to reconnect Spotify.
+- **Spotify disconnect fix** — Query param fallback for DELETE body (some environments strip it). Plus fresh OAuth re-authorization with `streaming` scope.
+- **Runaway YouTube fix** — `sendControl` checks if YouTube engine is actually playing (`duration > 0`) regardless of provider field. Provider only changes to "spotify" if `play_track` API call succeeds.
+- **Spotify SDK wiring** — `onDeviceReady`/`onDeviceLost` connected to PlaybackEngine. `spotifyDeviceId` stored in fabric state. `transferToSonos` API action uses SDK device to find Sonos speakers in Spotify device list.
+- **SDK auth failure handling** — Kills all listeners + disconnects on first auth error. No more reconnect storm flooding console with ghost events.
+- **CSP fixes** — `frame-src` allows `sdk.scdn.co`, `connect-src` allows `api.spotify.com` + `wss://dealer.spotify.com`.
+
+### Blocked
+- **Spotify Web Playback SDK `web-playback` scope → 403** — Development Mode platform limitation. Token has `streaming`, Dashboard has SDK enabled, Premium confirmed. Spotify's internal `check_scope` endpoint rejects it. Need Extended Quota approval. Full details + drafted email in `md/spotify-sdk-blocker.md`.
+
+### Key files modified
+- `app/lib/fabric.js` — sonosPlayers, sonosVolumes, sonosStatus, spotifyDeviceId, trackArt, setSonosSpeakers, setSonosPlayerVolume, sendControl (YouTube-first routing), playTrack (provider-agnostic Sonos routing, deferred provider switch)
+- `app/app/fabric/page.js` — selectedSpeakers local state, toggleSpeaker, volume steppers, connection status dot, trackArt display
+- `app/lib/providers/sonos.js` — createGroup, getPlayerVolume, setPlayerVolume
+- `app/app/api/fabric/sonos/route.js` — setGroup (with fallback chain), transferToSonos, playerVolume actions, per-player volume on GET
+- `app/components/engines/SpotifyEngine.js` — authFailedRef guard, kill all listeners on auth error, player_state_changed guard
+- `app/components/PlaybackEngine.js` — onDeviceReady/onDeviceLost callbacks wired
+- `app/middleware.js` — CSP for Spotify SDK iframe + WebSocket
+- `app/app/settings/page.js` — spotifyConnected state, disconnect query param fallback
+- `app/app/api/fabric/disconnect/route.js` — query param fallback for provider
+
+---
+
 ## Session 25 (continued) — 2026-03-29: Sonos + B-Side Sets + Landing Polish + Email
 
 ### What shipped (afternoon)

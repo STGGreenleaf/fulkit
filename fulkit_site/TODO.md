@@ -25,6 +25,12 @@
 - [ ] **B-Side search** — "find me some Burial" triggers catalog search
 - [x] **Sonos speaker picker UI** — ✅ Speaker icon in both transport bars, dropdown with rooms + "This device", offline fallback when off-network, volume routes to active room.
 - [x] **Sonos controls via B-Side** — ✅ "play in living room", "volume 60 in kitchen", "pause in bedroom" — instant execution via text, room matched from connected groups.
+- [x] **Sonos individual speakers** — ✅ Session 28. Broke "Kitchen + 6" into 8 individual checkboxes. Per-speaker volume (−/num/+). Local selection state (instant, no API per click). Default "This device". Connection status indicator (dot + text).
+- [x] **Independent art engine** — ✅ Session 28. `trackArt` state decoupled from track object lifecycle. Keyed on artist+title, never flickers on play/skip/provider switch. Cache chain: track → localStorage → iTunes → MusicBrainz → YouTube thumbnail.
+- [x] **Provider-agnostic Sonos routing** — ✅ Session 28. SONOS_PROVIDERS list (Spotify, Apple Music). playTrack resolves through streaming service when Sonos active. Ready for Apple Music.
+- [x] **Spotify/Sonos Settings split** — ✅ Session 28. `spotifyConnected` separate from `fabricConnected`. Spotify card only shows when Spotify actually connected (was: showing when Sonos connected, no way to reconnect).
+- [ ] **Spotify Web Playback SDK scope** — 🔒 BLOCKED. SDK loads, device registers, then `check_scope?scope=web-playback` returns 403. Token has `streaming`, Dashboard has Web Playback SDK enabled, Premium confirmed. Spotify Development Mode platform limitation. Need Extended Quota approval for Web Playback SDK specifically. See `md/spotify-sdk-blocker.md` for details + drafted email.
+- [ ] **Sonos playback handoff** — Blocked by SDK scope above. Transfer chain is built (SDK device → Spotify device list → match Sonos speaker → transfer), just needs the SDK device to stay registered.
 
 ### New Integrations
 - [ ] **Apple Music** — MusicKit JS, Apple Developer account ($99/yr approved), full playback source. Provider + Sources card + client playback.
