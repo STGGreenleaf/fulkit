@@ -20,6 +20,8 @@ import { getSlackToken, slackFetch } from "../../../lib/slack-server";
 import { getOneNoteToken, onenoteFetch } from "../../../lib/onenote-server";
 import { getTodoistToken, todoistFetch } from "../../../lib/todoist-server";
 import { getReadwiseToken, readwiseFetch } from "../../../lib/readwise-server";
+import { getAsanaToken, asanaFetch } from "../../../lib/asana-server";
+import { getMondayToken, mondayFetch } from "../../../lib/monday-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -252,6 +254,8 @@ const ECOSYSTEM_KEYWORDS = {
   onenote: ["onenote", "notebook", "one note", "microsoft notes", "section"],
   todoist: ["todoist", "todo", "task", "project", "due", "priority", "label"],
   readwise: ["readwise", "highlight", "annotation", "book", "article", "reading", "kindle"],
+  asana: ["asana", "task", "assignee", "project", "section", "subtask", "workspace", "milestone", "due date"],
+  monday: ["monday", "board", "item", "column", "group", "status", "pulse", "timeline"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -3071,6 +3075,168 @@ async function executeReadwiseTool(name, input, userId) {
   throw new Error(`Unknown readwise tool: ${name}`);
 }
 
+// Asana tools — tasks, projects, sections
+const ASANA_TOOLS = [
+  {
+    name: "asana_tasks",
+    description: "List or search the user's Asana tasks. Can filter by project, assignee, or completion status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "Filter by project GID. Optional." },
+        completed: { type: "boolean", description: "Include completed tasks. Default false." },
+        query: { type: "string", description: "Search tasks by name. Optional." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "asana_projects",
+    description: "List the user's Asana projects across all workspaces.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "asana_create_task",
+    description: "Create a new task in Asana.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Task name." },
+        notes: { type: "string", description: "Task description/notes. Optional." },
+        projectId: { type: "string", description: "Project GID to add the task to. Optional." },
+        due_on: { type: "string", description: "Due date in YYYY-MM-DD format. Optional." },
+      },
+      required: ["name"],
+    },
+  },
+];
+
+async function executeAsanaTool(name, input, userId) {
+  if (name === "asana_tasks") {
+    if (input.query) {
+      // Use search API
+      const wsRes = await asanaFetch(userId, "/workspaces");
+      if (wsRes.error) return wsRes;
+      const wsData = await wsRes.json();
+      const ws = wsData.data?.[0];
+      if (!ws) return { tasks: [], note: "No Asana workspaces found." };
+      const params = new URLSearchParams({ "text": input.query, "opt_fields": "name,completed,due_on,assignee.name,projects.name" });
+      const res = await asanaFetch(userId, `/workspaces/${ws.gid}/tasks/search?${params}`);
+      if (res.error) return res;
+      const data = await res.json();
+      return { tasks: (data.data || []).map(t => ({ id: t.gid, name: t.name, completed: t.completed, due: t.due_on, assignee: t.assignee?.name, project: t.projects?.[0]?.name })) };
+    }
+    let endpoint = "/tasks?opt_fields=name,completed,due_on,assignee.name&assignee=me&";
+    if (input.projectId) endpoint = `/projects/${input.projectId}/tasks?opt_fields=name,completed,due_on,assignee.name&`;
+    endpoint += `completed_since=${input.completed ? "2000-01-01" : "now"}&limit=50`;
+    const res = await asanaFetch(userId, endpoint);
+    if (res.error) return res;
+    const data = await res.json();
+    return { tasks: (data.data || []).map(t => ({ id: t.gid, name: t.name, completed: t.completed, due: t.due_on, assignee: t.assignee?.name })) };
+  }
+  if (name === "asana_projects") {
+    const wsRes = await asanaFetch(userId, "/workspaces");
+    if (wsRes.error) return wsRes;
+    const wsData = await wsRes.json();
+    const projects = [];
+    for (const ws of (wsData.data || [])) {
+      const res = await asanaFetch(userId, `/workspaces/${ws.gid}/projects?opt_fields=name,color,archived&limit=50`);
+      if (res.error) continue;
+      const data = await res.json();
+      for (const p of (data.data || [])) {
+        if (!p.archived) projects.push({ id: p.gid, name: p.name, workspace: ws.name });
+      }
+    }
+    return { projects };
+  }
+  if (name === "asana_create_task") {
+    const wsRes = await asanaFetch(userId, "/workspaces");
+    if (wsRes.error) return wsRes;
+    const wsData = await wsRes.json();
+    const ws = wsData.data?.[0];
+    if (!ws) return { error: "No Asana workspace found." };
+    const body = { data: { name: input.name, workspace: ws.gid } };
+    if (input.notes) body.data.notes = input.notes;
+    if (input.due_on) body.data.due_on = input.due_on;
+    if (input.projectId) body.data.projects = [input.projectId];
+    const res = await asanaFetch(userId, "/tasks", { method: "POST", body: JSON.stringify(body) });
+    if (res.error) return res;
+    const data = await res.json();
+    return { created: true, task: { id: data.data?.gid, name: data.data?.name, due: data.data?.due_on } };
+  }
+  throw new Error(`Unknown asana tool: ${name}`);
+}
+
+// monday.com tools — boards, items
+const MONDAY_TOOLS = [
+  {
+    name: "monday_boards",
+    description: "List the user's monday.com boards.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "monday_items",
+    description: "List items on a monday.com board. Can filter by board or search by name.",
+    input_schema: {
+      type: "object",
+      properties: {
+        boardId: { type: "string", description: "Board ID to list items from." },
+        query: { type: "string", description: "Search items by name. Optional." },
+        limit: { type: "integer", description: "Max items. Default 25." },
+      },
+      required: ["boardId"],
+    },
+  },
+  {
+    name: "monday_create_item",
+    description: "Create a new item on a monday.com board.",
+    input_schema: {
+      type: "object",
+      properties: {
+        boardId: { type: "string", description: "Board ID to create the item on." },
+        name: { type: "string", description: "Item name." },
+        groupId: { type: "string", description: "Group ID within the board. Optional." },
+        columnValues: { type: "string", description: "JSON string of column values. Optional." },
+      },
+      required: ["boardId", "name"],
+    },
+  },
+];
+
+async function executeMondayTool(name, input, userId) {
+  if (name === "monday_boards") {
+    const res = await mondayFetch(userId, "{ boards(limit: 50) { id name state board_kind groups { id title } } }");
+    if (res.error) return res;
+    const data = await res.json();
+    return { boards: (data.data?.boards || []).filter(b => b.state === "active").map(b => ({ id: b.id, name: b.name, kind: b.board_kind, groups: (b.groups || []).map(g => ({ id: g.id, name: g.title })) })) };
+  }
+  if (name === "monday_items") {
+    const limit = Math.min(input.limit || 25, 100);
+    const query = `{ boards(ids: [${input.boardId}]) { items_page(limit: ${limit}) { items { id name state column_values { id title text } group { id title } } } } }`;
+    const res = await mondayFetch(userId, query);
+    if (res.error) return res;
+    const data = await res.json();
+    let items = data.data?.boards?.[0]?.items_page?.items || [];
+    if (input.query) {
+      const q = input.query.toLowerCase();
+      items = items.filter(i => i.name.toLowerCase().includes(q));
+    }
+    return { items: items.map(i => ({ id: i.id, name: i.name, state: i.state, group: i.group?.title, columns: (i.column_values || []).filter(c => c.text).map(c => ({ name: c.title, value: c.text })) })) };
+  }
+  if (name === "monday_create_item") {
+    let query = `mutation { create_item(board_id: ${input.boardId}, item_name: ${JSON.stringify(input.name)}`;
+    if (input.groupId) query += `, group_id: ${JSON.stringify(input.groupId)}`;
+    if (input.columnValues) query += `, column_values: ${JSON.stringify(input.columnValues)}`;
+    query += `) { id name } }`;
+    const res = await mondayFetch(userId, query);
+    if (res.error) return res;
+    const data = await res.json();
+    const item = data.data?.create_item;
+    return { created: true, item: { id: item?.id, name: item?.name } };
+  }
+  throw new Error(`Unknown monday tool: ${name}`);
+}
+
 // Geocode cache — locations don't move, cache aggressively
 const _geocodeCache = new Map();
 
@@ -4693,7 +4859,9 @@ export async function POST(request) {
         safeGet(getOneNoteToken, "onenote"),
         safeGet(getTodoistToken, "todoist"),
         safeGet(getReadwiseToken, "readwise"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getAsanaToken, "asana"),
+        safeGet(getMondayToken, "monday"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -4742,7 +4910,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -4761,6 +4929,7 @@ export async function POST(request) {
         { ref: "dropboxToken", val: dropboxToken }, { ref: "slackToken", val: slackToken },
         { ref: "onenoteToken", val: onenoteToken }, { ref: "todoistToken", val: todoistToken },
         { ref: "readwiseToken", val: readwiseToken },
+        { ref: "asanaToken", val: asanaToken }, { ref: "mondayToken", val: mondayToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -4787,6 +4956,8 @@ export async function POST(request) {
             else if (s.ref === "onenoteToken") onenoteToken = null;
             else if (s.ref === "todoistToken") todoistToken = null;
             else if (s.ref === "readwiseToken") readwiseToken = null;
+            else if (s.ref === "asanaToken") asanaToken = null;
+            else if (s.ref === "mondayToken") mondayToken = null;
           }
         }
       }
@@ -5090,6 +5261,7 @@ Never skip the preview step. The user must see and approve changes before they g
       qbToken && "QuickBooks", notionToken && "Notion",
       dropboxToken && "Dropbox", slackToken && "Slack",
       onenoteToken && "OneNote", todoistToken && "Todoist", readwiseToken && "Readwise",
+      asanaToken && "Asana", mondayToken && "monday.com",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -5184,6 +5356,8 @@ Never skip the preview step. The user must see and approve changes before they g
       onenote: () => onenoteToken ? ONENOTE_TOOLS : [],
       todoist: () => todoistToken ? TODOIST_TOOLS : [],
       readwise: () => readwiseToken ? READWISE_TOOLS : [],
+      asana: () => asanaToken ? ASANA_TOOLS : [],
+      monday: () => mondayToken ? MONDAY_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -5266,6 +5440,7 @@ Never skip the preview step. The user must see and approve changes before they g
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
         onenote: !!onenoteToken, todoist: !!todoistToken, readwise: !!readwiseToken,
+        asana: !!asanaToken, monday: !!mondayToken,
       },
       kbIncluded,
       kbExcluded,
@@ -5666,6 +5841,28 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("readwise_") && readwiseToken) {
                 try {
                   const result = await withTimeout(() => executeReadwiseTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Asana tools
+              if (block.name.startsWith("asana_") && asanaToken) {
+                try {
+                  const result = await withTimeout(() => executeAsanaTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // monday.com tools
+              if (block.name.startsWith("monday_") && mondayToken) {
+                try {
+                  const result = await withTimeout(() => executeMondayTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
