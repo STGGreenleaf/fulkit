@@ -1106,6 +1106,7 @@ function SourcesTab() {
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [githubSaving, setGithubSaving] = useState(false);
   const [fabricConnected, setFabricConnected] = useState(false);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [fabricDisconnecting, setFabricDisconnecting] = useState(false);
   const [fabricExpanded, setFabricExpanded] = useState(false);
   const [spotifySeats, setSpotifySeats] = useState(null);
@@ -1258,6 +1259,7 @@ function SourcesTab() {
     }
     if (params.get("sp") === "connected" && params.get("fprovider") !== "sonos") {
       setFabricConnected(true);
+      setSpotifyConnected(true);
     }
     if (params.get("sq") === "connected") {
       setSquareConnected(true);
@@ -1354,6 +1356,7 @@ function SourcesTab() {
     ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
+        setSpotifyConnected(!!fabric.providers?.spotify);
         if (fabric.spotifySeats) setSpotifySeats(fabric.spotifySeats);
         if (fabric.providers?.sonos) setSonosConnected(true);
       }
@@ -1492,6 +1495,7 @@ function SourcesTab() {
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ provider: "spotify" }),
       });
+      setSpotifyConnected(false);
       setFabricConnected(false);
     } catch {}
     setFabricDisconnecting(false);
@@ -2039,7 +2043,7 @@ function SourcesTab() {
   const allConnected = [
     ...connected,
     ...(githubConnected ? ["github"] : []),
-    ...(fabricConnected ? ["fabric"] : []),
+    ...(spotifyConnected ? ["fabric"] : []),
     ...(numbrlyConnected ? ["numbrly"] : []),
     ...(tgConnected ? ["truegauge"] : []),
     ...(squareConnected ? ["square"] : []),
@@ -2510,8 +2514,8 @@ function SourcesTab() {
               </Card>
             )}
 
-            {/* Fabric */}
-            {fabricConnected && (
+            {/* Fabric / Spotify */}
+            {spotifyConnected && (
               <Card style={{ padding: 0, overflow: "hidden" }}>
                 <CardHeader
                   logo={SOURCE_LOGOS.fabric}
