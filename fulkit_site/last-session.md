@@ -1,28 +1,35 @@
 # Last Session
 
 **Date**: 2026-03-30 (Session 27, marathon)
-**Scope**: V1 launch checklist, Hum voice pipeline, Fabric independence, automations, closeout, standup, dev co-pilot, Square expansion, docs overhaul
+**Scope**: V1 launch sweep, Hum voice pipeline, Fabric independence, automations, watches, closeout, standup, dev co-pilot, Square expansion, docs overhaul, signal fixes
 
 **Shipped**:
-- Settings/Sources CLS fix (skeleton cards) + Spend Moderator history (spend_rollups + 30-day trend chart)
-- Fabric search rewrite (provider-agnostic, YouTube albums, no Spotify bias)
-- The Hum wired for real: MediaRecorder → Whisper → Opus → OpenAI TTS (onyx), 28 ack phrases, 60s cap, no text
-- User automations: user_automations table, 3 chat tools, hourly cron, dashboard whispers
+- The Hum: real voice (MediaRecorder → Whisper → Opus → OpenAI TTS onyx), 28 ack phrases with name, 60s cap, no text on screen, parallel ack+transcribe
+- Fabric: provider-agnostic search (YouTube albums/playlists/tracks standalone), stripped Spotify bias
+- User automations: schedule recurring tasks via chat, hourly cron, dashboard whispers
+- URL watches: monitor any page for changes, whisper on update, hourly/daily/weekly
 - Daily closeout (Square → TrueGauge, 4pm/8am crons) + Daily standup (yesterday/today/blockers, morning whisper)
-- Dev co-pilot: 6 GitHub write + 3 Vercel tools, owner-only, double-gated
-- Square expansion: 86 item, price change, invoice creation (all preview/confirm)
-- Disconnect purge prompt (keep/purge modal on all 20+ integrations)
-- Threads mobile (two-row toolbar, calendar day detail on tap)
-- Manual auto-generates from SOURCE_DESCRIPTIONS (one source of truth)
-- Owner KB + user curiosity KB articles updated/seeded (13 total)
-- Apple Music card staged (Coming Soon + waitlist)
-- Health ECOSYSTEM_KEYWORDS expanded (Fitbit + Strava)
+- Dev co-pilot: 6 GitHub write + 3 Vercel tools, owner-only
+- Square: 86 item, price change, invoice creation (all preview/confirm)
+- Disconnect purge prompt (keep/purge modal, all 20+ integrations)
+- Apple Music card staged (Coming Soon + waitlist + dedicated email template)
+- Spotify dev thread watcher (daily cron, dashboard whisper on change)
+- Settings/Sources CLS fix (skeleton cards + More section waits for statusReady)
+- AuthGuard fix (splash waits for auth resolve, not just timer — fixes blank chat on first load)
+- actions_update tool error fix (.maybeSingle() for missing IDs)
+- Manual: 8-point blueprint, 7-step getting started, auto-generates from SOURCE_DESCRIPTIONS
+- Owner KB: all 5 articles updated to Session 27 state
+- User KB: 8 curiosity-catching articles (How AI Works, Who Built This, The Umlaut, etc.)
+- Health ECOSYSTEM_KEYWORDS expanded, Strava + Apple Music on ticker, Google consolidated
+- Threads mobile: two-row toolbar, calendar day detail on tap
+- Buildnotes updated, TODO cleaned
 
 **Next (Session 28)**:
-- Waitlist email template: make per-source (not hardcoded to Spotify)
-- Test The Hum voice end-to-end (onyx confirmation)
+- Test The Hum end-to-end on prod (voice confirmation)
 - B-Side search standalone feature
 - Pitches.md audit (3 flagged items)
 - Landing hero + About page copy rewrite
 - Competitive grid expand (music, vault, voice moat)
-- Run the spend_rollups migration if not done
+- Morning briefing (merge standup + weather + calendar + watches into one whisper)
+- One-shot reminders ("remind me in 2 hours")
+- Threshold alerts ("alert me if refunds exceed $100")
