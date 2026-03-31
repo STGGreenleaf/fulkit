@@ -219,7 +219,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "apple_music", "linear"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "apple_music"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -2057,7 +2057,7 @@ function SourcesTab() {
   const moreCards = otherSources.filter((s) => REAL_INTEGRATIONS.includes(s.id) && SOURCE_DESCRIPTIONS[s.id]);
   const moreTiles = otherSources.filter((s) => !REAL_INTEGRATIONS.includes(s.id) || !SOURCE_DESCRIPTIONS[s.id]);
 
-  const COMING_SOON = new Set(["apple_music", "linear"]);
+  const COMING_SOON = new Set(["apple_music"]);
   const connect = (id) => {
     if (COMING_SOON.has(id)) return; // Card visible, connect disabled
     if (id === "github") { connectGitHub(); return; }
