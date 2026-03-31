@@ -742,11 +742,12 @@ export function FabricProvider({ children }) {
 
   // Controls — route to correct engine
   const sendControl = useCallback(async (action) => {
-    // YouTube or no Spotify: control via iframe engine
-    const useYT = currentTrack?.provider !== "spotify";
+    // YouTube engine is authoritative — if it's actively playing, always route through it
+    // (protects against provider field being "spotify" when YouTube is the actual playback engine)
+    const ytActive = window.__ytEngine?.getState?.()?.duration > 0;
+    const useYT = currentTrack?.provider !== "spotify" || ytActive;
     if (useYT && window.__ytEngine) {
       if (action === "play") {
-        // If no video is loaded (e.g. after resume from refresh), load it via playTrack
         const state = window.__ytEngine.getState?.();
         if (!state?.duration && currentTrack) {
           playTrackRef.current?.(currentTrack);
@@ -757,7 +758,7 @@ export function FabricProvider({ children }) {
       else if (action === "pause") window.__ytEngine.pause();
       return;
     }
-    // Sonos active: route play/pause/skip through Sonos API (it proxies to Spotify)
+    // Sonos active + Spotify track: route through Sonos API
     if (activeSonosGroupRef.current) {
       const sonosAction = action === "next" ? "next" : action === "previous" ? "previous" : action;
       await apiFetch("/api/fabric/sonos", {
@@ -1610,12 +1611,16 @@ export function FabricProvider({ children }) {
           if (match) {
             const uri = match.uri;
             if (match.image) track.art = match.image;
-            setCurrentTrack((cur) => cur ? { ...cur, art: track.art || cur.art, provider: match.provider, uri } : cur);
-            await apiFetch("/api/fabric/controls", {
+            // Don't set provider until play succeeds — otherwise YouTube can't be controlled
+            const result = await apiFetch("/api/fabric/controls", {
               method: "POST",
               body: JSON.stringify({ action: "play_track", value: { uri }, provider: match.provider }),
             });
-            return;
+            if (result?.ok) {
+              setCurrentTrack((cur) => cur ? { ...cur, art: track.art || cur.art, provider: match.provider, uri } : cur);
+              return;
+            }
+            // Play failed — fall through to YouTube
           }
         } catch {}
         // Not on any streaming service — falls through to YouTube (browser speakers only)
