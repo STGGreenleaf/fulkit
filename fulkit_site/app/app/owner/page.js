@@ -6637,6 +6637,110 @@ function PlaygroundTab() {
         )}
       </div>
 
+      {/* ═══ REFERRAL WHISPERS ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("whispers")} style={FOLD_BTN}>
+          <Speech size={14} color="var(--color-text-dim)" />
+          <span style={FOLD_LABEL}>Referral Whispers</span>
+          {openSections.whispers ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.whispers && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {/* Sub-header */}
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)" }}>
+              These are soft nudges Claude weaves into conversation naturally. Never banners, never popups. Once means once — if ignored, it fades.
+            </div>
+
+            {/* ── Whisper Types ── */}
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)" }}>Whisper Types</div>
+            {[
+              { label: "First Touch", text: "You know you could use Fülkit for free, right? Every friend who joins earns you Fül toward your subscription. 9 friends and it's free. Just putting it out there.", context: "Trigger: 7+ days active, no referral code, never shown" },
+              { label: "Milestone — 30 days", text: "You've been here a month. Fülkit's clearly working for you. Want to make it free? 9 friends and your subscription covers itself.", context: "Trigger: 30 days active, 0 referrals" },
+              { label: "Milestone — 100 messages", text: "100 conversations. That's a lot of thinking together. If you ever want this to cost you nothing — your referral link is in settings.", context: "Trigger: 100 messages sent, 0 referrals" },
+              { label: "Milestone — 500 messages", text: "You're a power user. Honestly, you should probably be getting this for free. Here's how.", context: "Trigger: 500 messages sent, 0 referrals" },
+              { label: "Referral Progress", text: "[First name] just activated. You're earning [X] Fül/mo now. [Y] more referrals and your subscription is covered.", context: "Trigger: referred user's first payment clears" },
+              { label: "Free Threshold", text: "That's it. Your subscription is fully covered by your referrals. Fülkit is free for you now. Nice work.", context: `Trigger: ${REFERRALS.freeAtStandard} Standard / ${REFERRALS.freeAtPro} Pro referrals reached` },
+              { label: "Cash Threshold", text: "You just crossed into payout territory. Your Fül now converts to cash. Set up payouts in settings whenever you're ready.", context: "Trigger: 25+ active referrals" },
+              { label: "Progress Nudge", text: "You've got [X] active referrals earning you [Y] Fül/mo. [Z] more and you're free. Want to share your link?", context: "Trigger: 1-6 referrals, 30+ days since last referral, 60+ days since last nudge" },
+              { label: "Re-engagement", text: "Heads up — [Name] went inactive, so your referral credits dropped to [X] Fül/mo. You're [Y] away from getting back to free.", context: "Trigger: referral churned, credits dropped below tier threshold" },
+              { label: "Earner Celebration", text: "Your first payout just went through. $[X] for telling people about something you already use. Not bad.", context: "Trigger: first cash payout processed" },
+              { label: "Dormant User", text: "You've been quiet but your referrals haven't. You've earned [X] Fül since you were last here. Your tree keeps growing while you sleep.", context: "Trigger: 14+ days inactive, still earning from active referrals" },
+              { label: "Success — First Referral", text: "Your first referral just went live. You officially helped build Fülkit. That matters.", context: "Trigger: first referral activates" },
+              { label: "Success — 10 Referrals", text: "10 people are using Fülkit because of you. That's not a number — that's a community you started.", context: "Trigger: 10 active referrals" },
+              { label: "Success — 50 Referrals", text: "50. You've brought 50 people into this. Fülkit is measurably better because of the community you built. Seriously — thank you.", context: "Trigger: 50 active referrals" },
+              { label: "Success — 100 Referrals", text: "100 people. You're not just using Fülkit anymore. You're building it with us.", context: "Trigger: 100 active referrals" },
+              { label: "Fülkit-wide — 100 Users", text: "Fülkit just crossed 100 users. You helped make that happen. This is how things start.", context: "Trigger: platform hits 100 users (shown to users with active referrals)" },
+              { label: "Fülkit-wide — 1,000 Users", text: "Fülkit just hit 1,000. Remember when it was just a handful of us? You were here for the build. That means something.", context: "Trigger: platform hits 1,000 users (shown to users with active referrals)" },
+              { label: "Tier-Up Celebration", text: "You just leveled up. [New tier name]. Here's what that unlocks: [brief unlock description]. Keep building.", context: "Trigger: user crosses a tier threshold" },
+            ].map((msg, i) => (
+              <div key={`w-${i}`} style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{msg.label}</span>
+                  <CopyButton text={msg.text} label="Copy" />
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{msg.text}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{msg.context}</div>
+              </div>
+            ))}
+
+            {/* ── Audience Variants ── */}
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginTop: "var(--space-2)" }}>Audience Variants</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-1)" }}>
+              Inferred from conversation patterns. A coder gets the dev pitch, a designer gets the design pitch. Context-aware, never generic.
+            </div>
+            {[
+              { label: "Creators", text: "You use Fülkit to create. Your friends probably create too. Every one of them that joins earns you Fül. Creators funding creators.", context: "Writers, musicians, content makers" },
+              { label: "Creators (alt)", text: "Your referral link is basically a patron model that costs your audience nothing extra. They pay for Fülkit. You earn Fül. Everyone makes things.", context: "Writers, musicians, content makers" },
+              { label: "Designers", text: "You care about tools that are designed well. Fülkit is one of those. If your designer friends are still using a generic note app, do them a favor. You'll earn Fül for it too.", context: "Visual / product designers" },
+              { label: "Designers (alt)", text: "Good design connects people. So does your referral link.", context: "Visual / product designers" },
+              { label: "Developers", text: "You're building on Fülkit. Your dev friends could too. Every referral earns you Fül — enough of them and your build costs you nothing. Dev-neutral.", context: "Coders / engineers" },
+              { label: "Developers (alt)", text: "Your referral tree funds your API usage. Think of it as open source economics — your community powers your tools.", context: "Coders / engineers" },
+              { label: "Curiosity Seekers", text: "You ask Fülkit about everything. Your curious friends would too. Share the link, earn Fül, keep asking questions for free.", context: "Generalists, lifelong learners" },
+              { label: "Workers", text: "Fülkit saves you time. It'll save your team time too. Every person you bring on earns you Fül toward your subscription — or toward cash.", context: "Operators, managers, small business owners" },
+              { label: "Workers (alt)", text: "You run a business. So does Fülkit. When you refer, we both profit. That's how good partnerships work.", context: "Operators, managers, small business owners" },
+            ].map((msg, i) => (
+              <div key={`a-${i}`} style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{msg.label}</span>
+                  <CopyButton text={msg.text} label="Copy" />
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{msg.text}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{msg.context}</div>
+              </div>
+            ))}
+
+            {/* ── Wordplay CTAs ── */}
+            <div style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginTop: "var(--space-2)" }}>Wordplay CTAs</div>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-1)" }}>
+              Max one per session. If the moment doesn't call for edge, use the straight version. Punk on the surface, Bauhaus underneath.
+            </div>
+            {[
+              { label: "Whisper-safe", text: "Fül it. Go free.", context: "In-app whisper" },
+              { label: "Whisper-safe", text: "Get Fülkit. Literally.", context: "In-app whisper" },
+              { label: "Whisper-safe", text: "What the Fül are you waiting for?", context: "In-app whisper" },
+              { label: "Whisper-safe", text: "Zero Füls given. Zero dollars paid.", context: "In-app whisper" },
+              { label: "Whisper-safe", text: "Fül around and find out.", context: "In-app whisper — find out your subscription is free" },
+              { label: "Whisper-safe", text: "Give a Fül. Get a Fül.", context: "In-app whisper — referrals specifically" },
+              { label: "Whisper-safe", text: "Fully Fülled.", context: "In-app whisper — tank topped off by referrals" },
+              { label: "Social-safe", text: "Fülkit. The AI you can actually Fül with.", context: "Shareable / social" },
+              { label: "Social-safe", text: "Too good to give a Fül about the price.", context: "Shareable / social" },
+              { label: "Social-safe", text: "I don't pay for my AI. I Fül for free.", context: "Shareable / social" },
+              { label: "Social-safe", text: "Fül you, pay nothing.", context: "Shareable / social" },
+              { label: "Social-safe", text: "You can't buy this kind of Fül.", context: "Shareable / social — referral flex" },
+            ].map((msg, i, arr) => (
+              <div key={`f-${i}`} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--color-border-light)" : "none", paddingBottom: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{msg.label}</span>
+                  <CopyButton text={msg.text} label="Copy" />
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{msg.text}</div>
+                <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{msg.context}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ═══ QUICK PREVIEWS ═══ */}
       <div style={FOLD}>
         <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
