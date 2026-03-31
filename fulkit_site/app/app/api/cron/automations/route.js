@@ -7,6 +7,7 @@
  */
 
 import { getSupabaseAdmin } from "../../../../lib/supabase-server";
+import { createHash } from "crypto";
 
 const DAYS = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 
@@ -95,7 +96,54 @@ export async function GET(request) {
       executed++;
     }
 
-    return Response.json({ processed: automations.length, executed });
+    // ── URL Watches: check all due watches ──
+    let watchesChecked = 0;
+    let watchesChanged = 0;
+
+    const { data: watches } = await admin
+      .from("user_watches")
+      .select("id, user_id, name, url, frequency, content_hash, last_checked_at")
+      .eq("active", true);
+
+    const FREQ_MS = { hourly: 3600000, daily: 86400000, weekly: 604800000 };
+
+    for (const watch of (watches || [])) {
+      const interval = FREQ_MS[watch.frequency] || FREQ_MS.daily;
+      if (watch.last_checked_at && (Date.now() - new Date(watch.last_checked_at).getTime()) < interval * 0.9) continue;
+
+      watchesChecked++;
+      try {
+        const res = await fetch(watch.url, {
+          headers: { "User-Agent": "Fulkit/1.0 (fulkit.app)" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) continue;
+
+        const html = await res.text();
+        const text = html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        const hash = createHash("md5").update(text.slice(0, 50000)).digest("hex");
+
+        const changed = watch.content_hash && watch.content_hash !== hash;
+
+        await admin.from("user_watches").update({
+          content_hash: hash,
+          last_checked_at: new Date().toISOString(),
+          ...(changed ? { last_changed_at: new Date().toISOString() } : {}),
+        }).eq("id", watch.id);
+
+        if (changed) {
+          watchesChanged++;
+          await admin.from("preferences").upsert({
+            user_id: watch.user_id,
+            key: `watch_whisper:${watch.id}`,
+            value: JSON.stringify({ text: `${watch.name} has been updated. ${watch.url}`, watchId: watch.id, name: watch.name, url: watch.url }),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id,key" });
+        }
+      } catch {}
+    }
+
+    return Response.json({ processed: (automations?.length || 0), executed, watchesChecked, watchesChanged });
   } catch (err) {
     console.error("[cron/automations] Error:", err.message);
     return Response.json({ error: err.message }, { status: 500 });
