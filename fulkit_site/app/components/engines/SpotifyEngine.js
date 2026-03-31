@@ -98,7 +98,7 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
 
       // Track changes — manage thumbprint capture per song
       player.addListener("player_state_changed", (state) => {
-        if (!state) return;
+        if (!state || authFailedRef.current) return;
         const trackId = state.track_window?.current_track?.id;
         const isPlaying = !state.paused;
 
