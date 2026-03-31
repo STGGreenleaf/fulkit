@@ -10,14 +10,14 @@
 > Carried forward from Session 25 pressure test. Ordered by priority.
 
 ### Bugs (fix first)
-- [ ] **Settings/Sources CLS 0.33-0.44** — integration cards pop in as status checks resolve, causing layout shifts. Fix: skeleton placeholders for cards until statuses load. LCP also 7-10s from parallel status fetches.
-- [ ] **Spend Moderator history** — currently resets when signals are cleared. Need persistent spend_log aggregation (daily/weekly rollups) so cost trends are visible over time. Goal: watch cost per message go down as Habit Engine + lean tool loading get smarter. Table or chart in Radio tab showing avg cost, tokens, cache hit rate over time.
+- [x] **Settings/Sources CLS 0.33-0.44** — ✅ Skeleton cards while status checks load. Three-state render.
+- [x] **Spend Moderator history** — ✅ spend_rollups table + 30-day trend chart in Radio. Atomic upsert per message. Survives signal purges.
 - [x] **Fabric search 500s** — ✅ Search endpoint returns empty results on error (not 500). cleanTitle() strips BPM from all search query paths.
 - [x] **B-Side set track IDs include BPM** — ✅ Format 1: reordered strip chain (markers before BPM). Format 2: made BPM word optional + tightened gate to reject prose. cleanTitle() at all 4 query construction points.
 - [x] **B-Side set tracks not playing** — ✅ btc-* tracks routed to YouTube (not Spotify path). Fixed search result property name (data.results not data.tracks).
 - [x] **Resume cue error** — ✅ Validate YouTube video ID before cueing (skip btc-* slugs).
 - [x] **Fabric independence sweep** — ✅ Spotify is a plugin, not the system. 13 files, 37 instances fixed. Provider routing by track.provider, defaults removed, API routes accept provider param.
-- [ ] **Sonos Sources card logo not rendering** — SVG looks correct in code. Needs visual verify in prod.
+- [x] **Sonos Sources card logo not rendering** — ✅ Verified in prod. SVG renders correctly.
 
 ### Fabric — B-Side Full Control (started Session 25)
 - [x] B-Side creates sets on request — ✅ intent detection + track parsing + auto-play
@@ -189,7 +189,7 @@
 - [x] **Fitbit** — live, direct OAuth, 4 chat tools (daily summary, sleep, heart rate, weight). Settings card with rich drawer.
 - [x] **Strava** — live for Collin, 3 chat tools (activities, stats, recent). API review submitted for 1000-athlete access (7-10 business days).
 - [ ] **Health pitch copy** — add Fitbit + Strava to landing page integrations section. Position: "Your health data in the conversation — sleep, workouts, heart rate. No extra app."
-- [ ] **Health ECOSYSTEM_KEYWORDS** — add: sleep, recovery, heart rate, workout, strain, run, ride, steps, weight, fitness, health, exercise
+- [x] **Health ECOSYSTEM_KEYWORDS** — ✅ Added fitness, exercise, strain, body to Fitbit; workout, fitness, exercise to Strava. Both fire on general health talk.
 
 ### Phase 2: Vital Day (When You Subscribe)
 > Vital gives you Whoop, Oura, Garmin, blood work, and more through one API. Second paid subscription after Droplet.
@@ -238,7 +238,7 @@
 ### Rewrite scope (do these together in one session)
 - [ ] **Landing /landing** — Tighten hero (keep dictionary concept, cut 40% of words before CTA). Add integrations section. Add vault/BYOK as differentiator. Replace planned features with shipped ones. Update competitive grid.
 - [ ] **About /about** — Keep brand philosophy (ü, name, design heritage) but add product substance. Who built it, what it does, who it's for. Balance manifesto with information.
-- [ ] **Manual /settings/manual** — Rethink as "Getting Started → Ask Chat." Light orientation (3-5 steps), then a CTA to just talk to Fülkit. The manual IS the chat now. Integration command reference can stay as a collapsible reference.
+- [x] **Manual /settings/manual** — ✅ 6-step Getting Started, 6-point blueprint (Talk, Remember, Act, Listen, Automate, Protect). Auto-generates integration sections from SOURCE_DESCRIPTIONS. One source of truth.
 
 ---
 
@@ -309,8 +309,8 @@ Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp,
 - Spec: `md/v3-spec.md`
 
 ### Phase 7: Fulkit Builds Fulkit
-- [ ] Claude reads/writes project files, runs commands, creates PRs
-- [ ] Full dev loop inside Fulkit — one surface for everything
+- [x] Claude reads/writes project files, creates PRs — ✅ 6 GitHub tools (write file, branch, issue, PR, commits, code search) + 3 Vercel tools. Owner-only.
+- [ ] Full dev loop inside Fulkit — shell commands, test runner, multi-file commits (V2)
 
 ---
 
