@@ -54,6 +54,20 @@ const TIPS = [
   "\"What's my health score?\" — TrueGauge gives you a single number for your business health, 0-100.",
   "\"Am I on pace this month?\" — TrueGauge shows MTD sales vs your survival goal and daily pace.",
   "\"Log a $420 expense to Sysco\" — TrueGauge records it from chat. Expenses, sales, all conversational.",
+  "\"Close out the day\" — Fülkit pulls your Square revenue, confirms, then logs it to TrueGauge. One sentence, two systems.",
+  "Every song on /fabric generates a unique topographic poster. Same track, same landscape — every time. Shift one second and it's a different world.",
+  "Paste a table with blank cells into chat — Fülkit turns it into a fillable form with a submit button. Instant data entry.",
+  "The Hum doesn't ask \"are you sure?\" — say \"add a meeting Tuesday at 2\" and it's done. Voice mode trusts you.",
+  "\"How did I sleep?\" — Fitbit gives you stages (deep, light, REM), duration, efficiency, and time asleep. One question.",
+  "\"How was my run?\" — Strava shows splits, elevation, pace, heart rate, and suffer score. Full breakdown.",
+  "Any response in chat has a share button — generates a public link anyone can see. No signup required.",
+  "Threads have 4 views — board, list, calendar, table. Same data, different lens. Toggle anytime.",
+  "\"Find the invoice from Sysco\" — searches your Gmail without leaving chat. Full thread, not just subject lines.",
+  "\"Define schadenfreude\" — full definition, pronunciation, etymology, synonyms. No tab switching.",
+  "\"100 EUR to USD\" — real-time currency conversion, right in chat.",
+  "\"Show me today's space picture\" — NASA's Astronomy Picture of the Day, pulled into your conversation.",
+  "\"How's the Shopify store?\" — daily summary with orders, revenue, top products. One question.",
+  "\"What did labor cost this week?\" — Toast pulls shifts, hours, and total labor spend.",
 ];
 
 function getGreeting() {
