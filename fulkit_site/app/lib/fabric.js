@@ -348,8 +348,14 @@ export function FabricProvider({ children }) {
   const updateHistorySignalRef = useRef(null);
 
   // Helper for authenticated API calls
+  // Circuit breaker: back off all requests when rate-limited (429)
+  const rateLimitedUntilRef = useRef(0);
   const apiFetch = useCallback(async (endpoint, options = {}) => {
     if (!accessToken) { console.warn("[fabric] No accessToken for", endpoint); return null; }
+    if (Date.now() < rateLimitedUntilRef.current) {
+      console.warn("[fabric] Rate limited, skipping:", endpoint);
+      return null;
+    }
     try {
       const res = await fetch(endpoint, {
         ...options,
@@ -359,6 +365,12 @@ export function FabricProvider({ children }) {
           ...options.headers,
         },
       });
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get("Retry-After") || "60", 10);
+        rateLimitedUntilRef.current = Date.now() + retryAfter * 1000;
+        console.warn(`[fabric] 429 — backing off ${retryAfter}s`);
+        return null;
+      }
       if (!res.ok) {
         console.warn("[fabric]", endpoint, res.status);
         const text = await res.text();
@@ -649,10 +661,14 @@ export function FabricProvider({ children }) {
     if (!isYT || !window.__ytEngine || !currentTrack) return;
 
     let ended = false;
+    let everPlayed = false;
     const interval = setInterval(() => {
       const state = window.__ytEngine.getState?.();
       if (!state) return;
       const { currentTime, duration, isPlaying: ytPlaying } = state;
+
+      // Track that this video actually started playing (not stale from previous track)
+      if (ytPlaying) everPlayed = true;
 
       // Sync isPlaying state with YouTube iframe
       if (ytPlaying && !isPlaying) setIsPlaying(true);
@@ -666,7 +682,8 @@ export function FabricProvider({ children }) {
           setCurrentTrack((cur) => cur ? { ...cur, duration: Math.round(duration / 1000) } : cur);
         }
         // Detect track end → auto-advance to next in context
-        if (!ytPlaying && pct > 0.9 && !ended) {
+        // Require everPlayed: prevents stale ended-video from triggering advance on a track that never loaded
+        if (!ytPlaying && pct > 0.9 && !ended && everPlayed) {
           ended = true;
           clearInterval(interval);
           setIsPlaying(false);
@@ -1628,7 +1645,8 @@ export function FabricProvider({ children }) {
         } catch {}
         // Not on any streaming service — falls through to YouTube (browser speakers only)
       }
-      await resolveAndPlayYT();
+      const success = await resolveAndPlayYT();
+      if (!success) setIsPlaying(false);
       return;
     }
 
