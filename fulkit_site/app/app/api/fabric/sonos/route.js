@@ -17,10 +17,20 @@ export async function GET(request) {
   // Get groups for the first household (most users have one)
   const { groups, players } = await provider.getGroups(households[0].id);
 
+  // Fetch per-player volumes in parallel
+  const volumes = {};
+  await Promise.all(players.map(async (p) => {
+    try {
+      const v = await provider.getPlayerVolume(p.id);
+      volumes[p.id] = v.volume;
+    } catch { volumes[p.id] = 0; }
+  }));
+
   return Response.json({
     householdId: households[0].id,
     groups,
     players,
+    volumes,
   });
 }
 
@@ -75,6 +85,15 @@ export async function POST(request) {
     }
 
     return Response.json({ ok: true, newGroupId, groups, players, transferred });
+  }
+
+  // Per-player volume
+  if (action === "playerVolume") {
+    const { playerId, volume } = body;
+    if (!playerId || volume == null) return Response.json({ error: "playerId and volume required" }, { status: 400 });
+    const result = await provider.setPlayerVolume(playerId, volume);
+    if (!result) return Response.json({ error: "Volume set failed" }, { status: 500 });
+    return Response.json({ ok: true });
   }
 
   // Playback control

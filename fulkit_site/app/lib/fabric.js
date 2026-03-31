@@ -250,6 +250,7 @@ export function FabricProvider({ children }) {
   // Sonos speaker state
   const [sonosGroups, setSonosGroups] = useState([]);
   const [sonosPlayers, setSonosPlayers] = useState([]);
+  const [sonosVolumes, setSonosVolumes] = useState({}); // { playerId: volume }
   const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
   const [activeSonosGroup, setActiveSonosGroup] = useState(null);
   const activeSonosGroupRef = useRef(null);
@@ -401,6 +402,7 @@ export function FabricProvider({ children }) {
           if (sonosData?.groups?.length) {
             setSonosGroups(sonosData.groups);
             setSonosPlayers(sonosData.players || []);
+            setSonosVolumes(sonosData.volumes || {});
             setSonosHouseholdId(sonosData.householdId);
             if (!activeSonosGroup) {
               setActiveSonosGroup(sonosData.groups[0].id);
@@ -2291,6 +2293,20 @@ export function FabricProvider({ children }) {
     }
   }, [accessToken, sonosHouseholdId, apiFetch]);
 
+  // Per-player volume (debounced 400ms)
+  const playerVolTimers = useRef({});
+  const setSonosPlayerVolume = useCallback((playerId, vol) => {
+    const v = Math.max(0, Math.min(100, Math.round(vol)));
+    setSonosVolumes(prev => ({ ...prev, [playerId]: v }));
+    clearTimeout(playerVolTimers.current[playerId]);
+    playerVolTimers.current[playerId] = setTimeout(() => {
+      apiFetch("/api/fabric/sonos", {
+        method: "POST",
+        body: JSON.stringify({ action: "playerVolume", playerId, volume: v }),
+      });
+    }, 400);
+  }, [apiFetch]);
+
   const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
 
   const formatTime = useCallback((seconds) => {
@@ -2370,9 +2386,11 @@ export function FabricProvider({ children }) {
         connectedProviders,
         sonosGroups,
         sonosPlayers,
+        sonosVolumes,
         activeSonosGroup,
         setActiveSonosGroup,
         setSonosSpeakers,
+        setSonosPlayerVolume,
         sonosControl,
       }}
     >

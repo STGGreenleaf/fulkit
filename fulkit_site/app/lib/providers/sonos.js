@@ -229,6 +229,18 @@ export class SonosProvider {
     return { volume: data?.volume ?? 0, muted: data?.muted ?? false };
   }
 
+  async getPlayerVolume(playerId) {
+    const data = await this._fetch(`/players/${playerId}/playerVolume`);
+    return { volume: data?.volume ?? 0, muted: data?.muted ?? false };
+  }
+
+  async setPlayerVolume(playerId, volume) {
+    return this._fetch(`/players/${playerId}/playerVolume`, {
+      method: "POST",
+      body: JSON.stringify({ volume: Math.round(volume) }),
+    });
+  }
+
   // ═══ Favorites ═══
 
   async getFavorites(householdId) {
