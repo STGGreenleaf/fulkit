@@ -10,6 +10,7 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
   const playerRef = useRef(null);
   const deviceIdRef = useRef(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const authFailedRef = useRef(false); // Stop reconnect loop on scope errors
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const thumbprintRef = useRef(null);
@@ -47,7 +48,7 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
 
   // Initialize player when SDK + connection are ready
   useEffect(() => {
-    if (!sdkReady || !connected || !accessToken) return;
+    if (!sdkReady || !connected || !accessToken || authFailedRef.current) return;
 
     const initPlayer = async () => {
       const token = await getToken();
@@ -85,6 +86,9 @@ export default function SpotifyEngine({ connected, onDeviceReady, onDeviceLost }
 
       player.addListener("authentication_error", ({ message }) => {
         console.error("[Spotify SDK] Auth error:", message);
+        // Stop reconnect loop — user needs to re-authorize Spotify with streaming scope
+        authFailedRef.current = true;
+        player.disconnect();
         onDeviceLost?.();
       });
 
