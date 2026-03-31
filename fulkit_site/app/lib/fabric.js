@@ -1577,7 +1577,27 @@ export function FabricProvider({ children }) {
     };
 
     // Route by provider — Spotify is just one plugin, YouTube is the universal engine
+    // Exception: when Sonos is active, resolve through Spotify so audio reaches the speakers
     if (track.provider !== "spotify") {
+      if (activeSonosGroupRef.current && connectedProvidersRef.current?.spotify && track.title) {
+        try {
+          const q = `${track.artist || ""} ${cleanTitle(track.title)}`.trim();
+          const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
+          if (playInFlightRef.current !== requestId) return;
+          const spMatch = (data?.results || []).find(r => r.provider === "spotify" && r.uri);
+          if (spMatch) {
+            const uri = spMatch.uri;
+            if (spMatch.image) track.art = spMatch.image;
+            setCurrentTrack((cur) => cur ? { ...cur, art: track.art || cur.art, provider: "spotify", uri } : cur);
+            await apiFetch("/api/fabric/controls", {
+              method: "POST",
+              body: JSON.stringify({ action: "play_track", value: { uri } }),
+            });
+            return;
+          }
+        } catch {}
+        // Not on Spotify — falls through to YouTube (browser speakers only)
+      }
       await resolveAndPlayYT();
       return;
     }
