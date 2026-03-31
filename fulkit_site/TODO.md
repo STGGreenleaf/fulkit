@@ -22,7 +22,7 @@
 ### Fabric — B-Side Full Control (started Session 25)
 - [x] B-Side creates sets on request — ✅ intent detection + track parsing + auto-play
 - [x] **B-Side playback control** — ✅ play/pause/skip/prev/volume/mute via text. Instant execution, B-Side responds with flavor.
-- [ ] **B-Side search** — "find me some Burial" triggers catalog search
+- [x] **B-Side + Search** — ✅ Two independent features on /fabric. Search: query bar → multi-provider results (tracks/albums/artists/playlists) → click to play/add. B-Side: conversational music persona → recommendations, playback control, set building. Complementary, not wired together by design.
 - [x] **Sonos speaker picker UI** — ✅ Speaker icon in both transport bars, dropdown with rooms + "This device", offline fallback when off-network, volume routes to active room.
 - [x] **Sonos controls via B-Side** — ✅ "play in living room", "volume 60 in kitchen", "pause in bedroom" — instant execution via text, room matched from connected groups.
 - [x] **Sonos individual speakers** — ✅ Session 28. Broke "Kitchen + 6" into 8 individual checkboxes. Per-speaker volume (−/num/+). Local selection state (instant, no API per click). Default "This device". Connection status indicator (dot + text).
