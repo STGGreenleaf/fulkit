@@ -12,6 +12,8 @@ import MessageRenderer from "./MessageRenderer";
 import TriageCard, { ScanningState } from "./TriageCard";
 import { useChat } from "../lib/use-chat";
 import { useChatContext } from "../lib/use-chat-context";
+import { useClaudeStatus } from "../lib/use-claude-status";
+import StatusBanner from "./StatusBanner";
 import { useSandbox } from "../lib/sandbox";
 import { SEAT_LIMITS, TIERS, CREDITS } from "../lib/ful-config";
 import { useIsMobile } from "../lib/use-mobile";
@@ -102,10 +104,14 @@ export default function ChatContent({ isPopout = false }) {
   // ─── Sandbox hook ────────────────────────────────────────
   const sandbox = useSandbox();
 
+  // ─── Claude status (downtime banner) ──────────────────────
+  const claudeStatus = useClaudeStatus();
+
   // ─── Core chat hook ───────────────────────────────────────
   const chat = useChat({
     user, accessToken, authFetch, storageMode, directoryHandle, sandbox,
     onMessageSent: () => { if (user?.id) fetchProfile(user.id); },
+    onApiDown: claudeStatus.markDown,
   });
 
   // ─── Context hook ─────────────────────────────────────────
@@ -702,6 +708,8 @@ export default function ChatContent({ isPopout = false }) {
                     )}
                   </div>
                 )}
+
+                {claudeStatus.isDown && <StatusBanner description={claudeStatus.description} />}
 
                 {chat.messages.map((msg, i) => (
                   <div

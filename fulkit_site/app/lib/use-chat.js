@@ -59,7 +59,7 @@ function extractTopics(messages) {
  * Owns: messages, streaming, conversations, send flow, DB persistence.
  * Does NOT own: context assembly, file attachments, UI state.
  */
-export function useChat({ user, accessToken, authFetch, storageMode, directoryHandle, sandbox, onMessageSent }) {
+export function useChat({ user, accessToken, authFetch, storageMode, directoryHandle, sandbox, onMessageSent, onApiDown }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -366,6 +366,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         const err = await res.json().catch(() => ({}));
         const errMsg = err.error || "Something went wrong.";
         console.error("[sendMessage] API error:", res.status, errMsg);
+        if (res.status >= 500) onApiDown?.();
         if (res.status === 429) {
           signal("rate_limit", "warning", { conversationId });
         } else {
