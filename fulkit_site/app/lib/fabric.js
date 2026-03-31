@@ -1577,26 +1577,31 @@ export function FabricProvider({ children }) {
     };
 
     // Route by provider — Spotify is just one plugin, YouTube is the universal engine
-    // Exception: when Sonos is active, resolve through Spotify so audio reaches the speakers
+    // Exception: when Sonos is active, resolve through a streaming service so audio reaches speakers
+    // (YouTube iframe only outputs to browser — Sonos needs Spotify, Apple Music, etc.)
+    const SONOS_PROVIDERS = ["spotify", "apple_music"];
+    const hasSonosSource = activeSonosGroupRef.current &&
+      SONOS_PROVIDERS.some(p => connectedProvidersRef.current?.[p]);
     if (track.provider !== "spotify") {
-      if (activeSonosGroupRef.current && connectedProvidersRef.current?.spotify && track.title) {
+      if (hasSonosSource && track.title) {
         try {
           const q = `${track.artist || ""} ${cleanTitle(track.title)}`.trim();
           const data = await apiFetch(`/api/fabric/search?q=${encodeURIComponent(q)}&type=track`);
           if (playInFlightRef.current !== requestId) return;
-          const spMatch = (data?.results || []).find(r => r.provider === "spotify" && r.uri);
-          if (spMatch) {
-            const uri = spMatch.uri;
-            if (spMatch.image) track.art = spMatch.image;
-            setCurrentTrack((cur) => cur ? { ...cur, art: track.art || cur.art, provider: "spotify", uri } : cur);
+          // Pick the first streaming match Sonos can play
+          const match = (data?.results || []).find(r => SONOS_PROVIDERS.includes(r.provider) && r.uri);
+          if (match) {
+            const uri = match.uri;
+            if (match.image) track.art = match.image;
+            setCurrentTrack((cur) => cur ? { ...cur, art: track.art || cur.art, provider: match.provider, uri } : cur);
             await apiFetch("/api/fabric/controls", {
               method: "POST",
-              body: JSON.stringify({ action: "play_track", value: { uri } }),
+              body: JSON.stringify({ action: "play_track", value: { uri }, provider: match.provider }),
             });
             return;
           }
         } catch {}
-        // Not on Spotify — falls through to YouTube (browser speakers only)
+        // Not on any streaming service — falls through to YouTube (browser speakers only)
       }
       await resolveAndPlayYT();
       return;
