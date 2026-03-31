@@ -3494,8 +3494,8 @@ function SourcesTab() {
         </>
       )}
 
-      {/* All other sources */}
-      {(moreCards.length > 0 || moreTiles.length > 0) && (() => {
+      {/* All other sources — wait for status checks to avoid CLS */}
+      {statusReady && (moreCards.length > 0 || moreTiles.length > 0) && (() => {
         const q = searchMore.toLowerCase().trim();
         const filteredCards = moreCards;
         const filteredTiles = q ? moreTiles.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q)) : moreTiles;

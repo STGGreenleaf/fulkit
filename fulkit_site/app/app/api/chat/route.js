@@ -3683,8 +3683,9 @@ async function executeActionTool(name, input, userId, conversationId) {
     if (input.priority) updates.priority = input.priority;
     if (input.title) updates.title = input.title;
     if (input.bucket) updates.bucket = input.bucket;
-    const { data, error } = await admin.from("actions").update(updates).eq("id", input.id).eq("user_id", userId).select("id, title, status, priority, bucket").single();
+    const { data, error } = await admin.from("actions").update(updates).eq("id", input.id).eq("user_id", userId).select("id, title, status, priority, bucket").maybeSingle();
     if (error) throw new Error(error.message);
+    if (!data) return { error: "Action not found — it may have been deleted or the ID is wrong." };
     return { updated: true, action: data };
   }
 
