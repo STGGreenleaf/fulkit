@@ -1,21 +1,19 @@
 # Last Session
 
-**Date**: 2026-03-31 (Session 28)
-**Scope**: Sonos individual speakers, independent art engine, Spotify SDK wiring, provider-agnostic routing, Settings Spotify/Sonos split
+**Date**: 2026-03-31 (Session 29)
+**Scope**: 429 cascade fix, Sonos direct transfer, Asana/Monday integrations, Claude downtime banner, CLS fix
 
 **Shipped**:
-- Sonos: 8 individual speakers with checkboxes + per-speaker volume (−/num/+) + connection status dot
-- Art engine: trackArt decoupled from currentTrack, never flickers on play/skip/provider switch
-- Sonos routing: SONOS_PROVIDERS list, auto-resolves through Spotify when Sonos active, provider only changes on success
-- Settings: spotifyConnected split from fabricConnected, disconnect query param fix, fresh re-auth with streaming scope
-- SDK: SpotifyEngine wired to fabric state (spotifyDeviceId), transferToSonos action, auth failure kills SDK cleanly
-- CSP: sdk.scdn.co iframe + api.spotify.com + wss://dealer.spotify.com
+- 429 cascade: circuit breaker in apiFetch + everPlayed guard + playTrack failure cleanup
+- Sonos: bypassed SDK, direct Spotify Web API transfer via setGroup (speakers not in device list yet — needs manual pairing)
+- Asana + monday.com: full OAuth + 3 chat tools each + Settings UI cards + ECOSYSTEM_KEYWORDS
+- Downtime banner: polls status.claude.com every 60s + reactive on chat 5xx + auto-clear
+- CLS fix: settings/sources skeletons 3→8
 
-**Blocked**: Spotify Web Playback SDK `web-playback` scope → 403 (Development Mode limitation). Transfer chain is built, just needs SDK approval. Details + drafted email in `md/spotify-sdk-blocker.md`.
+**Open**: Sonos speakers don't appear in Spotify device list (need manual pairing from Spotify app). Spotify SDK web-playback 403 is Dashboard config, not Dev Mode — but not blocking anything now.
 
-**Next (Session 29)**:
-- Submit Spotify Extended Quota request for Web Playback SDK
-- Test Sonos transfer once SDK scope clears
+**Next (Session 30)**:
+- Test Sonos after manual Spotify→speaker pairing
 - B-Side search standalone feature
 - Pitches.md audit (3 flagged items)
 - Morning briefing (merge standup + weather + calendar + watches)

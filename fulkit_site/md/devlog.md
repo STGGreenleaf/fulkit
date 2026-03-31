@@ -3,6 +3,37 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 29 — 2026-03-31: 429 Cascade Fix + Sonos Direct Transfer + Asana/Monday + Downtime Banner
+
+### What shipped
+- **429 request cascade fix** — Circuit breaker in `apiFetch`: first 429 triggers 60s backoff across all Fabric API calls. `everPlayed` guard on YouTube poller prevents stale ended-video from triggering false auto-advance. `playTrack` sets `isPlaying(false)` when YouTube resolution fails. Killed a 57K-line console error storm.
+- **Sonos direct transfer** — Bypassed broken Spotify SDK entirely. `setSonosSpeakers` now calls `setGroup` which wakes Sonos via Sonos API, finds speaker in Spotify's device list by name, transfers via Spotify Web API. No Web Playback SDK needed — Sonos speakers are already Spotify Connect devices. Transfer still fails because speakers don't appear in Spotify's device list (need manual pairing first). Moved on.
+- **SpotifyEngine disabled** — `web-playback` 403 is a Spotify Dashboard config issue, not Dev Mode. Added `user-read-email` scope (SDK docs say required) — didn't fix it. Disabled to stop console noise. Not needed for Sonos path.
+- **Asana integration** — Full OAuth with token refresh, 3 chat tools (asana_tasks, asana_projects, asana_create_task), Settings UI card, ECOSYSTEM_KEYWORDS gating.
+- **monday.com integration** — Full OAuth, GraphQL API (tokens don't expire), 3 chat tools (monday_boards, monday_items, monday_create_item), Settings UI card.
+- **Claude downtime banner** — `useClaudeStatus` hook polls `status.claude.com/api/v2/status.json` every 60s. Reactive layer: `use-chat.js` calls `markDown()` on 5xx. `StatusBanner` component renders above chat messages. Auto-clears when status returns to normal. Live preview in Owner → Playground → Page Previews.
+- **CLS fix on settings/sources** — Skeleton count 3→8 to match connected integration count. Was causing 0.27–0.34 layout shift on every page load.
+
+### Key files created
+- `app/lib/asana-server.js`, `app/lib/monday-server.js` — server modules
+- `app/app/api/asana/*`, `app/app/api/monday/*` — OAuth routes (8 files)
+- `app/lib/use-claude-status.js` — status poll hook
+- `app/components/StatusBanner.js` — downtime banner
+
+### Key files modified
+- `app/lib/fabric.js` — circuit breaker in apiFetch, everPlayed guard, playTrack failure cleanup, setSonosSpeakers → setGroup
+- `app/lib/providers/spotify.js` — added user-read-email scope
+- `app/components/PlaybackEngine.js` — SpotifyEngine disabled
+- `app/app/api/chat/route.js` — Asana + Monday tools, keywords, handlers, token fetch
+- `app/app/settings/page.js` — Asana + Monday UI cards, CLS skeleton fix
+- `app/app/owner/page.js` — StatusBanner preview in Playground
+- `app/middleware.js` — CSP for status.claude.com
+- `app/lib/use-chat.js` — onApiDown callback for reactive detection
+- `app/components/ChatContent.js` — mount StatusBanner + useClaudeStatus
+- `CLAUDE.md` — updated with Asana/Monday entries
+
+---
+
 ## Session 28 — 2026-03-31: Sonos Individual Speakers + Art Engine + Spotify SDK
 
 ### What shipped
