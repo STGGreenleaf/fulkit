@@ -93,19 +93,25 @@ export async function POST(request) {
 
     // Transfer Spotify playback to a Sonos device
     let transferred = false;
-    let transferDebug = { spotifyDevices: [], coordName: null, matchedDevice: null, error: null };
+    let transferDebug = { spotifyDevices: [], coordName: null, matchedDevice: null, error: null, woke: false };
     const spotify = getProvider(userId, "spotify");
-    if (spotify) {
+    if (spotify && targetGroupId) {
       try {
+        // Wake the Sonos group first — this makes it appear in Spotify's device list
+        await provider.control(targetGroupId, "play").catch(() => {});
+        transferDebug.woke = true;
+        // Give Sonos a moment to register with Spotify Connect
+        await new Promise(r => setTimeout(r, 1500));
+
         const devices = await spotify.getDevices();
         transferDebug.spotifyDevices = devices.map(d => ({ name: d.name, type: d.type, id: d.id, active: d.is_active }));
 
-        // Try coordinator name first
         const targetGroup = groups.find(g => g.id === targetGroupId);
         const coordPlayer = players.find(p => p.id === targetGroup?.coordinatorId);
         const coordName = coordPlayer?.name?.toLowerCase();
         transferDebug.coordName = coordPlayer?.name || null;
 
+        // Try coordinator name first
         if (coordName) {
           const match = devices.find(d => d.name.toLowerCase() === coordName);
           if (match) {
