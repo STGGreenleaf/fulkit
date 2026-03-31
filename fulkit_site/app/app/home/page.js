@@ -16,6 +16,39 @@ import { useIsMobile } from "../../lib/use-mobile";
 import { DashboardSkeleton } from "../../components/Skeleton";
 
 
+const TIPS = [
+  "Cmd+Shift+C opens Tiny Fülkit — a floating side window while you work anywhere else.",
+  "Drop any file into chat — PDF, CSV, image — Fülkit reads it, triages it, extracts what matters.",
+  "Say \"save this\" in chat and Fülkit distills the conversation into a permanent note.",
+  "\"86 the green smoothie\" — marks it sold out across Square instantly. No dashboard needed.",
+  "Cmd+K focuses the chat input from anywhere in the app. Fast hands, fast answers.",
+  "/recall [topic] searches your notes by meaning, not keywords. Semantic, not literal.",
+  "\"Watch nytimes.com/tech daily\" — Fülkit whispers you when the page changes.",
+  "Say \"standup\" — yesterday's wins, today's calendar, open blockers. One word.",
+  "Tap the orb on /hum. Talk. No typing, no transcript on screen. Just voice.",
+  "\"What time's golden hour tomorrow?\" — instant sunset data for photography.",
+  "Your music becomes a live landscape on /fabric. Signal Terrain renders audio in real time.",
+  "\"Is my email in a breach?\" — checks Have I Been Pwned right from chat.",
+  "\"What if we priced this at $15?\" — Numbrly simulates margins across all your recipes.",
+  "Your vault has 3 modes — local-only, encrypted sync, or Fülkit-managed. Your data, your rules.",
+  "\"How many calories in a banana?\" — USDA nutrition data, no app switching.",
+  "9 friends = free forever. Referrals cover your subscription automatically.",
+  "Whispers are proactive — Fülkit notices things and suggests before you ask.",
+  "\"Every Monday at 9am, pull my P&L\" — automated recurring tasks, no reminders needed.",
+  "Cmd+N starts a new chat from anywhere. Cmd+H jumps home. Cmd+J opens threads.",
+  "Tell Fülkit your name once — it remembers across every conversation, forever.",
+  "\"What's my profit margin?\" — pulls your QuickBooks P&L in seconds.",
+  "Drop a CSV into chat — Fülkit previews every change before executing anything.",
+  "B-Side is the guy behind the counter on /fabric. He knows music. Have a real conversation.",
+  "\"Am I free Thursday at 2?\" — checks your Google Calendar without leaving chat.",
+  "Threads are kanban cards. Create them from chat, drag them on the board, track everything.",
+  "\"Import that doc\" — pulls Google Drive files straight into your vault as searchable notes.",
+  "\"Revenue yesterday?\" — Stripe charges, refunds, net. One sentence, one answer.",
+  "Compact mode — sidebar shrinks to icons only. Hover for labels. More room to think.",
+  "Crates on /fabric — drag songs into collections, DJ-style. Build your sets.",
+  "\"Track this\" in chat starts a thread. It lives on your board until you close it out.",
+];
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -54,6 +87,19 @@ export default function Dashboard() {
   const [patterns, setPatterns] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * TIPS.length));
+  const [tipFade, setTipFade] = useState(1);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTipFade(0);
+      setTimeout(() => {
+        setTipIndex(i => (i + 1) % TIPS.length);
+        setTipFade(1);
+      }, 300);
+    }, 12000);
+    return () => clearInterval(id);
+  }, []);
 
   // Trial state — only for non-owner users with onboarding state
   const trialDaysRemaining = onboardingState?.trialDaysRemaining ?? null;
@@ -366,6 +412,48 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Did you know — cycling tips */}
+              <button
+                onClick={() => { setTipFade(0); setTimeout(() => { setTipIndex(i => (i + 1) % TIPS.length); setTipFade(1); }, 200); }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "var(--space-3)",
+                  width: "100%",
+                  padding: "var(--space-3) var(--space-4)",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border-light)",
+                  borderRadius: "var(--radius-md)",
+                  marginBottom: "var(--space-6)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <Zap size={14} strokeWidth={2} color="var(--color-text-dim)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1, minHeight: 36 }}>
+                  <div style={{
+                    fontSize: "var(--font-size-2xs)",
+                    fontWeight: "var(--font-weight-semibold)",
+                    textTransform: "uppercase",
+                    letterSpacing: "var(--letter-spacing-wider)",
+                    color: "var(--color-text-dim)",
+                    marginBottom: "var(--space-1)",
+                  }}>
+                    Did you know
+                  </div>
+                  <div style={{
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-secondary)",
+                    fontFamily: "var(--font-primary)",
+                    lineHeight: "var(--line-height-relaxed)",
+                    opacity: tipFade,
+                    transition: "opacity 300ms ease",
+                  }}>
+                    {TIPS[tipIndex]}
+                  </div>
+                </div>
+              </button>
 
               {/* Two-column dashboard grid */}
               <div style={{

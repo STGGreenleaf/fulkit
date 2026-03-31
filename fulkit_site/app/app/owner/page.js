@@ -56,6 +56,39 @@ import { PLANS, COST_BASIS, PROJECTIONS } from "../../lib/ful-legend";
 import { useIsMobile } from "../../lib/use-mobile";
 import { EMAIL_CONTENTS, EMAIL_FOOTERS, buildEmailHtml } from "../../lib/email-templates";
 
+const DASHBOARD_TIPS = [
+  "Cmd+Shift+C opens Tiny Fülkit — a floating side window while you work anywhere else.",
+  "Drop any file into chat — PDF, CSV, image — Fülkit reads it, triages it, extracts what matters.",
+  "Say \"save this\" in chat and Fülkit distills the conversation into a permanent note.",
+  "\"86 the green smoothie\" — marks it sold out across Square instantly. No dashboard needed.",
+  "Cmd+K focuses the chat input from anywhere in the app. Fast hands, fast answers.",
+  "/recall [topic] searches your notes by meaning, not keywords. Semantic, not literal.",
+  "\"Watch nytimes.com/tech daily\" — Fülkit whispers you when the page changes.",
+  "Say \"standup\" — yesterday's wins, today's calendar, open blockers. One word.",
+  "Tap the orb on /hum. Talk. No typing, no transcript on screen. Just voice.",
+  "\"What time's golden hour tomorrow?\" — instant sunset data for photography.",
+  "Your music becomes a live landscape on /fabric. Signal Terrain renders audio in real time.",
+  "\"Is my email in a breach?\" — checks Have I Been Pwned right from chat.",
+  "\"What if we priced this at $15?\" — Numbrly simulates margins across all your recipes.",
+  "Your vault has 3 modes — local-only, encrypted sync, or Fülkit-managed. Your data, your rules.",
+  "\"How many calories in a banana?\" — USDA nutrition data, no app switching.",
+  "9 friends = free forever. Referrals cover your subscription automatically.",
+  "Whispers are proactive — Fülkit notices things and suggests before you ask.",
+  "\"Every Monday at 9am, pull my P&L\" — automated recurring tasks, no reminders needed.",
+  "Cmd+N starts a new chat from anywhere. Cmd+H jumps home. Cmd+J opens threads.",
+  "Tell Fülkit your name once — it remembers across every conversation, forever.",
+  "\"What's my profit margin?\" — pulls your QuickBooks P&L in seconds.",
+  "Drop a CSV into chat — Fülkit previews every change before executing anything.",
+  "B-Side is the guy behind the counter on /fabric. He knows music. Have a real conversation.",
+  "\"Am I free Thursday at 2?\" — checks your Google Calendar without leaving chat.",
+  "Threads are kanban cards. Create them from chat, drag them on the board, track everything.",
+  "\"Import that doc\" — pulls Google Drive files straight into your vault as searchable notes.",
+  "\"Revenue yesterday?\" — Stripe charges, refunds, net. One sentence, one answer.",
+  "Compact mode — sidebar shrinks to icons only. Hover for labels. More room to think.",
+  "Crates on /fabric — drag songs into collections, DJ-style. Build your sets.",
+  "\"Track this\" in chat starts a thread. It lives on your board until you close it out.",
+];
+
 const TAB_ICON_SIZE = 16;
 
 const TABS = [
@@ -6735,6 +6768,31 @@ function PlaygroundTab() {
                 </div>
                 <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{msg.text}</div>
                 <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{msg.context}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ TOOLTIPS ═══ */}
+      <div style={FOLD}>
+        <button onClick={() => toggle("tooltips")} style={FOLD_BTN}>
+          <Zap size={14} color="var(--color-text-dim)" />
+          <span style={FOLD_LABEL}>Tooltips — Did You Know ({DASHBOARD_TIPS.length})</span>
+          {openSections.tooltips ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+        </button>
+        {openSections.tooltips && (
+          <div style={{ borderTop: "1px solid var(--color-border-light)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-1)" }}>
+              These cycle on the dashboard every 12 seconds. Users can click to skip. Starts at a random tip each visit.
+            </div>
+            {DASHBOARD_TIPS.map((tip, i) => (
+              <div key={`tip-${i}`} style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", borderBottom: i < DASHBOARD_TIPS.length - 1 ? "1px solid var(--color-border-light)" : "none", paddingBottom: "var(--space-2)" }}>
+                <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)", flexShrink: 0, width: 20, textAlign: "right" }}>{i + 1}.</span>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", fontFamily: "var(--font-primary)", lineHeight: "var(--line-height-relaxed)" }}>{tip}</span>
+                  <CopyButton text={tip} label="Copy" />
+                </div>
               </div>
             ))}
           </div>
