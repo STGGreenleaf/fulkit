@@ -3824,6 +3824,113 @@ const MANUAL_SECTIONS = {
       },
     ],
   },
+  fitbit: {
+    name: "Fitbit",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "How did I sleep last night?", description: "Sleep duration, stages, and quality score" },
+          { example: "What's my heart rate?", description: "Resting heart rate and recent readings" },
+          { example: "How many steps today?", description: "Daily activity summary \u2014 steps, calories, active minutes" },
+          { example: "What's my weight trend?", description: "Weight history and changes" },
+        ],
+      },
+    ],
+  },
+  strava: {
+    name: "Strava",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "How was my last run?", description: "Distance, pace, splits, heart rate, elevation" },
+          { example: "What's my mileage this week?", description: "Weekly activity totals" },
+          { example: "Show me my recent activities", description: "Runs, rides, and workouts" },
+        ],
+      },
+    ],
+  },
+  quickbooks: {
+    name: "QuickBooks",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's my P&L this month?", description: "Profit and loss statement" },
+          { example: "Show me the balance sheet", description: "Assets, liabilities, equity snapshot" },
+          { example: "Any open invoices?", description: "Accounts receivable and overdue invoices" },
+          { example: "What did we spend on last month?", description: "Expense breakdown by category" },
+        ],
+      },
+    ],
+  },
+  sonos: {
+    name: "Sonos",
+    categories: [
+      {
+        label: "What you can do",
+        commands: [
+          { example: "Play in the living room", description: "Route playback to a specific speaker/room" },
+          { example: "Volume 60 in the kitchen", description: "Set volume for a specific room" },
+          { example: "Pause in the bedroom", description: "Control playback per room" },
+          { example: "What rooms are available?", description: "List connected Sonos speakers and groups" },
+        ],
+      },
+    ],
+  },
+  google: {
+    name: "Google Suite",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "What's on my calendar today?", description: "Google Calendar \u2014 events, meetings, availability" },
+          { example: "Search my email for the invoice", description: "Gmail \u2014 search messages and threads" },
+          { example: "Find the budget spreadsheet", description: "Google Drive \u2014 search files, import to vault" },
+          { example: "Am I free tomorrow at 2?", description: "Check availability for scheduling" },
+          { example: "Add a meeting tomorrow at 11", description: "Create calendar events" },
+        ],
+      },
+    ],
+  },
+  slack: {
+    name: "Slack",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "Search Slack for the launch plan", description: "Search messages across channels" },
+          { example: "What's happening in #general?", description: "Recent channel history" },
+          { example: "Show me my channels", description: "List your Slack channels" },
+        ],
+      },
+    ],
+  },
+  notion: {
+    name: "Notion",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "Search Notion for meeting notes", description: "Search pages and databases" },
+          { example: "Import that page to my vault", description: "Pull Notion content into F\u00fclkit notes" },
+        ],
+      },
+    ],
+  },
+  dropbox: {
+    name: "Dropbox",
+    categories: [
+      {
+        label: "What you can ask",
+        commands: [
+          { example: "Find the contract in Dropbox", description: "Search files and folders" },
+          { example: "Import that file to my vault", description: "Pull Dropbox content into F\u00fclkit notes" },
+        ],
+      },
+    ],
+  },
 };
 
 const MANUAL_BLUEPRINT = [
@@ -3836,7 +3943,8 @@ const MANUAL_BLUEPRINT = [
 ];
 
 const ALL_INTEGRATIONS = [
-  { id: "square", name: "Square", summary: "POS, inventory, orders, customers" },
+  { id: "google", name: "Google Suite", summary: "Calendar, Gmail, Drive \u2014 one connection" },
+  { id: "square", name: "Square", summary: "POS, inventory, orders, 86 items, invoices" },
   { id: "truegauge", name: "TrueGauge", summary: "Pace, cash, expenses, alerts" },
   { id: "github", name: "GitHub", summary: "Commits, issues, repo structure" },
   { id: "fabric", name: "Fabric", summary: "Music playback, search, playlists \u2014 any source" },
@@ -3845,6 +3953,13 @@ const ALL_INTEGRATIONS = [
   { id: "stripe", name: "Stripe", summary: "Revenue, payments, disputes" },
   { id: "toast", name: "Toast", summary: "Service periods, menu, sales" },
   { id: "trello", name: "Trello", summary: "Boards, cards, deadlines" },
+  { id: "quickbooks", name: "QuickBooks", summary: "P&L, balance sheet, invoices, expenses" },
+  { id: "fitbit", name: "Fitbit", summary: "Activity, sleep, heart rate, weight" },
+  { id: "strava", name: "Strava", summary: "Runs, rides, pace, training metrics" },
+  { id: "slack", name: "Slack", summary: "Messages, channels, team chat" },
+  { id: "notion", name: "Notion", summary: "Pages, databases, import to vault" },
+  { id: "dropbox", name: "Dropbox", summary: "Files, folders, import to vault" },
+  { id: "sonos", name: "Sonos", summary: "Speaker control, room routing, volume" },
 ];
 
 const GETTING_STARTED = [
@@ -3852,7 +3967,8 @@ const GETTING_STARTED = [
   { step: "2", action: "Save your first note", desc: "\u201CSave this\u201D \u2014 F\u00fclkit distills it to what matters." },
   { step: "3", action: "Pick your vault", desc: "Settings \u2192 Vault. Local, encrypted, or managed. You choose." },
   { step: "4", action: "Try The Hum", desc: "Tap the orb. Talk. No text on screen \u2014 just voice in, voice out." },
-  { step: "5", action: "Automate something", desc: "\u201CEvery day at 4pm, pull my sales.\u201D F\u00fclkit remembers so you don\u2019t have to." },
+  { step: "5", action: "Run a standup", desc: "\u201CStandup\u201D \u2014 yesterday\u2019s wins, today\u2019s open items, blockers. One command." },
+  { step: "6", action: "Automate something", desc: "\u201CEvery day at 4pm, pull my sales.\u201D F\u00fclkit remembers so you don\u2019t have to." },
 ];
 
 const QUICK_REFERENCE = [

@@ -1458,14 +1458,19 @@ fulkit/                   # Monorepo root (git root)
 | Design system | ✅ Complete (design.md) |
 | Task tracking | ✅ Complete (TODO.md) |
 | App prototype | ✅ Production-ready |
-| The Hum | ✅ Feature-complete (4 animation states, voice input, chat integration) |
+| The Hum | ✅ Shipped (MediaRecorder + Whisper + OpenAI TTS onyx, 60s cap, no text on screen) |
 | Auth (Google OAuth) | ✅ Working (PKCE flow) |
 | Spotify / Fabric | ✅ Full integration (OAuth, playback, playlists, search, crates) |
 | Vault / trust model | ✅ Built (3 storage models, write-back, relevance scoring) |
 | Supabase setup | ✅ Connected (Postgres + Auth + RLS) |
 | RAG pipeline | ✅ Built (pgvector + Voyage embeddings + keyword fallback) |
 | Landing page | ✅ Complete (competitive grid, features, pricing) |
-| Integrations | ✅ 9 active: Square, Shopify, Stripe, Toast, Trello, GitHub, Numbrly, TrueGauge, Spotify |
+| Integrations | ✅ 20+ active: Square (86, price, invoices), Shopify, Stripe, Toast, Trello, GitHub, Numbrly, TrueGauge, Fabric (Spotify/YouTube/Sonos), Google Suite (Calendar/Gmail/Drive), Fitbit, Strava, QuickBooks, Slack, Notion, Dropbox |
+| Automations | ✅ Shipped (user_automations table, chat tools, hourly cron, dashboard whispers) |
+| Daily closeout | ✅ Shipped (Square \u2192 TrueGauge pipeline, 4pm + 8am crons) |
+| Daily standup | ✅ Shipped (yesterday + today + blockers, morning whisper for all users) |
+| Dev co-pilot | ✅ Shipped (owner-only: 6 GitHub + 3 Vercel tools) |
+| Disconnect purge | ✅ Shipped (keep/purge modal on all integration disconnects) |
 | Sandbox (planning) | ✅ Built (chapter-based, 20-turn auto-close) |
 | Threads (kanban) | ✅ Built (board, calendar, table views) |
 | Signal system | ✅ Built (error capture, cold diagnosis, owner portal) |
@@ -1493,7 +1498,7 @@ fulkit/                   # Monorepo root (git root)
 - ~~Color palette~~ → Eggshell off-white bg, deep warm slate text, white on dark ✅
 - ~~Typography~~ → Type as design, minimal text = every word is intentional ✅
 - ~~Voice transcription~~ → Whisper API (OpenAI). ~$0.006/min. Cross-platform identical quality. ✅
-- Voice output: which TTS for Fülkit's speaking voice? (warm, natural, not robotic)
+- ~~Voice output~~ → OpenAI TTS (onyx voice). Warm, natural. Base64 JSON delivery for mobile reliability. ✅
 - Voice cloning: ElevenLabs for user voice training? Legal/ethical review needed
 - ~~Font selection~~ → DIN Pro (German industrial standard, 1931). D-DIN free for prototyping. Full weight range. ✅
 - Font license: purchase DIN Pro (~$100) or prototype with free D-DIN first?
