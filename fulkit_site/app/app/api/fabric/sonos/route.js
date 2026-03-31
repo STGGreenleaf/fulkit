@@ -24,16 +24,33 @@ export async function GET(request) {
   });
 }
 
-// POST /api/fabric/sonos — control playback on a group
+// POST /api/fabric/sonos — control playback or manage groups
 export async function POST(request) {
   const userId = await authenticateUser(request);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { groupId, action, value } = await request.json();
-  if (!groupId || !action) return Response.json({ error: "groupId and action required" }, { status: 400 });
+  const body = await request.json();
+  const { action } = body;
 
   const provider = getProvider(userId, "sonos");
   if (!provider) return Response.json({ error: "Sonos not available" }, { status: 400 });
+
+  // Group management: create a group from selected player IDs
+  if (action === "setGroup") {
+    const { householdId, playerIds } = body;
+    if (!householdId || !playerIds?.length) {
+      return Response.json({ error: "householdId and playerIds required" }, { status: 400 });
+    }
+    const result = await provider.createGroup(householdId, playerIds);
+    if (!result) return Response.json({ error: "Failed to create group" }, { status: 500 });
+    // Re-fetch groups so client gets the updated state
+    const { groups, players } = await provider.getGroups(householdId);
+    return Response.json({ ok: true, newGroupId: result.id, groups, players });
+  }
+
+  // Playback control
+  const { groupId, value } = body;
+  if (!groupId || !action) return Response.json({ error: "groupId and action required" }, { status: 400 });
 
   const result = await provider.control(groupId, action, value);
   if (!result) return Response.json({ error: "Control failed" }, { status: 500 });

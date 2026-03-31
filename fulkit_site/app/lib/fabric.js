@@ -249,6 +249,7 @@ export function FabricProvider({ children }) {
 
   // Sonos speaker state
   const [sonosGroups, setSonosGroups] = useState([]);
+  const [sonosPlayers, setSonosPlayers] = useState([]);
   const [sonosHouseholdId, setSonosHouseholdId] = useState(null);
   const [activeSonosGroup, setActiveSonosGroup] = useState(null);
   const activeSonosGroupRef = useRef(null);
@@ -399,6 +400,7 @@ export function FabricProvider({ children }) {
         apiFetch("/api/fabric/sonos").then((sonosData) => {
           if (sonosData?.groups?.length) {
             setSonosGroups(sonosData.groups);
+            setSonosPlayers(sonosData.players || []);
             setSonosHouseholdId(sonosData.householdId);
             if (!activeSonosGroup) {
               setActiveSonosGroup(sonosData.groups[0].id);
@@ -407,10 +409,12 @@ export function FabricProvider({ children }) {
             // Sonos connected but no groups reachable (off-network) — show picker with offline state
             const offlineGroups = [{ id: "sonos-offline", name: "Sonos (offline)", playerIds: [], coordinatorId: null }];
             setSonosGroups(offlineGroups);
+            setSonosPlayers([]);
           }
         }).catch(() => {
           // API failed — still show picker so user knows Sonos is connected
           setSonosGroups([{ id: "sonos-offline", name: "Sonos (offline)", playerIds: [], coordinatorId: null }]);
+          setSonosPlayers([]);
         });
       }
     }).catch(() => {
@@ -2263,6 +2267,21 @@ export function FabricProvider({ children }) {
   const sonosControlRef = useRef(sonosControl);
   useEffect(() => { sonosControlRef.current = sonosControl; }, [sonosControl]);
 
+  // Create a Sonos group from selected player IDs
+  const setSonosSpeakers = useCallback(async (playerIds) => {
+    if (!accessToken || !sonosHouseholdId) return;
+    if (!playerIds?.length) { setActiveSonosGroup(null); return; }
+    const res = await apiFetch("/api/fabric/sonos", {
+      method: "POST",
+      body: JSON.stringify({ action: "setGroup", householdId: sonosHouseholdId, playerIds }),
+    });
+    if (res?.ok) {
+      if (res.groups) setSonosGroups(res.groups);
+      if (res.players) setSonosPlayers(res.players);
+      if (res.newGroupId) setActiveSonosGroup(res.newGroupId);
+    }
+  }, [accessToken, sonosHouseholdId, apiFetch]);
+
   const toggleMusicChat = useCallback(() => setMusicChatOpen(v => !v), []);
 
   const formatTime = useCallback((seconds) => {
@@ -2341,8 +2360,10 @@ export function FabricProvider({ children }) {
         reconnectSpotify,
         connectedProviders,
         sonosGroups,
+        sonosPlayers,
         activeSonosGroup,
         setActiveSonosGroup,
+        setSonosSpeakers,
         sonosControl,
       }}
     >

@@ -169,6 +169,23 @@ export class SonosProvider {
     };
   }
 
+  // ═══ Group Management ═══
+
+  async createGroup(householdId, playerIds) {
+    if (!playerIds?.length) return null;
+    // Single player — just find its current group
+    if (playerIds.length === 1) {
+      const { groups } = await this.getGroups(householdId);
+      const match = groups.find(g => g.playerIds.includes(playerIds[0]));
+      return match || null;
+    }
+    const data = await this._fetch(`/households/${householdId}/groups/createGroup`, {
+      method: "POST",
+      body: JSON.stringify({ playerIds }),
+    });
+    return data?.group || data || null;
+  }
+
   // ═══ Playback Control ═══
 
   async getPlaybackStatus(groupId) {
