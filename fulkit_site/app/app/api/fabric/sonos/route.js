@@ -35,7 +35,7 @@ export async function POST(request) {
   const provider = getProvider(userId, "sonos");
   if (!provider) return Response.json({ error: "Sonos not available" }, { status: 400 });
 
-  // Group management: create a group from selected player IDs
+  // Group management: create a group from selected player IDs, then transfer Spotify
   if (action === "setGroup") {
     const { householdId, playerIds } = body;
     if (!householdId || !playerIds?.length) {
@@ -45,7 +45,36 @@ export async function POST(request) {
     if (!result) return Response.json({ error: "Failed to create group" }, { status: 500 });
     // Re-fetch groups so client gets the updated state
     const { groups, players } = await provider.getGroups(householdId);
-    return Response.json({ ok: true, newGroupId: result.id, groups, players });
+    const newGroupId = result.id;
+
+    // Transfer Spotify playback to the new Sonos group's coordinator
+    let transferred = false;
+    const spotify = getProvider(userId, "spotify");
+    if (spotify) {
+      try {
+        // Find the coordinator player name
+        const newGroup = groups.find(g => g.id === newGroupId);
+        const coordPlayer = players.find(p => p.id === newGroup?.coordinatorId);
+        const coordName = coordPlayer?.name;
+        if (coordName) {
+          const devices = await spotify.getDevices();
+          // Match Sonos room name to Spotify Connect device name
+          const match = devices.find(d =>
+            d.name === coordName ||
+            d.name.toLowerCase().includes(coordName.toLowerCase()) ||
+            coordName.toLowerCase().includes(d.name.toLowerCase())
+          );
+          if (match) {
+            await spotify.transferPlayback(match.id, true);
+            transferred = true;
+          }
+        }
+      } catch (e) {
+        console.warn("[sonos] Spotify transfer failed:", e.message);
+      }
+    }
+
+    return Response.json({ ok: true, newGroupId, groups, players, transferred });
   }
 
   // Playback control

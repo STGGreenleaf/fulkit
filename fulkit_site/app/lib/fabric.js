@@ -738,6 +738,15 @@ export function FabricProvider({ children }) {
       else if (action === "pause") window.__ytEngine.pause();
       return;
     }
+    // Sonos active: route play/pause/skip through Sonos API (it proxies to Spotify)
+    if (activeSonosGroupRef.current) {
+      const sonosAction = action === "next" ? "next" : action === "previous" ? "previous" : action;
+      await apiFetch("/api/fabric/sonos", {
+        method: "POST",
+        body: JSON.stringify({ groupId: activeSonosGroupRef.current, action: sonosAction }),
+      });
+      return;
+    }
     // Spotify / other: control via API
     await apiFetch("/api/fabric/controls", {
       method: "POST",
