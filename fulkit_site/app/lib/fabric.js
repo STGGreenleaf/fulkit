@@ -2363,7 +2363,7 @@ export function FabricProvider({ children }) {
     });
     if (res?.newGroupId) setActiveSonosGroup(res.newGroupId);
     setSonosStatus(res?.transferred ? "connected" : "failed");
-    if (!res?.transferred) console.warn("[sonos] Transfer debug:", res?.transferDebug);
+    if (!res?.transferred) console.warn("[sonos] Transfer failed:", JSON.stringify(res?.transferDebug, null, 2));
   }, [sonosHouseholdId, accessToken, apiFetch]);
 
   // Per-player volume (debounced 400ms)
