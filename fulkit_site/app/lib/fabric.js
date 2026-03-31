@@ -548,6 +548,8 @@ export function FabricProvider({ children }) {
   useEffect(() => {
     if (!hasPollingProvider || !accessToken) return;
     if (!onFabricPage && !isPlaying) return;
+    // Don't poll Spotify when YouTube is the active engine — YouTube manages its own state
+    if (currentTrack?.provider !== "spotify") return;
 
     let failCount = 0;
     const fetchNowPlaying = async () => {
@@ -638,7 +640,7 @@ export function FabricProvider({ children }) {
     const interval = onFabricPage ? 4000 : 30000;
     pollRef.current = setInterval(fetchNowPlaying, interval);
     return () => clearInterval(pollRef.current);
-  }, [hasPollingProvider, accessToken, apiFetch, onFabricPage, isPlaying]);
+  }, [hasPollingProvider, accessToken, apiFetch, onFabricPage, isPlaying, currentTrack?.provider]);
 
   // YouTube progress poll — read iframe state for time/duration + detect track end
   // Runs whenever we have a YouTube track (not gated on isPlaying — needs to detect end)
