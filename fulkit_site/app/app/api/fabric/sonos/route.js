@@ -45,37 +45,85 @@ export async function POST(request) {
   const provider = getProvider(userId, "sonos");
   if (!provider) return Response.json({ error: "Sonos not available" }, { status: 400 });
 
-  // Group management: create a group from selected player IDs, then transfer Spotify
+  // Group management: select speakers, then transfer Spotify to Sonos
   if (action === "setGroup") {
     const { householdId, playerIds } = body;
     if (!householdId || !playerIds?.length) {
       return Response.json({ error: "householdId and playerIds required" }, { status: 400 });
     }
-    const result = await provider.createGroup(householdId, playerIds);
-    if (!result) return Response.json({ error: "Failed to create group" }, { status: 500 });
-    // Re-fetch groups so client gets the updated state
-    const { groups, players } = await provider.getGroups(householdId);
-    const newGroupId = result.id;
 
-    // Transfer Spotify playback to the new Sonos group's coordinator
+    let { groups, players } = await provider.getGroups(householdId);
+    let targetGroupId = null;
+
+    // 1. Check if all requested players already share one group (common: "Play everywhere")
+    const exact = groups.find(g =>
+      playerIds.length === g.playerIds.length &&
+      playerIds.every(id => g.playerIds.includes(id))
+    );
+    if (exact) {
+      targetGroupId = exact.id;
+    }
+
+    // 2. Check if a group already contains all requested players (subset)
+    if (!targetGroupId) {
+      const superset = groups.find(g => playerIds.every(id => g.playerIds.includes(id)));
+      if (superset) targetGroupId = superset.id;
+    }
+
+    // 3. Try creating a new group via Sonos API
+    if (!targetGroupId) {
+      try {
+        const result = await provider.createGroup(householdId, playerIds);
+        if (result?.id) {
+          targetGroupId = result.id;
+          const updated = await provider.getGroups(householdId);
+          groups = updated.groups;
+          players = updated.players;
+        }
+      } catch (e) {
+        console.warn("[sonos] createGroup failed:", e.message);
+      }
+    }
+
+    // 4. Fallback: use the group containing the first requested player
+    if (!targetGroupId) {
+      const fallback = groups.find(g => g.playerIds.includes(playerIds[0]));
+      if (fallback) targetGroupId = fallback.id;
+    }
+
+    // Transfer Spotify playback to a Sonos device
     let transferred = false;
     const spotify = getProvider(userId, "spotify");
     if (spotify) {
       try {
-        // Find the coordinator player name
-        const newGroup = groups.find(g => g.id === newGroupId);
-        const coordPlayer = players.find(p => p.id === newGroup?.coordinatorId);
-        const coordName = coordPlayer?.name;
+        const devices = await spotify.getDevices();
+        // Try coordinator name first
+        const targetGroup = groups.find(g => g.id === targetGroupId);
+        const coordPlayer = players.find(p => p.id === targetGroup?.coordinatorId);
+        const coordName = coordPlayer?.name?.toLowerCase();
         if (coordName) {
-          const devices = await spotify.getDevices();
-          // Match Sonos room name to Spotify Connect device name
-          const match = devices.find(d =>
-            d.name === coordName ||
-            d.name.toLowerCase().includes(coordName.toLowerCase()) ||
-            coordName.toLowerCase().includes(d.name.toLowerCase())
-          );
+          const match = devices.find(d => d.name.toLowerCase() === coordName);
           if (match) {
             await spotify.transferPlayback(match.id, true);
+            transferred = true;
+          }
+        }
+        // Broaden: try any Sonos player name
+        if (!transferred) {
+          for (const p of players) {
+            const match = devices.find(d => d.name.toLowerCase() === p.name.toLowerCase());
+            if (match) {
+              await spotify.transferPlayback(match.id, true);
+              transferred = true;
+              break;
+            }
+          }
+        }
+        // Last resort: any Sonos-looking device (type "Speaker" or "CastAudio")
+        if (!transferred) {
+          const speaker = devices.find(d => d.type === "Speaker" || d.type === "CastAudio");
+          if (speaker) {
+            await spotify.transferPlayback(speaker.id, true);
             transferred = true;
           }
         }
@@ -84,7 +132,7 @@ export async function POST(request) {
       }
     }
 
-    return Response.json({ ok: true, newGroupId, groups, players, transferred });
+    return Response.json({ ok: true, newGroupId: targetGroupId, groups, players, transferred });
   }
 
   // Per-player volume
