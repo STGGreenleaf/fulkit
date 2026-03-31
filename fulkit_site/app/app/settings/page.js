@@ -2473,7 +2473,7 @@ function SourcesTab() {
       {/* Loading skeletons — reserve space while status checks run */}
       {!statusReady && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <Card key={i} style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)" }}>
                 <Skeleton width={16} height={16} circle />
