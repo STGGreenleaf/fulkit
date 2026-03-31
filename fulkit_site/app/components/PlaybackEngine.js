@@ -8,7 +8,9 @@ import YouTubeEngine from "./engines/YouTubeEngine";
 export default function PlaybackEngine({ connectedProviders, onDeviceReady, onDeviceLost }) {
   return (
     <>
-      {connectedProviders?.spotify && (
+      {/* SpotifyEngine disabled — web-playback scope blocked by Spotify Development Mode.
+          Re-enable when Extended Quota approved. See md/spotify-sdk-blocker.md */}
+      {false && connectedProviders?.spotify && (
         <SpotifyEngine
           connected={true}
           onDeviceReady={onDeviceReady}
