@@ -219,7 +219,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "apple_music", "linear"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -357,6 +357,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "How did I sleep last night?\u201D\n\u201CHow many steps this week?",
     linkLabel: "fitbit.com",
     linkHref: "https://www.fitbit.com",
+  },
+  linear: {
+    subtitle: "Your issues, in context.",
+    description: "Linear tracks your team\u2019s issues, projects, and cycles. Connecting it means F\u00FClkit sees your tickets, sprint progress, and blockers \u2014 so you can ask about what\u2019s in flight without opening another tab.",
+    gives: "Issue search, project listing, cycle progress, assigned tickets, and blocker tracking. Ask what\u2019s due or what\u2019s blocking and get real answers.",
+    tryPrompt: "What\u2019s assigned to me?\u201D\n\u201CShow me open bugs\u201D\n\u201CWhat\u2019s blocking the release?",
+    linkLabel: "linear.app",
+    linkHref: "https://linear.app",
   },
   apple_music: {
     subtitle: "Your library, your way.",
