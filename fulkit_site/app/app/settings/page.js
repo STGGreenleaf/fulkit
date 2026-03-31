@@ -3682,256 +3682,25 @@ function SourcesTab() {
 
 // ── Operator's Manual ─────────────────────────────────
 
-const MANUAL_SECTIONS = {
-  square: {
-    name: "Square",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "How did we do today?", description: "Daily sales summary — revenue, orders, top items, payment breakdown" },
-          { example: "What's our inventory?", description: "Current stock levels for all items" },
-          { example: "Show me this week's orders", description: "Order history with date range filters" },
-          { example: "Who are our top customers?", description: "Customer search and spend history" },
-          { example: "Any open invoices?", description: "Invoice status and details" },
-          { example: "Who's working today?", description: "Team members and shift schedules" },
-          { example: "Any refunds this week?", description: "Refund history with amounts" },
-          { example: "What's our card vs cash split?", description: "Payment breakdown by type" },
-        ],
-      },
-      {
-        label: "What you can do",
-        commands: [
-          { example: "3 tropical, 12 ginger shots, 0 orange", description: "Update inventory counts — preview before confirm" },
-          { example: "86 chia pudding", description: "Mark an item sold out \u2014 sets inventory to 0" },
-          { example: "Bump acai bowl to $14", description: "Change item pricing with preview/confirm" },
-          { example: "Invoice Matt $150 for catering", description: "Create a draft invoice (or send immediately)" },
-        ],
-      },
-    ],
-  },
-  truegauge: {
-    name: "TrueGauge",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "Am I on pace for the month?", description: "Survival goal progress and daily target" },
-          { example: "What's my cash position?", description: "Current cash balance and runway" },
-          { example: "Show me this month's expenses", description: "Expense breakdown by vendor and category" },
-          { example: "Any alerts?", description: "Business warnings — behind pace, high COGS, low cash" },
-        ],
-      },
-      {
-        label: "What you can do",
-        commands: [
-          { example: "Log $450 to Sysco for COGS", description: "Record an expense with preview/confirm" },
-          { example: "We did $2,400 today", description: "Update daily sales entry" },
-        ],
-      },
-    ],
-  },
-  github: {
-    name: "GitHub",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What changed in the API this week?", description: "Recent commits and code changes" },
-          { example: "Show me open issues", description: "Issue tracker across repos" },
-          { example: "What's the project structure?", description: "Repository file tree" },
-        ],
-      },
-    ],
-  },
-  fabric: {
-    name: "Fabric",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's playing?", description: "Current track and playback status" },
-          { example: "Search for Radiohead", description: "Search across all connected music sources" },
-          { example: "Show me my playlists", description: "Your playlists from any connected source" },
-        ],
-      },
-    ],
-  },
-  numbrly: {
-    name: "Numbrly",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's my margin on acai bowls?", description: "Cost breakdown for any product" },
-          { example: "Show me vendor costs", description: "Vendor and component pricing" },
-        ],
-      },
-    ],
-  },
-  shopify: {
-    name: "Shopify",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What sold the most this week?", description: "Top products and order volume" },
-          { example: "Show me recent orders", description: "Order history and fulfillment status" },
-        ],
-      },
-    ],
-  },
-  stripe: {
-    name: "Stripe",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's my revenue this month?", description: "Payment totals, refunds, and net" },
-          { example: "Any failed payments?", description: "Disputes and failure tracking" },
-        ],
-      },
-    ],
-  },
-  toast: {
-    name: "Toast",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "How was lunch today?", description: "Service period breakdown" },
-          { example: "Show me the menu", description: "Menu items and pricing" },
-        ],
-      },
-    ],
-  },
-  trello: {
-    name: "Trello",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's on my board?", description: "Board overview with lists and cards" },
-          { example: "What's due this week?", description: "Upcoming deadlines" },
-        ],
-      },
-      {
-        label: "What you can do",
-        commands: [
-          { example: "Create a card for new menu items", description: "Add cards to boards" },
-          { example: "Move that to Done", description: "Update card status" },
-        ],
-      },
-    ],
-  },
-  fitbit: {
-    name: "Fitbit",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "How did I sleep last night?", description: "Sleep duration, stages, and quality score" },
-          { example: "What's my heart rate?", description: "Resting heart rate and recent readings" },
-          { example: "How many steps today?", description: "Daily activity summary \u2014 steps, calories, active minutes" },
-          { example: "What's my weight trend?", description: "Weight history and changes" },
-        ],
-      },
-    ],
-  },
-  strava: {
-    name: "Strava",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "How was my last run?", description: "Distance, pace, splits, heart rate, elevation" },
-          { example: "What's my mileage this week?", description: "Weekly activity totals" },
-          { example: "Show me my recent activities", description: "Runs, rides, and workouts" },
-        ],
-      },
-    ],
-  },
-  quickbooks: {
-    name: "QuickBooks",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's my P&L this month?", description: "Profit and loss statement" },
-          { example: "Show me the balance sheet", description: "Assets, liabilities, equity snapshot" },
-          { example: "Any open invoices?", description: "Accounts receivable and overdue invoices" },
-          { example: "What did we spend on last month?", description: "Expense breakdown by category" },
-        ],
-      },
-    ],
-  },
-  sonos: {
-    name: "Sonos",
-    categories: [
-      {
-        label: "What you can do",
-        commands: [
-          { example: "Play in the living room", description: "Route playback to a specific speaker/room" },
-          { example: "Volume 60 in the kitchen", description: "Set volume for a specific room" },
-          { example: "Pause in the bedroom", description: "Control playback per room" },
-          { example: "What rooms are available?", description: "List connected Sonos speakers and groups" },
-        ],
-      },
-    ],
-  },
-  google: {
-    name: "Google Suite",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "What's on my calendar today?", description: "Google Calendar \u2014 events, meetings, availability" },
-          { example: "Search my email for the invoice", description: "Gmail \u2014 search messages and threads" },
-          { example: "Find the budget spreadsheet", description: "Google Drive \u2014 search files, import to vault" },
-          { example: "Am I free tomorrow at 2?", description: "Check availability for scheduling" },
-          { example: "Add a meeting tomorrow at 11", description: "Create calendar events" },
-        ],
-      },
-    ],
-  },
-  slack: {
-    name: "Slack",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "Search Slack for the launch plan", description: "Search messages across channels" },
-          { example: "What's happening in #general?", description: "Recent channel history" },
-          { example: "Show me my channels", description: "List your Slack channels" },
-        ],
-      },
-    ],
-  },
-  notion: {
-    name: "Notion",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "Search Notion for meeting notes", description: "Search pages and databases" },
-          { example: "Import that page to my vault", description: "Pull Notion content into F\u00fclkit notes" },
-        ],
-      },
-    ],
-  },
-  dropbox: {
-    name: "Dropbox",
-    categories: [
-      {
-        label: "What you can ask",
-        commands: [
-          { example: "Find the contract in Dropbox", description: "Search files and folders" },
-          { example: "Import that file to my vault", description: "Pull Dropbox content into F\u00fclkit notes" },
-        ],
-      },
-    ],
-  },
-};
+// Auto-generated from SOURCE_DESCRIPTIONS — one source of truth.
+// Add a new integration to SOURCE_DESCRIPTIONS → manual inherits it automatically.
+const MANUAL_SECTIONS = Object.fromEntries(
+  Object.entries(SOURCE_DESCRIPTIONS).map(([id, desc]) => {
+    const name = ALL_SOURCES.find(s => s.id === id)?.name || id.charAt(0).toUpperCase() + id.slice(1);
+    const prompts = (desc.tryPrompt || "")
+      .replace(/[\u201C\u201D]/g, "")
+      .split(/\n|\\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    return [id, {
+      name: id === "google" ? "Google Suite" : id === "fabric" ? "Fabric" : name,
+      categories: [{
+        label: "Try asking",
+        commands: prompts.map(p => ({ example: p, description: "" })),
+      }],
+    }];
+  })
+);
 
 const MANUAL_BLUEPRINT = [
   { num: "01", label: "TALK", desc: "One chat. Say what you need.", examples: ["\u201CHow did we do today?\u201D", "\u201CSave this recipe.\u201D", "\u201CPlay something chill.\u201D"] },
@@ -3942,25 +3711,13 @@ const MANUAL_BLUEPRINT = [
   { num: "06", label: "PROTECT", desc: "Three vault modes. Your data, your rules.", vaultModes: true },
 ];
 
-const ALL_INTEGRATIONS = [
-  { id: "google", name: "Google Suite", summary: "Calendar, Gmail, Drive \u2014 one connection" },
-  { id: "square", name: "Square", summary: "POS, inventory, orders, 86 items, invoices" },
-  { id: "truegauge", name: "TrueGauge", summary: "Pace, cash, expenses, alerts" },
-  { id: "github", name: "GitHub", summary: "Commits, issues, repo structure" },
-  { id: "fabric", name: "Fabric", summary: "Music playback, search, playlists \u2014 any source" },
-  { id: "numbrly", name: "Numbrly", summary: "Margins, vendor costs, components" },
-  { id: "shopify", name: "Shopify", summary: "Products, orders, fulfillment" },
-  { id: "stripe", name: "Stripe", summary: "Revenue, payments, disputes" },
-  { id: "toast", name: "Toast", summary: "Service periods, menu, sales" },
-  { id: "trello", name: "Trello", summary: "Boards, cards, deadlines" },
-  { id: "quickbooks", name: "QuickBooks", summary: "P&L, balance sheet, invoices, expenses" },
-  { id: "fitbit", name: "Fitbit", summary: "Activity, sleep, heart rate, weight" },
-  { id: "strava", name: "Strava", summary: "Runs, rides, pace, training metrics" },
-  { id: "slack", name: "Slack", summary: "Messages, channels, team chat" },
-  { id: "notion", name: "Notion", summary: "Pages, databases, import to vault" },
-  { id: "dropbox", name: "Dropbox", summary: "Files, folders, import to vault" },
-  { id: "sonos", name: "Sonos", summary: "Speaker control, room routing, volume" },
-];
+// Auto-generated from SOURCE_DESCRIPTIONS — one source of truth.
+// Add a new integration to SOURCE_DESCRIPTIONS and it appears here automatically.
+const ALL_INTEGRATIONS = Object.entries(SOURCE_DESCRIPTIONS).map(([id, desc]) => ({
+  id,
+  name: MANUAL_SECTIONS[id]?.name || ALL_SOURCES.find(s => s.id === id)?.name || id,
+  summary: desc.subtitle?.replace(/\.$/, "") || desc.gives?.split(".")[0] || "",
+}));
 
 const GETTING_STARTED = [
   { step: "1", action: "Say something", desc: "Open chat. Talk naturally \u2014 no menus, no commands." },
