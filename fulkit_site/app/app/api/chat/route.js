@@ -4055,6 +4055,43 @@ const DEV_TOOLS = [
       required: [],
     },
   },
+  {
+    name: "dev_multi_write",
+    description: "Write multiple files in a single atomic commit. Uses Git Trees API. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        files: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string", description: "File path in repo" },
+              content: { type: "string", description: "Full file content" },
+            },
+            required: ["path", "content"],
+          },
+          description: "Array of files to write (max 20)",
+        },
+        message: { type: "string", description: "Commit message" },
+        branch: { type: "string", description: "Branch name (default: main)" },
+      },
+      required: ["repo", "files", "message"],
+    },
+  },
+  {
+    name: "dev_run_tests",
+    description: "Trigger the CI workflow on GitHub Actions and return results. Owner only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/repo format" },
+        branch: { type: "string", description: "Branch to test (default: main)" },
+      },
+      required: ["repo"],
+    },
+  },
 ];
 
 async function executeDevTool(name, input, userId, ghToken) {
@@ -4196,6 +4233,102 @@ async function executeDevTool(name, input, userId, ghToken) {
     }
     const data = await res.json();
     return { triggered: true, id: data.id?.slice(0, 8), url: data.url ? `https://${data.url}` : null };
+  }
+
+  if (name === "dev_multi_write") {
+    const { repo, files, message, branch } = input;
+    if (!files?.length) throw new Error("No files provided");
+    if (files.length > 20) throw new Error("Max 20 files per commit");
+    const branchName = branch || "main";
+
+    // Get the latest commit SHA on the branch
+    const ref = await githubFetch(ghToken, `/repos/${repo}/git/ref/heads/${branchName}`);
+    const latestSha = ref.object.sha;
+    const commit = await githubFetch(ghToken, `/repos/${repo}/git/commits/${latestSha}`);
+    const baseTreeSha = commit.tree.sha;
+
+    // Create blobs for each file
+    const tree = [];
+    for (const f of files) {
+      const blob = await githubPost(ghToken, `/repos/${repo}/git/blobs`, {
+        content: f.content,
+        encoding: "utf-8",
+      });
+      tree.push({ path: f.path, mode: "100644", type: "blob", sha: blob.sha });
+    }
+
+    // Create tree, commit, and update ref
+    const newTree = await githubPost(ghToken, `/repos/${repo}/git/trees`, { base_tree: baseTreeSha, tree });
+    const newCommit = await githubPost(ghToken, `/repos/${repo}/git/commits`, {
+      message,
+      tree: newTree.sha,
+      parents: [latestSha],
+    });
+    // Update ref (needs PATCH, not PUT/POST)
+    const patchRes = await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/${branchName}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${ghToken}`, Accept: "application/vnd.github.v3+json", "User-Agent": "Fulkit", "Content-Type": "application/json" },
+      body: JSON.stringify({ sha: newCommit.sha }),
+    });
+    if (!patchRes.ok) throw new Error(`Ref update failed: ${patchRes.status}`);
+
+    return {
+      committed: true,
+      sha: newCommit.sha?.slice(0, 7),
+      files: files.map(f => f.path),
+      message,
+    };
+  }
+
+  if (name === "dev_run_tests") {
+    const { repo, branch } = input;
+    const branchName = branch || "main";
+
+    // Trigger workflow dispatch on ci.yml
+    await githubPost(ghToken, `/repos/${repo}/actions/workflows/ci.yml/dispatches`, {
+      ref: branchName,
+    });
+
+    // Poll for the run (give Actions a moment to register)
+    await new Promise(r => setTimeout(r, 3000));
+
+    const runs = await githubFetch(ghToken, `/repos/${repo}/actions/runs?branch=${branchName}&per_page=1&event=workflow_dispatch`);
+    const run = runs.workflow_runs?.[0];
+    if (!run) return { triggered: true, status: "dispatched", note: "Run not yet visible. Check back in a moment." };
+
+    // Poll up to 60 seconds for completion
+    const runId = run.id;
+    let status = run.status;
+    let conclusion = run.conclusion;
+    for (let i = 0; i < 12 && status !== "completed"; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const check = await githubFetch(ghToken, `/repos/${repo}/actions/runs/${runId}`);
+      status = check.status;
+      conclusion = check.conclusion;
+    }
+
+    if (status !== "completed") {
+      return { triggered: true, run_id: runId, status, note: "Still running. Ask again to check status." };
+    }
+
+    // Get job logs summary
+    const jobs = await githubFetch(ghToken, `/repos/${repo}/actions/runs/${runId}/jobs`);
+    const jobSummary = (jobs.jobs || []).map(j => ({
+      name: j.name,
+      status: j.conclusion,
+      duration: j.started_at && j.completed_at
+        ? `${Math.round((new Date(j.completed_at) - new Date(j.started_at)) / 1000)}s`
+        : null,
+    }));
+
+    return {
+      run_id: runId,
+      status,
+      conclusion,
+      branch: branchName,
+      jobs: jobSummary,
+      url: run.html_url,
+    };
   }
 
   throw new Error(`Unknown dev tool: ${name}`);

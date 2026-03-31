@@ -249,8 +249,18 @@ The system prompt is one cache block but ~90% changes between messages (date, co
 ### Phase 4: The Heartbeat ✅ Session 22
 ### Phase 5: The Audit Loop ✅ Session 22
 
-### Phase 6: The Meta-Tool (100+ integrations) — future
-`load_integration` tool — Claude requests specific integration tools mid-conversation. Build when keyword collisions become a problem.
+### Phase 6: Integration Scaling (best practice path)
+
+**Current (22 integrations):** ECOSYSTEM_KEYWORDS scans all keyword groups per message. `ECOSYSTEM_TOOLS[eco]()` returns empty array if user isn't connected — tools only load when both keywords match AND token exists. 96% token reduction. System is healthy.
+
+**Scaling tiers:**
+| Scale | Action | Trigger |
+|-------|--------|---------|
+| 22–40 | No change needed | Current architecture holds |
+| 40–60 | **Registry pattern** — extract integration definitions (keywords, tools, server lib, category) to `integrations-registry.js`. Chat route reads dynamically. Adding integrations becomes config, not code. | When adding integrations becomes tedious |
+| 60–100+ | **`load_integration` meta-tool** — Claude requests specific integration tools mid-conversation. Zero tools loaded by default, Claude self-serves. | When keyword collisions become frequent |
+
+**Already effective:** Connected-only filtering happens naturally — `ECOSYSTEM_TOOLS` closures check for tokens and return empty arrays when not connected. No code change needed.
 
 ---
 

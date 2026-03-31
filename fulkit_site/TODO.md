@@ -254,7 +254,9 @@ Vagaro, Linear, Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, G
 
 ### Phase 7: Fulkit Builds Fulkit
 - [x] Claude reads/writes project files, creates PRs — ✅ 6 GitHub tools (write file, branch, issue, PR, commits, code search) + 3 Vercel tools. Owner-only.
-- [ ] Full dev loop inside Fulkit — shell commands, test runner, multi-file commits (V2)
+- [x] **Multi-file commits** — ✅ `dev_multi_write` — atomic changes across files via Git Trees API. Max 20 files per commit. Owner-only.
+- [x] **Test runner** — ✅ `dev_run_tests` — triggers CI workflow on GitHub Actions, polls up to 60s for results, returns job summary. Owner-only.
+- [ ] Full dev loop for users — sandbox per-user repos, resource limits, shell scoping (V2, needs sandboxing architecture)
 
 ---
 
