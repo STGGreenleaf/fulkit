@@ -14,15 +14,21 @@ export default function AuthGuard({ children }) {
 
   // Only run the splash timer on cold start (auth never resolved before)
   const warm = hasAuthResolved();
+  const [timerDone, setTimerDone] = useState(false);
 
   useEffect(() => {
     if (warm) {
       setSplashDone(true);
       return;
     }
-    const t = setTimeout(() => setSplashDone(true), MIN_SPLASH_MS);
+    const t = setTimeout(() => setTimerDone(true), MIN_SPLASH_MS);
     return () => clearTimeout(t);
   }, [warm]);
+
+  // Splash ends when BOTH timer is done AND auth has resolved (not just timer)
+  useEffect(() => {
+    if (timerDone && !loading) setSplashDone(true);
+  }, [timerDone, loading]);
 
   useEffect(() => {
     if (loading || !splashDone) return;
