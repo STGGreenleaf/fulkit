@@ -4508,6 +4508,100 @@ function UsersTab() {
           The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$430/mo. At 1,000 it's $5K/mo.
         </p>
       </div>
+
+      {/* Waitlist management */}
+      <WaitlistSection accessToken={accessToken} />
+    </div>
+  );
+}
+
+function WaitlistSection({ accessToken }) {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/owner/waitlist", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.entries) setEntries(data.entries); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [accessToken]);
+
+  const remove = async (id) => {
+    setEntries(prev => prev.filter(e => e.id !== id));
+    await fetch("/api/owner/waitlist", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  };
+
+  // Group by provider
+  const grouped = {};
+  for (const e of entries) {
+    const key = e.key?.replace("waitlist_", "") || "unknown";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(e);
+  }
+
+  if (loading) return null;
+  if (entries.length === 0) return null;
+
+  return (
+    <div style={{
+      padding: "var(--space-5)",
+      background: "var(--color-bg-elevated)",
+      border: "1px solid var(--color-border-light)",
+      borderRadius: "var(--radius-lg)",
+      marginTop: "var(--space-6)",
+    }}>
+      <div style={{
+        fontSize: 9,
+        fontFamily: "var(--font-mono)",
+        fontWeight: "var(--font-weight-medium)",
+        textTransform: "uppercase",
+        letterSpacing: "var(--letter-spacing-widest)",
+        color: "var(--color-text-dim)",
+        marginBottom: "var(--space-4)",
+      }}>
+        Waitlists ({entries.length})
+      </div>
+      {Object.entries(grouped).map(([provider, users]) => (
+        <div key={provider} style={{ marginBottom: "var(--space-4)" }}>
+          <div style={{
+            fontSize: "var(--font-size-xs)",
+            fontWeight: "var(--font-weight-semibold)",
+            color: "var(--color-text)",
+            marginBottom: "var(--space-2)",
+            textTransform: "capitalize",
+          }}>
+            {provider.replace("_", " ")} ({users.length})
+          </div>
+          {users.map(u => (
+            <div key={u.id} style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "var(--space-1-5) 0",
+              borderBottom: "1px solid var(--color-border-light)",
+            }}>
+              <div>
+                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)" }}>{u.display_name || u.user_id?.slice(0, 8)}</span>
+                <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>{u.value ? new Date(u.value).toLocaleDateString() : ""}</span>
+              </div>
+              <button
+                onClick={() => remove(u.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)", padding: "var(--space-1)" }}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

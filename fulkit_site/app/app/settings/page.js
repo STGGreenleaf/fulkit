@@ -3595,11 +3595,18 @@ function SourcesTab() {
                         ) : COMING_SOON.has(src.id) ? (
                           <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)" }}>
                             <DrawerItem index={5} visible={isOpen}>
-                              <div
-                                style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg-alt)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", color: "var(--color-text-dim)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textAlign: "center" }}
-                              >
-                                Coming soon
-                              </div>
+                              {waitlisted[src.id] ? (
+                                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textAlign: "center" }}>
+                                  You{"\u2019"}re on the list. We{"\u2019"}ll notify you when it{"\u2019"}s live.
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => joinWaitlist(src.id)}
+                                  style={{ width: "100%", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg-alt)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", color: "var(--color-text)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textAlign: "center", cursor: "pointer" }}
+                                >
+                                  Join waitlist
+                                </button>
+                              )}
                             </DrawerItem>
                           </div>
                         ) : (
