@@ -41,7 +41,9 @@ import {
   Settings2,
   Mail,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
+import StatusBanner from "../../components/StatusBanner";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
@@ -6639,6 +6641,17 @@ function PlaygroundTab() {
       <div style={FOLD}>
         <div style={{ padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <span style={{ ...FOLD_LABEL, marginBottom: "var(--space-1)" }}>Page Previews</span>
+
+          {/* Status Banner preview */}
+          <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2) var(--space-3)", borderBottom: "1px solid var(--color-border-light)" }}>
+              <AlertTriangle size={13} strokeWidth={2} color="var(--color-text-muted)" />
+              <span style={{ fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", color: "var(--color-text-secondary)" }}>Status Banner</span>
+              <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginLeft: "auto" }}>Polls status.claude.com every 60s</span>
+            </div>
+            <StatusBanner description="Partially Degraded Service" />
+          </div>
+
           {[
             { href: "/payment-preview", icon: CreditCard, label: "Payment" },
             { href: "/loading-preview", icon: Zap, label: "Loading" },
