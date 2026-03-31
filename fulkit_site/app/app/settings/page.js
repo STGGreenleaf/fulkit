@@ -218,11 +218,27 @@ const SOURCE_LOGOS = {
       <path d="M12 2L3 20h4l5-12 5 12h4L12 2z"/>
     </svg>
   ),
+  asana: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="6" r="4.5"/>
+      <circle cx="5.5" cy="16.5" r="4.5"/>
+      <circle cx="18.5" cy="16.5" r="4.5"/>
+    </svg>
+  ),
+  monday: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="4.5" cy="17" r="3"/>
+      <circle cx="12" cy="17" r="3"/>
+      <ellipse cx="4.5" cy="10" rx="3" ry="5"/>
+      <ellipse cx="12" cy="10" rx="3" ry="5"/>
+      <ellipse cx="19.5" cy="12" rx="3" ry="7"/>
+    </svg>
+  ),
 };
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "apple_music"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "apple_music"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -385,6 +401,22 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "strava.com",
     linkHref: "https://www.strava.com",
   },
+  asana: {
+    subtitle: "Your tasks, organized.",
+    description: "Asana tracks projects, tasks, and subtasks across your team. Connecting it means F\u00FClkit can see what\u2019s assigned to you, what\u2019s due, and where things stand \u2014 so you can manage work without switching tabs.",
+    gives: "Project listing, task search by name or status, assignee info, due dates, and the ability to create tasks directly from chat.",
+    tryPrompt: "\u201CWhat\u2019s assigned to me?\u201D\n\u201CShow my Asana projects\u201D\n\u201CCreate a task: review Q2 deck, due Friday\u201D",
+    linkLabel: "asana.com",
+    linkHref: "https://asana.com",
+  },
+  monday: {
+    subtitle: "Your boards, connected.",
+    description: "monday.com is a work OS where teams manage projects on customizable boards with columns, groups, and automations. Connecting it means F\u00FClkit sees your boards and items \u2014 ask about status, create items, or get a pulse on what\u2019s moving.",
+    gives: "Board listing, item search with column values and status, group info, and the ability to create items from chat.",
+    tryPrompt: "\u201CShow my monday boards\u201D\n\u201CWhat\u2019s on the sprint board?\u201D\n\u201CCreate an item: deploy hotfix\u201D",
+    linkLabel: "monday.com",
+    linkHref: "https://monday.com",
+  },
 };
 
 const ALL_SOURCES = [
@@ -406,6 +438,8 @@ const ALL_SOURCES = [
   { id: "slack", name: "Slack", cat: "Chat" },
   { id: "readwise", name: "Readwise", cat: "Reading" },
   { id: "todoist", name: "Todoist", cat: "Tasks" },
+  { id: "asana", name: "Asana", cat: "Project Management" },
+  { id: "monday", name: "monday.com", cat: "Work Management" },
   { id: "apple_music", name: "Apple Music", cat: "Media" },
   { id: "linear", name: "Linear", cat: "Tasks" },
   { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
@@ -1210,6 +1244,16 @@ function SourcesTab() {
   const [todoistLastSynced, setTodoistLastSynced] = useState(null);
   const [todoistDisconnecting, setTodoistDisconnecting] = useState(false);
 
+  const [asanaConnected, setAsanaConnected] = useState(false);
+  const [asanaExpanded, setAsanaExpanded] = useState(false);
+  const [asanaLastSynced, setAsanaLastSynced] = useState(null);
+  const [asanaDisconnecting, setAsanaDisconnecting] = useState(false);
+
+  const [mondayConnected, setMondayConnected] = useState(false);
+  const [mondayExpanded, setMondayExpanded] = useState(false);
+  const [mondayLastSynced, setMondayLastSynced] = useState(null);
+  const [mondayDisconnecting, setMondayDisconnecting] = useState(false);
+
   const [dropboxConnected, setDropboxConnected] = useState(false);
   const [dropboxExpanded, setDropboxExpanded] = useState(false);
   const [dropboxLastSynced, setDropboxLastSynced] = useState(null);
@@ -1353,7 +1397,9 @@ function SourcesTab() {
       check("/api/onenote/status"),
       check("/api/todoist/status"),
       check("/api/readwise/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise]) => {
+      check("/api/asana/status"),
+      check("/api/monday/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise, asana, monday]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         setSpotifyConnected(!!fabric.providers?.spotify);
@@ -1379,6 +1425,8 @@ function SourcesTab() {
       if (onenote) { setOnenoteConnected(onenote.connected); if (onenote.lastSynced) setOnenoteLastSynced(onenote.lastSynced); }
       if (todoist) { setTodoistConnected(todoist.connected); if (todoist.lastSynced) setTodoistLastSynced(todoist.lastSynced); }
       if (readwise) { setReadwiseConnected(readwise.connected); }
+      if (asana) { setAsanaConnected(asana.connected); if (asana.lastSynced) setAsanaLastSynced(asana.lastSynced); }
+      if (monday) { setMondayConnected(monday.connected); if (monday.lastSynced) setMondayLastSynced(monday.lastSynced); }
       setStatusReady(true);
     });
   }, [accessToken]);
@@ -1826,6 +1874,26 @@ function SourcesTab() {
     setTodoistDisconnecting(false);
   }
 
+  function connectAsana() {
+    if (accessToken) { window.open("/api/asana/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/asana/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectAsana() {
+    setAsanaDisconnecting(true);
+    try { await fetch("/api/asana/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setAsanaConnected(false); } catch {}
+    setAsanaDisconnecting(false);
+  }
+
+  function connectMonday() {
+    if (accessToken) { window.open("/api/monday/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/monday/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectMonday() {
+    setMondayDisconnecting(true);
+    try { await fetch("/api/monday/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setMondayConnected(false); } catch {}
+    setMondayDisconnecting(false);
+  }
+
   function connectDropbox() {
     if (accessToken) { window.open("/api/dropbox/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
     supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/dropbox/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
@@ -2062,8 +2130,10 @@ function SourcesTab() {
     ...(onenoteConnected ? ["onenote"] : []),
     ...(todoistConnected ? ["todoist"] : []),
     ...(readwiseConnected ? ["readwise"] : []),
+    ...(asanaConnected ? ["asana"] : []),
+    ...(mondayConnected ? ["monday"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -2094,6 +2164,8 @@ function SourcesTab() {
     if (id === "slack") { connectSlack(); return; }
     if (id === "onenote") { connectOnenote(); return; }
     if (id === "todoist") { connectTodoist(); return; }
+    if (id === "asana") { connectAsana(); return; }
+    if (id === "monday") { connectMonday(); return; }
     if (id === "readwise") { setReadwiseExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
@@ -2105,6 +2177,7 @@ function SourcesTab() {
     quickbooks: disconnectQB, obsidian: disconnectObsidian, notion: disconnectNotion,
     dropbox: disconnectDropbox, slack: disconnectSlack, onenote: disconnectOnenote,
     todoist: disconnectTodoist, readwise: disconnectReadwise,
+    asana: disconnectAsana, monday: disconnectMonday,
   };
   const disconnect = (id) => {
     // Show purge prompt instead of immediately disconnecting
@@ -3340,6 +3413,54 @@ function SourcesTab() {
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{todoistLastSynced ? ` \u00B7 Last synced ${timeAgo(todoistLastSynced)}` : ""}</div>
                         <button onClick={() => disconnect("todoist")} disabled={todoistDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: todoistDisconnecting ? 0.5 : 1 }}>{todoistDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Asana — connected */}
+            {asanaConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.asana} name="Asana" subtitle={SOURCE_DESCRIPTIONS.asana.subtitle} isExpanded={asanaExpanded} onToggle={() => setAsanaExpanded(!asanaExpanded)} />
+                <Drawer open={asanaExpanded}>
+                  {richDrawerContent({
+                    expanded: asanaExpanded,
+                    description: SOURCE_DESCRIPTIONS.asana.description,
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: SOURCE_DESCRIPTIONS.asana.gives,
+                    tryPrompt: SOURCE_DESCRIPTIONS.asana.tryPrompt,
+                    linkLabel: SOURCE_DESCRIPTIONS.asana.linkLabel,
+                    linkHref: SOURCE_DESCRIPTIONS.asana.linkHref,
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{asanaLastSynced ? ` \u00B7 Last synced ${timeAgo(asanaLastSynced)}` : ""}</div>
+                        <button onClick={() => disconnect("asana")} disabled={asanaDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: asanaDisconnecting ? 0.5 : 1 }}>{asanaDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* monday.com — connected */}
+            {mondayConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.monday} name="monday.com" subtitle={SOURCE_DESCRIPTIONS.monday.subtitle} isExpanded={mondayExpanded} onToggle={() => setMondayExpanded(!mondayExpanded)} />
+                <Drawer open={mondayExpanded}>
+                  {richDrawerContent({
+                    expanded: mondayExpanded,
+                    description: SOURCE_DESCRIPTIONS.monday.description,
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: SOURCE_DESCRIPTIONS.monday.gives,
+                    tryPrompt: SOURCE_DESCRIPTIONS.monday.tryPrompt,
+                    linkLabel: SOURCE_DESCRIPTIONS.monday.linkLabel,
+                    linkHref: SOURCE_DESCRIPTIONS.monday.linkHref,
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{mondayLastSynced ? ` \u00B7 Last synced ${timeAgo(mondayLastSynced)}` : ""}</div>
+                        <button onClick={() => disconnect("monday")} disabled={mondayDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: mondayDisconnecting ? 0.5 : 1 }}>{mondayDisconnecting ? "..." : "Disconnect"}</button>
                       </div>
                     ),
                   })}
