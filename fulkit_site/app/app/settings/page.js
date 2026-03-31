@@ -1400,6 +1400,14 @@ function SourcesTab() {
         key: `waitlist_${providerId}`,
         value: new Date().toISOString(),
       }, { onConflict: "user_id,key" }).then(() => {}).catch(() => {});
+      // Also hit the waitlist API so the confirmation email fires
+      if (accessToken) {
+        fetch("/api/waitlist", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ email: user.email, category: providerId }),
+        }).catch(() => {});
+      }
     }
   }
 

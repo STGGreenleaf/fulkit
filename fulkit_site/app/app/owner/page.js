@@ -6574,7 +6574,8 @@ function PlaygroundTab() {
             <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
               {[
                 { id: "welcome", label: "Welcome" },
-                { id: "added", label: "Waitlist: Added" },
+                { id: "added", label: "Waitlist: Spotify" },
+                { id: "added-apple", label: "Waitlist: Apple Music" },
                 { id: "seat-open", label: "Waitlist: Seat opened" },
                 { id: "custom", label: "Custom" },
               ].map(t => (

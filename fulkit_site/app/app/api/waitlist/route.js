@@ -41,7 +41,7 @@ export async function POST(request) {
     fetch(`${origin.startsWith("http") ? origin : `https://${origin}`}/api/email/waitlist`, {
       method: "POST",
       headers: { Authorization: authHeader, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: finalEmail, template: "added" }),
+      body: JSON.stringify({ email: finalEmail, template: category === "apple_music" ? "added-apple" : "added" }),
     }).catch(() => {});
 
     return Response.json(data);

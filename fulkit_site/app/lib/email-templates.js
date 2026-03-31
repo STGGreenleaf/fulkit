@@ -48,6 +48,21 @@ export const EMAIL_CONTENTS = {
     <div style="font-size:16px;font-weight:600;color:#2A2826;margin-bottom:28px;">Go dig.</div>
     ${cta("https://fulkit.app/fabric", "Open Fabric")}`,
 
+  "added-apple": (name, message) => `
+    <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You're on the list.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Apple Music is coming to Fabric. We\u2019re finalizing the integration now \u2014 your spot is saved.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">In the meantime \u2014 you're not waiting. You're already inside.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">Fabric is a music system. Not a wrapper around someone else's. Every track plays instantly via YouTube. No login, no permissions. Just music.</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Dig</strong> \u2014 search across sources, discover new music, tap "more like this" on anything that catches your ear.</div>
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Crates</strong> \u2014 not algorithmic playlists. Curated shelves that get sharper the more you use them.</div>
+      <div style="margin-bottom:8px;"><strong style="color:#2A2826;">Sets</strong> \u2014 your playlists, built here. Drag to reorder, flag tracks from anywhere, trophy the ones worth keeping.</div>
+      <div><strong style="color:#2A2826;">Signal Terrain</strong> \u2014 a visualization that actually listens.</div>
+    </div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">When Apple Music goes live, we\u2019ll let you know. Your library and playlists will sync right in alongside everything else.</div>
+    <div style="font-size:16px;font-weight:600;color:#2A2826;margin-bottom:28px;">Go dig.</div>
+    ${cta("https://fulkit.app/fabric", "Open Fabric")}`,
+
   "seat-open": (name, message) => `
     <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Your Spotify seat is ready.</div>
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">A seat opened up. Head to <strong style="color:#2A2826;">Settings \u2192 Sources</strong> and connect your Spotify account.</div>
@@ -61,7 +76,8 @@ export const EMAIL_CONTENTS = {
 
 export const EMAIL_FOOTERS = {
   welcome: `You're getting this because you signed up at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
-  added: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+  added: `You're getting this because you joined the Spotify waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+  "added-apple": `You're getting this because you joined the Apple Music waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
   "seat-open": `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
   custom: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
 };

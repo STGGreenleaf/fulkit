@@ -31,6 +31,7 @@ export async function POST(request) {
 
     const subjects = {
       added: "You're on the Spotify waitlist",
+      "added-apple": "You're on the Apple Music waitlist",
       "seat-open": "Your Spotify seat is ready",
       custom: "Update from F\u00fclkit",
     };
