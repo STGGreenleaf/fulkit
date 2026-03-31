@@ -47,6 +47,13 @@ const TIPS = [
   "Compact mode — sidebar shrinks to icons only. Hover for labels. More room to think.",
   "Crates on /fabric — drag songs into collections, DJ-style. Build your sets.",
   "\"Track this\" in chat starts a thread. It lives on your board until you close it out.",
+  "\"What's my margin on the Green Machine?\" — Numbrly breaks down cost, price, and margin instantly.",
+  "\"If bananas go to $0.50/lb, what happens?\" — Numbrly simulates the cost change across every recipe that uses them.",
+  "\"Show me my most expensive build\" — Numbrly ranks your products by cost so you know where the money goes.",
+  "\"Add a new component: oat milk, $3.49/gal\" — Numbrly creates it right from chat. No dashboard needed.",
+  "\"What's my health score?\" — TrueGauge gives you a single number for your business health, 0-100.",
+  "\"Am I on pace this month?\" — TrueGauge shows MTD sales vs your survival goal and daily pace.",
+  "\"Log a $420 expense to Sysco\" — TrueGauge records it from chat. Expenses, sales, all conversational.",
 ];
 
 function getGreeting() {
