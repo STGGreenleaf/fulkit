@@ -4,7 +4,12 @@
 import { saveHandle, getHandle, clearHandle } from "./vault-idb";
 
 export function isFileSystemAccessSupported() {
-  return typeof window !== "undefined" && "showDirectoryPicker" in window;
+  if (typeof window === "undefined") return false;
+  if (!("showDirectoryPicker" in window)) return false;
+  // Mobile Chrome exposes showDirectoryPicker but it doesn't work — exclude mobile
+  const ua = navigator.userAgent || "";
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return false;
+  return true;
 }
 
 const REQUIRED_FOLDERS = [
