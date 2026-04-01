@@ -5495,7 +5495,9 @@ function SocialsTab() {
           { key: "ig-stories", label: "Instagram Stories", dims: "1080 \u00D7 1920", aspect: "1080/1920" },
           { key: "square", label: "1:1", dims: "1080 \u00D7 1080", aspect: "1080/1080" },
         ];
-        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const BASE_CONCEPTS = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const PITCH_CARDS = ["magic", "chosen", "whitespace", "mascot", "rams", "fewer", "standards", "argue", "quiet", "invisible", "friction", "typeface", "brains", "benefits", "noise", "sorry", "energy", "vault", "ful", "remember"];
+        const concepts = (socialSize === "ig-post" || socialSize === "square") ? [...BASE_CONCEPTS, ...PITCH_CARDS] : BASE_CONCEPTS;
         const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
         const sizeParam = socialSize;
         return (
@@ -5651,14 +5653,16 @@ function SocialsTab() {
 
       {/* Template Preview Modal */}
       {previewTemplate && (() => {
-        const concepts = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const BASE_CONCEPTS_M = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
+        const PITCH_CARDS_M = ["magic", "chosen", "whitespace", "mascot", "rams", "fewer", "standards", "argue", "quiet", "invisible", "friction", "typeface", "brains", "benefits", "noise", "sorry", "energy", "vault", "ful", "remember"];
+        const concepts = (previewTemplate.sizeKey === "ig-post" || previewTemplate.sizeKey === "square") ? [...BASE_CONCEPTS_M, ...PITCH_CARDS_M] : BASE_CONCEPTS_M;
         const sizes = [
           { key: "og", label: "OG / Bluesky", aspect: "1200/630" },
           { key: "ig-post", label: "Instagram Post", aspect: "1080/1350" },
           { key: "ig-stories", label: "Instagram Stories", aspect: "1080/1920" },
           { key: "square", label: "1:1", aspect: "1080/1080" },
         ];
-        const ci = concepts.indexOf(previewTemplate.concept);
+        const ci = Math.max(0, concepts.indexOf(previewTemplate.concept));
         const si = sizes.findIndex(s => s.key === previewTemplate.sizeKey);
         const totalItems = concepts.length * sizes.length;
         const currentIndex = si * concepts.length + ci;
