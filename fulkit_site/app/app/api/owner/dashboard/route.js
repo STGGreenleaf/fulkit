@@ -44,7 +44,7 @@ export async function GET(request) {
     const profiles = profilesRes.data || [];
     const metrics = {
       total: profiles.length,
-      free: profiles.filter(p => !p.seat_type || p.seat_type === "free").length,
+      free: profiles.filter(p => !p.seat_type || p.seat_type === "free" || p.seat_type === "trial").length,
       standard: profiles.filter(p => p.seat_type === "standard").length,
       pro: profiles.filter(p => p.seat_type === "pro").length,
       onboarded: profiles.filter(p => p.onboarded).length,

@@ -65,7 +65,7 @@ export async function GET(request) {
     lifetimeFulEarned: profile?.lifetime_ful_earned || 0,
     toFreeStandard,
     toFreePro,
-    seatType: profile?.seat_type || "free",
+    seatType: profile?.seat_type || "trial",
     referrals: (referrals || []).map(r => ({
       id: r.id,
       name: referredProfiles[r.referred_id] || "User",

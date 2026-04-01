@@ -4634,7 +4634,7 @@ function ReferralsTab() {
   const tier = stats?.tier;
   const monthlyFul = stats?.monthlyFul || 0;
   const monthlyDollars = stats?.monthlyDollars || 0;
-  const seatType = profile?.seat_type || "free";
+  const seatType = profile?.seat_type || "trial";
 
   const copyLink = () => {
     navigator.clipboard.writeText(`https://${refLink}`);
@@ -5292,7 +5292,7 @@ function BillingTab() {
     }
   }, []);
 
-  const seatType = profile?.seat_type || "free";
+  const seatType = profile?.seat_type || "trial";
   const seatLimit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = seatLimit - messagesUsed;
@@ -5590,7 +5590,7 @@ function BillingTab() {
         payout: null, upgradeLabel: "Upgrade to Pro", downgradeLabel: null,
       },
       free: {
-        label: "Free", name: "Jamie Rivera", email: "jamie@gmail.com", seat: "free", joined: "June 2026",
+        label: "Free", name: "Jamie Rivera", email: "jamie@gmail.com", seat: "trial", joined: "June 2026",
         limit: SEAT_LIMITS.free, used: 72, refs: 0, ful: 0, credit: 0, tier: null, fulPerRef: 0, lifetimeFul: 0,
         card: null, sub: null,
         invoices: [],
@@ -5690,7 +5690,7 @@ function BillingTab() {
                 {sPlanPrice} {"\u00B7"} Member since {s.joined}
               </div>
             </div>
-            {s.seat === "free" ? (
+            {s.seat === "trial" ? (
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
                 <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>Standard {PLAN_PRICES.standard}</span>
                 <span style={{ padding: "var(--space-1-5) var(--space-3)", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)" }}>Pro {PLAN_PRICES.pro}</span>
@@ -5707,7 +5707,7 @@ function BillingTab() {
               { label: "Messages", value: `${s.limit}/mo` },
               { label: "Model", value: "Claude Sonnet" },
               { label: "Max tokens", value: sMaxTokens },
-              { label: s.seat === "free" ? "Upgrade" : "Credits", value: "Available" },
+              { label: s.seat === "trial" ? "Upgrade" : "Credits", value: "Available" },
             ].map((b, i) => (
               <div key={i}>
                 <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-bold)", fontFamily: "var(--font-mono)" }}>{b.value}</div>
@@ -5871,7 +5871,7 @@ function BillingTab() {
               <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{row.value}</span>
             </div>
           ))}
-          {s.seat !== "free" && (
+          {s.seat !== "trial" && (
             <>
               <div style={{ marginTop: "var(--space-3)" }}>
                 <div style={{ padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text-secondary)", textAlign: "center" }}>
@@ -6054,7 +6054,7 @@ function BillingTab() {
               {planPrice}{memberSince ? ` \u00B7 Member since ${memberSince}` : ""}
             </div>
           </div>
-          {seatType === "free" ? (
+          {seatType === "trial" ? (
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <button onClick={() => handleCheckout("standard")} disabled={!!loading} style={{ padding: "var(--space-1-5) var(--space-3)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1 }}>
                 {loading === "standard" ? "..." : `Standard ${PLAN_PRICES.standard}`}
@@ -6330,14 +6330,14 @@ function BillingTab() {
             <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)" }}>{row.value}</span>
           </div>
         ))}
-        {seatType !== "free" && (
+        {seatType !== "trial" && (
           <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
             <button onClick={handlePortal} disabled={!!loading} style={{ flex: 1, padding: "var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-medium)", fontFamily: "var(--font-primary)", color: "var(--color-text-secondary)", cursor: loading ? "wait" : "pointer", opacity: loading === "portal" ? 0.6 : 1 }}>
               {loading === "portal" ? "..." : "Manage subscription"}
             </button>
           </div>
         )}
-        {seatType !== "free" && !billingInfo?.subscription?.cancelAtPeriodEnd && (
+        {seatType !== "trial" && !billingInfo?.subscription?.cancelAtPeriodEnd && (
           <button onClick={() => setShowCancelModal(true)} disabled={!!loading} style={{ display: "block", width: "100%", marginTop: "var(--space-2)", padding: 0, background: "none", border: "none", fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", cursor: "pointer", textAlign: "center" }}>
             Cancel subscription
           </button>

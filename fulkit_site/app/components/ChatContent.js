@@ -54,7 +54,7 @@ export default function ChatContent({ isPopout = false }) {
   const { user, profile, accessToken, authFetch, githubConnected, compactMode, hasContext, fetchProfile, isOwner } = useAuth();
 
   // ─── Fül cap state + billing state machine ──────────────
-  const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || SEAT_LIMITS.free;
+  const seatLimit = SEAT_LIMITS[profile?.seat_type || "trial"] || SEAT_LIMITS.trial;
   const messagesUsed = profile?.messages_this_month || 0;
   const remaining = Math.max(0, seatLimit - messagesUsed);
   const fuelPct = seatLimit > 0 ? Math.round((messagesUsed / seatLimit) * 100) : 0;
@@ -81,7 +81,7 @@ export default function ChatContent({ isPopout = false }) {
   const trialDaysLeft = trialStarted
     ? Math.max(0, 14 - Math.floor((Date.now() - trialStarted.getTime()) / 86400000))
     : 14;
-  const isTrialExpired = !isByokOrOwner && (profile?.seat_type || "free") === "free" && trialStarted && trialDaysLeft <= 0;
+  const isTrialExpired = !isByokOrOwner && (profile?.seat_type || "trial") === "trial" && trialStarted && trialDaysLeft <= 0;
 
   // Trial expiry overrides billing state
   if (isTrialExpired) billingState = "LIMIT";
@@ -1281,7 +1281,7 @@ export default function ChatContent({ isPopout = false }) {
               )}
 
               {/* Trial countdown */}
-              {!isByokOrOwner && (profile?.seat_type || "free") === "free" && trialStarted && trialDaysLeft > 0 && trialDaysLeft <= 3 && billingState !== "LIMIT" && (
+              {!isByokOrOwner && (profile?.seat_type || "trial") === "trial" && trialStarted && trialDaysLeft > 0 && trialDaysLeft <= 3 && billingState !== "LIMIT" && (
                 <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
                   <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
                     {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} left on your trial —{" "}
@@ -1302,7 +1302,7 @@ export default function ChatContent({ isPopout = false }) {
                 <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: "0 var(--space-6) var(--space-1)" }}>
                   <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-warning)", fontFamily: "var(--font-primary)" }}>
                     {remaining} message{remaining !== 1 ? "s" : ""} left —{" "}
-                    {profile?.seat_type === "free" ? (
+                    {profile?.seat_type === "trial" ? (
                       <Link href="/settings?tab=billing" style={{ color: "var(--color-warning)", textDecoration: "underline" }}>
                         subscribe to keep everything you&apos;ve built
                       </Link>
@@ -1346,7 +1346,7 @@ export default function ChatContent({ isPopout = false }) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
                       <Link href="/settings?tab=billing" style={{ display: "block", width: "100%", textAlign: "center", padding: "var(--space-2-5) 0", background: "var(--color-accent)", color: "var(--color-text-inverse)", borderRadius: "var(--radius-sm)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", textDecoration: "none" }}>
-                        {profile?.seat_type === "free"
+                        {profile?.seat_type === "trial"
                           ? `Start with ${TIERS.standard.label} — ${TIERS.standard.priceLabel}`
                           : `Grab ${CREDITS.amount} messages — ${CREDITS.priceLabel}`}
                       </Link>

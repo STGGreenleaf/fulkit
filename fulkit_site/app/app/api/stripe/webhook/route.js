@@ -198,7 +198,7 @@ export async function POST(request) {
         if (userId && (sub.status === "past_due" || sub.status === "unpaid")) {
           await admin
             .from("profiles")
-            .update({ seat_type: "free" })
+            .update({ seat_type: "trial" })
             .eq("id", userId);
 
           churnReferral(admin, userId).catch((e) =>

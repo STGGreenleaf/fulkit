@@ -133,8 +133,8 @@ export default function Dashboard() {
 
   // Trial state — only for non-owner users with onboarding state
   const trialDaysRemaining = onboardingState?.trialDaysRemaining ?? null;
-  const trialExpired = trialDaysRemaining !== null && trialDaysRemaining <= 0 && profile?.seat_type === "free";
-  const trialEndingSoon = trialDaysRemaining !== null && trialDaysRemaining > 0 && trialDaysRemaining <= 5 && profile?.seat_type === "free";
+  const trialExpired = trialDaysRemaining !== null && trialDaysRemaining <= 0 && ["free", "trial"].includes(profile?.seat_type);
+  const trialEndingSoon = trialDaysRemaining !== null && trialDaysRemaining > 0 && trialDaysRemaining <= 5 && ["free", "trial"].includes(profile?.seat_type);
 
   useEffect(() => {
     if (!user) return;
@@ -214,7 +214,7 @@ export default function Dashboard() {
   }, [accessToken, user?.id]);
 
   const messagesUsed = profile?.messages_this_month || 0;
-  const seatLimit = SEAT_LIMITS[profile?.seat_type || "free"] || 100;
+  const seatLimit = SEAT_LIMITS[profile?.seat_type || "trial"] || 100;
   const gaugeRemaining = seatLimit - messagesUsed;
   const gaugeLow = gaugeRemaining <= Math.ceil(seatLimit * 0.1);
   const gaugeCapped = gaugeRemaining <= 0;

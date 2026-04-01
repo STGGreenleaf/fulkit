@@ -34,7 +34,7 @@ export async function GET(request) {
     }
 
     const total = profiles.length;
-    const free = profiles.filter(p => !p.seat_type || p.seat_type === "free").length;
+    const free = profiles.filter(p => !p.seat_type || p.seat_type === "free" || p.seat_type === "trial").length;
     const standard = profiles.filter(p => p.seat_type === "standard").length;
     const pro = profiles.filter(p => p.seat_type === "pro").length;
     const onboarded = profiles.filter(p => p.onboarded).length;

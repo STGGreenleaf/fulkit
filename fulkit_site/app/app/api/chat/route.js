@@ -4884,8 +4884,8 @@ export async function POST(request) {
 
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
-      const seatType = profile?.seat_type || "free";
-      const limit = SEAT_LIMITS[seatType] || SEAT_LIMITS.free;
+      const seatType = profile?.seat_type || "trial";
+      const limit = SEAT_LIMITS[seatType] || SEAT_LIMITS.trial;
       const used = profile?.messages_this_month || 0;
       if (used >= limit) {
         emitServerSignal(userId, "rate_limit", "warning", { limit, used, seat: seatType, model: config.model, hasByok: config.isByok });
@@ -4902,7 +4902,7 @@ export async function POST(request) {
 
     // Cost ceiling — secondary safeguard against API overspend (BYOK and owners exempt)
     if (userId && !config.isByok && profile?.role !== "owner") {
-      const budgetCheck = checkUserBudget(profile?.seat_type || "free", parseFloat(profile?.api_spend_this_month || 0));
+      const budgetCheck = checkUserBudget(profile?.seat_type || "trial", parseFloat(profile?.api_spend_this_month || 0));
       if (!budgetCheck.allowed) {
         emitServerSignal(userId, "cost_ceiling", "warning", { seat: profile?.seat_type, spend: profile?.api_spend_this_month });
         return Response.json({ error: budgetCheck.reason }, { status: 429 });
@@ -5124,7 +5124,7 @@ export async function POST(request) {
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
-    const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
+    const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "trial") === "free";
     if (isTrial) {
       const maxInt = PLANS.trial.integrations; // 1
       const slots = [
@@ -5324,7 +5324,7 @@ export async function POST(request) {
     function applyPricing(block) {
       if (!block.includes("{{")) return block;
       const replacements = {
-        "{{free_limit}}": String(SEAT_LIMITS.free),
+        "{{free_limit}}": String(SEAT_LIMITS.trial),
         "{{standard_limit}}": String(SEAT_LIMITS.standard),
         "{{pro_limit}}": String(SEAT_LIMITS.pro),
         "{{standard_price}}": stripePrices?.standard || TIERS.standard.priceLabel.replace("/mo", ""),
@@ -5405,7 +5405,7 @@ export async function POST(request) {
     // Referral whisper context (pre-fetched)
     if (refProfileResult) {
       const refs = refProfileResult.total_active_referrals || 0;
-      const seatType = refProfileResult.seat_type || "free";
+      const seatType = refProfileResult.seat_type || "trial";
       const hasCode = !!refProfileResult.referral_code;
 
       const toFreeStandard = Math.max(0, 9 - refs);

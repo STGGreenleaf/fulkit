@@ -14,26 +14,30 @@ import {
 
 // ── Tier definitions (derived from legend PLANS) ─────────────────────
 export const TIERS = {
-  free:     { label: PLANS.trial.label,    price: PLANS.trial.price,    priceLabel: PLANS.trial.priceLabel,    messages: PLANS.trial.fulTotal,     model: PLANS.trial.model,    maxTokens: PLANS.trial.maxTokens },
+  trial:    { label: PLANS.trial.label,    price: PLANS.trial.price,    priceLabel: PLANS.trial.priceLabel,    messages: PLANS.trial.fulTotal,     model: PLANS.trial.model,    maxTokens: PLANS.trial.maxTokens },
+  free:     { label: PLANS.trial.label,    price: PLANS.trial.price,    priceLabel: PLANS.trial.priceLabel,    messages: PLANS.trial.fulTotal,     model: PLANS.trial.model,    maxTokens: PLANS.trial.maxTokens }, // alias for legacy
   standard: { label: PLANS.standard.label, price: PLANS.standard.price, priceLabel: PLANS.standard.priceLabel, messages: PLANS.standard.fulPerMonth, model: PLANS.standard.model, maxTokens: PLANS.standard.maxTokens },
   pro:      { label: PLANS.pro.label,      price: PLANS.pro.price,      priceLabel: PLANS.pro.priceLabel,      messages: PLANS.pro.fulPerMonth,     model: PLANS.pro.model,     maxTokens: PLANS.pro.maxTokens },
 };
 
 // ── Shorthand maps ───────────────────────────────────────────────────
 export const SEAT_LIMITS = {
-  free: TIERS.free.messages,
+  trial: TIERS.trial.messages,
+  free: TIERS.trial.messages,  // alias
   standard: TIERS.standard.messages,
   pro: TIERS.pro.messages,
 };
 
 export const PLAN_LABELS = {
-  free: TIERS.free.label,
+  trial: TIERS.trial.label,
+  free: TIERS.trial.label,     // alias
   standard: TIERS.standard.label,
   pro: TIERS.pro.label,
 };
 
 export const PLAN_PRICES = {
-  free: TIERS.free.priceLabel,
+  trial: TIERS.trial.priceLabel,
+  free: TIERS.trial.priceLabel, // alias
   standard: TIERS.standard.priceLabel,
   pro: TIERS.pro.priceLabel,
 };
@@ -84,7 +88,8 @@ export const COST_BASIS = {
 
 // ── Cost ceilings (derived from legend — auto-tightens as costs drop) ─
 export const COST_CEILINGS = {
-  free: getSpendCap("trial"),
+  trial: getSpendCap("trial"),
+  free: getSpendCap("trial"), // alias
   standard: getSpendCap("standard"),
   pro: getSpendCap("pro"),
 };

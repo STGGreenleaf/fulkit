@@ -53,7 +53,7 @@ export async function GET(request) {
   let totalMessages = 0;
 
   for (const p of (allProfiles || [])) {
-    const st = p.seat_type || "free";
+    const st = p.seat_type || "trial";
     if (subscribers[st] !== undefined) subscribers[st]++;
     totalApiSpend += parseFloat(p.api_spend_this_month || 0);
     totalMessages += p.messages_this_month || 0;
@@ -142,7 +142,7 @@ export async function GET(request) {
     const tier = getTierForCount(p.total_active_referrals);
     return {
       name: p.name || p.email?.split("@")[0] || "User",
-      seat: p.seat_type || "free",
+      seat: p.seat_type || "trial",
       refs: p.total_active_referrals || 0,
       tier: tier ? tier.label : "—",
       ful: calculateMonthlyFul(p.total_active_referrals || 0),

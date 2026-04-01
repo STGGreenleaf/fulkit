@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
     if (!data) {
       const { data: created } = await supabase
         .from("profiles")
-        .upsert({ id: userId, seat_type: "free", onboarded: false, messages_this_month: 0, updated_at: new Date().toISOString() }, { onConflict: "id" })
+        .upsert({ id: userId, seat_type: "trial", onboarded: false, messages_this_month: 0, updated_at: new Date().toISOString() }, { onConflict: "id" })
         .select("*")
         .single();
       if (created) {

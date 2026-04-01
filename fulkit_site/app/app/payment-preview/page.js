@@ -31,7 +31,7 @@ export default function PaymentPreview() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [webhookEvents, setWebhookEvents] = useState([]);
   const [mockProfile, setMockProfile] = useState({
-    seat_type: "free",
+    seat_type: "trial",
     stripe_customer_id: null,
     stripe_subscription_id: null,
     messages_this_month: 23,
@@ -83,7 +83,7 @@ export default function PaymentPreview() {
       ]);
       setMockProfile((prev) => ({
         ...prev,
-        seat_type: "free",
+        seat_type: "trial",
         stripe_subscription_id: null,
       }));
       setGwStep(5);
@@ -95,7 +95,7 @@ export default function PaymentPreview() {
     setSelectedPlan(null);
     setWebhookEvents([]);
     setMockProfile({
-      seat_type: "free",
+      seat_type: "trial",
       stripe_customer_id: null,
       stripe_subscription_id: null,
       messages_this_month: 23,

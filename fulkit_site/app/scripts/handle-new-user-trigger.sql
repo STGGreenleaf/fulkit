@@ -1,4 +1,4 @@
--- Trigger: set seat_type='free' on new user signup
+-- Trigger: set seat_type='trial' on new user signup
 -- Runs after a new row is inserted into profiles (created by Supabase Auth trigger)
 
 CREATE OR REPLACE FUNCTION public.handle_new_user_defaults()
@@ -6,7 +6,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Set explicit defaults for new users
   IF NEW.seat_type IS NULL THEN
-    NEW.seat_type := 'free';
+    NEW.seat_type := 'trial';
   END IF;
   IF NEW.messages_this_month IS NULL THEN
     NEW.messages_this_month := 0;
@@ -27,5 +27,5 @@ CREATE TRIGGER on_profile_created_defaults
 
 -- Backfill: set seat_type for any existing NULL rows
 UPDATE public.profiles
-SET seat_type = 'free'
+SET seat_type = 'trial'
 WHERE seat_type IS NULL;
