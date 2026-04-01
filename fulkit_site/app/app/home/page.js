@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home, Activity } from "lucide-react";
+import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home, Activity, Flame } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 // Sidebar + header provided by AppShell in layout
@@ -107,6 +107,7 @@ export default function Dashboard() {
   const [whispers, setWhispers] = useState([]);
   const [patterns, setPatterns] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [habits, setHabits] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [activeTips] = useState(() => {
@@ -187,6 +188,18 @@ export default function Dashboard() {
         const sorted = Object.entries(eco).sort((a, b) => b[1] - a[1]).slice(0, 5);
         setPatterns(sorted.map(([name, count]) => ({ name, count })));
       });
+
+    // Fetch active habits
+    supabase
+      .from("habits")
+      .select("title, streak, next_due, track_type, category, last_completed")
+      .eq("user_id", user.id)
+      .eq("paused", false)
+      .order("next_due", { ascending: true })
+      .limit(10)
+      .abortSignal(AbortSignal.timeout(5000))
+      .then(({ data }) => { if (data) setHabits(data); })
+      .catch(() => {});
 
     // Fetch unread notifications (feedback replies, announcements)
     supabase
@@ -696,6 +709,49 @@ export default function Dashboard() {
                     <ActionList actions={displayActions} onComplete={completeAction} />
                   ) : (
                     <EmptyState message="No action items yet. Tell me what's on your plate." link="/chat" linkLabel="Start chatting" marginBottom="var(--space-8)" />
+                  )}
+
+                  {/* Habits — only visible if user tracks any */}
+                  {habits.length > 0 && (
+                    <>
+                      <SectionLabel icon={Flame}>Habits</SectionLabel>
+                      <div style={{
+                        display: "flex", flexDirection: "column", gap: "var(--space-2)",
+                        padding: "var(--space-3)", background: "var(--color-bg-elevated)",
+                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+                        marginBottom: "var(--space-8)",
+                      }}>
+                        {habits.map((h) => {
+                          const today = new Date().toISOString().split("T")[0];
+                          const isDue = h.next_due && h.next_due <= today;
+                          const isOverdue = h.next_due && h.next_due < today;
+                          return (
+                            <div key={h.title} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                {isDue && <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOverdue ? "var(--color-warning, #C4A35A)" : "var(--color-text)", flexShrink: 0 }} />}
+                                <span style={{ fontSize: "var(--font-size-sm)", color: isDue ? "var(--color-text)" : "var(--color-text-muted)" }}>
+                                  {h.title}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                                {h.streak > 0 && (
+                                  <span style={{ fontSize: "var(--font-size-2xs)", fontFamily: "var(--font-mono)", color: "var(--color-text-dim)" }}>
+                                    {h.streak} streak
+                                  </span>
+                                )}
+                                <span style={{
+                                  fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)",
+                                  padding: "1px 6px", borderRadius: "var(--radius-sm)",
+                                  background: "var(--color-bg-alt)",
+                                }}>
+                                  {h.category}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
 
                   {/* Pattern Insights */}
