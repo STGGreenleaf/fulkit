@@ -6448,45 +6448,36 @@ function formatTokens(n) {
 }
 
 function VaultBrainSummary() {
-  const { storageMode, vaultConnected, localNoteCount, connectVault } = useVaultContext();
-  const modeLabel = storageMode === "local" ? (vaultConnected ? "Connected" : "Disconnected") : storageMode === "encrypted" ? "Encrypted" : "Managed";
-  const noteCount = localNoteCount || 0;
+  const { storageMode, vaultConnected, vaultError, connectVault, directoryHandle } = useVaultContext();
+  const folderName = directoryHandle?.name || null;
 
   return (
     <div style={{ marginTop: "var(--space-8)" }}>
       <div style={{
         background: "var(--color-bg-elevated)",
         borderRadius: "var(--radius-md)",
-        border: "1px solid var(--color-border-light)",
+        border: vaultError ? "1px solid var(--color-error)" : "1px solid var(--color-border-light)",
         padding: "var(--space-3) var(--space-4)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
       }}>
-        <div>
-          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
-            Your Brain
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-            {storageMode === "local" && vaultConnected
-              ? `${noteCount} files on your computer`
-              : storageMode === "local" && !vaultConnected
-              ? "Vault not connected"
-              : `${modeLabel} storage`}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: vaultError ? "var(--color-error)" : (storageMode === "local" && vaultConnected) ? "var(--color-success)" : "var(--color-text-dim)", flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text)", fontWeight: "var(--font-weight-medium)" }}>
+              {vaultError ? "Brain disconnected" : storageMode === "local" && vaultConnected ? `~/${folderName || "fulkit-vault"}` : storageMode === "local" ? "No brain connected" : "Fülkit-managed storage"}
+            </div>
           </div>
         </div>
-        {storageMode === "local" && !vaultConnected ? (
+        {vaultError || (storageMode === "local" && !vaultConnected) ? (
           <button
             onClick={connectVault}
             style={{ fontSize: "var(--font-size-xs)", color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)" }}
           >
-            Connect
+            Reconnect
           </button>
-        ) : (
-          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
-            {modeLabel}
-          </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
