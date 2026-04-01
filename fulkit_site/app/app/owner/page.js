@@ -2111,6 +2111,24 @@ function DeveloperTab() {
 
   const nextStatus = (s) => ({ open: "seen", seen: "fixed", fixed: "wontfix", wontfix: "open" }[s] || "open");
 
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+
+  const sendReply = async (id) => {
+    if (!replyText.trim()) return;
+    const res = await fetch("/api/feedback", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ id, reply: replyText.trim(), status: "fixed" }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTickets(prev => prev.map(t => t.id === id ? updated : t));
+      setReplyingTo(null);
+      setReplyText("");
+    }
+  };
+
   const openCount = tickets.filter(t => t.status === "open").length;
 
   // ── Drawer states ──
@@ -2875,22 +2893,65 @@ function DeveloperTab() {
                     {t.message}
                   </div>
                   <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
-                    {t.email || "unknown"} {"\u00b7"} {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {t.email || "unknown"} {"\u00b7"} {t.category || "bug"} {"\u00b7"} {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     {t.page_url ? ` \u00b7 ${t.page_url.replace(/^https?:\/\/[^/]+/, "")}` : ""}
                   </div>
+                  {t.reply && (
+                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 4, fontStyle: "italic" }}>
+                      Replied: {t.reply}
+                    </div>
+                  )}
+                  {replyingTo === t.id && (
+                    <div style={{ marginTop: "var(--space-2)", display: "flex", gap: "var(--space-2)" }}>
+                      <input
+                        autoFocus
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") sendReply(t.id); if (e.key === "Escape") { setReplyingTo(null); setReplyText(""); } }}
+                        placeholder="We built it for you..."
+                        style={{
+                          flex: 1, padding: "var(--space-1-5) var(--space-2)",
+                          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                          border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                          background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                        }}
+                      />
+                      <button onClick={() => sendReply(t.id)} style={{
+                        padding: "var(--space-1-5) var(--space-2)", fontSize: "var(--font-size-xs)",
+                        background: "var(--color-text)", color: "var(--color-bg)",
+                        border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                        fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
+                      }}>Send</button>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => updateStatus(t.id, nextStatus(t.status))}
-                  style={{
-                    padding: "2px 8px", borderRadius: "var(--radius-sm)",
-                    fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)",
-                    textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
-                    cursor: "pointer", border: "none", flexShrink: 0,
-                    ...STATUS_STYLES[t.status],
-                  }}
-                >
-                  {t.status}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                  <button
+                    onClick={() => updateStatus(t.id, nextStatus(t.status))}
+                    style={{
+                      padding: "2px 8px", borderRadius: "var(--radius-sm)",
+                      fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)",
+                      textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
+                      cursor: "pointer", border: "none",
+                      ...STATUS_STYLES[t.status],
+                    }}
+                  >
+                    {t.status}
+                  </button>
+                  {!t.reply && t.status !== "wontfix" && (
+                    <button
+                      onClick={() => { setReplyingTo(replyingTo === t.id ? null : t.id); setReplyText(""); }}
+                      style={{
+                        padding: "2px 8px", borderRadius: "var(--radius-sm)",
+                        fontSize: 9, fontFamily: "var(--font-mono)",
+                        cursor: "pointer", border: "1px solid var(--color-border-light)",
+                        background: "transparent", color: "var(--color-text-muted)",
+                      }}
+                    >
+                      reply
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

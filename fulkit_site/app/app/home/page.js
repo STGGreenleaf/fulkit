@@ -106,6 +106,7 @@ export default function Dashboard() {
   const [notes, setNotes] = useState([]);
   const [whispers, setWhispers] = useState([]);
   const [patterns, setPatterns] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [activeTips] = useState(() => {
@@ -186,6 +187,18 @@ export default function Dashboard() {
         const sorted = Object.entries(eco).sort((a, b) => b[1] - a[1]).slice(0, 5);
         setPatterns(sorted.map(([name, count]) => ({ name, count })));
       });
+
+    // Fetch unread notifications (feedback replies, announcements)
+    supabase
+      .from("user_notifications")
+      .select("id, type, title, message, created_at")
+      .eq("user_id", user.id)
+      .eq("read", false)
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .abortSignal(AbortSignal.timeout(5000))
+      .then(({ data }) => { if (data) setNotifications(data); })
+      .catch(() => {});
   }, [user]);
 
   // Fetch whispers (proactive suggestions from Claude) + closeout whisper
@@ -361,6 +374,41 @@ export default function Dashboard() {
                   </button>
                 </div>
               )}
+
+              {/* Notifications — feedback replies from the developer */}
+              {notifications.map((n) => (
+                <div
+                  key={n.id}
+                  style={{
+                    padding: "var(--space-3) var(--space-4)",
+                    background: "var(--color-bg-elevated)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-lg)",
+                    marginBottom: "var(--space-3)",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", marginBottom: "var(--space-1)" }}>
+                    {n.title || "From the team"}
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)" }}>
+                    {n.message}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setNotifications(prev => prev.filter(x => x.id !== n.id));
+                      supabase.from("user_notifications").update({ read: true }).eq("id", n.id).then(() => {}).catch(() => {});
+                    }}
+                    style={{
+                      position: "absolute", top: "var(--space-2)", right: "var(--space-2)",
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "var(--color-text-dim)", padding: 2,
+                    }}
+                  >
+                    <X size={12} strokeWidth={2} />
+                  </button>
+                </div>
+              ))}
 
               {/* Context nudge — show when user has no context and hasn't dismissed */}
               {!hasContext && !nudgeDismissed && (

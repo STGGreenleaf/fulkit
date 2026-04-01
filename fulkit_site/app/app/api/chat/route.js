@@ -4823,6 +4823,69 @@ async function executeKbSearch(input, userId, userRole) {
   return { results: scored.map(d => ({ title: d.title, content: d.content })) };
 }
 
+// ── Feedback Tool ──────────────────────────────────────────────────
+const FEEDBACK_TOOLS = [
+  {
+    name: "submit_feedback",
+    description: "Submit a feature request, bug report, or suggestion to the developer on behalf of the user. Use when the user says something like 'I wish it could...', 'can you tell the developer...', 'it would be cool if...', or reports a bug.",
+    input_schema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "The feedback message — capture the user's idea clearly" },
+        category: { type: "string", enum: ["feature", "bug", "suggestion"], description: "Type of feedback. Default: feature" },
+      },
+      required: ["message"],
+    },
+  },
+];
+
+async function executeFeedbackSubmit(input, userId) {
+  const admin = getSupabaseAdmin();
+  const message = (input.message || "").slice(0, 2000);
+  if (!message.trim()) throw new Error("Message is required");
+
+  // Get user email for the ticket
+  let email = null;
+  try {
+    const { data: profile } = await admin.from("profiles").select("email").eq("id", userId).single();
+    email = profile?.email;
+  } catch {}
+
+  const { data, error } = await admin
+    .from("feedback_tickets")
+    .insert({
+      user_id: userId,
+      email: email || "unknown",
+      message,
+      category: input.category || "feature",
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  // Fire-and-forget: email owner
+  try {
+    const resendKey = process.env.RESEND_API_KEY;
+    if (resendKey) {
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+        body: JSON.stringify({
+          from: "Fülkit <hello@fulkit.app>",
+          to: "collingreenleaf@gmail.com",
+          subject: `New ${input.category || "feature"} feedback from ${email || "a user"}`,
+          html: `<p><strong>${email || "Unknown user"}</strong> submitted ${input.category || "feature"} feedback:</p><blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#555">${message}</blockquote><p><a href="https://fulkit.app/owner">View in Owner Dashboard →</a></p>`,
+        }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => {});
+    }
+  } catch {}
+
+  return { submitted: true, id: data.id, message: "Feedback sent to the developer. They'll see it." };
+}
+
 export async function POST(request) {
   try {
     // Authenticate user via Supabase
@@ -5647,6 +5710,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId ? NOTES_TOOLS : []),
       ...(userId ? THREADS_TOOLS : []),
       ...(userId ? KB_TOOLS : []),
+      ...(userId ? FEEDBACK_TOOLS : []),
       ...worldTools,
       ...integrationTools,
     ];
@@ -6022,6 +6086,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name === "kb_search" && userId) {
                 try {
                   const result = await withTimeout(() => executeKbSearch(block.input || {}, userId, profile?.role));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Feedback tool
+              if (block.name === "submit_feedback" && userId) {
+                try {
+                  const result = await withTimeout(() => executeFeedbackSubmit(block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
