@@ -243,7 +243,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "apple_music"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear", "apple_music"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -454,7 +454,7 @@ const ALL_SOURCES = [
   { id: "asana", name: "Asana", cat: "Project Management" },
   { id: "monday", name: "monday.com", cat: "Work Management" },
   { id: "apple_music", name: "Apple Music", cat: "Media" },
-  { id: "linear", name: "Linear", cat: "Tasks" },
+  { id: "linear", name: "Linear", cat: "Dev" },
   { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
   { id: "whoop", name: "Whoop", cat: "Health" },
   { id: "fitbit", name: "Fitbit", cat: "Health" },
@@ -2160,7 +2160,7 @@ function SourcesTab() {
     ...(mondayConnected ? ["monday"] : []),
     ...(linearConnected ? ["linear"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
