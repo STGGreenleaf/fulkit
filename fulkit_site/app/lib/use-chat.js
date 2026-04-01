@@ -327,17 +327,17 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Safety timeout — abort if no chunks arrive within 45 seconds
+      // Safety timeout — abort if no chunks arrive within 20 seconds
       safetyTimeout = setTimeout(() => {
         controller.abort();
-      }, 45000);
+      }, 20000);
 
       // Rolling inactivity watchdog — resets on each chunk
       function resetWatchdog() {
         clearTimeout(safetyTimeout);
         safetyTimeout = setTimeout(() => {
           controller.abort();
-        }, 30000);
+        }, 15000);
       }
 
       msgCount = apiMessages.length;

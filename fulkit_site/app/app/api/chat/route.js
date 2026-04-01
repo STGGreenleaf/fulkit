@@ -5704,6 +5704,14 @@ Never skip the preview step. The user must see and approve changes before they g
           const toolsUsed = [];
           const loopStart = Date.now();
           const MAX_LOOP_MS = 50000; // 50s total — stay under Vercel's 60s limit
+
+          // Combined abort: fires on client disconnect OR overall timeout (90s hard cap)
+          const streamAbort = new AbortController();
+          if (request.signal) {
+            request.signal.addEventListener('abort', () => { if (!streamAbort.signal.aborted) streamAbort.abort(); }, { once: true });
+          }
+          const overallTimeout = setTimeout(() => { if (!streamAbort.signal.aborted) streamAbort.abort(); }, 90000);
+
           for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
             // Check total execution time before starting a new round
             if (Date.now() - loopStart > MAX_LOOP_MS) {
@@ -5712,66 +5720,85 @@ Never skip the preview step. The user must see and approve changes before they g
             }
             console.log("[chat] starting stream round", round, "model:", config.model, "tools:", allTools.length);
 
-            // Retry wrapper: 3 attempts with exponential backoff on 429/529
+            // Create stream with abort signal — retries on 429/529
             let stream;
-            let streamConnected = false;
+            let streamCreated = false;
             for (let attempt = 0; attempt < 3; attempt++) {
               try {
-                stream = anthropic.messages.stream({
-                  ...baseOpts,
-                  messages: loopMessages,
-                });
-                streamConnected = true;
+                stream = anthropic.messages.stream(
+                  { ...baseOpts, messages: loopMessages },
+                  { signal: streamAbort.signal }
+                );
+                streamCreated = true;
                 break;
               } catch (retryErr) {
                 const status = retryErr?.status || retryErr?.error?.status;
                 if ((status === 429 || status === 529) && attempt < 2) {
-                  const delay = (attempt + 1) * 1500; // 1.5s, 3s
+                  const delay = (attempt + 1) * 1500;
                   console.warn(`[chat] API ${status}, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-                  try {
-                    controller.enqueue(
-                      encoder.encode(`data: ${JSON.stringify({ status: "retrying", attempt: attempt + 1 })}\n\n`)
-                    );
-                  } catch {}
+                  try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: "retrying", attempt: attempt + 1 })}\n\n`)); } catch {}
                   await new Promise(r => setTimeout(r, delay));
                   continue;
                 }
                 throw retryErr;
               }
             }
-            if (!stream) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ error: "AI service is temporarily busy. Try again in a moment." })}\n\n`)
-              );
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
+            if (!streamCreated) {
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "AI service is temporarily busy. Try again in a moment." })}\n\n`)); } catch {}
+              try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
+              try { controller.close(); } catch {}
+              clearTimeout(overallTimeout);
               return;
             }
 
-            // Stream text deltas to client
-            for await (const event of stream) {
-              if (
-                event.type === "content_block_delta" &&
-                event.delta.type === "text_delta"
-              ) {
-                try {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
-                  );
-                } catch { break; /* client disconnected */ }
+            // Stream text deltas to client — catch 429/529 for retry
+            try {
+              for await (const event of stream) {
+                if (
+                  event.type === "content_block_delta" &&
+                  event.delta.type === "text_delta"
+                ) {
+                  try {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                    );
+                  } catch { break; /* client disconnected */ }
+                }
               }
+            } catch (streamErr) {
+              const status = streamErr?.status || streamErr?.error?.status;
+              if ((status === 429 || status === 529) && round < MAX_TOOL_ROUNDS - 1) {
+                const delay = 2000;
+                console.warn(`[chat] stream ${status}, retrying in ${delay}ms`);
+                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: "retrying", attempt: round + 1 })}\n\n`)); } catch {}
+                await new Promise(r => setTimeout(r, delay));
+                continue; // retry this round
+              }
+              // Abort or fatal — stop gracefully
+              if (streamAbort.signal.aborted) {
+                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Response took too long. Try again." })}\n\n`)); } catch {}
+              } else {
+                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
+              }
+              try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
+              try { controller.close(); } catch {}
+              clearTimeout(overallTimeout);
+              return;
             }
 
+            // Get final message — race with 10s timeout to prevent hangs
             let finalMessage;
             try {
-              finalMessage = await stream.finalMessage();
+              finalMessage = await Promise.race([
+                stream.finalMessage(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("finalMessage_timeout")), 10000)),
+              ]);
             } catch (err) {
-              // Claude API disconnected mid-stream
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)
-              );
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
+              // Stream stalled, client disconnected, or API interrupted
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
+              try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
+              try { controller.close(); } catch {}
+              clearTimeout(overallTimeout);
               return;
             }
 
@@ -5793,8 +5820,11 @@ Never skip the preview step. The user must see and approve changes before they g
             // Check if client disconnected before executing tools
             if (request.signal?.aborted) break;
 
-            // Send keep-alive ping before tool execution
-            try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { break; }
+            // Keep-alive pings every 8s during tool execution (prevents client watchdog timeout)
+            const toolKeepAlive = setInterval(() => {
+              try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { clearInterval(toolKeepAlive); }
+            }, 8000);
+            try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { clearInterval(toolKeepAlive); break; }
 
             // Execute each tool call
             const toolResults = [];
@@ -6291,6 +6321,8 @@ Never skip the preview step. The user must see and approve changes before they g
               }
             }
 
+            clearInterval(toolKeepAlive);
+
             // Signal any tool errors
             for (const tr of toolResults) {
               if (tr.is_error) {
@@ -6312,12 +6344,10 @@ Never skip the preview step. The user must see and approve changes before they g
           // If tool loop exhausted, make one final call without tools so Claude responds
           if (needsFinalResponse) {
             try {
-              const finalStream = anthropic.messages.stream({
-                model: config.model,
-                max_tokens: config.maxTokens,
-                system: systemBlocks,
-                messages: loopMessages,
-              });
+              const finalStream = anthropic.messages.stream(
+                { model: config.model, max_tokens: config.maxTokens, system: systemBlocks, messages: loopMessages },
+                { signal: streamAbort.signal }
+              );
               for await (const event of finalStream) {
                 if (
                   event.type === "content_block_delta" &&
@@ -6331,9 +6361,7 @@ Never skip the preview step. The user must see and approve changes before they g
                 }
               }
             } catch (err) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)
-              );
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
             }
           }
 
@@ -6614,15 +6642,19 @@ Never skip the preview step. The user must see and approve changes before they g
             );
           } catch {}
 
+          clearTimeout(overallTimeout);
           try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
           try { controller.close(); } catch {}
         } catch (err) {
-          console.error("[chat] STREAM FATAL:", err.message, err.stack?.split("\n")[1]);
-          emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message, stack: err.stack?.split("\n").slice(0, 3).join(" | "), model: config.model, messageCount: messages.length, contextLength: context?.length, hasByok: config.isByok, seatType: profile?.seat_type, conversationId: rawConvId });
+          clearTimeout(overallTimeout);
+          const isAbort = streamAbort?.signal?.aborted || err.name === 'AbortError';
+          console.error("[chat] STREAM FATAL:", err.message, isAbort ? "(aborted)" : "", err.stack?.split("\n")[1]);
+          if (!isAbort) {
+            emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message, stack: err.stack?.split("\n").slice(0, 3).join(" | "), model: config.model, messageCount: messages.length, contextLength: context?.length, hasByok: config.isByok, seatType: profile?.seat_type, conversationId: rawConvId });
+          }
           try {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong. Try again." })}\n\n`)
-            );
+            const errMsg = isAbort ? "Response took too long. Try again." : "Something went wrong. Try again.";
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`));
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           } catch { /* stream already closed by client disconnect */ }
           try { controller.close(); } catch {}
