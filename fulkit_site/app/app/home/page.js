@@ -68,6 +68,13 @@ const TIPS = [
   "\"Show me today's space picture\" — NASA's Astronomy Picture of the Day, pulled into your conversation.",
   "\"How's the Shopify store?\" — daily summary with orders, revenue, top products. One question.",
   "\"What did labor cost this week?\" — Toast pulls shifts, hours, and total labor spend.",
+  "\"I whiten my teeth the first Sunday of every month\" — Fülkit tracks it. Whisper reminds you. Streak builds.",
+  "\"Track my water — 8 glasses a day\" — daily check-in, no app to open. Just reply to the whisper.",
+  "\"I want to read every day\" — connect Readwise and it auto-checks when you highlight something.",
+  "\"Change the air filter every 90 days\" — household habits, not just fitness. Fülkit reminds you.",
+  "\"How are my habits?\" — streaks, what's due, what you've been crushing. One question.",
+  "Been away? Say \"catch me up\" — Fülkit shows what came due while you were gone. Check off, move on.",
+  "Have a feature idea? Just say it — Fülkit sends it to the developer and you'll hear back on your dashboard.",
 ];
 
 function getGreeting() {

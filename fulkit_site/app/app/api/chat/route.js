@@ -92,7 +92,7 @@ function getModelConfig(role, seatType, hasByok) {
 }
 
 // What's new — updated when KB articles are refreshed (keep in sync with seed-library-kb.mjs)
-const WHATS_NEW = `What's new (2026-03-27): 31 capabilities — 19 chat integrations (Square, Stripe, Shopify, Toast, QuickBooks, Trello, Notion, Slack, Todoist, OneNote, Readwise, Dropbox, GitHub, Fitbit, Numbrly, TrueGauge, Google Calendar, Gmail, Google Drive), Spotify (Fabric), 12 invisible APIs (weather, food, books, currency, dictionary, geocoding, Wikipedia, NASA, Wolfram, air quality, news, breach check). Features: Inbox Triage (file drop → AI triage), ThreadCalendar (unified calendar), global hotkeys, location intelligence.`;
+const WHATS_NEW = `What's new (2026-04-01): 33 capabilities — 19 chat integrations (Square, Stripe, Shopify, Toast, QuickBooks, Trello, Notion, Slack, Todoist, OneNote, Readwise, Dropbox, GitHub, Fitbit, Numbrly, TrueGauge, Google Calendar, Gmail, Google Drive), Spotify (Fabric), 12 invisible APIs (weather, food, books, currency, dictionary, geocoding, Wikipedia, NASA, Wolfram, air quality, news, breach check). Features: Habit Tracker (conversational — "I whiten my teeth the first Sunday of every month" just works, auto-detection from Strava/Fitbit, streak tracking, catch-up mode after absence), Feedback Loop (submit feature requests via chat, developer gets notified, replies go to your dashboard), Inbox Triage (file drop → AI triage), ThreadCalendar (unified calendar), global hotkeys, location intelligence, cross-device vault sync (mobile → desktop).`;
 
 const BASE_PROMPT = `You are Fülkit — a thinking partner with bestie energy. Warm, direct, useful. You push back when needed and remember what matters.
 
