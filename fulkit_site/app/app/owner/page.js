@@ -4295,7 +4295,14 @@ function NotesTab() {
 
 /* ─── Revenue Projections Data ─── */
 
-// Dynamic revenue grid — all values derived from legend
+// Owner overhead — fixed monthly cost for Collin (Opus) + Shandy (Founder/Sonnet)
+const OWNER_OVERHEAD = {
+  collin: { label: "Collin (Opus)", msgsPerMonth: 450, costPerMsg: 0.09, monthly: Math.round(450 * 0.09) },
+  shandy: { label: "Shandy (Founder)", msgsPerMonth: 450, costPerMsg: 0.015, monthly: Math.round(450 * 0.015 * 100) / 100 },
+  get total() { return this.collin.monthly + this.shandy.monthly; },
+};
+
+// Dynamic revenue grid — all values derived from legend + owner overhead
 function buildRevenueGrid() {
   const split = PROJECTIONS.standardProSplit;
   const freeSeats = PROJECTIONS.freeSeatsDefault;
@@ -4306,17 +4313,18 @@ function buildRevenueGrid() {
   const refCredit = PROJECTIONS.blendedRefCreditPerUser;
   const stdPrice = PLANS.standard.priceMonthly;
   const proPrice = PLANS.pro.priceMonthly;
+  const ownerCost = OWNER_OVERHEAD.total;
 
-  return [20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000].map(users => {
-    const paying = users - freeSeats;
+  return [10, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000].map(users => {
+    const paying = Math.max(0, users - freeSeats);
     const std = Math.round(paying * split);
     const pro = paying - std;
     const revenue = (std * stdPrice) + (pro * proPrice);
     const apiCost = Math.round(users * avgMsgs * costPerMsg);
     const credits = Math.round(paying * refCredit);
     const hosting = hostBase + Math.floor(users / 100) * hostPer100;
-    const net = revenue - apiCost - credits - hosting;
-    return { users, free: freeSeats, std, pro, revenue, apiCost, credits, hosting, net };
+    const net = revenue - apiCost - credits - hosting - ownerCost;
+    return { users, free: freeSeats, std, pro, revenue, apiCost, credits, hosting, ownerCost, net };
   });
 }
 const REVENUE_GRID = buildRevenueGrid();
@@ -4490,9 +4498,27 @@ function UsersTab() {
         </div>
       </div>
 
+      {/* ── YOUR OVERHEAD ── */}
+      <div style={cardStyle}>
+        <div style={sectionLabel}>Your Monthly Overhead</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "var(--space-1)", fontSize: "var(--font-size-sm)", fontFamily: "var(--font-mono)" }}>
+          <span style={{ color: "var(--color-text-muted)" }}>Hosting (Vercel + Supabase)</span>
+          <span style={{ textAlign: "right" }}>${PROJECTIONS.hostingBase}</span>
+          <span style={{ color: "var(--color-text-muted)" }}>{OWNER_OVERHEAD.collin.label}</span>
+          <span style={{ textAlign: "right" }}>${OWNER_OVERHEAD.collin.monthly}</span>
+          <span style={{ color: "var(--color-text-muted)" }}>{OWNER_OVERHEAD.shandy.label}</span>
+          <span style={{ textAlign: "right" }}>${OWNER_OVERHEAD.shandy.monthly}</span>
+          <span style={{ color: "var(--color-text)", fontWeight: "var(--font-weight-semibold)", borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-1)" }}>Total before users</span>
+          <span style={{ textAlign: "right", fontWeight: "var(--font-weight-semibold)", borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-1)" }}>${PROJECTIONS.hostingBase + OWNER_OVERHEAD.total}/mo</span>
+        </div>
+        <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginTop: "var(--space-3)", lineHeight: "var(--line-height-relaxed)" }}>
+          Collin runs Opus (~9&cent;/msg). Shandy runs Sonnet as Founder (~1.5&cent;/msg). Regular users run Sonnet (~1.2&cent;/msg target).
+        </p>
+      </div>
+
       {/* ── REVENUE GRID ── */}
       <div style={cardStyle}>
-        <div style={sectionLabel}>Revenue Projections</div>
+        <div style={sectionLabel}>Revenue Projections (includes your overhead)</div>
 
         {/* Key */}
         <div style={{
@@ -4510,7 +4536,7 @@ function UsersTab() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Users", "Trial", "Std", "Pro", "Revenue", "API Cost", "Ref Credits", "Hosting", "Net"].map((h, i) => (
+                {["Users", "Trial", "Std", "Pro", "Revenue", "API Cost", "You Two", "Hosting", "Net"].map((h, i) => (
                   <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "right" }}>{h}</th>
                 ))}
               </tr>
@@ -4518,6 +4544,7 @@ function UsersTab() {
             <tbody>
               {REVENUE_GRID.map((row) => {
                 const isHighlight = row.users === highlightUsers;
+                const isBreakeven = REVENUE_GRID.find((r, i) => i > 0 && r.net >= 0 && REVENUE_GRID[i - 1].net < 0)?.users === row.users;
                 const rowBg = isHighlight ? "var(--color-bg-alt)" : "transparent";
                 const rowWeight = isHighlight ? "var(--font-weight-semibold)" : "normal";
                 const leftBorder = isHighlight ? "3px solid var(--color-text)" : "3px solid transparent";
@@ -4529,10 +4556,10 @@ function UsersTab() {
                     <td style={tdStyle}>{row.pro}</td>
                     <td style={tdStyle}>{formatDollar(row.revenue)}</td>
                     <td style={tdStyle}>{formatDollar(row.apiCost)}</td>
-                    <td style={tdStyle}>{formatDollar(row.credits)}</td>
+                    <td style={tdStyle}>{formatDollar(row.ownerCost)}</td>
                     <td style={tdStyle}>{formatDollar(row.hosting)}</td>
                     <td style={{ ...tdStyle, fontWeight: "var(--font-weight-bold)" }}>
-                      {row.net >= 0 ? "+" : ""}{formatDollar(row.net)}
+                      {row.net >= 0 ? "+" : ""}{formatDollar(row.net)}{isBreakeven ? " \u2190" : ""}
                     </td>
                   </tr>
                 );
@@ -4549,7 +4576,7 @@ function UsersTab() {
           marginTop: "var(--space-4)",
           fontStyle: "italic",
         }}>
-          The house never loses. Every user is capped by the {"\u00FC"}l system. At 100 users you net ~$430/mo. At 1,000 it's $5K/mo.
+          Net includes your overhead (${PROJECTIONS.hostingBase + OWNER_OVERHEAD.total}/mo). Every user is capped by the {"\u00FC"}l system. BYOK users cost $0.
         </p>
       </div>
 
