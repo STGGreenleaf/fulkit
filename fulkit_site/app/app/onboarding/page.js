@@ -1047,23 +1047,31 @@ function VaultSetupStep({ onAdvance }) {
   const { connectVault, setStorageMode } = useVaultContext();
   const supported = isFileSystemAccessSupported();
 
+  // Non-Chromium: auto-set Model C and advance immediately
+  useEffect(() => {
+    if (!supported) {
+      setStorageMode("fulkit");
+      onAdvance("fulkit_managed");
+    }
+  }, [supported, setStorageMode, onAdvance]);
+
   const handleDownload = () => {
     if (downloadRef.current) downloadRef.current.click();
     setDownloadState("downloaded");
   };
 
   const handleConnect = async () => {
-    if (!supported) { onAdvance("fulkit_managed"); return; }
     setDownloadState("connecting");
     try {
       await connectVault();
       await setStorageMode("local");
       onAdvance("connected");
     } catch {
-      // User cancelled picker — stay on screen
       setDownloadState("downloaded");
     }
   };
+
+  if (!supported) return null; // Safari/Firefox skip this screen entirely
 
   return (
     <div>
@@ -1094,21 +1102,19 @@ function VaultSetupStep({ onAdvance }) {
         ))}
       </div>
 
-      {/* Recommendation */}
       <p style={{
         fontSize: "var(--font-size-xs)",
         color: "var(--color-text-muted)",
         lineHeight: "var(--line-height-relaxed)",
         marginBottom: "var(--space-4)",
       }}>
-        We recommend our structure — it&apos;s clean and F{"\u00FC"}lkit knows how to use it. Have your own folders? We&apos;ll help you migrate.
+        This is your brain. F{"\u00FC"}lkit saves notes, decisions, and summaries as files on your computer. Your data stays yours.
       </p>
 
       {/* Hidden download link */}
       <a ref={downloadRef} href="/fulkit-vault.zip" download="fulkit-vault.zip" style={{ display: "none" }} />
 
       {downloadState === "downloaded" ? (
-        /* Post-download confirmation */
         <div>
           <p style={{
             fontSize: "var(--font-size-sm)",
@@ -1116,7 +1122,7 @@ function VaultSetupStep({ onAdvance }) {
             lineHeight: "var(--line-height-relaxed)",
             marginBottom: "var(--space-4)",
           }}>
-            Unzip it on your Desktop — easiest to find, easiest to use. When you&apos;re ready:
+            Unzip it on your Desktop. Then point F{"\u00FC"}lkit to it:
           </p>
           <button
             onClick={handleConnect}
@@ -1139,22 +1145,22 @@ function VaultSetupStep({ onAdvance }) {
               opacity: downloadState === "connecting" ? 0.6 : 1,
             }}
           >
-            {downloadState === "connecting" ? "Connecting..." : "Point to your folder"}
+            {downloadState === "connecting" ? "Connecting..." : "Connect my vault folder"}
             {downloadState !== "connecting" && <ArrowRight size={16} strokeWidth={2.5} />}
           </button>
         </div>
       ) : (
-        /* Three options */
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <button
             onClick={handleDownload}
             style={{
               padding: "var(--space-3) var(--space-4)",
-              background: "var(--color-bg-elevated)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
+              background: "var(--color-accent)",
+              color: "var(--color-text-inverse)",
+              border: "none",
               borderRadius: "var(--radius-md)",
               fontSize: "var(--font-size-base)",
+              fontWeight: "var(--font-weight-semibold)",
               fontFamily: "var(--font-primary)",
               textAlign: "left",
               cursor: "pointer",
@@ -1163,7 +1169,7 @@ function VaultSetupStep({ onAdvance }) {
               gap: "var(--space-3)",
             }}
           >
-            <FolderDown size={18} strokeWidth={1.5} color="var(--color-text-dim)" />
+            <FolderDown size={18} strokeWidth={1.5} />
             Download F{"\u00FC"}lkit vault
           </button>
           <button
@@ -1184,27 +1190,7 @@ function VaultSetupStep({ onAdvance }) {
             }}
           >
             <FolderOpen size={18} strokeWidth={1.5} color="var(--color-text-dim)" />
-            I have my own folder
-          </button>
-          <button
-            onClick={() => onAdvance("fulkit_managed")}
-            style={{
-              padding: "var(--space-3) var(--space-4)",
-              background: "transparent",
-              color: "var(--color-text-dim)",
-              border: "none",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-xs)",
-              fontFamily: "var(--font-primary)",
-              textAlign: "left",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-3)",
-            }}
-          >
-            <Cloud size={16} strokeWidth={1.5} />
-            I&apos;ll use F{"\u00FC"}lkit storage
+            I already have a folder (Obsidian, etc.)
           </button>
         </div>
       )}

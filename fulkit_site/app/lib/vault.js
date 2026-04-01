@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { useAuth } from "./auth";
 import { supabase } from "./supabase";
 import { selectContext, selectContextWithMetadata, estimateTokens } from "./vault-tokens";
-import { isFileSystemAccessSupported, pickVaultDirectory, restoreDirectoryHandle, disconnectVault as disconnectLocal, readLocalVault, writeLocalNote, deleteLocalNote } from "./vault-local";
+import { isFileSystemAccessSupported, pickVaultDirectory, restoreDirectoryHandle, disconnectVault as disconnectLocal, readLocalVault, writeLocalNote, deleteLocalNote, validateVaultStructure } from "./vault-local";
 import { deriveKey, generateSalt, encryptNote, decryptNote, cacheKey, getCachedKey, clearCachedKey } from "./vault-crypto";
 import { readFulkitNotes, readEncryptedNotes, updateContextMode, listNotes, searchNotes } from "./vault-fulkit";
 
@@ -82,20 +82,35 @@ export function VaultProvider({ children }) {
   const [lastScanHash, setLastScanHash] = useState("");
   const watcherRef = useRef(null);
 
+  const [vaultError, setVaultError] = useState(null); // "permission" | "structure" | null
+
   const scanVaultFolder = useCallback(async () => {
     if (storageMode !== "local" || !directoryHandle) return;
     try {
+      // Re-verify permission (Chrome can revoke silently)
+      const perm = await directoryHandle.queryPermission({ mode: "readwrite" });
+      if (perm !== "granted") {
+        setVaultError("permission");
+        return;
+      }
+      setVaultError(null);
+
+      // Re-validate structure every scan (user may have renamed/deleted folders)
+      await validateVaultStructure(directoryHandle);
+
       const notes = await readLocalVault(directoryHandle);
       const hash = notes.map(n => `${n.path}:${n.content.length}`).sort().join("|");
       if (hash !== lastScanHash) {
         setLastScanHash(hash);
         setLocalNoteCount(notes.length);
-        // Emit custom event so other components can react
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("fulkit-vault-change", { detail: { count: notes.length, notes } }));
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error("[vault] Scan failed:", err.message);
+      setVaultError("permission");
+    }
   }, [storageMode, directoryHandle, lastScanHash]);
 
   useEffect(() => {
@@ -304,6 +319,7 @@ export function VaultProvider({ children }) {
         deleteFromLocalVault,
         scanVaultFolder,
         localNoteCount,
+        vaultError,
 
         // Model B
         setPassphrase,
