@@ -5617,7 +5617,7 @@ function SocialsTab() {
                     </div>
 
                     {/* Thumbnail strip */}
-                    <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+                    <div style={{ display: "flex", gap: "var(--space-1-5)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
                       {concepts.map((c, i) => {
                         const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
                         const isActive = i === idx;
@@ -5626,16 +5626,16 @@ function SocialsTab() {
                             <div
                               onClick={() => setSocialConceptIdx(i)}
                               style={{
-                                width: 80, aspectRatio: active.aspect,
+                                width: 56, height: 56,
                                 border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
                                 borderRadius: "var(--radius-sm)",
                                 overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                               }}
                             >
-                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
                             </div>
-                            <span style={{ fontSize: "var(--font-size-2xs)", color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
-                              #{i + 1}
+                            <span style={{ fontSize: 9, color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
+                              {i + 1}
                             </span>
                           </div>
                         );
