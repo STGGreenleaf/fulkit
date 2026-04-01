@@ -131,6 +131,11 @@ const SOURCE_LOGOS = {
       <path d="M12.77 2l9.23 9.23C21.476 6.377 17.623 2.524 12.77 2z"/>
     </svg>
   ),
+  vagaro: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-1.5-4.5L5 11l4.5-1.5L11 5l1.5 4.5L17 11l-4.5 1.5L11 17z"/>
+    </svg>
+  ),
   numbrly: (
     <svg width="16" height="16" viewBox="0 0 1080 1080" fill="currentColor">
       <circle cx="540" cy="540" r="490" fill="none" stroke="currentColor" strokeWidth="70"/>
@@ -243,7 +248,7 @@ const SOURCE_LOGOS = {
 
 const SUGGESTED_SOURCES = [];
 
-const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear", "apple_music"];
+const REAL_INTEGRATIONS = ["github", "fabric", "sonos", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear", "vagaro", "apple_music"];
 
 const SOURCE_DESCRIPTIONS = {
   square: {
@@ -390,6 +395,14 @@ const SOURCE_DESCRIPTIONS = {
     linkLabel: "linear.app",
     linkHref: "https://linear.app",
   },
+  vagaro: {
+    subtitle: "Your salon, in your pocket.",
+    description: "Vagaro manages appointments, clients, services, and payments for salons, spas, and wellness businesses. Connecting it means F\u00FClkit sees your schedule, client history, and service menu \u2014 ask who\u2019s coming in today without opening the app.",
+    gives: "Today\u2019s appointments, client lookup, service list, and booking details. Ask about your schedule or look up a client\u2019s info.",
+    tryPrompt: "Who\u2019s booked today?\u201D\n\u201CLook up client Sarah\u201D\n\u201CWhat services do I offer?",
+    linkLabel: "vagaro.com",
+    linkHref: "https://www.vagaro.com",
+  },
   apple_music: {
     subtitle: "Your library, your way.",
     description: "Apple Music brings your full library, playlists, and Apple-curated content into Fabric. Search, play, and build sets from your Apple Music catalog alongside Spotify and YouTube \u2014 all in one place.",
@@ -455,6 +468,7 @@ const ALL_SOURCES = [
   { id: "monday", name: "monday.com", cat: "Work Management" },
   { id: "apple_music", name: "Apple Music", cat: "Media" },
   { id: "linear", name: "Linear", cat: "Dev" },
+  { id: "vagaro", name: "Vagaro", cat: "Beauty & Wellness" },
   { id: "quickbooks", name: "QuickBooks", cat: "Accounting" },
   { id: "whoop", name: "Whoop", cat: "Health" },
   { id: "fitbit", name: "Fitbit", cat: "Health" },
@@ -1267,10 +1281,15 @@ function SourcesTab() {
 
   const [mondayConnected, setMondayConnected] = useState(false);
   const [linearConnected, setLinearConnected] = useState(false);
+  const [vagaroConnected, setVagaroConnected] = useState(false);
   const [mondayExpanded, setMondayExpanded] = useState(false);
   const [mondayLastSynced, setMondayLastSynced] = useState(null);
   const [linearExpanded, setLinearExpanded] = useState(false);
   const [linearLastSynced, setLinearLastSynced] = useState(null);
+  const [vagaroExpanded, setVagaroExpanded] = useState(false);
+  const [vagaroForm, setVagaroForm] = useState({ clientId: "", clientSecretKey: "", region: "" });
+  const [vagaroConnecting, setVagaroConnecting] = useState(false);
+  const [vagaroError, setVagaroError] = useState(null);
   const [mondayDisconnecting, setMondayDisconnecting] = useState(false);
 
   const [dropboxConnected, setDropboxConnected] = useState(false);
@@ -1448,6 +1467,8 @@ function SourcesTab() {
       if (asana) { setAsanaConnected(asana.connected); if (asana.lastSynced) setAsanaLastSynced(asana.lastSynced); }
       if (monday) { setMondayConnected(monday.connected); if (monday.lastSynced) setMondayLastSynced(monday.lastSynced); }
       if (linear) { setLinearConnected(linear.connected); if (linear.lastSynced) setLinearLastSynced(linear.lastSynced); }
+      const vagaro = await authFetch("/api/vagaro/status").then(r => r.ok ? r.json() : null).catch(() => null);
+      if (vagaro) { setVagaroConnected(vagaro.connected); }
       setStatusReady(true);
     });
   }, [accessToken]);
@@ -1923,6 +1944,24 @@ function SourcesTab() {
     try { await fetch("/api/linear/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setLinearConnected(false); } catch {}
   }
 
+  async function connectVagaro() {
+    if (!vagaroForm.clientId || !vagaroForm.clientSecretKey || !vagaroForm.region) { setVagaroError("All three fields are required."); return; }
+    setVagaroConnecting(true); setVagaroError(null);
+    try {
+      const res = await authFetch("/api/vagaro/connect", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vagaroForm),
+      });
+      if (res.ok) { setVagaroConnected(true); setVagaroForm({ clientId: "", clientSecretKey: "", region: "" }); }
+      else { const err = await res.json().catch(() => ({})); setVagaroError(err.error || "Connection failed."); }
+    } catch { setVagaroError("Connection failed."); }
+    setVagaroConnecting(false);
+  }
+
+  async function disconnectVagaro() {
+    try { await authFetch("/api/vagaro/disconnect", { method: "POST" }); setVagaroConnected(false); } catch {}
+  }
+
   function connectDropbox() {
     if (accessToken) { window.open("/api/dropbox/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
     supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/dropbox/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
@@ -2162,8 +2201,9 @@ function SourcesTab() {
     ...(asanaConnected ? ["asana"] : []),
     ...(mondayConnected ? ["monday"] : []),
     ...(linearConnected ? ["linear"] : []),
+    ...(vagaroConnected ? ["vagaro"] : []),
   ];
-  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear"];
+  const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday", "linear", "vagaro"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
   const suggested = ALL_SOURCES.filter((s) => SUGGESTED_SOURCES.includes(s.id) && !allConnected.includes(s.id));
   const otherSources = ALL_SOURCES.filter(
@@ -2208,7 +2248,7 @@ function SourcesTab() {
     quickbooks: disconnectQB, obsidian: disconnectObsidian, notion: disconnectNotion,
     dropbox: disconnectDropbox, slack: disconnectSlack, onenote: disconnectOnenote,
     todoist: disconnectTodoist, readwise: disconnectReadwise,
-    asana: disconnectAsana, monday: disconnectMonday, linear: disconnectLinear,
+    asana: disconnectAsana, monday: disconnectMonday, linear: disconnectLinear, vagaro: disconnectVagaro,
   };
   const disconnect = (id) => {
     // Show purge prompt instead of immediately disconnecting
@@ -3519,6 +3559,68 @@ function SourcesTab() {
                       </div>
                     ),
                   })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Vagaro — credential-based connection */}
+            {(vagaroConnected || vagaroExpanded) && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.vagaro} name="Vagaro" subtitle={SOURCE_DESCRIPTIONS.vagaro.subtitle} isExpanded={vagaroExpanded} onToggle={() => setVagaroExpanded(!vagaroExpanded)} />
+                <Drawer open={vagaroExpanded}>
+                  {vagaroConnected ? richDrawerContent({
+                    expanded: vagaroExpanded,
+                    description: SOURCE_DESCRIPTIONS.vagaro.description,
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: SOURCE_DESCRIPTIONS.vagaro.gives,
+                    tryPrompt: SOURCE_DESCRIPTIONS.vagaro.tryPrompt,
+                    linkLabel: SOURCE_DESCRIPTIONS.vagaro.linkLabel,
+                    linkHref: SOURCE_DESCRIPTIONS.vagaro.linkHref,
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected</div>
+                        <button onClick={disconnectVagaro} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>Disconnect</button>
+                      </div>
+                    ),
+                  }) : (
+                    <div style={{ padding: "var(--space-4)" }}>
+                      <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)", marginBottom: "var(--space-3)" }}>
+                        {SOURCE_DESCRIPTIONS.vagaro.description}
+                      </p>
+                      <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginBottom: "var(--space-3)" }}>
+                        Find your credentials in Vagaro: Settings {"\u2192"} Developers {"\u2192"} APIs & Webhooks.
+                      </p>
+                      {[
+                        { key: "clientId", placeholder: "Client ID", type: "text" },
+                        { key: "clientSecretKey", placeholder: "Client Secret Key", type: "password" },
+                        { key: "region", placeholder: "Region (e.g. us01)", type: "text" },
+                      ].map(f => (
+                        <input key={f.key} type={f.type} placeholder={f.placeholder} value={vagaroForm[f.key]}
+                          onChange={(e) => setVagaroForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          style={{
+                            display: "block", width: "100%", marginBottom: "var(--space-2)",
+                            padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-sm)",
+                            fontFamily: "var(--font-primary)", border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-sm)", background: "var(--color-bg)", color: "var(--color-text)",
+                            outline: "none",
+                          }}
+                        />
+                      ))}
+                      {vagaroError && <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-warning, #C4A35A)", marginBottom: "var(--space-2)" }}>{vagaroError}</p>}
+                      <button onClick={connectVagaro} disabled={vagaroConnecting}
+                        style={{
+                          display: "block", width: "100%", textAlign: "center",
+                          padding: "var(--space-2) var(--space-3)", background: "var(--color-text)",
+                          color: "var(--color-bg)", border: "none", borderRadius: "var(--radius-sm)",
+                          fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
+                          fontFamily: "var(--font-primary)", cursor: "pointer",
+                          opacity: vagaroConnecting ? 0.5 : 1,
+                        }}
+                      >
+                        {vagaroConnecting ? "Connecting..." : "Connect Vagaro"}
+                      </button>
+                    </div>
+                  )}
                 </Drawer>
               </Card>
             )}
