@@ -10,6 +10,7 @@ import { supabase } from "../../lib/supabase";
 
 export default function Onboarding() {
   const { user, fetchProfile } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
   const track = useTrack();
   const router = useRouter();
 
@@ -133,9 +134,11 @@ export default function Onboarding() {
     if (user) load();
   }, [user]);
 
-  // No user → go to landing
+  // No user → go to landing (but wait for auth to resolve first)
   useEffect(() => {
-    if (!user) router.replace("/");
+    if (user) { setAuthChecked(true); return; }
+    const timer = setTimeout(() => { if (!user) router.replace("/"); }, 2000);
+    return () => clearTimeout(timer);
   }, [user, router]);
 
   // Focus input on question change
