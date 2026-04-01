@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowRight, ArrowLeft, Check, SkipForward, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
@@ -594,7 +594,6 @@ export default function Onboarding() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
         <ProgressBar pct={totalProgress} />
-        <SkipLink />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
             Tier {tier.tier_num}
@@ -682,7 +681,6 @@ export default function Onboarding() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh", position: "relative" }}>
         <ProgressBar pct={totalProgress} />
-        <SkipLink />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
             Tier {tier.tier_num}
@@ -969,27 +967,6 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* ─── Skip ─── */}
-        {(question?.skippable || qType === "text_input") && qType !== "feature_walkthrough" && (
-          <button
-            onClick={skip}
-            style={{
-              marginTop: "var(--space-4)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-dim)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "var(--font-primary)",
-            }}
-          >
-            <SkipForward size={12} strokeWidth={2} />
-            Skip
-          </button>
-        )}
 
         {/* Back button — for non-multi-select question types */}
         {qType !== "multi_select" && (questionIdx > 0 || tierIdx > 0) && (
@@ -1022,22 +999,6 @@ function ProgressBar({ pct }) {
 }
 
 
-function SkipLink() {
-  return (
-    <a
-      href="/home"
-      style={{
-        position: "fixed", top: "var(--space-5)", right: "var(--space-6)",
-        fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)",
-        textDecoration: "none", transition: "color 200ms",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
-      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-dim)")}
-    >
-      I'll do this later
-    </a>
-  );
-}
 
 const VAULT_TREE = [
   { name: "_FULKIT/", desc: "your brain (always loaded)", icon: Folder },
