@@ -890,41 +890,56 @@ export default function Onboarding() {
         )}
 
         {/* ─── Integration picker ─── */}
-        {qType === "integration_picker" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            {(question.options || [{ label: "Spotify" }, { label: "I'll do this later" }]).map((opt) => {
-              const label = typeof opt === "string" ? opt : opt.label;
-              const isSkip = label.toLowerCase().includes("later") || label.toLowerCase().includes("skip");
-              return (
+        {qType === "integration_picker" && (() => {
+          const allOpts = question.options || [];
+          const integrations = allOpts.filter(o => { const l = (typeof o === "string" ? o : o.label).toLowerCase(); return !l.includes("later") && !l.includes("skip"); });
+          const skipOpt = allOpts.find(o => { const l = (typeof o === "string" ? o : o.label).toLowerCase(); return l.includes("later") || l.includes("skip"); });
+          return (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+                {integrations.map((opt) => {
+                  const label = typeof opt === "string" ? opt : opt.label;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => advance(label)}
+                      style={{
+                        padding: "var(--space-3) var(--space-3)",
+                        background: "var(--color-bg-elevated)",
+                        color: "var(--color-text)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-sm)",
+                        fontFamily: "var(--font-primary)",
+                        textAlign: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {skipOpt && (
                 <button
-                  key={label}
-                  onClick={() => {
-                    if (isSkip) {
-                      advance("skipped");
-                    } else {
-                      // For now, record the selection and advance
-                      // Actual OAuth flow would be triggered here
-                      advance(label);
-                    }
-                  }}
+                  onClick={() => advance("skipped")}
                   style={{
-                    padding: "var(--space-3) var(--space-4)",
-                    background: isSkip ? "transparent" : "var(--color-bg-elevated)",
-                    color: isSkip ? "var(--color-text-dim)" : "var(--color-text)",
-                    border: isSkip ? "none" : "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: isSkip ? "var(--font-size-xs)" : "var(--font-size-base)",
+                    marginTop: "var(--space-3)",
+                    padding: "var(--space-2)",
+                    background: "transparent",
+                    color: "var(--color-text-dim)",
+                    border: "none",
+                    fontSize: "var(--font-size-xs)",
                     fontFamily: "var(--font-primary)",
-                    textAlign: "left",
                     cursor: "pointer",
                   }}
                 >
-                  {label}
+                  {typeof skipOpt === "string" ? skipOpt : skipOpt.label}
                 </button>
-              );
-            })}
-          </div>
-        )}
+              )}
+            </>
+          );
+        })()}
 
         {/* ─── Vault setup ─── */}
         {qType === "vault_setup" && (
