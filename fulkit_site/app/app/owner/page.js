@@ -4157,22 +4157,6 @@ const OWNER_NOTES = [
     ],
   },
   {
-    category: "Integrations",
-    items: [
-      { name: "Stripe", url: "https://dashboard.stripe.com", note: "Payments — account 'Fulkit'. sk_live_ key wired directly (no Connect OAuth yet)." },
-      { name: "Spotify", url: "https://developer.spotify.com", note: "Development Mode — only Collin's account. Needs Extended Quota Mode for other users." },
-      { name: "GitHub", url: "https://github.com/settings/developers", note: "OAuth app for repo access integration." },
-      { name: "Trello", url: "https://trello.com/power-ups/admin", note: "Power-Up for board integration." },
-      { name: "QuickBooks", url: "https://developer.intuit.com/app/developer/dashboard", note: "Intuit Developer. App: Fulkit. Production keys live. Accounting + Payments API." },
-      { name: "Notion", url: "https://www.notion.so/my-integrations", note: "Public integration. OAuth Client ID + Secret. Read content only." },
-      { name: "Dropbox", url: "https://www.dropbox.com/developers/apps", note: "App: F\u00FClkit. Production applied. Read-only (files.metadata.read, files.content.read)." },
-      { name: "Slack", url: "https://api.slack.com/apps", note: "App: Fulkit. User scopes: channels:read, channels:history, search:read, users:read." },
-      { name: "Microsoft (OneNote)", url: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade", note: "Azure App Registration: Fulkit. Notes.Read + User.Read + offline_access. Multi-tenant." },
-      { name: "Todoist", url: "https://developer.todoist.com/appconsole.html", note: "App: Fulkit. data:read scope." },
-      { name: "Readwise", url: "https://readwise.io/access_token", note: "API key based \u2014 no developer app needed. Users paste their own key." },
-    ],
-  },
-  {
     category: "Domain",
     items: [
       { name: "GoDaddy", url: "https://www.godaddy.com", note: "Domain registrar for fulkit.app + fullkit.app. Nameservers pointed to Vercel." },
@@ -4192,7 +4176,7 @@ const OWNER_NOTES = [
       { name: "Fitbit Dev", url: "https://dev.fitbit.com", note: "OAuth app registered. Client ID: 23V5V8. Activity, sleep, heart rate, weight." },
       { name: "Whoop Dev", url: "https://developer-dashboard.whoop.com", note: "Requires Whoop device + membership. Sleep, recovery, strain, HR." },
       { name: "Oura Dev", url: "https://cloud.ouraring.com/oauth/applications", note: "Not yet registered. Sleep, readiness, HR." },
-      { name: "Strava Dev", url: "https://developers.strava.com", note: "Not yet registered. Runs, rides, workouts." },
+      { name: "Strava Dev", url: "https://developers.strava.com", note: "\u2705 Live. OAuth + webhook. 1000-athlete review submitted." },
       { name: "Garmin Dev", url: "https://developerprogram.garmin.com", note: "Not yet registered. OAuth 1.0a (harder). Activity, sleep, HR, stress." },
       { name: "Vital (paused)", url: "https://dashboard.tryvital.io", note: "Health aggregator. $300/mo min. Webhook configured, signing secret saved. Revisit at scale." },
       { name: "Terra (skipped)", url: "https://dashboard.tryterra.co", note: "Health aggregator. $499/mo min. Too expensive pre-launch." },
