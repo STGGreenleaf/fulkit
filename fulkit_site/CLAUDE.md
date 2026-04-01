@@ -113,6 +113,7 @@ This is the most complex file (~3500 lines). The flow:
 | `readwise-server.js` | Readwise API key auth + highlights |
 | `asana-server.js` | Asana OAuth + token refresh + API wrapper |
 | `monday-server.js` | monday.com OAuth + GraphQL API wrapper |
+| `linear-server.js` | Linear OAuth + GraphQL API wrapper |
 | `signal.js` | Signal Radio client-side (CWV, error boundary, fetch interceptor) |
 | `signal-server.js` | Signal Radio server-side (emit, query, Spend Moderator) |
 | `email-templates.js` | Welcome + notification email templates (Resend) |
@@ -148,6 +149,7 @@ This is the most complex file (~3500 lines). The flow:
 | `api/trello/*` | Trello OAuth + boards/cards/lists |
 | `api/asana/*` | Asana OAuth (connect/callback/status/disconnect) |
 | `api/monday/*` | monday.com OAuth (connect/callback/status/disconnect) |
+| `api/linear/*` | Linear OAuth (connect/callback/status/disconnect) |
 | `api/sonos/*` | Sonos OAuth + rooms/control |
 | `api/owner/spend` | Spend Moderator aggregation (summary + flags + period comparison) |
 | `api/owner/heartbeat` | System health pulse (cost, errors, cache, integrations, doc freshness) |

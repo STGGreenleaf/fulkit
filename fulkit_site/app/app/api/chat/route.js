@@ -22,6 +22,7 @@ import { getTodoistToken, todoistFetch } from "../../../lib/todoist-server";
 import { getReadwiseToken, readwiseFetch } from "../../../lib/readwise-server";
 import { getAsanaToken, asanaFetch } from "../../../lib/asana-server";
 import { getMondayToken, mondayFetch } from "../../../lib/monday-server";
+import { getLinearToken, linearQuery } from "../../../lib/linear-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -256,6 +257,7 @@ const ECOSYSTEM_KEYWORDS = {
   readwise: ["readwise", "highlight", "annotation", "book", "article", "reading", "kindle"],
   asana: ["asana", "task", "assignee", "project", "section", "subtask", "workspace", "milestone", "due date"],
   monday: ["monday", "board", "item", "column", "group", "status", "pulse", "timeline"],
+  linear: ["linear", "issue", "bug", "ticket", "sprint", "backlog", "cycle", "triage"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -3237,6 +3239,81 @@ async function executeMondayTool(name, input, userId) {
   throw new Error(`Unknown monday tool: ${name}`);
 }
 
+const LINEAR_TOOLS = [
+  {
+    name: "linear_issues",
+    description: "List or search Linear issues. Filter by team, status, assignee, or keyword.",
+    input_schema: {
+      type: "object",
+      properties: {
+        teamName: { type: "string", description: "Filter by team name. Optional." },
+        status: { type: "string", description: "Filter by status name (e.g. 'In Progress', 'Todo', 'Done'). Optional." },
+        assignedToMe: { type: "boolean", description: "Only show issues assigned to the authenticated user. Default false." },
+        query: { type: "string", description: "Search issues by title. Optional." },
+        limit: { type: "integer", description: "Max issues to return. Default 25." },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "linear_teams",
+    description: "List teams in the user's Linear workspace.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "linear_create_issue",
+    description: "Create a new issue in Linear.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Issue title." },
+        description: { type: "string", description: "Issue description (markdown). Optional." },
+        teamId: { type: "string", description: "Team ID (get from linear_teams). Required." },
+        priority: { type: "integer", description: "Priority: 0=none, 1=urgent, 2=high, 3=medium, 4=low. Optional." },
+        labelIds: { type: "array", items: { type: "string" }, description: "Label IDs. Optional." },
+      },
+      required: ["title", "teamId"],
+    },
+  },
+];
+
+async function executeLinearTool(name, input, userId) {
+  if (name === "linear_issues") {
+    const limit = Math.min(input.limit || 25, 50);
+    let filter = "";
+    const filters = [];
+    if (input.teamName) filters.push(`team: { name: { eq: ${JSON.stringify(input.teamName)} } }`);
+    if (input.status) filters.push(`state: { name: { eq: ${JSON.stringify(input.status)} } }`);
+    if (input.assignedToMe) filters.push(`assignee: { isMe: { eq: true } }`);
+    if (input.query) filters.push(`title: { contains: ${JSON.stringify(input.query)} }`);
+    if (filters.length) filter = `filter: { ${filters.join(", ")} }, `;
+    const query = `{ issues(${filter}first: ${limit}, orderBy: updatedAt) { nodes { id identifier title priority state { name } assignee { name } team { name } dueDate labels { nodes { name } } } } }`;
+    const data = await linearQuery(userId, query);
+    if (data.error) return data;
+    return { issues: (data.issues?.nodes || []).map(i => ({ id: i.identifier, title: i.title, status: i.state?.name, priority: i.priority, assignee: i.assignee?.name, team: i.team?.name, due: i.dueDate, labels: (i.labels?.nodes || []).map(l => l.name) })) };
+  }
+  if (name === "linear_teams") {
+    const data = await linearQuery(userId, "{ teams { nodes { id name key description } } }");
+    if (data.error) return data;
+    return { teams: (data.teams?.nodes || []).map(t => ({ id: t.id, name: t.name, key: t.key, description: t.description })) };
+  }
+  if (name === "linear_create_issue") {
+    const vars = { title: input.title, teamId: input.teamId };
+    if (input.description) vars.description = input.description;
+    if (input.priority != null) vars.priority = input.priority;
+    if (input.labelIds) vars.labelIds = input.labelIds;
+    const data = await linearQuery(userId, `mutation($title: String!, $teamId: String!, $description: String, $priority: Int, $labelIds: [String!]) {
+      issueCreate(input: { title: $title, teamId: $teamId, description: $description, priority: $priority, labelIds: $labelIds }) {
+        success issue { id identifier title state { name } team { name } url }
+      }
+    }`, vars);
+    if (data.error) return data;
+    const issue = data.issueCreate?.issue;
+    return { created: data.issueCreate?.success, issue: { id: issue?.identifier, title: issue?.title, status: issue?.state?.name, team: issue?.team?.name, url: issue?.url } };
+  }
+  throw new Error(`Unknown linear tool: ${name}`);
+}
+
 // Geocode cache — locations don't move, cache aggressively
 const _geocodeCache = new Map();
 
@@ -4994,7 +5071,8 @@ export async function POST(request) {
         safeGet(getReadwiseToken, "readwise"),
         safeGet(getAsanaToken, "asana"),
         safeGet(getMondayToken, "monday"),
-      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
+        safeGet(getLinearToken, "linear"),
+      ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
       // Semantic note search (Voyage embedding → match_notes RPC, with fallback cache)
@@ -5043,7 +5121,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "free") === "free";
@@ -5063,6 +5141,7 @@ export async function POST(request) {
         { ref: "onenoteToken", val: onenoteToken }, { ref: "todoistToken", val: todoistToken },
         { ref: "readwiseToken", val: readwiseToken },
         { ref: "asanaToken", val: asanaToken }, { ref: "mondayToken", val: mondayToken },
+        { ref: "linearToken", val: linearToken },
       ];
       let count = 0;
       for (const s of slots) {
@@ -5091,6 +5170,7 @@ export async function POST(request) {
             else if (s.ref === "readwiseToken") readwiseToken = null;
             else if (s.ref === "asanaToken") asanaToken = null;
             else if (s.ref === "mondayToken") mondayToken = null;
+            else if (s.ref === "linearToken") linearToken = null;
           }
         }
       }
@@ -5394,7 +5474,7 @@ Never skip the preview step. The user must see and approve changes before they g
       qbToken && "QuickBooks", notionToken && "Notion",
       dropboxToken && "Dropbox", slackToken && "Slack",
       onenoteToken && "OneNote", todoistToken && "Todoist", readwiseToken && "Readwise",
-      asanaToken && "Asana", mondayToken && "monday.com",
+      asanaToken && "Asana", mondayToken && "monday.com", linearToken && "Linear",
     ].filter(Boolean);
     const contextCount = Array.isArray(context) ? context.length : 0;
     system += `\n\n## What's Loaded\nNotes: ${contextCount} loaded (use notes_search for others). KB: keyword-matched docs loaded above (if any).${connectedProviders.length > 0 ? ` Integrations: ${connectedProviders.join(", ")} connected — use their tools for live data, don't guess.` : ""} If the user asks about something not in your context, use your tools to find it.`;
@@ -5491,6 +5571,7 @@ Never skip the preview step. The user must see and approve changes before they g
       readwise: () => readwiseToken ? READWISE_TOOLS : [],
       asana: () => asanaToken ? ASANA_TOOLS : [],
       monday: () => mondayToken ? MONDAY_TOOLS : [],
+      linear: () => linearToken ? LINEAR_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -5573,7 +5654,7 @@ Never skip the preview step. The user must see and approve changes before they g
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
         onenote: !!onenoteToken, todoist: !!todoistToken, readwise: !!readwiseToken,
-        asana: !!asanaToken, monday: !!mondayToken,
+        asana: !!asanaToken, monday: !!mondayToken, linear: !!linearToken,
       },
       kbIncluded,
       kbExcluded,
@@ -5996,6 +6077,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("monday_") && mondayToken) {
                 try {
                   const result = await withTimeout(() => executeMondayTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Linear tools
+              if (block.name.startsWith("linear_") && linearToken) {
+                try {
+                  const result = await withTimeout(() => executeLinearTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

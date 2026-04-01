@@ -170,7 +170,7 @@
 
 ## Integration Roadmap
 
-> 22 chat sources live + Spotify/Sonos (Fabric) + 4 social publish (Bluesky, Threads, Facebook, Instagram).
+> 23 chat sources live + Spotify/Sonos (Fabric) + 4 social publish (Bluesky, Threads, Facebook, Instagram).
 > Each integration: connect/callback/status/disconnect, server lib, ECOSYSTEM_KEYWORDS, Settings UI card.
 
 ### Tier 1: Everyone
@@ -204,8 +204,11 @@
 - [x] **OneNote** — ✅ OAuth + chat tools (notebooks, sections, pages). Settings card.
 - [x] **Readwise** — ✅ API key auth + chat tools (highlights, books). Settings card.
 
+### Tier 5: Developer
+- [x] **Linear** — ✅ OAuth + 3 chat tools (issues, teams, create issue). GraphQL API. Settings card. Session 30.
+
 ### Contenders (evaluate later)
-Vagaro, Linear, Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, ClickUp, Zoom, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
+Vagaro, Calendly, Acuity, Mindbody, Clover, Xero, FreshBooks, HubSpot, Gusto, Mailchimp, Airtable, ClickUp, Zoom, YouTube, Vercel, Twilio, WooCommerce, Etsy, Amazon Seller.
 
 ---
 

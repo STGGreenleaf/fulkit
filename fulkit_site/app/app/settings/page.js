@@ -234,6 +234,11 @@ const SOURCE_LOGOS = {
       <ellipse cx="19.5" cy="12" rx="3" ry="7"/>
     </svg>
   ),
+  linear: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M3.35 14.57l6.08 6.08C5.23 20.19 2 16.2 2 12c0-.43.03-.86.08-1.28l1.27 1.27V14.57zm1.49 2.71l2.21 2.21C6.04 18.77 5.15 17.95 4.84 17.28zm3.71 3.07l1.2 1.2c-.21-.02-.42-.05-.63-.09l-.57-.57V20.35zm2.29 1.37l.63.28c-.21 0-.42-.01-.63-.03v-.25zm1.5.34c.22-.01.44-.03.65-.06l-1.15-1.15.5.5v.71zm1.7-.3c.23-.06.45-.13.67-.21l-2.37-2.37 1.7 1.7v.88zm1.69-.71c.21-.1.42-.21.62-.33l-3.52-3.52 2.9 2.9v.95zm1.53-1.03c.19-.13.37-.27.55-.42l-4.55-4.55 4 4v.97zm1.32-1.27c.16-.16.32-.33.47-.5l-5.47-5.47 5 5v.97zm1.06-1.52c.13-.19.25-.38.36-.58L14.53 9.53 20 15v.57zm.74-1.73c.08-.21.16-.43.23-.65l-6.76-6.76L19 12.14v1.4zM21.53 12c0-.22-.02-.44-.04-.65L15 4.87 19.63 9.5c.18.18.36.36.52.55l1.27 1.27c.07.42.11.85.11 1.28 0 .14 0 .28-.01.42"/>
+    </svg>
+  ),
 };
 
 const SUGGESTED_SOURCES = [];
@@ -416,6 +421,14 @@ const SOURCE_DESCRIPTIONS = {
     tryPrompt: "\u201CShow my monday boards\u201D\n\u201CWhat\u2019s on the sprint board?\u201D\n\u201CCreate an item: deploy hotfix\u201D",
     linkLabel: "monday.com",
     linkHref: "https://monday.com",
+  },
+  linear: {
+    subtitle: "Your issues, in the conversation.",
+    description: "Linear tracks issues, sprints, and cycles for dev teams. Connecting it means F\u00FClkit can see your backlog, search issues, and create new ones \u2014 without switching tabs.",
+    gives: "Team listing, issue search by status, assignee, or keyword, priority and label info, and the ability to create issues from chat.",
+    tryPrompt: "\u201CWhat issues are assigned to me?\u201D\n\u201CShow the backlog\u201D\n\u201CCreate a bug: login redirect fails on Safari\u201D",
+    linkLabel: "linear.app",
+    linkHref: "https://linear.app",
   },
 };
 
@@ -1250,8 +1263,11 @@ function SourcesTab() {
   const [asanaDisconnecting, setAsanaDisconnecting] = useState(false);
 
   const [mondayConnected, setMondayConnected] = useState(false);
+  const [linearConnected, setLinearConnected] = useState(false);
   const [mondayExpanded, setMondayExpanded] = useState(false);
   const [mondayLastSynced, setMondayLastSynced] = useState(null);
+  const [linearExpanded, setLinearExpanded] = useState(false);
+  const [linearLastSynced, setLinearLastSynced] = useState(null);
   const [mondayDisconnecting, setMondayDisconnecting] = useState(false);
 
   const [dropboxConnected, setDropboxConnected] = useState(false);
@@ -1399,7 +1415,8 @@ function SourcesTab() {
       check("/api/readwise/status"),
       check("/api/asana/status"),
       check("/api/monday/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise, asana, monday]) => {
+      check("/api/linear/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise, asana, monday, linear]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         setSpotifyConnected(!!fabric.providers?.spotify);
@@ -1427,6 +1444,7 @@ function SourcesTab() {
       if (readwise) { setReadwiseConnected(readwise.connected); }
       if (asana) { setAsanaConnected(asana.connected); if (asana.lastSynced) setAsanaLastSynced(asana.lastSynced); }
       if (monday) { setMondayConnected(monday.connected); if (monday.lastSynced) setMondayLastSynced(monday.lastSynced); }
+      if (linear) { setLinearConnected(linear.connected); if (linear.lastSynced) setLinearLastSynced(linear.lastSynced); }
       setStatusReady(true);
     });
   }, [accessToken]);
@@ -1894,6 +1912,14 @@ function SourcesTab() {
     setMondayDisconnecting(false);
   }
 
+  function connectLinear() {
+    if (accessToken) { window.open("/api/linear/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
+    supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/linear/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
+  }
+  async function disconnectLinear() {
+    try { await fetch("/api/linear/disconnect", { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); setLinearConnected(false); } catch {}
+  }
+
   function connectDropbox() {
     if (accessToken) { window.open("/api/dropbox/connect?token=" + encodeURIComponent(accessToken), "_blank"); return; }
     supabase.auth.getSession().then(({ data }) => { const token = data?.session?.access_token; if (token) window.open("/api/dropbox/connect?token=" + encodeURIComponent(token), "_blank"); }).catch(() => {});
@@ -2132,6 +2158,7 @@ function SourcesTab() {
     ...(readwiseConnected ? ["readwise"] : []),
     ...(asanaConnected ? ["asana"] : []),
     ...(mondayConnected ? ["monday"] : []),
+    ...(linearConnected ? ["linear"] : []),
   ];
   const CUSTOM_CARD_IDS = ["fabric", "github", "numbrly", "truegauge", "square", "shopify", "stripe", "toast", "trello", "fitbit", "strava", "sonos", "quickbooks", "obsidian", "notion", "dropbox", "slack", "onenote", "todoist", "readwise", "asana", "monday"];
   const connectedSources = ALL_SOURCES.filter((s) => allConnected.includes(s.id) && !CUSTOM_CARD_IDS.includes(s.id));
@@ -2166,6 +2193,7 @@ function SourcesTab() {
     if (id === "todoist") { connectTodoist(); return; }
     if (id === "asana") { connectAsana(); return; }
     if (id === "monday") { connectMonday(); return; }
+    if (id === "linear") { connectLinear(); return; }
     if (id === "readwise") { setReadwiseExpanded(true); return; }
     setConnected((prev) => [...prev, id]);
   };
@@ -2177,7 +2205,7 @@ function SourcesTab() {
     quickbooks: disconnectQB, obsidian: disconnectObsidian, notion: disconnectNotion,
     dropbox: disconnectDropbox, slack: disconnectSlack, onenote: disconnectOnenote,
     todoist: disconnectTodoist, readwise: disconnectReadwise,
-    asana: disconnectAsana, monday: disconnectMonday,
+    asana: disconnectAsana, monday: disconnectMonday, linear: disconnectLinear,
   };
   const disconnect = (id) => {
     // Show purge prompt instead of immediately disconnecting
@@ -3461,6 +3489,30 @@ function SourcesTab() {
                       <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{mondayLastSynced ? ` \u00B7 Last synced ${timeAgo(mondayLastSynced)}` : ""}</div>
                         <button onClick={() => disconnect("monday")} disabled={mondayDisconnecting} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer", opacity: mondayDisconnecting ? 0.5 : 1 }}>{mondayDisconnecting ? "..." : "Disconnect"}</button>
+                      </div>
+                    ),
+                  })}
+                </Drawer>
+              </Card>
+            )}
+
+            {/* Linear — connected */}
+            {linearConnected && (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <CardHeader logo={SOURCE_LOGOS.linear} name="Linear" subtitle={SOURCE_DESCRIPTIONS.linear.subtitle} isExpanded={linearExpanded} onToggle={() => setLinearExpanded(!linearExpanded)} />
+                <Drawer open={linearExpanded}>
+                  {richDrawerContent({
+                    expanded: linearExpanded,
+                    description: SOURCE_DESCRIPTIONS.linear.description,
+                    givesLabel: "What this gives F\u00FClkit",
+                    gives: SOURCE_DESCRIPTIONS.linear.gives,
+                    tryPrompt: SOURCE_DESCRIPTIONS.linear.tryPrompt,
+                    linkLabel: SOURCE_DESCRIPTIONS.linear.linkLabel,
+                    linkHref: SOURCE_DESCRIPTIONS.linear.linkHref,
+                    footer: (
+                      <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)" }}>Connected{linearLastSynced ? ` \u00B7 Last synced ${timeAgo(linearLastSynced)}` : ""}</div>
+                        <button onClick={() => disconnectLinear()} style={{ padding: "var(--space-1) var(--space-2)", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-muted)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)", cursor: "pointer" }}>Disconnect</button>
                       </div>
                     ),
                   })}
