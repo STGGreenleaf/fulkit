@@ -2878,9 +2878,11 @@ function DeveloperTab() {
                 { id: "feature", label: "Feature" },
                 { id: "bug", label: "Bug" },
                 { id: "done", label: "Done" },
+                { id: "archive", label: "Archive" },
               ];
               const filtered = tickets.filter(t => {
-                if (t.status === "wontfix") return false; // archived
+                if (ticketFilter === "archive") return t.status === "wontfix";
+                if (t.status === "wontfix") return false;
                 if (ticketFilter === "unread") return t.status === "open";
                 if (ticketFilter === "feature") return t.category === "feature";
                 if (ticketFilter === "bug") return t.category === "bug";
@@ -2914,7 +2916,9 @@ function DeveloperTab() {
                         : f.id === "unread" ? tickets.filter(t => t.status === "open").length
                         : f.id === "feature" ? tickets.filter(t => t.category === "feature" && t.status !== "wontfix").length
                         : f.id === "bug" ? tickets.filter(t => t.category === "bug" && t.status !== "wontfix").length
-                        : tickets.filter(t => t.status === "fixed").length;
+                        : f.id === "done" ? tickets.filter(t => t.status === "fixed").length
+                        : f.id === "archive" ? tickets.filter(t => t.status === "wontfix").length
+                        : 0;
                       return (
                         <button key={f.id} onClick={() => { setTicketFilter(f.id); setSelectedContact(null); }} style={{
                           padding: "var(--space-1) var(--space-2)",
@@ -3016,7 +3020,11 @@ function DeveloperTab() {
                               {!t.reply && <button onClick={() => { setReplyingTo(replyingTo === t.id ? null : t.id); setReplyText(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Reply</button>}
                               {t.status === "open" && <button onClick={() => updateTicket(t.id, { status: "seen" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Mark read</button>}
                               {!t.reply && <button onClick={() => updateTicket(t.id, { status: "fixed" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Done</button>}
-                              <button onClick={() => archiveTicket(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}>Archive</button>
+                              {t.status === "wontfix" ? (
+                                <button onClick={() => updateTicket(t.id, { status: "open" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}>Restore</button>
+                              ) : (
+                                <button onClick={() => archiveTicket(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}>Archive</button>
+                              )}
                             </div>
                           </div>
                         ))}
