@@ -983,6 +983,20 @@ export default function Landing() {
           We don{"\u2019"}t read your notes. We encrypt them so we can{"\u2019"}t.
         </p>
 
+        <p
+          style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-muted)",
+            lineHeight: "var(--line-height-relaxed)",
+            textAlign: "center",
+            maxWidth: 480,
+            margin: "0 auto var(--space-12)",
+            marginTop: "calc(-1 * var(--space-8))",
+          }}
+        >
+          No AI product does this. ChatGPT, Claude, Notion {"\u2014"} they all hold your data on their servers. F{"\u00FC"}lkit writes it to your desktop. Delete your account and your files are still there.
+        </p>
+
         <div
           style={{
             display: "grid",
