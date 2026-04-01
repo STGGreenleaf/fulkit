@@ -5124,7 +5124,7 @@ export async function POST(request) {
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
-    const isTrial = !config.isByok && profile?.role !== "owner" && (profile?.seat_type || "trial") === "free";
+    const isTrial = !config.isByok && profile?.role !== "owner" && ["free", "trial"].includes(profile?.seat_type || "trial");
     if (isTrial) {
       const maxInt = PLANS.trial.integrations; // 1
       const slots = [
@@ -5428,7 +5428,7 @@ export async function POST(request) {
 
         if (!hasCode) {
           whisperHint += `They haven't generated a referral code yet. If the moment is right, mention that they can share Fülkit with friends and earn credit toward their subscription. Their referral link is in Settings > Referrals.`;
-        } else if (seatType !== "free" && toFreeStandard > 0 && toFreeStandard <= 3) {
+        } else if (!["free", "trial"].includes(seatType) && toFreeStandard > 0 && toFreeStandard <= 3) {
           whisperHint += `They're ${toFreeStandard} referral${toFreeStandard === 1 ? "" : "s"} away from making their Standard plan free. A gentle mention could be motivating.`;
         } else if (toFreePro > 0 && toFreePro <= 3) {
           whisperHint += `They're ${toFreePro} referral${toFreePro === 1 ? "" : "s"} away from making their Pro plan free.`;

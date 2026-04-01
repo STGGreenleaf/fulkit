@@ -59,7 +59,7 @@ export async function GET(request) {
         // Grace period expired — revoke to free
         await admin
           .from("profiles")
-          .update({ seat_type: "free" })
+          .update({ seat_type: "trial" })
           .eq("id", user.id);
 
         revoked.push({ id: user.id, name: user.name, email: user.email, daysSince: daysSinceLastMsg });

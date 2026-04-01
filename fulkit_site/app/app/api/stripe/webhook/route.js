@@ -277,7 +277,7 @@ export async function POST(request) {
           await admin
             .from("profiles")
             .update({
-              seat_type: "free",
+              seat_type: "trial",
               stripe_subscription_id: null,
             })
             .eq("id", userId);
@@ -293,7 +293,7 @@ export async function POST(request) {
             await admin
               .from("profiles")
               .update({
-                seat_type: "free",
+                seat_type: "trial",
                 stripe_subscription_id: null,
               })
               .eq("id", profile.id);
