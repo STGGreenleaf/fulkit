@@ -6604,10 +6604,43 @@ function VaultTab() {
 
         {storageMode === "fulkit" && (
           <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-            {notesLoading ? "Loading..." : `${noteCount} notes stored.`} Encrypted at rest.
+            {notesLoading ? "Loading..." : `${noteCount} notes in your brain.`} Encrypted at rest.
           </p>
         )}
       </div>
+
+      {/* Vault brain view — Model A connected */}
+      {storageMode === "local" && vaultConnected && notes.length > 0 && (
+        <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          <div style={{ padding: "var(--space-3)", borderBottom: "1px solid var(--color-border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-dim)" }}>
+              Your Brain
+            </span>
+            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
+              {notes.length} files
+            </span>
+          </div>
+          <div style={{ padding: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: "var(--font-size-2xs)", lineHeight: 1.9, maxHeight: 280, overflowY: "auto" }}>
+            {(() => {
+              const folders = {};
+              notes.forEach(n => {
+                const parts = (n.path || n.folder || "00-INBOX").split("/");
+                const folder = parts.length > 1 ? parts[0] : (n.folder || "00-INBOX");
+                if (!folders[folder]) folders[folder] = [];
+                folders[folder].push(n.title);
+              });
+              return Object.entries(folders).sort(([a], [b]) => a.localeCompare(b)).map(([folder, files]) => (
+                <div key={folder} style={{ marginBottom: "var(--space-2)" }}>
+                  <div style={{ color: "var(--color-text-muted)", fontWeight: "var(--font-weight-medium)" }}>{folder}/</div>
+                  {files.map((f, i) => (
+                    <div key={i} style={{ paddingLeft: "var(--space-4)", color: "var(--color-text-dim)" }}>{f}.md</div>
+                  ))}
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Drop zone — Models B (unlocked) + C */}
       {canUpload && (
