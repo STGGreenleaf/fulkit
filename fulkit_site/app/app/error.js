@@ -1,16 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 
-export default function Error({ error, reset }) {
-  useEffect(() => {
-    console.error("[error-boundary]", error?.message, error?.stack);
-    try {
-      const { emitSignal } = require("../../lib/signal");
-      emitSignal("client_error", "error", { message: error?.message, page: window.location.pathname });
-    } catch {}
-  }, [error]);
+export default function Error({ reset }) {
   return (
     <div
       style={{
