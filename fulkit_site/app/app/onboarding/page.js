@@ -676,7 +676,7 @@ export default function Onboarding() {
   // ─── Tier intro screen ───
   if (showTierIntro && tier.trust_line) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh", position: "relative" }}>
         <ProgressBar pct={totalProgress} />
         <TierLabel tierNum={tier.tier_num} label={tier.label} />
         <SkipLink />
