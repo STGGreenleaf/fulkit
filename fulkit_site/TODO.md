@@ -146,7 +146,7 @@
 ### Build first (the copy can't be honest until these ship)
 - [x] **Remove planned features from landing** — ✅ Both Inbox Triage and Quick Capture are built and shipped. Updated descriptions to reflect actual functionality.
 - [x] **Remove unsourced stats from landing** — ✅ Replaced "15% / 3.6 hours" with real pain points (eight apps, eight logins).
-- [x] **Ship remaining business integrations** — ✅ 22+ integrations live: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, QuickBooks, Google Calendar, Gmail, Google Drive, Fitbit, Strava, Slack, Notion, Dropbox, OneNote, Todoist, Readwise, Asana, Monday + Spotify/Sonos (Fabric) + 4 social publish.
+- [x] **Ship remaining business integrations** — ✅ 23 integrations live: Square, Shopify, Stripe, TrueGauge, Numbrly, Trello, Toast, GitHub, QuickBooks, Google Calendar, Gmail, Google Drive, Fitbit, Strava, Slack, Notion, Dropbox, OneNote, Todoist, Readwise, Asana, Monday, Linear + Spotify/Sonos (Fabric) + 4 social publish.
 - [x] **Spotify Extended Quota** — ✅ Approved, 5-seat cap. Revisit when Spotify lifts.
 
 ### Fix before rewrite

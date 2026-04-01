@@ -251,7 +251,7 @@ The system prompt is one cache block but ~90% changes between messages (date, co
 
 ### Phase 6: Integration Scaling (best practice path)
 
-**Current (22 integrations):** ECOSYSTEM_KEYWORDS scans all keyword groups per message. `ECOSYSTEM_TOOLS[eco]()` returns empty array if user isn't connected — tools only load when both keywords match AND token exists. 96% token reduction. System is healthy.
+**Current (23 integrations):** ECOSYSTEM_KEYWORDS scans all keyword groups per message. `ECOSYSTEM_TOOLS[eco]()` returns empty array if user isn't connected — tools only load when both keywords match AND token exists. 96% token reduction. System is healthy.
 
 **Scaling tiers:**
 | Scale | Action | Trigger |
