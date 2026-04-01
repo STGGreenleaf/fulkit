@@ -728,7 +728,7 @@ export default function Onboarding() {
         )}
 
         {/* Question text */}
-        <h2 style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", letterSpacing: "var(--letter-spacing-tight)", marginBottom: "var(--space-2)" }}>
+        <h2 style={{ fontSize: "var(--font-size-2xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", letterSpacing: "var(--letter-spacing-tight)", marginBottom: "var(--space-2)", textWrap: "balance" }}>
           {question?.text}
         </h2>
         {question?.why && (
