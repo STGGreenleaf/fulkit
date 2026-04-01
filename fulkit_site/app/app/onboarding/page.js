@@ -851,29 +851,44 @@ export default function Onboarding() {
                 );
               })}
             </div>
-            <button
-              onClick={submitMulti}
-              disabled={multiSelect.length === 0}
-              style={{
-                marginTop: "var(--space-4)",
-                padding: "var(--space-2-5) var(--space-5)",
-                background: multiSelect.length > 0 ? "var(--color-accent)" : "transparent",
-                color: multiSelect.length > 0 ? "var(--color-text-inverse)" : "transparent",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-semibold)",
-                fontFamily: "var(--font-primary)",
-                cursor: multiSelect.length > 0 ? "pointer" : "default",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                transition: "all var(--duration-normal) var(--ease-default)",
-              }}
-            >
-              Continue
-              <ArrowRight size={14} strokeWidth={2.5} />
-            </button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "var(--space-4)" }}>
+              <div>
+                {(questionIdx > 0 || tierIdx > 0) && (
+                  <button
+                    onClick={() => {
+                      if (questionIdx > 0) { setQuestionIdx(questionIdx - 1); setMultiSelect([]); setTextVal(""); }
+                      else if (tierIdx > 0) { setTierIdx(tierIdx - 1); setShowTierIntro(true); }
+                    }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)" }}
+                  >
+                    <ArrowLeft size={12} strokeWidth={2} />
+                    Back
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={submitMulti}
+                disabled={multiSelect.length === 0}
+                style={{
+                  padding: "var(--space-2-5) var(--space-5)",
+                  background: multiSelect.length > 0 ? "var(--color-accent)" : "transparent",
+                  color: multiSelect.length > 0 ? "var(--color-text-inverse)" : "transparent",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "var(--font-size-sm)",
+                  fontWeight: "var(--font-weight-semibold)",
+                  fontFamily: "var(--font-primary)",
+                  cursor: multiSelect.length > 0 ? "pointer" : "default",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  transition: "all var(--duration-normal) var(--ease-default)",
+                }}
+              >
+                Continue
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </button>
+            </div>
           </>
         )}
 
@@ -976,35 +991,20 @@ export default function Onboarding() {
           </button>
         )}
 
-        {/* Back button */}
-        {(questionIdx > 0 || tierIdx > 0) && (
-          <button
-            onClick={() => {
-              if (questionIdx > 0) {
-                setQuestionIdx(questionIdx - 1);
-                setMultiSelect([]);
-                setTextVal("");
-              } else if (tierIdx > 0) {
-                setTierIdx(tierIdx - 1);
-                setShowTierIntro(true);
-              }
-            }}
-            style={{
-              marginTop: "var(--space-6)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-dim)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "var(--font-primary)",
-            }}
-          >
-            <ArrowLeft size={12} strokeWidth={2} />
-            Back
-          </button>
+        {/* Back button — for non-multi-select question types */}
+        {qType !== "multi_select" && (questionIdx > 0 || tierIdx > 0) && (
+          <div style={{ marginTop: "var(--space-4)" }}>
+            <button
+              onClick={() => {
+                if (questionIdx > 0) { setQuestionIdx(questionIdx - 1); setMultiSelect([]); setTextVal(""); }
+                else if (tierIdx > 0) { setTierIdx(tierIdx - 1); setShowTierIntro(true); }
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)" }}
+            >
+              <ArrowLeft size={12} strokeWidth={2} />
+              Back
+            </button>
+          </div>
         )}
       </div>
     </div>
