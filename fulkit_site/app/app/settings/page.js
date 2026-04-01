@@ -983,6 +983,9 @@ function AccountTab() {
         </div>
       </Card>
 
+      {/* Brain summary */}
+      <VaultBrainSummary />
+
       <div style={{ marginTop: "var(--space-8)" }}>
         <div style={{
           background: "var(--color-bg-elevated)",
@@ -6442,6 +6445,51 @@ function ContextModeToggle({ mode, onChange, disabled }) {
 function formatTokens(n) {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return `${n}`;
+}
+
+function VaultBrainSummary() {
+  const { storageMode, vaultConnected, localNoteCount, connectVault } = useVaultContext();
+  const modeLabel = storageMode === "local" ? (vaultConnected ? "Connected" : "Disconnected") : storageMode === "encrypted" ? "Encrypted" : "Managed";
+  const noteCount = localNoteCount || 0;
+
+  return (
+    <div style={{ marginTop: "var(--space-8)" }}>
+      <div style={{
+        background: "var(--color-bg-elevated)",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--color-border-light)",
+        padding: "var(--space-3) var(--space-4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <div>
+          <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-1)" }}>
+            Your Brain
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+            {storageMode === "local" && vaultConnected
+              ? `${noteCount} files on your computer`
+              : storageMode === "local" && !vaultConnected
+              ? "Vault not connected"
+              : `${modeLabel} storage`}
+          </div>
+        </div>
+        {storageMode === "local" && !vaultConnected ? (
+          <button
+            onClick={connectVault}
+            style={{ fontSize: "var(--font-size-xs)", color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)" }}
+          >
+            Connect
+          </button>
+        ) : (
+          <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-mono)" }}>
+            {modeLabel}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function VaultTab() {
