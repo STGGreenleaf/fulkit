@@ -715,7 +715,6 @@ export default function Onboarding() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
       <ProgressBar pct={totalProgress} />
-      <SkipLink />
 
       <div style={{ maxWidth: 480, width: "100%" }}>
         <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", textAlign: "center" }}>
