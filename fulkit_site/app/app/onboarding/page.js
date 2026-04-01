@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { TICKER_ITEMS } from "../../lib/integration-ticker";
 
 export default function Onboarding() {
   const { user, fetchProfile } = useAuth();
@@ -894,53 +895,62 @@ export default function Onboarding() {
 
         {/* ─── Integration picker ─── */}
         {qType === "integration_picker" && (() => {
+          const LOGO_MAP = { Square: "square", Numbrly: "numbrly", Google: "google", Shopify: "shopify", GitHub: "github", Notion: "notion", Fitbit: "fitbit", Slack: "slack", Stripe: "stripe", Trello: "trello" };
           const allOpts = question.options || [];
           const integrations = allOpts.filter(o => { const l = (typeof o === "string" ? o : o.label).toLowerCase(); return !l.includes("later") && !l.includes("skip"); });
           const skipOpt = allOpts.find(o => { const l = (typeof o === "string" ? o : o.label).toLowerCase(); return l.includes("later") || l.includes("skip"); });
           return (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
-                {integrations.map((opt) => {
-                  const label = typeof opt === "string" ? opt : opt.label;
-                  return (
-                    <button
-                      key={label}
-                      onClick={() => advance(label)}
-                      style={{
-                        padding: "var(--space-3) var(--space-3)",
-                        background: "var(--color-bg-elevated)",
-                        color: "var(--color-text)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-md)",
-                        fontSize: "var(--font-size-sm)",
-                        fontFamily: "var(--font-primary)",
-                        textAlign: "center",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+              {integrations.map((opt) => {
+                const label = typeof opt === "string" ? opt : opt.label;
+                const tickerId = LOGO_MAP[label];
+                const ticker = tickerId && TICKER_ITEMS.find(t => t.id === tickerId);
+                return (
+                  <button
+                    key={label}
+                    onClick={() => advance(label)}
+                    style={{
+                      padding: "var(--space-3) var(--space-3)",
+                      background: "var(--color-bg-elevated)",
+                      color: "var(--color-text)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "var(--font-size-sm)",
+                      fontFamily: "var(--font-primary)",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    {ticker && <span style={{ opacity: 0.6 }}>{ticker.icon}</span>}
+                    {label}
+                  </button>
+                );
+              })}
               {skipOpt && (
                 <button
                   onClick={() => advance("skipped")}
                   style={{
-                    marginTop: "var(--space-3)",
-                    padding: "var(--space-2)",
+                    padding: "var(--space-3) var(--space-3)",
                     background: "transparent",
                     color: "var(--color-text-dim)",
-                    border: "none",
+                    border: "1px dashed var(--color-border-light)",
+                    borderRadius: "var(--radius-md)",
                     fontSize: "var(--font-size-xs)",
                     fontFamily: "var(--font-primary)",
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   {typeof skipOpt === "string" ? skipOpt : skipOpt.label}
                 </button>
               )}
-            </>
+            </div>
           );
         })()}
 
