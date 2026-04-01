@@ -986,7 +986,7 @@ function AccountTab() {
       {/* Brain summary */}
       <VaultBrainSummary />
 
-      <div style={{ marginTop: "var(--space-8)" }}>
+      <div style={{ marginTop: "var(--space-3)" }}>
         <div style={{
           background: "var(--color-bg-elevated)",
           borderRadius: "var(--radius-md)",
@@ -6452,7 +6452,7 @@ function VaultBrainSummary() {
   const folderName = directoryHandle?.name || null;
 
   return (
-    <div style={{ marginTop: "var(--space-8)" }}>
+    <div style={{ marginTop: "var(--space-3)" }}>
       <div style={{
         background: "var(--color-bg-elevated)",
         borderRadius: "var(--radius-md)",
