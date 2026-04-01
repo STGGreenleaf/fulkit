@@ -8,6 +8,8 @@ import { useTrack } from "../../lib/track";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { TICKER_ITEMS } from "../../lib/integration-ticker";
+import { useVaultContext } from "../../lib/vault";
+import { isFileSystemAccessSupported } from "../../lib/vault-local";
 
 export default function Onboarding() {
   const { user, fetchProfile } = useAuth();
@@ -1040,12 +1042,27 @@ const VAULT_TREE = [
 ];
 
 function VaultSetupStep({ onAdvance }) {
-  const [downloadState, setDownloadState] = useState(null); // null | "downloaded"
+  const [downloadState, setDownloadState] = useState(null); // null | "downloaded" | "connecting"
   const downloadRef = useRef(null);
+  const { connectVault, setStorageMode } = useVaultContext();
+  const supported = isFileSystemAccessSupported();
 
   const handleDownload = () => {
     if (downloadRef.current) downloadRef.current.click();
     setDownloadState("downloaded");
+  };
+
+  const handleConnect = async () => {
+    if (!supported) { onAdvance("fulkit_managed"); return; }
+    setDownloadState("connecting");
+    try {
+      await connectVault();
+      await setStorageMode("local");
+      onAdvance("connected");
+    } catch {
+      // User cancelled picker — stay on screen
+      setDownloadState("downloaded");
+    }
   };
 
   return (
@@ -1102,7 +1119,8 @@ function VaultSetupStep({ onAdvance }) {
             Unzip it on your Desktop — easiest to find, easiest to use. When you&apos;re ready:
           </p>
           <button
-            onClick={() => onAdvance("download")}
+            onClick={handleConnect}
+            disabled={downloadState === "connecting"}
             style={{
               width: "100%",
               padding: "var(--space-3) var(--space-4)",
@@ -1113,15 +1131,16 @@ function VaultSetupStep({ onAdvance }) {
               fontSize: "var(--font-size-base)",
               fontWeight: "var(--font-weight-semibold)",
               fontFamily: "var(--font-primary)",
-              cursor: "pointer",
+              cursor: downloadState === "connecting" ? "default" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "var(--space-2)",
+              opacity: downloadState === "connecting" ? 0.6 : 1,
             }}
           >
-            Done, let&apos;s go
-            <ArrowRight size={16} strokeWidth={2.5} />
+            {downloadState === "connecting" ? "Connecting..." : "Point to your folder"}
+            {downloadState !== "connecting" && <ArrowRight size={16} strokeWidth={2.5} />}
           </button>
         </div>
       ) : (
@@ -1148,7 +1167,7 @@ function VaultSetupStep({ onAdvance }) {
             Download F{"\u00FC"}lkit vault
           </button>
           <button
-            onClick={() => onAdvance("existing")}
+            onClick={handleConnect}
             style={{
               padding: "var(--space-3) var(--space-4)",
               background: "var(--color-bg-elevated)",

@@ -56,6 +56,30 @@ export async function readLocalVault(handle) {
   return files;
 }
 
+// Write a note as a .md file to the vault folder
+export async function writeLocalNote(handle, folder, title, content) {
+  if (!handle) throw new Error("No vault connected");
+  const safeName = title.replace(/[/\\?%*:|"<>]/g, "-").trim() + ".md";
+  const dirHandle = await handle.getDirectoryHandle(folder || "00-INBOX", { create: true });
+  const fileHandle = await dirHandle.getFileHandle(safeName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+  return `${folder || "00-INBOX"}/${safeName}`;
+}
+
+// Delete a note from the vault folder
+export async function deleteLocalNote(handle, folder, title) {
+  if (!handle) return;
+  const safeName = title.replace(/[/\\?%*:|"<>]/g, "-").trim() + ".md";
+  try {
+    const dirHandle = await handle.getDirectoryHandle(folder || "00-INBOX");
+    await dirHandle.removeEntry(safeName);
+  } catch {
+    // File may not exist — that's fine
+  }
+}
+
 async function readDirectory(dirHandle, path, files) {
   for await (const entry of dirHandle.values()) {
     const entryPath = path ? `${path}/${entry.name}` : entry.name;

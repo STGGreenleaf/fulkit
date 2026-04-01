@@ -141,39 +141,85 @@ function triageFolder(content) {
 }
 
 // Write artifacts back to local vault via File System Access API (Model A)
+// Helper: write a single file to a vault subfolder
+async function writeFile(directoryHandle, folder, filename, content) {
+  const dir = await directoryHandle.getDirectoryHandle(folder, { create: true });
+  const fileHandle = await dir.getFileHandle(filename, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+}
+
+// Helper: append to an existing file or create it
+async function appendOrCreate(directoryHandle, folder, filename, header, newContent) {
+  const dir = await directoryHandle.getDirectoryHandle(folder, { create: true });
+  let existing = "";
+  try {
+    const fh = await dir.getFileHandle(filename);
+    const file = await fh.getFile();
+    existing = await file.text();
+  } catch {}
+  const content = existing ? `${existing}\n\n${newContent}` : `${header}\n\n${newContent}`;
+  const fileHandle = await dir.getFileHandle(filename, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+}
+
 export async function writeBackLocal(directoryHandle, artifacts, conversationTitle) {
   if (!directoryHandle) return [];
   const written = [];
+  const date = new Date().toISOString().slice(0, 10);
+  const from = conversationTitle || "Chat";
 
-  // Write action items
-  if (artifacts.actionItems.length > 0) {
+  // Write action items → 00-INBOX/actions-YYYY-MM-DD.md
+  if (artifacts.actionItems?.length > 0) {
     try {
-      const inbox = await directoryHandle.getDirectoryHandle("00-INBOX", { create: true });
-      const date = new Date().toISOString().slice(0, 10);
-      const filename = `actions-${date}.md`;
+      await appendOrCreate(directoryHandle, "00-INBOX", `actions-${date}.md`,
+        `# Action Items — ${date}`,
+        `## From: ${from}\n${artifacts.actionItems.map(a => `- [ ] ${a.text}`).join("\n")}`
+      );
+      written.push({ type: "actions", folder: "00-INBOX" });
+    } catch (err) { console.error("[writeback] Actions write:", err.message); }
+  }
 
-      let existing = "";
+  // Write notes/facts → appropriate folder
+  if (artifacts.notes?.length > 0) {
+    for (const note of artifacts.notes) {
       try {
-        const existingHandle = await inbox.getFileHandle(filename);
-        const file = await existingHandle.getFile();
-        existing = await file.text();
-      } catch {
-        // File doesn't exist yet
-      }
-
-      const content = existing
-        ? `${existing}\n\n## From: ${conversationTitle || "Chat"}\n${artifacts.actionItems.map((a) => `- [ ] ${a.text}`).join("\n")}`
-        : `# Action Items — ${date}\n\n## From: ${conversationTitle || "Chat"}\n${artifacts.actionItems.map((a) => `- [ ] ${a.text}`).join("\n")}`;
-
-      const fileHandle = await inbox.getFileHandle(filename, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(content);
-      await writable.close();
-
-      written.push({ type: "actions", folder: "00-INBOX", filename });
-    } catch (err) {
-      console.error("[writeback] Local write error:", err.message);
+        const folder = note.folder || "00-INBOX";
+        const safeName = (note.title || `note-${date}`).replace(/[/\\?%*:|"<>]/g, "-").trim() + ".md";
+        await writeFile(directoryHandle, folder, safeName, note.content || note.text || "");
+        written.push({ type: "note", folder, filename: safeName });
+      } catch (err) { console.error("[writeback] Note write:", err.message); }
     }
+  }
+
+  // Write decisions → _FULKIT/decisions.md (append)
+  if (artifacts.decisions?.length > 0) {
+    try {
+      await appendOrCreate(directoryHandle, "_FULKIT", "decisions.md",
+        "# Decisions",
+        `## ${date} — ${from}\n${artifacts.decisions.map(d => `- ${d.text || d}`).join("\n")}`
+      );
+      written.push({ type: "decisions", folder: "_FULKIT" });
+    } catch (err) { console.error("[writeback] Decisions write:", err.message); }
+  }
+
+  // Write conversation summary → _FULKIT/conversations/YYYY-MM-DD-title.md
+  if (artifacts.summary) {
+    try {
+      const convFolder = await directoryHandle.getDirectoryHandle("_FULKIT", { create: true });
+      await convFolder.getDirectoryHandle("conversations", { create: true });
+      const safeName = `${date}-${(from).replace(/[/\\?%*:|"<>]/g, "-").trim().slice(0, 50)}.md`;
+      const content = `# ${from}\n\n*${date}*\n\n${artifacts.summary}`;
+      const dir = await convFolder.getDirectoryHandle("conversations");
+      const fh = await dir.getFileHandle(safeName, { create: true });
+      const w = await fh.createWritable();
+      await w.write(content);
+      await w.close();
+      written.push({ type: "summary", folder: "_FULKIT/conversations" });
+    } catch (err) { console.error("[writeback] Summary write:", err.message); }
   }
 
   return written;

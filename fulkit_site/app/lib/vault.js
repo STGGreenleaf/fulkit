@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import { useAuth } from "./auth";
 import { supabase } from "./supabase";
 import { selectContext, selectContextWithMetadata, estimateTokens } from "./vault-tokens";
-import { isFileSystemAccessSupported, pickVaultDirectory, restoreDirectoryHandle, disconnectVault as disconnectLocal, readLocalVault } from "./vault-local";
+import { isFileSystemAccessSupported, pickVaultDirectory, restoreDirectoryHandle, disconnectVault as disconnectLocal, readLocalVault, writeLocalNote, deleteLocalNote } from "./vault-local";
 import { deriveKey, generateSalt, encryptNote, decryptNote, cacheKey, getCachedKey, clearCachedKey } from "./vault-crypto";
 import { readFulkitNotes, readEncryptedNotes, updateContextMode, listNotes, searchNotes } from "./vault-fulkit";
 
@@ -202,6 +202,28 @@ export function VaultProvider({ children }) {
     setCryptoKey(null);
   }, []);
 
+  // Write a note to the local vault folder (Model A only)
+  const saveToLocalVault = useCallback(async (folder, title, content) => {
+    if (storageMode !== "local" || !directoryHandle) return null;
+    try {
+      const path = await writeLocalNote(directoryHandle, folder, title, content);
+      return path;
+    } catch (err) {
+      console.error("[vault] Local write failed:", err.message);
+      return null;
+    }
+  }, [storageMode, directoryHandle]);
+
+  // Delete a note from the local vault folder (Model A only)
+  const deleteFromLocalVault = useCallback(async (folder, title) => {
+    if (storageMode !== "local" || !directoryHandle) return;
+    try {
+      await deleteLocalNote(directoryHandle, folder, title);
+    } catch (err) {
+      console.error("[vault] Local delete failed:", err.message);
+    }
+  }, [storageMode, directoryHandle]);
+
   // Switch storage mode
   const setStorageMode = useCallback(async (mode) => {
     if (!user) return;
@@ -237,6 +259,8 @@ export function VaultProvider({ children }) {
         disconnectVault,
         vaultConnected,
         directoryHandle,
+        saveToLocalVault,
+        deleteFromLocalVault,
 
         // Model B
         setPassphrase,
