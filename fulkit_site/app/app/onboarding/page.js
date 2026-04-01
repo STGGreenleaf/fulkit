@@ -596,7 +596,7 @@ export default function Onboarding() {
   // ─── Copy after answer screen ───
   if (showCopyAfter) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh" }}>
         <ProgressBar pct={totalProgress} />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
@@ -626,7 +626,7 @@ export default function Onboarding() {
   // ─── Feature assignment screen ───
   if (showAssignment) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh" }}>
         <ProgressBar pct={totalProgress} />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
@@ -717,7 +717,7 @@ export default function Onboarding() {
 
   // ─── Question screen ───
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh" }}>
       <ProgressBar pct={totalProgress} />
 
       <div style={{ maxWidth: 480, width: "100%" }}>
