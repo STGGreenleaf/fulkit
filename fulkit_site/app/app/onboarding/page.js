@@ -678,9 +678,11 @@ export default function Onboarding() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)", paddingBottom: "15vh", position: "relative" }}>
         <ProgressBar pct={totalProgress} />
-        <TierLabel tierNum={tier.tier_num} label={tier.label} />
         <SkipLink />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
+            Tier {tier.tier_num}
+          </div>
           {tier.intro && (
             <h2 style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", lineHeight: "var(--line-height-snug)", letterSpacing: "var(--letter-spacing-tight)", marginBottom: "var(--space-5)" }}>
               {tier.label}
