@@ -12,9 +12,21 @@ export default function AuthCallback() {
       const code = url.searchParams.get("code");
 
       if (code) {
-        // PKCE flow — exchange code for session
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        console.log("[auth/callback] PKCE result:", { error: error?.message });
+        // Try PKCE exchange first (works for OAuth + magic links opened in same browser)
+        let { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        // If PKCE verifier missing (magic link opened in different browser/email app),
+        // try verifyOtp as fallback with the token_hash if present
+        if (error?.message?.includes("code verifier")) {
+          const tokenHash = url.searchParams.get("token_hash");
+          const type = url.searchParams.get("type") || "email";
+          if (tokenHash) {
+            const otpResult = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+            error = otpResult.error;
+          }
+        }
+
+        console.log("[auth/callback] Auth result:", { error: error?.message });
         if (error) {
           setStatus(`Error: ${error.message}`);
           return;
