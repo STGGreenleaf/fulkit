@@ -2108,6 +2108,9 @@ function DeveloperTab() {
 
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
+  const [ticketsOpen, setTicketsOpen] = useState(true);
+  const [ticketFilter, setTicketFilter] = useState("all");
+  const [selectedContact, setSelectedContact] = useState(null);
 
   const sendReply = async (id) => {
     if (!replyText.trim()) return;
@@ -2845,126 +2848,184 @@ function DeveloperTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
       <div style={TAB_TITLE}>Developer</div>
-      {/* ── Tickets (priority — always on top) ── */}
-      <div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+      {/* ── Tickets (collapsible KB inbox) ── */}
+      <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <button onClick={() => setTicketsOpen(!ticketsOpen)} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", width: "100%", padding: "var(--space-3)", background: "none", border: "none", cursor: "pointer" }}>
           <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
             Tickets
           </span>
           {openCount > 0 && (
-            <span style={{
-              fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)",
-              background: "var(--color-text)", color: "var(--color-bg)",
-              padding: "1px 6px", borderRadius: "var(--radius-full)",
-            }}>
+            <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-bold)", background: "var(--color-text)", color: "var(--color-bg)", padding: "1px 6px", borderRadius: "var(--radius-full)" }}>
               {openCount}
             </span>
           )}
-        </div>
+          <span style={{ marginLeft: "auto" }}>
+            {ticketsOpen ? <ChevronDown size={14} color="var(--color-text-dim)" /> : <ChevronRight size={14} color="var(--color-text-dim)" />}
+          </span>
+        </button>
 
-        {ticketsLoading ? (
-          <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
-        ) : tickets.length === 0 ? (
-          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No tickets yet.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            {tickets.filter(t => t.status !== "wontfix").map((t) => (
-              <div key={t.id} style={{
-                padding: "var(--space-4)",
-                background: t.status === "open" ? "var(--color-bg-elevated)" : "var(--color-bg)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-md)",
-                borderLeft: t.status === "open" ? "3px solid var(--color-text)" : "3px solid var(--color-border-light)",
-              }}>
-                {/* Header — like an email from/date line */}
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span>
-                    <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{t.email || "Unknown"}</span>
-                    {" \u00b7 "}{t.category || "bug"}
-                  </span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>
-                    {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                  </span>
-                </div>
+        {ticketsOpen && (
+          <div style={{ padding: "0 var(--space-3) var(--space-3)" }}>
+            {ticketsLoading ? (
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)" }}>Loading...</div>
+            ) : tickets.length === 0 ? (
+              <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No tickets yet.</div>
+            ) : (() => {
+              // Filter tabs
+              const FILTERS = [
+                { id: "all", label: "All" },
+                { id: "unread", label: "Unread" },
+                { id: "feature", label: "Feature" },
+                { id: "bug", label: "Bug" },
+                { id: "done", label: "Done" },
+              ];
+              const filtered = tickets.filter(t => {
+                if (t.status === "wontfix") return false; // archived
+                if (ticketFilter === "unread") return t.status === "open";
+                if (ticketFilter === "feature") return t.category === "feature";
+                if (ticketFilter === "bug") return t.category === "bug";
+                if (ticketFilter === "done") return t.status === "fixed";
+                return true;
+              });
+              // Unique contacts from filtered tickets
+              const contactMap = {};
+              for (const t of filtered) {
+                const email = t.email || "unknown";
+                if (!contactMap[email]) contactMap[email] = { email, tickets: [], hasUnread: false, latest: t.created_at };
+                contactMap[email].tickets.push(t);
+                if (t.status === "open") contactMap[email].hasUnread = true;
+                if (t.created_at > contactMap[email].latest) contactMap[email].latest = t.created_at;
+              }
+              const contacts = Object.values(contactMap).sort((a, b) => b.latest.localeCompare(a.latest));
+              const active = selectedContact && contactMap[selectedContact] ? selectedContact : contacts[0]?.email || null;
+              const activeTickets = active ? (contactMap[active]?.tickets || []) : [];
+              const contactName = (email) => {
+                const prefix = email.split("@")[0] || "";
+                return prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/[._]/g, " ");
+              };
 
-                {/* Body — the message */}
-                <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)", wordBreak: "break-word", marginBottom: "var(--space-3)" }}>
-                  {t.message}
-                </div>
-
-                {/* Your reply (if sent) */}
-                {t.reply && (
-                  <div style={{
-                    fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)",
-                    padding: "var(--space-2) var(--space-3)",
-                    background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)",
-                    marginBottom: "var(--space-3)",
-                    borderLeft: "2px solid var(--color-text-dim)",
-                  }}>
-                    <span style={{ fontWeight: "var(--font-weight-semibold)" }}>You replied:</span> {t.reply}
+              return (
+                <>
+                  {/* Filter tabs */}
+                  <div style={{ display: "flex", gap: "var(--space-1)", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
+                    {FILTERS.map(f => {
+                      const isActive = ticketFilter === f.id;
+                      const count = f.id === "all" ? tickets.filter(t => t.status !== "wontfix").length
+                        : f.id === "unread" ? tickets.filter(t => t.status === "open").length
+                        : f.id === "feature" ? tickets.filter(t => t.category === "feature" && t.status !== "wontfix").length
+                        : f.id === "bug" ? tickets.filter(t => t.category === "bug" && t.status !== "wontfix").length
+                        : tickets.filter(t => t.status === "fixed").length;
+                      return (
+                        <button key={f.id} onClick={() => { setTicketFilter(f.id); setSelectedContact(null); }} style={{
+                          padding: "var(--space-1) var(--space-2)",
+                          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                          fontWeight: isActive ? "var(--font-weight-semibold)" : "normal",
+                          background: isActive ? "var(--color-bg-inverse)" : "transparent",
+                          color: isActive ? "var(--color-text-inverse)" : "var(--color-text-muted)",
+                          border: isActive ? "none" : "1px solid var(--color-border-light)",
+                          borderRadius: "var(--radius-sm)", cursor: "pointer",
+                        }}>
+                          {f.label}{count > 0 ? ` (${count})` : ""}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
 
-                {/* Reply input */}
-                {replyingTo === t.id && (
-                  <div style={{ marginBottom: "var(--space-3)", display: "flex", gap: "var(--space-2)" }}>
-                    <input
-                      autoFocus
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") sendReply(t.id); if (e.key === "Escape") { setReplyingTo(null); setReplyText(""); } }}
-                      placeholder="We built it for you..."
-                      style={{
-                        flex: 1, padding: "var(--space-2) var(--space-3)",
-                        fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
-                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                        background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
-                      }}
-                    />
-                    <button onClick={() => sendReply(t.id)} style={{
-                      padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-sm)",
-                      background: "var(--color-text)", color: "var(--color-bg)",
-                      border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
-                      fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
-                    }}>Send</button>
-                  </div>
-                )}
+                  {filtered.length === 0 ? (
+                    <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No tickets match this filter.</div>
+                  ) : (
+                    <div style={{ display: "flex", gap: "var(--space-3)", minHeight: 200 }}>
+                      {/* Contact list — left pane */}
+                      <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--color-border-light)", paddingRight: "var(--space-3)", overflowY: "auto", maxHeight: 400 }}>
+                        {contacts.map(c => (
+                          <button key={c.email} onClick={() => { setSelectedContact(c.email); setReplyingTo(null); setReplyText(""); }} style={{
+                            display: "block", width: "100%", textAlign: "left",
+                            padding: "var(--space-2)", marginBottom: "var(--space-1)",
+                            background: active === c.email ? "var(--color-bg-alt)" : "transparent",
+                            border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                          }}>
+                            <div style={{ fontSize: "var(--font-size-xs)", fontWeight: c.hasUnread ? "var(--font-weight-semibold)" : "normal", color: "var(--color-text)", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                              {c.hasUnread && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-text)", flexShrink: 0 }} />}
+                              {contactName(c.email)}
+                            </div>
+                            <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 1 }}>
+                              {c.tickets.length} {c.tickets.length === 1 ? "ticket" : "tickets"}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
 
-                {/* Actions — clear, email-style */}
-                <div style={{ display: "flex", gap: "var(--space-3)", borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
-                  {!t.reply && (
-                    <button
-                      onClick={() => { setReplyingTo(replyingTo === t.id ? null : t.id); setReplyText(""); }}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
-                    >
-                      Reply
-                    </button>
+                      {/* Message pane — right side */}
+                      <div style={{ flex: 1, overflowY: "auto", maxHeight: 400 }}>
+                        {activeTickets.length === 0 ? (
+                          <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", padding: "var(--space-4)" }}>Select a contact.</div>
+                        ) : activeTickets.map(t => (
+                          <div key={t.id} style={{
+                            padding: "var(--space-3)",
+                            marginBottom: "var(--space-3)",
+                            background: "var(--color-bg)",
+                            border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-sm)",
+                            borderLeft: t.status === "open" ? "3px solid var(--color-text)" : "3px solid transparent",
+                          }}>
+                            {/* Header */}
+                            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)", display: "flex", justifyContent: "space-between" }}>
+                              <span>{t.category || "bug"}</span>
+                              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>
+                                {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                              </span>
+                            </div>
+
+                            {/* Message */}
+                            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)", wordBreak: "break-word", marginBottom: "var(--space-2)" }}>
+                              {t.message}
+                            </div>
+
+                            {/* Reply quote */}
+                            {t.reply && (
+                              <div style={{
+                                fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)",
+                                padding: "var(--space-2) var(--space-3)", background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)",
+                                marginBottom: "var(--space-2)", borderLeft: "2px solid var(--color-text-dim)",
+                              }}>
+                                <span style={{ fontWeight: "var(--font-weight-semibold)" }}>You:</span> {t.reply}
+                              </div>
+                            )}
+
+                            {/* Reply input */}
+                            {replyingTo === t.id && (
+                              <div style={{ marginBottom: "var(--space-2)", display: "flex", gap: "var(--space-2)" }}>
+                                <input autoFocus value={replyText} onChange={(e) => setReplyText(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") sendReply(t.id); if (e.key === "Escape") { setReplyingTo(null); setReplyText(""); } }}
+                                  placeholder="We built it for you..."
+                                  style={{
+                                    flex: 1, padding: "var(--space-1-5) var(--space-2)", fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
+                                    border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)", background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                                  }}
+                                />
+                                <button onClick={() => sendReply(t.id)} style={{
+                                  padding: "var(--space-1-5) var(--space-2)", fontSize: "var(--font-size-xs)",
+                                  background: "var(--color-text)", color: "var(--color-bg)", border: "none", borderRadius: "var(--radius-sm)",
+                                  cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
+                                }}>Send</button>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div style={{ display: "flex", gap: "var(--space-3)", fontSize: "var(--font-size-xs)" }}>
+                              {!t.reply && <button onClick={() => { setReplyingTo(replyingTo === t.id ? null : t.id); setReplyText(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Reply</button>}
+                              {t.status === "open" && <button onClick={() => updateTicket(t.id, { status: "seen" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Mark read</button>}
+                              {!t.reply && <button onClick={() => updateTicket(t.id, { status: "fixed" })} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}>Done</button>}
+                              <button onClick={() => archiveTicket(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}>Archive</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  {t.status === "open" && (
-                    <button
-                      onClick={() => updateTicket(t.id, { status: "seen" })}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
-                    >
-                      Mark read
-                    </button>
-                  )}
-                  {!t.reply && (
-                    <button
-                      onClick={() => updateTicket(t.id, { status: "fixed" })}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
-                    >
-                      Done
-                    </button>
-                  )}
-                  <button
-                    onClick={() => archiveTicket(t.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}
-                  >
-                    Archive
-                  </button>
-                </div>
-              </div>
-            ))}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
