@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./auth";
 import { supabase } from "./supabase";
 import { selectContext, selectContextWithMetadata, estimateTokens } from "./vault-tokens";
@@ -75,6 +75,47 @@ export function VaultProvider({ children }) {
     storageMode === "fulkit" ||
     (storageMode === "local" && vaultConnected) ||
     (storageMode === "encrypted" && isUnlocked);
+
+  // ── Vault folder watcher (Model A) ──
+  // Polls for new/changed files every 30s + on window focus
+  const [localNoteCount, setLocalNoteCount] = useState(0);
+  const [lastScanHash, setLastScanHash] = useState("");
+  const watcherRef = useRef(null);
+
+  const scanVaultFolder = useCallback(async () => {
+    if (storageMode !== "local" || !directoryHandle) return;
+    try {
+      const notes = await readLocalVault(directoryHandle);
+      const hash = notes.map(n => `${n.path}:${n.content.length}`).sort().join("|");
+      if (hash !== lastScanHash) {
+        setLastScanHash(hash);
+        setLocalNoteCount(notes.length);
+        // Emit custom event so other components can react
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("fulkit-vault-change", { detail: { count: notes.length, notes } }));
+        }
+      }
+    } catch {}
+  }, [storageMode, directoryHandle, lastScanHash]);
+
+  useEffect(() => {
+    if (storageMode !== "local" || !directoryHandle) return;
+
+    // Initial scan
+    scanVaultFolder();
+
+    // Poll every 30 seconds
+    watcherRef.current = setInterval(scanVaultFolder, 30000);
+
+    // Scan on window focus (user may have dropped files in)
+    const onFocus = () => scanVaultFolder();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      if (watcherRef.current) clearInterval(watcherRef.current);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [storageMode, directoryHandle, scanVaultFolder]);
 
   // Shared note-fetching logic
   const getRawNotes = useCallback(async () => {
@@ -261,6 +302,8 @@ export function VaultProvider({ children }) {
         directoryHandle,
         saveToLocalVault,
         deleteFromLocalVault,
+        scanVaultFolder,
+        localNoteCount,
 
         // Model B
         setPassphrase,
