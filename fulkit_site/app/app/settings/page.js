@@ -6445,7 +6445,7 @@ function formatTokens(n) {
 }
 
 function VaultTab() {
-  const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode, cryptoKey } = useVaultContext();
+  const { storageMode, vaultConnected, isUnlocked, connectVault, disconnectVault, lockVault, getNoteList, updateNoteMode, cryptoKey, directoryHandle } = useVaultContext();
   const { user, accessToken } = useAuth();
 
   const [notes, setNotes] = useState([]);
@@ -6529,8 +6529,15 @@ function VaultTab() {
   }
 
   async function handleDelete(noteId) {
+    const note = notes.find(n => n.id === noteId);
     const { deleteNote } = await import("../../lib/vault-fulkit");
     await deleteNote(noteId, supabase);
+    // Also remove from local vault filesystem if Model A
+    if (storageMode === "local" && directoryHandle && note) {
+      import("../../lib/vault-local").then(({ deleteLocalNote }) => {
+        deleteLocalNote(directoryHandle, note.folder, note.title).catch(() => {});
+      }).catch(() => {});
+    }
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
     setDeleteConfirm(null);
   }

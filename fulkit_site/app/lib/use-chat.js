@@ -594,6 +594,22 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
           }
         } catch {}
 
+      // Sync newly created notes to local vault (Model A)
+      if (storageMode === "local" && directoryHandle && user) {
+        try {
+          const { writeLocalNote } = await import("./vault-local");
+          // Fetch notes created in the last 30 seconds (covers this response's tool calls)
+          const since = new Date(Date.now() - 30000).toISOString();
+          const { data: recentNotes } = await supabase
+            .from("notes").select("title, content, folder")
+            .eq("user_id", user.id).gte("created_at", since)
+            .order("created_at", { ascending: false }).limit(5);
+          for (const note of (recentNotes || [])) {
+            writeLocalNote(directoryHandle, note.folder || "00-INBOX", note.title, note.content).catch(() => {});
+          }
+        } catch {}
+      }
+
       // Auto-summarize conversation (always on — baked in)
       try {
         if (user && convId && apiMessages.length >= 5) {
