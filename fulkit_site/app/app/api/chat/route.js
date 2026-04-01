@@ -23,6 +23,7 @@ import { getReadwiseToken, readwiseFetch } from "../../../lib/readwise-server";
 import { getAsanaToken, asanaFetch } from "../../../lib/asana-server";
 import { getMondayToken, mondayFetch } from "../../../lib/monday-server";
 import { getLinearToken, linearQuery } from "../../../lib/linear-server";
+import { getVagaroToken, vagaroFetch } from "../../../lib/vagaro-server";
 import { decryptByokKey } from "../byok/route";
 import { getEmbedding, getQueryEmbedding } from "../embed/route";
 import { emitServerSignal } from "../../../lib/signal-server";
@@ -264,6 +265,7 @@ const ECOSYSTEM_KEYWORDS = {
   asana: ["asana", "task", "assignee", "project", "section", "subtask", "workspace", "milestone", "due date"],
   monday: ["monday", "board", "item", "column", "group", "status", "pulse", "timeline"],
   linear: ["linear", "issue", "bug", "ticket", "sprint", "backlog", "cycle", "triage"],
+  vagaro: ["vagaro", "salon", "appointment", "booking", "beauty", "spa", "stylist", "client", "haircut", "nails", "facial", "wax", "lash"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -3320,6 +3322,111 @@ async function executeLinearTool(name, input, userId) {
   throw new Error(`Unknown linear tool: ${name}`);
 }
 
+// ── Vagaro Tools ──────────────────────────────────────────────────
+const VAGARO_TOOLS = [
+  {
+    name: "vagaro_appointments",
+    description: "List appointments from Vagaro. Filter by date range or client. Use for 'who's coming in today', 'tomorrow's schedule', 'show my appointments'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        businessId: { type: "string", description: "Business ID (get from vagaro_info if unknown)" },
+        date: { type: "string", description: "YYYY-MM-DD. Defaults to today." },
+        customerId: { type: "string", description: "Filter by specific customer ID. Optional." },
+      },
+      required: ["businessId"],
+    },
+  },
+  {
+    name: "vagaro_clients",
+    description: "Look up a Vagaro client by ID. Use when user asks about a specific customer.",
+    input_schema: {
+      type: "object",
+      properties: {
+        businessId: { type: "string", description: "Business ID" },
+        customerId: { type: "string", description: "Customer ID to look up" },
+      },
+      required: ["businessId", "customerId"],
+    },
+  },
+  {
+    name: "vagaro_services",
+    description: "List all services offered in Vagaro. Use when user asks 'what services do I offer', 'my menu', 'service list'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        businessId: { type: "string", description: "Business ID" },
+      },
+      required: ["businessId"],
+    },
+  },
+];
+
+async function executeVagaroTool(name, input, userId) {
+  if (name === "vagaro_appointments") {
+    const result = await vagaroFetch(userId, "/appointments", {
+      method: "POST",
+      body: JSON.stringify({
+        businessId: input.businessId,
+        ...(input.customerId ? { customerId: input.customerId } : {}),
+        pageNumber: 1,
+        pageSize: 25,
+        orderBy: "asc",
+      }),
+    });
+    if (result.error) return result;
+    const appointments = result.data || [];
+    const dateFilter = input.date || new Date().toISOString().split("T")[0];
+    const filtered = appointments.filter(a => a.startTime?.startsWith(dateFilter));
+    return {
+      date: dateFilter,
+      count: filtered.length,
+      appointments: filtered.map(a => ({
+        id: a.appointmentId,
+        service: a.serviceTitle,
+        start: a.startTime,
+        end: a.endTime,
+        status: a.bookingStatus,
+        customerId: a.customerId,
+        staff: a.serviceProviderId,
+      })),
+    };
+  }
+
+  if (name === "vagaro_clients") {
+    const result = await vagaroFetch(userId, "/customers", {
+      method: "POST",
+      body: JSON.stringify({
+        businessId: input.businessId,
+        customerId: input.customerId,
+      }),
+    });
+    if (result.error) return result;
+    const c = result.data;
+    if (!c) return { error: "Client not found" };
+    return {
+      id: c.customerId,
+      name: `${c.customerFirstName || ""} ${c.customerLastName || ""}`.trim(),
+      email: c.email,
+      phone: c.mobilePhone || c.dayPhone,
+      tags: c.generalTags,
+      points: c.pointsBalance,
+      since: c.createdDate,
+    };
+  }
+
+  if (name === "vagaro_services") {
+    const result = await vagaroFetch(userId, "/services", {
+      method: "POST",
+      body: JSON.stringify({ businessId: input.businessId }),
+    });
+    if (result.error) return result;
+    return { services: result.data || [] };
+  }
+
+  throw new Error(`Unknown vagaro tool: ${name}`);
+}
+
 // Geocode cache — locations don't move, cache aggressively
 const _geocodeCache = new Map();
 
@@ -5261,7 +5368,7 @@ export async function POST(request) {
       : () => Promise.resolve(null);
 
     // 10s hard cap — if anything in the parallel fetch hangs past its individual timeout, this catches it
-    const SETUP_DEFAULTS = [[], [], [], [], null, Array(23).fill(null), null, [], null];
+    const SETUP_DEFAULTS = [[], [], [], [], null, Array(24).fill(null), null, [], null];
     const [
       prefsResult,
       recentConvosResult,
@@ -5337,6 +5444,7 @@ export async function POST(request) {
         safeGet(getAsanaToken, "asana"),
         safeGet(getMondayToken, "monday"),
         safeGet(getLinearToken, "linear"),
+        safeGet(getVagaroToken, "vagaro"),
       ]) : Promise.resolve([null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]),
       // Stripe prices (fetched once, used by broadcasts + owner context)
       getStripePrices(),
@@ -5391,7 +5499,7 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
-    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken] = integrationTokens;
+    let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken, vagaroToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
     const isTrial = !config.isByok && !["owner", "founder"].includes(profile?.role) && ["free", "trial"].includes(profile?.seat_type || "trial");
@@ -5843,6 +5951,7 @@ Never skip the preview step. The user must see and approve changes before they g
       asana: () => asanaToken ? ASANA_TOOLS : [],
       monday: () => mondayToken ? MONDAY_TOOLS : [],
       linear: () => linearToken ? LINEAR_TOOLS : [],
+      vagaro: () => vagaroToken ? VAGARO_TOOLS : [],
     };
 
     // Detect which ecosystems the message actually needs
@@ -5927,7 +6036,7 @@ Never skip the preview step. The user must see and approve changes before they g
         quickbooks: !!qbToken, notion: !!notionToken,
         dropbox: !!dropboxToken, slack: !!slackToken,
         onenote: !!onenoteToken, todoist: !!todoistToken, readwise: !!readwiseToken,
-        asana: !!asanaToken, monday: !!mondayToken, linear: !!linearToken,
+        asana: !!asanaToken, monday: !!mondayToken, linear: !!linearToken, vagaro: !!vagaroToken,
       },
       kbIncluded,
       kbExcluded,
@@ -6414,6 +6523,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("linear_") && linearToken) {
                 try {
                   const result = await withTimeout(() => executeLinearTool(block.name, block.input || {}, userId));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Vagaro tools
+              if (block.name.startsWith("vagaro_") && vagaroToken) {
+                try {
+                  const result = await withTimeout(() => executeVagaroTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
