@@ -22,6 +22,7 @@ async function getEmbedding(text) {
       input: truncated,
       input_type: "document",
     }),
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
@@ -51,6 +52,7 @@ async function getQueryEmbedding(text) {
       input: truncated,
       input_type: "query",
     }),
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {

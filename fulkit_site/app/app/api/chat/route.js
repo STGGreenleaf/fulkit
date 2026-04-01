@@ -4822,10 +4822,13 @@ export async function POST(request) {
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
       try {
-        const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
+        const { data: { user }, error } = await Promise.race([
+          getSupabaseAdmin().auth.getUser(token),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("auth_timeout")), 5000)),
+        ]);
         if (!error && user) userId = user.id;
       } catch {
-        // Token validation failed
+        // Token validation failed or timed out
       }
     }
 
@@ -4994,10 +4997,16 @@ export async function POST(request) {
     } : null;
 
     // Parallel data fetch — all independent of each other, depend only on userId + profile
+    // safeGet: race with 5s timeout so a stalled token fetch never blocks the entire Promise.all
     const safeGet = userId
-      ? (fn, provider) => fn(userId).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; })
+      ? (fn, provider) => Promise.race([
+          fn(userId),
+          new Promise(resolve => setTimeout(() => resolve(null), 5000)),
+        ]).catch((err) => { emitServerSignal(userId, "token_refresh_failed", "warning", { provider, error: err?.message }); return null; })
       : () => Promise.resolve(null);
 
+    // 10s hard cap — if anything in the parallel fetch hangs past its individual timeout, this catches it
+    const SETUP_DEFAULTS = [[], [], [], [], null, [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null], null, [], null];
     const [
       prefsResult,
       recentConvosResult,
@@ -5008,7 +5017,8 @@ export async function POST(request) {
       stripePrices,
       semanticNotes,
       conversationSummary,
-    ] = await Promise.all([
+    ] = await Promise.race([
+      Promise.all([
       // Prefs + memories (combined query)
       userId ? getSupabaseAdmin()
         .from("preferences").select("key, value").eq("user_id", userId)
@@ -5112,6 +5122,11 @@ export async function POST(request) {
         .then(({ data }) => data)
         .catch(() => null)
       : Promise.resolve(null),
+    ]),
+      new Promise(resolve => setTimeout(() => {
+        console.warn("[chat] setup Promise.all hit 10s cap — proceeding with defaults");
+        resolve(SETUP_DEFAULTS);
+      }, 10000)),
     ]);
 
     // Destructure parallel results
