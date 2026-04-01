@@ -4246,29 +4246,6 @@ const OWNER_NOTES = [
     ],
   },
   {
-    category: "Features Shipped (Session 30)",
-    items: [
-      { name: "Vault Filesystem Sync", url: "https://fulkit.app/settings/vault", note: "Write notes/actions/decisions/summaries as .md files to user's desktop. File System Access API." },
-      { name: "Dev Loop Phase A", url: "https://fulkit.app/chat", note: "dev_multi_write (Git Trees API) + dev_run_tests (GitHub Actions). Owner-only." },
-      { name: "52 Tooltips", url: "https://fulkit.app/home", note: "Cycling 'Did you know' on dashboard. Curated via Owner Playground." },
-      { name: "Onboarding Overhaul", url: "https://fulkit.app/onboarding", note: "Mandatory vault, 3-col integration picker with logos, back button, no skip." },
-      { name: "Launch Polish", url: "https://fulkit.app", note: "error.js, robots.txt, sitemap.xml, auth signals, PKCE fix, seat rename." },
-      { name: "Brain Card", url: "https://fulkit.app/settings/account", note: "Vault connection status on Account tab. Green/red/grey dot + folder path." },
-    ],
-  },
-  {
-    category: "Features Shipped (Session 23)",
-    items: [
-      { name: "Inbox Triage", url: "https://fulkit.app/chat", note: "Drop any file \u2192 AI reads \u2192 triage card \u2192 file/discuss/extract/connect." },
-      { name: "ThreadCalendar", url: "https://fulkit.app/threads/calendar", note: "Google Calendar + Trello events on calendar grid. Drag-to-folder mapping." },
-      { name: "Sources Search", url: "https://fulkit.app/settings/sources", note: "Search upcoming integrations + waitlist tickets + suggestion input." },
-      { name: "Manual Redesign", url: "https://fulkit.app/settings/manual", note: "The manual is the chat. Try Asking section with 32 prompts." },
-      { name: "Global Hotkeys", url: "https://fulkit.app/settings/manual", note: "Cmd+N (chat), Cmd+H (home), Cmd+J (threads), Cmd+Shift+C (side chat)." },
-      { name: "Landing Cleanup", url: "https://fulkit.app/landing", note: "Removed unsourced stats, updated shipped features." },
-      { name: "Location Intelligence", url: "https://fulkit.app/chat", note: "Auto-detect via memory \u2192 IP fallback. Nominatim geocoding with cache." },
-    ],
-  },
-  {
     category: "Pending / One Day",
     items: [
       { name: "Vagaro", url: "https://docs.vagaro.com", note: "\u23F3 Email sent to Enterprise Sales for API access." },
