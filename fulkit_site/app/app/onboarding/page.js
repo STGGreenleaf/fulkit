@@ -984,7 +984,7 @@ function ProgressBar({ pct }) {
 
 function TierLabel({ tierNum, label }) {
   return (
-    <div style={{ position: "fixed", top: "var(--space-4)", left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none", zIndex: 1 }}>
+    <div style={{ position: "absolute", top: "var(--space-4)", left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
       <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
         Tier {tierNum}: {label}
       </span>
