@@ -491,16 +491,16 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       clearTimeout(safetyTimeout);
       let isFailed = false;
       if (err.name === "AbortError" && !firstChunkReceived) {
-        fullResponse = "Took too long to respond.";
+        fullResponse = "Something went wrong — try refreshing your browser.";
         isFailed = true;
         signal("chat_timeout", "warning", { phase: "waiting", elapsed: Date.now() - fetchStart, conversationId, messageCount: msgCount, firstChunkReceived: false });
       } else if (err.name === "AbortError" && firstChunkReceived) {
         // Mid-stream inactivity timeout — show what we have + error
-        fullResponse = (fullResponse || "") + "\n\n*(Response interrupted — connection went silent.)*";
+        fullResponse = (fullResponse || "") + "\n\n*(Something went wrong — try refreshing your browser.)*";
         isFailed = true;
         signal("chat_timeout", "warning", { phase: "streaming", elapsed: Date.now() - fetchStart, conversationId, messageCount: msgCount, firstChunkReceived: true, responseLength: fullResponse?.length });
       } else if (err.name !== "AbortError") {
-        fullResponse = "Connection error.";
+        fullResponse = "Something went wrong — try refreshing your browser.";
         isFailed = true;
         signal("chat_api_error", "error", { error: err.message, errorType: err.name, conversationId, messageCount: msgCount });
       }

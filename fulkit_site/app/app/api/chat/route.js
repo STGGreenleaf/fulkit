@@ -4729,6 +4729,9 @@ async function executeNoteCreate(input, userId, conversationId) {
     });
   }
 
+  // Invalidate semantic cache so the new note appears in searches immediately
+  _semanticCache.delete(userId);
+
   return { saved: true, id: data.id, title: data.title, folder: data.folder };
 }
 
@@ -4760,6 +4763,9 @@ async function executeNoteUpdate(input, userId) {
       emitServerSignal(userId, "note_embed_failed", "warning", { phase: "embedding", noteId: data.id, error: err?.message });
     });
   }
+
+  // Invalidate semantic cache so updated content appears in searches immediately
+  _semanticCache.delete(userId);
 
   return { updated: true, id: data.id, title: data.title, folder: data.folder };
 }
@@ -5006,7 +5012,7 @@ export async function POST(request) {
       : () => Promise.resolve(null);
 
     // 10s hard cap — if anything in the parallel fetch hangs past its individual timeout, this catches it
-    const SETUP_DEFAULTS = [[], [], [], [], null, [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null], null, [], null];
+    const SETUP_DEFAULTS = [[], [], [], [], null, Array(23).fill(null), null, [], null];
     const [
       prefsResult,
       recentConvosResult,
@@ -5560,7 +5566,8 @@ Never skip the preview step. The user must see and approve changes before they g
     function capResult(result) {
       const str = JSON.stringify(result);
       if (str.length <= MAX_TOOL_RESULT_CHARS) return str;
-      return str.slice(0, MAX_TOOL_RESULT_CHARS) + '... [truncated — result too large]';
+      // Truncate as valid JSON so Claude can still parse partial data
+      return JSON.stringify({ _truncated: true, _originalLength: str.length, data: str.slice(0, MAX_TOOL_RESULT_CHARS - 200) });
     }
     // Build tools — keyword-gated: only load ecosystems the message signals
     const ECOSYSTEM_TOOLS = {
@@ -5759,7 +5766,7 @@ Never skip the preview step. The user must see and approve changes before they g
               }
             }
             if (!streamCreated) {
-              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "AI service is temporarily busy. Try again in a moment." })}\n\n`)); } catch {}
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong — try refreshing your browser." })}\n\n`)); } catch {}
               try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
               try { controller.close(); } catch {}
               clearTimeout(overallTimeout);
@@ -5791,9 +5798,9 @@ Never skip the preview step. The user must see and approve changes before they g
               }
               // Abort or fatal — stop gracefully
               if (streamAbort.signal.aborted) {
-                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Response took too long. Try again." })}\n\n`)); } catch {}
+                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong — try refreshing your browser." })}\n\n`)); } catch {}
               } else {
-                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
+                try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong — try refreshing your browser." })}\n\n`)); } catch {}
               }
               try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
               try { controller.close(); } catch {}
@@ -5810,7 +5817,7 @@ Never skip the preview step. The user must see and approve changes before they g
               ]);
             } catch (err) {
               // Stream stalled, client disconnected, or API interrupted
-              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong — try refreshing your browser." })}\n\n`)); } catch {}
               try { controller.enqueue(encoder.encode("data: [DONE]\n\n")); } catch {}
               try { controller.close(); } catch {}
               clearTimeout(overallTimeout);
@@ -5841,9 +5848,10 @@ Never skip the preview step. The user must see and approve changes before they g
             }, 8000);
             try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { clearInterval(toolKeepAlive); break; }
 
-            // Execute each tool call
+            // Execute each tool call (wrapped so toolKeepAlive always clears)
             const toolResults = [];
             totalRounds = round + 1;
+            try {
             for (const block of finalMessage.content) {
               if (block.type !== "tool_use") continue;
               toolsUsed.push(block.name);
@@ -6336,7 +6344,9 @@ Never skip the preview step. The user must see and approve changes before they g
               }
             }
 
-            clearInterval(toolKeepAlive);
+            } finally {
+              clearInterval(toolKeepAlive);
+            }
 
             // Signal any tool errors
             for (const tr of toolResults) {
@@ -6357,7 +6367,7 @@ Never skip the preview step. The user must see and approve changes before they g
           }
 
           // If tool loop exhausted, make one final call without tools so Claude responds
-          if (needsFinalResponse) {
+          if (needsFinalResponse && !streamAbort.signal.aborted) {
             try {
               const finalStream = anthropic.messages.stream(
                 { model: config.model, max_tokens: config.maxTokens, system: systemBlocks, messages: loopMessages },
@@ -6376,7 +6386,7 @@ Never skip the preview step. The user must see and approve changes before they g
                 }
               }
             } catch (err) {
-              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Connection to AI was interrupted. Try again." })}\n\n`)); } catch {}
+              try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Something went wrong — try refreshing your browser." })}\n\n`)); } catch {}
             }
           }
 
@@ -6668,7 +6678,7 @@ Never skip the preview step. The user must see and approve changes before they g
             emitServerSignal(userId, "chat_stream_fatal", "error", { error: err.message, stack: err.stack?.split("\n").slice(0, 3).join(" | "), model: config.model, messageCount: messages.length, contextLength: context?.length, hasByok: config.isByok, seatType: profile?.seat_type, conversationId: rawConvId });
           }
           try {
-            const errMsg = isAbort ? "Response took too long. Try again." : "Something went wrong. Try again.";
+            const errMsg = isAbort ? "Something went wrong — try refreshing your browser." : "Something went wrong — try refreshing your browser.";
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`));
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           } catch { /* stream already closed by client disconnect */ }

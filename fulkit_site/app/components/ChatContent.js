@@ -1520,7 +1520,7 @@ export default function ChatContent({ isPopout = false }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       Pinned
                     </span>
-                    <button type="button" onClick={() => { setShowPins(false); window.history.replaceState(null, "", "/chat"); }} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => { setShowPins(false); window.history.replaceState(null, "", "/chat"); }} style={{ ...toolbarBtnStyle, color: "var(--color-text-muted)" }}>
                       <X size={18} strokeWidth={2} style={{ pointerEvents: "none" }} />
                     </button>
                   </div>
@@ -1622,7 +1622,7 @@ export default function ChatContent({ isPopout = false }) {
                     <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
                       History
                     </span>
-                    <button type="button" onClick={() => { setShowHistory(false); window.history.replaceState(null, "", "/chat"); }} style={toolbarBtn(false)}>
+                    <button type="button" onClick={() => { setShowHistory(false); window.history.replaceState(null, "", "/chat"); }} style={{ ...toolbarBtnStyle, color: "var(--color-text-muted)" }}>
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
