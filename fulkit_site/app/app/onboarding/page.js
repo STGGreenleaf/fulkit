@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowRight, Check, SkipForward, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, SkipForward, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
@@ -835,9 +835,9 @@ export default function Onboarding() {
                     onClick={() => selectChoice(label)}
                     style={{
                       padding: "var(--space-2-5) var(--space-4)",
-                      background: selected ? "var(--color-accent)" : "var(--color-bg-elevated)",
-                      color: selected ? "var(--color-text-inverse)" : "var(--color-text)",
-                      border: selected ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
+                      background: selected ? "#D4D1CC" : "var(--color-bg-elevated)",
+                      color: "var(--color-text)",
+                      border: selected ? "1px solid #D4D1CC" : "1px solid var(--color-border)",
                       borderRadius: "var(--radius-md)",
                       fontSize: "var(--font-size-base)",
                       fontFamily: "var(--font-primary)",
@@ -851,29 +851,29 @@ export default function Onboarding() {
                 );
               })}
             </div>
-            {multiSelect.length > 0 && (
-              <button
-                onClick={submitMulti}
-                style={{
-                  marginTop: "var(--space-4)",
-                  padding: "var(--space-2-5) var(--space-5)",
-                  background: "var(--color-accent)",
-                  color: "var(--color-text-inverse)",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: "var(--font-weight-semibold)",
-                  fontFamily: "var(--font-primary)",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                }}
-              >
-                Continue
-                <ArrowRight size={14} strokeWidth={2.5} />
-              </button>
-            )}
+            <button
+              onClick={submitMulti}
+              disabled={multiSelect.length === 0}
+              style={{
+                marginTop: "var(--space-4)",
+                padding: "var(--space-2-5) var(--space-5)",
+                background: multiSelect.length > 0 ? "var(--color-accent)" : "transparent",
+                color: multiSelect.length > 0 ? "var(--color-text-inverse)" : "transparent",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-semibold)",
+                fontFamily: "var(--font-primary)",
+                cursor: multiSelect.length > 0 ? "pointer" : "default",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                transition: "all var(--duration-normal) var(--ease-default)",
+              }}
+            >
+              Continue
+              <ArrowRight size={14} strokeWidth={2.5} />
+            </button>
           </>
         )}
 
@@ -973,6 +973,37 @@ export default function Onboarding() {
           >
             <SkipForward size={12} strokeWidth={2} />
             Skip
+          </button>
+        )}
+
+        {/* Back button */}
+        {(questionIdx > 0 || tierIdx > 0) && (
+          <button
+            onClick={() => {
+              if (questionIdx > 0) {
+                setQuestionIdx(questionIdx - 1);
+                setMultiSelect([]);
+                setTextVal("");
+              } else if (tierIdx > 0) {
+                setTierIdx(tierIdx - 1);
+                setShowTierIntro(true);
+              }
+            }}
+            style={{
+              marginTop: "var(--space-6)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-dim)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "var(--font-primary)",
+            }}
+          >
+            <ArrowLeft size={12} strokeWidth={2} />
+            Back
           </button>
         )}
       </div>
