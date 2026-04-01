@@ -4843,6 +4843,16 @@ const PITCHES = [
   { cat: "Features", text: "Local-first, encrypted sync, or managed. Most apps don\u2019t give you a choice. We give you three." },
   { cat: "Features", text: "You didn\u2019t write a to-do list. F\u00FClkit read your notes and wrote one for you.", star: true },
   { cat: "Features", text: "Friday brain dump. Monday morning: sorted, prioritized, waiting for you." },
+  { cat: "Features", text: "\u201CI whiten my teeth the first Sunday of every month.\u201D One sentence. Now it\u2019s tracked.", star: true },
+  { cat: "Features", text: "No habit app. No checkboxes. No guilt. Just say what you do and F\u00FClkit handles the rest." },
+  { cat: "Features", text: "Strava logged a run? Habit checked. Fitbit tracked your sleep? Streak updated. You didn\u2019t do anything." },
+  { cat: "Features", text: "Miss a few days? F\u00FClkit doesn\u2019t guilt you. One quiet check-in: \u201CStill want me to track this?\u201D", star: true },
+  { cat: "Features", text: "Back from vacation? \u201CHere\u2019s what came due while you were away.\u201D Check off, move on." },
+  { cat: "Features", text: "Change the air filter. Flea treatment for the dog. Teeth whitening. The stuff you always forget \u2014 tracked." },
+  { cat: "Features", text: "Have a feature idea? Say it in chat. The developer gets notified. You hear back on your dashboard.", star: true },
+  { cat: "Features", text: "Start on your phone. Your notes follow you home. Desktop vault syncs everything as .md files." },
+  { cat: "Features", text: "Your cycle data lives on YOUR computer. Not our servers. Not a period tracker that sells your data.", star: true },
+  { cat: "Features", text: "Your dashboard is yours. Not a template. It shows what you use \u2014 nothing else." },
   // ── Fabric ──
   { cat: "Fabric", text: "Your music has a shape. Fabric shows it to you.", star: true },
   { cat: "Fabric", text: "Hit play. Watch the wave come alive. That\u2019s your song \u2014 no two look the same." },
@@ -5128,7 +5138,7 @@ const PITCHES = [
   { cat: "Switch", text: "Nobody switches back. Not because they can\u2019t. Because there\u2019s nothing to go back to.", star: true },
   { cat: "Switch", text: "You\u2019ll spend 5 minutes setting up F\u00FClkit and wonder why you spent 5 years setting up everything else.", star: true },
   { cat: "Switch", text: "Cancel 3 apps today. Sign up for F\u00FClkit. Net savings by tomorrow: $40+/mo." },
-  { cat: "Switch", text: "The free trial is 100 messages. That\u2019s enough to know." },
+  { cat: "Switch", text: "The free trial is 150 messages. That\u2019s enough to know." },
   { cat: "Switch", text: `$${TIERS.standard.price}/mo. 30-day cancel anytime. No annual trap. No \u201Care you sure?\u201D guilt screen.`, star: true },
 ];
 

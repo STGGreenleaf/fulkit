@@ -156,5 +156,22 @@
 - `entre-no-deck`: "It's not a pitch deck tool. It's the thing that makes your pitch deck honest."
 - `entre-time`: "You have 14 hours a day and 40 priorities. Fülkit remembers all of them."
 
+### Habits
+- `habits-invisible`: "'I whiten my teeth the first Sunday of every month.' One sentence. Now it's tracked. No app. No form. No settings page."
+- `habits-auto`: "Strava logged a run? Habit checked. Fitbit tracked your sleep? Streak updated. You didn't lift a finger."
+- `habits-catchup`: "Back from vacation? 'Here's what came due.' Check off what's done. No guilt. No broken-streak shame."
+- `habits-household`: "Change the air filter. Flea treatment for the dog. The stuff you always forget — now you don't."
+- `habits-no-shame`: "Miss a few days? One quiet check-in. Not 47 angry notifications."
+- `habits-cycle`: "Your cycle data lives on your computer. Not our servers. Not a period tracker that sells your data."
+
+### Cross-Device
+- `cross-device`: "Start on your phone at lunch. Come home. Your notes are already in a folder on your desktop."
+- `mobile-first`: "Sign up on your phone. Start chatting immediately. Connect the vault when you're at your desk."
+- `vault-sync`: "Your data isn't trapped in an app. It's .md files in a folder you own. On your actual computer."
+
+### Feedback Loop
+- `feedback-loop`: "Have a feature idea? Say it in chat. The developer hears you. You hear back when it's built."
+- `feedback-collaborative`: "This is how Fülkit gets built — by listening. Every feature request goes to a real person."
+
 ### For Investors
-- `investor-thesis`: "Convenience layer for fragmented SaaS. Habit Engine cuts per-message cost 87% while improving accuracy. Referral-driven growth with $0 acquisition cost per referred user and always-positive unit economics. $6.48 average margin per Standard user."
+- `investor-thesis`: [!] "Convenience layer for fragmented SaaS. Lean tool loading cuts schema tokens ~96%. Referral-driven growth with $0 acquisition cost per referred user. Break even at ~25 paying users. Sonnet at ~$0.015/msg."
