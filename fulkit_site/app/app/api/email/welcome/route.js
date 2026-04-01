@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import { buildEmailHtml } from "../../../../lib/email-templates";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() { return new Resend(process.env.RESEND_API_KEY); }
 
 // POST /api/email/welcome — send welcome email to a user
 // Called from auth callback on first signup, or manually from owner portal
@@ -22,7 +22,7 @@ export async function POST(request) {
 
     if (!toEmail) return Response.json({ error: "No email address" }, { status: 400 });
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: "F\u00fclkit <hello@fulkit.app>",
       to: toEmail,
       subject: "Welcome to F\u00fclkit",

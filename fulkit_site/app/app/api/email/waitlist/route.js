@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from "../../../../lib/supabase-server";
 import { buildEmailHtml } from "../../../../lib/email-templates";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() { return new Resend(process.env.RESEND_API_KEY); }
 
 // POST /api/email/waitlist — send waitlist notification emails
 // Owner: { emails, template, message?, category? }
@@ -39,7 +39,7 @@ export async function POST(request) {
     let sent = 0;
     for (const email of emails) {
       try {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: "F\u00fclkit <hello@fulkit.app>",
           to: email,
           subject: subjects[template] || subjects.custom,
