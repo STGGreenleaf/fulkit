@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import { PLANS } from "./ful-legend";
+import { emitSignal } from "./signal";
 
 const AuthContext = createContext(null);
 
@@ -222,7 +223,12 @@ export function AuthProvider({ children }) {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    if (error) console.error("Magic link error:", error.message);
+    if (error) {
+      console.error("Magic link error:", error.message);
+      if (error.message.toLowerCase().includes("rate limit")) {
+        try { emitSignal("auth_rate_limit", "warning", { method: "magic_link", message: error.message }); } catch {}
+      }
+    }
     return { error };
   }, []);
 

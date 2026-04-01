@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { emitSignal } from "../../../lib/signal";
 
 export default function AuthCallback() {
   const [status, setStatus] = useState("Signing in...");
@@ -16,8 +17,10 @@ export default function AuthCallback() {
         const message = decodeURIComponent(errorParam.replace(/\+/g, " "));
         if (message.includes("expired")) {
           setStatus("expired");
+          try { emitSignal("auth_link_expired", "warning", { message }); } catch {}
         } else {
           setStatus(`Error: ${message}`);
+          try { emitSignal("auth_callback_error", "error", { message }); } catch {}
         }
         return;
       }
