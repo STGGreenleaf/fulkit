@@ -2090,11 +2090,11 @@ function DeveloperTab() {
       .finally(() => setWaitlistLoading(false));
   }, [accessToken]);
 
-  const updateStatus = async (id, status) => {
+  const updateTicket = async (id, updates) => {
     const res = await fetch("/api/feedback", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ id, ...updates }),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -2102,34 +2102,21 @@ function DeveloperTab() {
     }
   };
 
-  const STATUS_STYLES = {
-    open: { background: "var(--color-bg-alt)", color: "var(--color-text)" },
-    seen: { background: "var(--color-border-light)", color: "var(--color-text-secondary)" },
-    fixed: { background: "var(--color-bg-inverse)", color: "var(--color-text-inverse)" },
-    wontfix: { background: "transparent", color: "var(--color-text-dim)", border: "1px solid var(--color-border-light)" },
+  const archiveTicket = (id) => {
+    updateTicket(id, { status: "wontfix" });
   };
-
-  const nextStatus = (s) => ({ open: "seen", seen: "fixed", fixed: "wontfix", wontfix: "open" }[s] || "open");
 
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
 
   const sendReply = async (id) => {
     if (!replyText.trim()) return;
-    const res = await fetch("/api/feedback", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ id, reply: replyText.trim(), status: "fixed" }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setTickets(prev => prev.map(t => t.id === id ? updated : t));
-      setReplyingTo(null);
-      setReplyText("");
-    }
+    await updateTicket(id, { reply: replyText.trim(), status: "fixed" });
+    setReplyingTo(null);
+    setReplyText("");
   };
 
-  const openCount = tickets.filter(t => t.status === "open").length;
+  const openCount = tickets.filter(t => ["open", "seen"].includes(t.status)).length;
 
   // ── Drawer states ──
   const [switchesOpen, setSwitchesOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-switchesOpen") === "true");
@@ -2880,77 +2867,101 @@ function DeveloperTab() {
         ) : tickets.length === 0 ? (
           <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-dim)", fontStyle: "italic" }}>No tickets yet.</div>
         ) : (
-          <div style={{ border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-            {tickets.map((t, i) => (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {tickets.filter(t => t.status !== "wontfix").map((t) => (
               <div key={t.id} style={{
-                display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
-                padding: "var(--space-2-5) var(--space-3)",
-                borderBottom: i < tickets.length - 1 ? "1px solid var(--color-border-light)" : "none",
-                background: t.status === "open" ? "var(--color-bg-elevated)" : "transparent",
+                padding: "var(--space-4)",
+                background: t.status === "open" ? "var(--color-bg-elevated)" : "var(--color-bg)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-md)",
+                borderLeft: t.status === "open" ? "3px solid var(--color-text)" : "3px solid var(--color-border-light)",
               }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)", wordBreak: "break-word" }}>
-                    {t.message}
-                  </div>
-                  <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-text-dim)", marginTop: 2 }}>
-                    {t.email || "unknown"} {"\u00b7"} {t.category || "bug"} {"\u00b7"} {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {t.page_url ? ` \u00b7 ${t.page_url.replace(/^https?:\/\/[^/]+/, "")}` : ""}
-                  </div>
-                  {t.reply && (
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 4, fontStyle: "italic" }}>
-                      Replied: {t.reply}
-                    </div>
-                  )}
-                  {replyingTo === t.id && (
-                    <div style={{ marginTop: "var(--space-2)", display: "flex", gap: "var(--space-2)" }}>
-                      <input
-                        autoFocus
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") sendReply(t.id); if (e.key === "Escape") { setReplyingTo(null); setReplyText(""); } }}
-                        placeholder="We built it for you..."
-                        style={{
-                          flex: 1, padding: "var(--space-1-5) var(--space-2)",
-                          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-primary)",
-                          border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
-                          background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
-                        }}
-                      />
-                      <button onClick={() => sendReply(t.id)} style={{
-                        padding: "var(--space-1-5) var(--space-2)", fontSize: "var(--font-size-xs)",
-                        background: "var(--color-text)", color: "var(--color-bg)",
-                        border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
-                        fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
-                      }}>Send</button>
-                    </div>
-                  )}
+                {/* Header — like an email from/date line */}
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>
+                    <span style={{ fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>{t.email || "Unknown"}</span>
+                    {" \u00b7 "}{t.category || "bug"}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9 }}>
+                    {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-                  <button
-                    onClick={() => updateStatus(t.id, nextStatus(t.status))}
-                    style={{
-                      padding: "2px 8px", borderRadius: "var(--radius-sm)",
-                      fontSize: 9, fontFamily: "var(--font-mono)", fontWeight: "var(--font-weight-medium)",
-                      textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)",
-                      cursor: "pointer", border: "none",
-                      ...STATUS_STYLES[t.status],
-                    }}
-                  >
-                    {t.status}
-                  </button>
-                  {!t.reply && t.status !== "wontfix" && (
+
+                {/* Body — the message */}
+                <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)", lineHeight: "var(--line-height-relaxed)", wordBreak: "break-word", marginBottom: "var(--space-3)" }}>
+                  {t.message}
+                </div>
+
+                {/* Your reply (if sent) */}
+                {t.reply && (
+                  <div style={{
+                    fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: "var(--line-height-relaxed)",
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "var(--color-bg-alt)", borderRadius: "var(--radius-sm)",
+                    marginBottom: "var(--space-3)",
+                    borderLeft: "2px solid var(--color-text-dim)",
+                  }}>
+                    <span style={{ fontWeight: "var(--font-weight-semibold)" }}>You replied:</span> {t.reply}
+                  </div>
+                )}
+
+                {/* Reply input */}
+                {replyingTo === t.id && (
+                  <div style={{ marginBottom: "var(--space-3)", display: "flex", gap: "var(--space-2)" }}>
+                    <input
+                      autoFocus
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") sendReply(t.id); if (e.key === "Escape") { setReplyingTo(null); setReplyText(""); } }}
+                      placeholder="We built it for you..."
+                      style={{
+                        flex: 1, padding: "var(--space-2) var(--space-3)",
+                        fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
+                        border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-sm)",
+                        background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                      }}
+                    />
+                    <button onClick={() => sendReply(t.id)} style={{
+                      padding: "var(--space-2) var(--space-3)", fontSize: "var(--font-size-sm)",
+                      background: "var(--color-text)", color: "var(--color-bg)",
+                      border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                      fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-semibold)",
+                    }}>Send</button>
+                  </div>
+                )}
+
+                {/* Actions — clear, email-style */}
+                <div style={{ display: "flex", gap: "var(--space-3)", borderTop: "1px solid var(--color-border-light)", paddingTop: "var(--space-2)" }}>
+                  {!t.reply && (
                     <button
                       onClick={() => { setReplyingTo(replyingTo === t.id ? null : t.id); setReplyText(""); }}
-                      style={{
-                        padding: "2px 8px", borderRadius: "var(--radius-sm)",
-                        fontSize: 9, fontFamily: "var(--font-mono)",
-                        cursor: "pointer", border: "1px solid var(--color-border-light)",
-                        background: "transparent", color: "var(--color-text-muted)",
-                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
                     >
-                      reply
+                      Reply
                     </button>
                   )}
+                  {t.status === "open" && (
+                    <button
+                      onClick={() => updateTicket(t.id, { status: "seen" })}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  {!t.reply && (
+                    <button
+                      onClick={() => updateTicket(t.id, { status: "fixed" })}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontFamily: "var(--font-primary)", padding: 0 }}
+                    >
+                      Done
+                    </button>
+                  )}
+                  <button
+                    onClick={() => archiveTicket(t.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", fontFamily: "var(--font-primary)", padding: 0, marginLeft: "auto" }}
+                  >
+                    Archive
+                  </button>
                 </div>
               </div>
             ))}
