@@ -682,11 +682,11 @@ export default function Onboarding() {
         <SkipLink />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
           {tier.intro && (
-            <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: "var(--font-weight-bold)", lineHeight: "var(--line-height-snug)", letterSpacing: "var(--letter-spacing-tight)", marginBottom: "var(--space-4)" }}>
+            <h2 style={{ fontSize: "var(--font-size-3xl)", fontWeight: "var(--font-weight-black)", lineHeight: "var(--line-height-snug)", letterSpacing: "var(--letter-spacing-tight)", marginBottom: "var(--space-5)" }}>
               {tier.label}
             </h2>
           )}
-          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", textAlign: "left", marginBottom: "var(--space-8)" }}>
+          <p style={{ fontSize: "var(--font-size-base)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", textAlign: "left", marginBottom: "var(--space-8)" }}>
             {tier.trust_line}
           </p>
           <button
