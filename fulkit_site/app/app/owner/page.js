@@ -4306,7 +4306,7 @@ const OWNER_OVERHEAD = {
 function buildRevenueGrid() {
   const split = PROJECTIONS.standardProSplit;
   const freeSeats = PROJECTIONS.freeSeatsDefault;
-  const costPerMsg = COST_BASIS.targetCostPerFul;
+  const costPerMsg = COST_BASIS.currentCostPerFul;
   const avgMsgs = PROJECTIONS.avgMsgsPerUserPerMonth;
   const hostBase = PROJECTIONS.hostingBase;
   const hostPer100 = PROJECTIONS.hostingPerHundredUsers;
@@ -4333,17 +4333,17 @@ const MILESTONES = REVENUE_GRID.map(r => r.users);
 
 const BINGO_CARDS = [
   { label: "First paying user", threshold: 7 },
-  { label: "Cover hosting", threshold: 12 },
-  { label: "Break even", threshold: 20 },
-  { label: "First $100/mo", threshold: 50 },
-  { label: "Ramen profitable", threshold: 75 },
-  { label: "First $500/mo", threshold: 150 },
-  { label: "$1K/mo club", threshold: 300 },
-  { label: "Real side income", threshold: 500 },
-  { label: "Real business", threshold: 750 },
-  { label: "Four figures net", threshold: 1000 },
-  { label: "Scaling", threshold: 1500 },
-  { label: "Quit your day job", threshold: 2000 },
+  { label: "Cover hosting", threshold: 15 },
+  { label: "Break even", threshold: 25 },
+  { label: "First $100/mo net", threshold: 35 },
+  { label: "First $500/mo net", threshold: 75 },
+  { label: "$1K/mo net", threshold: 150 },
+  { label: "Real side income", threshold: 300 },
+  { label: "$3K/mo net", threshold: 500 },
+  { label: "$5K/mo net", threshold: 750 },
+  { label: "Quit your day job", threshold: 1000 },
+  { label: "$10K/mo net", threshold: 1500 },
+  { label: "Real company", threshold: 2000 },
 ];
 
 function getProgressPercent(userCount) {
@@ -4528,7 +4528,7 @@ function UsersTab() {
           marginBottom: "var(--space-4)",
         }}>
           <div>{TIERS.standard.label} {TIERS.standard.priceLabel} ({TIERS.standard.messages} msgs) &middot; {TIERS.pro.label} {TIERS.pro.priceLabel} ({TIERS.pro.messages} msgs) &middot; Credits {CREDITS.priceLabel}/{CREDITS.amount}</div>
-          <div>{Math.round(PROJECTIONS.standardProSplit * 100)}/{Math.round((1 - PROJECTIONS.standardProSplit) * 100)} {TIERS.standard.label}/{TIERS.pro.label} split &middot; {PROJECTIONS.freeSeatsDefault} free seats &middot; ~{COST_BASIS.targetCostPerFul * 100}&cent;/msg target API cost &middot; ~${PROJECTIONS.blendedRefCreditPerUser}/mo blended ref credit</div>
+          <div>{Math.round(PROJECTIONS.standardProSplit * 100)}/{Math.round((1 - PROJECTIONS.standardProSplit) * 100)} {TIERS.standard.label}/{TIERS.pro.label} split &middot; {PROJECTIONS.freeSeatsDefault} free seats &middot; ~{COST_BASIS.currentCostPerFul * 100}&cent;/msg API cost &middot; ~${PROJECTIONS.blendedRefCreditPerUser}/mo blended ref credit</div>
         </div>
 
         {/* Table */}

@@ -125,12 +125,12 @@ export const REFERRALS = {
 // === VARIABLE (internal ops) =============================================
 
 export const COST_BASIS = {
-  targetCostPerFul: 0.012,    // target after optimization
-  currentCostPerFul: 0.09,    // actual today (pre-optimization)
+  targetCostPerFul: 0.012,    // target with caching + lean tools
+  currentCostPerFul: 0.015,   // actual Sonnet cost today (was 0.09 when running Opus for all)
   // Compat aliases
   targetCostPerMsg: 0.012,
-  currentCostPerMsg: 0.09,
-  lastUpdated: "2026-03-19",
+  currentCostPerMsg: 0.015,
+  lastUpdated: "2026-04-01",
 };
 
 export function getSpendCap(plan) {
@@ -143,8 +143,8 @@ export function getSpendCap(plan) {
   const costPerFul = Math.max(COST_BASIS.currentCostPerFul, COST_BASIS.targetCostPerFul);
   // 1.5x buffer above expected cost
   return Math.ceil(fulLimit * costPerFul * 1.5 * 100) / 100;
-  // At current costs: Standard = 450 x 0.09 x 1.5 = $60.75, Pro = 800 x 0.09 x 1.5 = $108.00
-  // Post-optimization: Standard = $8.10, Pro = $14.40 (once currentCostPerFul drops)
+  // At current costs (Sonnet $0.015): Standard = 450 x 0.015 x 1.5 = $10.13, Pro = 800 x 0.015 x 1.5 = $18.00
+  // Post-optimization ($0.012): Standard = $8.10, Pro = $14.40
 }
 
 export const CIRCUIT_BREAKER = {
