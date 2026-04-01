@@ -9,6 +9,19 @@ export default function AuthCallback() {
   useEffect(() => {
     async function handleAuth() {
       const url = new URL(window.location.href);
+
+      // Check for error in query params or hash (Supabase puts errors in both)
+      const errorParam = url.searchParams.get("error_description") || url.hash.match(/error_description=([^&]+)/)?.[1];
+      if (errorParam) {
+        const message = decodeURIComponent(errorParam.replace(/\+/g, " "));
+        if (message.includes("expired")) {
+          setStatus("expired");
+        } else {
+          setStatus(`Error: ${message}`);
+        }
+        return;
+      }
+
       const code = url.searchParams.get("code");
 
       if (code) {
@@ -66,26 +79,48 @@ export default function AuthCallback() {
     handleAuth();
   }, []);
 
-  if (status.startsWith("Error:")) {
+  if (status === "expired" || status.startsWith("Error:")) {
     return (
       <div
         style={{
           minHeight: "100vh",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          fontFamily: "var(--font-primary)",
+          background: "var(--color-bg)",
+          padding: "var(--space-6)",
+          textAlign: "center",
         }}
       >
-        <div
+        <div style={{ fontSize: "var(--font-size-4xl)", fontWeight: "var(--font-weight-black)", color: "var(--color-text)", marginBottom: "var(--space-2)" }}>
+          {status === "expired" ? "Link expired" : "Oops"}
+        </div>
+        <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)", marginBottom: "var(--space-6)", maxWidth: 320 }}>
+          {status === "expired"
+            ? "That sign-in link is no longer valid. They only last a few minutes. Request a fresh one."
+            : status.replace("Error: ", "")}
+        </div>
+        <a
+          href="/login"
           style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-muted)",
-            maxWidth: 400,
+            display: "block",
+            width: "100%",
+            maxWidth: 280,
             textAlign: "center",
+            padding: "var(--space-3)",
+            background: "var(--color-accent)",
+            color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-semibold)",
+            fontFamily: "var(--font-primary)",
+            textDecoration: "none",
           }}
         >
-          {status}
-        </div>
+          {status === "expired" ? "Try again" : "Back to login"}
+        </a>
       </div>
     );
   }
