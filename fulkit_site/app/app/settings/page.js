@@ -5361,7 +5361,7 @@ function BillingTab() {
   // User billing CSV export
   function exportBillingCSV() {
     const rows = [["Category", "Detail", "Value"]];
-    rows.push(["Plan", "Type", isOwner ? "Owner (BYOK)" : (PLAN_LABELS[seatType] || "Free")]);
+    rows.push(["Plan", "Type", isOwner ? "Owner (BYOK)" : (PLAN_LABELS[seatType] || "Trial")]);
     rows.push(["Plan", "Price", isOwner ? "Unlimited" : (PLAN_PRICES[seatType] || "$0")]);
     rows.push(["Plan", "Messages/mo", isOwner ? "Unlimited" : String(seatLimit)]);
     rows.push(["Usage", "Messages used", String(messagesUsed)]);
@@ -5590,7 +5590,7 @@ function BillingTab() {
         payout: null, upgradeLabel: "Upgrade to Pro", downgradeLabel: null,
       },
       free: {
-        label: "Free", name: "Jamie Rivera", email: "jamie@gmail.com", seat: "trial", joined: "June 2026",
+        label: "Trial", name: "Jamie Rivera", email: "jamie@gmail.com", seat: "trial", joined: "June 2026",
         limit: SEAT_LIMITS.free, used: 72, refs: 0, ful: 0, credit: 0, tier: null, fulPerRef: 0, lifetimeFul: 0,
         card: null, sub: null,
         invoices: [],
@@ -5650,8 +5650,8 @@ function BillingTab() {
     const sGaugeLow = sRemaining <= Math.ceil(s.limit * 0.1);
     const sGaugeCapped = sRemaining <= 0;
     const sGaugeColor = sGaugeCapped ? "var(--color-error)" : sGaugeLow ? "var(--color-warning)" : "var(--color-accent)";
-    const sPlanLabel = PLAN_LABELS[s.seat] || "Free";
-    const sPlanPrice = PLAN_PRICES[s.seat] || "Free";
+    const sPlanLabel = PLAN_LABELS[s.seat] || "Trial";
+    const sPlanPrice = PLAN_PRICES[s.seat] || "Trial";
     const sMaxTokens = s.seat === "pro" ? "4,096" : "2,048";
     const statusBg = s.sub?.status === "active" ? "var(--color-success-soft)" : s.sub?.status === "past_due" ? "var(--color-error-soft)" : "var(--color-bg)";
     const statusColor = s.sub?.status === "active" ? "var(--color-success)" : s.sub?.status === "past_due" ? "var(--color-error)" : "var(--color-text-dim)";
@@ -5986,8 +5986,8 @@ function BillingTab() {
   }
 
   // ── Regular user view ──
-  const planLabel = PLAN_LABELS[seatType] || "Free";
-  const planPrice = PLAN_PRICES[seatType] || "Free";
+  const planLabel = PLAN_LABELS[seatType] || "Trial";
+  const planPrice = PLAN_PRICES[seatType] || "Trial";
   const planBenefits = seatType === "pro" ? [
     { label: "Messages", value: `${seatLimit}/mo` },
     { label: "Model", value: "Claude Sonnet" },
