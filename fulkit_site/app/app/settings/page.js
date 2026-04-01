@@ -1438,7 +1438,8 @@ function SourcesTab() {
       check("/api/asana/status"),
       check("/api/monday/status"),
       check("/api/linear/status"),
-    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise, asana, monday, linear]) => {
+      check("/api/vagaro/status"),
+    ]).then(([fabric, numbrly, tg, square, shopify, stripe, toast, trello, gcal, gmail, gdrive, fitbit, strava, qb, notion, dropbox, slack, onenote, todoist, readwise, asana, monday, linear, vagaro]) => {
       if (fabric) {
         setFabricConnected(fabric.connected);
         setSpotifyConnected(!!fabric.providers?.spotify);
@@ -1467,7 +1468,6 @@ function SourcesTab() {
       if (asana) { setAsanaConnected(asana.connected); if (asana.lastSynced) setAsanaLastSynced(asana.lastSynced); }
       if (monday) { setMondayConnected(monday.connected); if (monday.lastSynced) setMondayLastSynced(monday.lastSynced); }
       if (linear) { setLinearConnected(linear.connected); if (linear.lastSynced) setLinearLastSynced(linear.lastSynced); }
-      const vagaro = await authFetch("/api/vagaro/status").then(r => r.ok ? r.json() : null).catch(() => null);
       if (vagaro) { setVagaroConnected(vagaro.connected); }
       setStatusReady(true);
     });
