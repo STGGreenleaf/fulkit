@@ -168,6 +168,28 @@
 - [x] **SVG rage clicks on toolbar buttons** — Lucide SVG icons eating taps on mobile. Fix: pointerEvents:"none" on icons.
 
 
+## Vault Filesystem Sync — ✅ Session 30
+
+> The spine. Fulkit writes to the user's computer.
+
+- [x] **Write operations** — notes, actions, decisions, summaries written as .md files via File System Access API
+- [x] **Folder watcher** — polls every 30s + on focus, re-validates structure, checks permissions
+- [x] **Onboarding enforced** — mandatory vault connection (Chromium), auto Model C (Safari/Firefox). No skip.
+- [x] **Note sync** — chat creates note → Supabase → client writes .md to folder
+- [x] **Delete sync** — note deleted in settings → .md removed from folder
+- [x] **Writeback expanded** — actions, decisions, conversation summaries all write to vault folder
+- [x] **Brain card** — Settings Account tab shows connection status + folder path
+- [x] **Brain tree** — Settings Vault tab shows read-only folder structure
+- [x] **Permission recovery** — vaultError state exposed for reconnect banner
+- [x] **Landing page** — trust copy: "No AI product does this... Fülkit writes it to your desktop"
+
+## Seat Type Rename — ✅ Session 30
+
+- [x] `free` → `trial` across entire codebase (14 files)
+- [x] DB constraint updated (CHECK includes "trial")
+- [x] Column default changed to "trial"
+- [x] 5 remaining bugs caught by automated sweep
+
 ## Integration Roadmap
 
 > 23 chat sources live + Spotify/Sonos (Fabric) + 4 social publish (Bluesky, Threads, Facebook, Instagram).
