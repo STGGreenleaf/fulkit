@@ -98,11 +98,13 @@ export function VaultProvider({ children }) {
       // Re-validate structure every scan (user may have renamed/deleted folders)
       await validateVaultStructure(directoryHandle);
 
-      // Pull new/updated notes from Supabase → write to local vault (cross-device sync)
+      // Pull new/updated notes + actions from Supabase → write to local vault (cross-device sync)
       if (user?.id) {
         try {
           const syncKey = `fulkit-vault-sync-${user.id}`;
           const lastSync = localStorage.getItem(syncKey) || new Date(0).toISOString();
+
+          // Notes → vault folders as .md files
           const { data: newNotes } = await supabase
             .from("notes")
             .select("title, content, folder, updated_at")
@@ -114,8 +116,41 @@ export function VaultProvider({ children }) {
             for (const note of newNotes) {
               await writeLocalNote(directoryHandle, note.folder || "00-INBOX", note.title, note.content || "").catch(() => {});
             }
-            localStorage.setItem(syncKey, new Date().toISOString());
           }
+
+          // Actions → 00-INBOX/actions.md (append new items)
+          const { data: newActions } = await supabase
+            .from("actions")
+            .select("title, status, priority, due_date, updated_at")
+            .eq("user_id", user.id)
+            .gt("updated_at", lastSync)
+            .order("updated_at", { ascending: true })
+            .limit(20);
+          if (newActions?.length > 0) {
+            const date = new Date().toISOString().slice(0, 10);
+            const lines = newActions.map(a => {
+              const check = a.status === "done" ? "x" : " ";
+              const due = a.due_date ? ` (due ${a.due_date})` : "";
+              return `- [${check}] ${a.title}${due}`;
+            }).join("\n");
+            const content = `## Synced ${date}\n${lines}\n`;
+            try {
+              const inbox = await directoryHandle.getDirectoryHandle("00-INBOX", { create: true });
+              let existing = "";
+              try {
+                const fh = await inbox.getFileHandle("actions.md");
+                const file = await fh.getFile();
+                existing = await file.text();
+              } catch { /* file doesn't exist yet */ }
+              const fh = await inbox.getFileHandle("actions.md", { create: true });
+              const w = await fh.createWritable();
+              await w.write(existing ? existing + "\n" + content : `# Actions\n\n${content}`);
+              await w.close();
+            } catch {}
+          }
+
+          // Update sync timestamp only after both succeed
+          localStorage.setItem(syncKey, new Date().toISOString());
         } catch (err) {
           console.warn("[vault] Supabase sync failed:", err.message);
         }
