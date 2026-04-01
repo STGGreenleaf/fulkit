@@ -23,7 +23,7 @@ export async function POST(request) {
     const res = await fetch(`https://api.vagaro.com/${region}/api/v2/merchants/generate-access-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId, clientSecretKey, scope: "read access,write access" }),
+      body: JSON.stringify({ clientId, clientSecretKey, scope: "merchants.read,customers.read,appointments.read,services.read" }),
       signal: AbortSignal.timeout(10000),
     });
 
@@ -45,7 +45,7 @@ export async function POST(request) {
       user_id: user.id,
       provider: "vagaro",
       access_token: encryptToken(accessToken),
-      scope: "read access,write access",
+      scope: "merchants.read,customers.read,appointments.read,services.read",
       metadata: encryptMeta({
         clientId,
         clientSecretKey,

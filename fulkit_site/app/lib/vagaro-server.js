@@ -38,7 +38,7 @@ async function refreshVagaroToken(userId, meta) {
       body: JSON.stringify({
         clientId: meta.clientId,
         clientSecretKey: meta.clientSecretKey,
-        scope: "read access,write access",
+        scope: "merchants.read,customers.read,appointments.read,services.read",
       }),
       signal: AbortSignal.timeout(8000),
     });
