@@ -1047,13 +1047,12 @@ function VaultSetupStep({ onAdvance }) {
   const { connectVault, setStorageMode } = useVaultContext();
   const supported = isFileSystemAccessSupported();
 
-  // Non-Chromium: auto-set Model C and advance immediately
+  // Non-Chromium / mobile: set Model C, show brief context screen
   useEffect(() => {
     if (!supported) {
       setStorageMode("fulkit");
-      onAdvance("fulkit_managed");
     }
-  }, [supported, setStorageMode, onAdvance]);
+  }, [supported, setStorageMode]);
 
   const handleDownload = () => {
     if (downloadRef.current) downloadRef.current.click();
@@ -1071,7 +1070,52 @@ function VaultSetupStep({ onAdvance }) {
     }
   };
 
-  if (!supported) return null; // Safari/Firefox skip this screen entirely
+  // Mobile / Safari / Firefox — show context screen instead of vault picker
+  if (!supported) return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: "50%",
+        background: "var(--color-bg-elevated)",
+        border: "1px solid var(--color-border-light)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        margin: "0 auto var(--space-4)",
+      }}>
+        <Cloud size={24} strokeWidth={1.5} color="var(--color-text-muted)" />
+      </div>
+      <p style={{
+        fontSize: "var(--font-size-sm)",
+        color: "var(--color-text)",
+        lineHeight: "var(--line-height-relaxed)",
+        marginBottom: "var(--space-2)",
+        fontWeight: "var(--font-weight-semibold)",
+        textWrap: "balance",
+      }}>
+        Your brain is already building.
+      </p>
+      <p style={{
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-muted)",
+        lineHeight: "var(--line-height-relaxed)",
+        marginBottom: "var(--space-6)",
+        textWrap: "balance",
+      }}>
+        Everything you save here is stored securely. Log in on your computer to connect a vault folder{"\u2009"}&mdash;{"\u2009"}your notes will sync as files on your desktop.
+      </p>
+      <button
+        onClick={() => onAdvance("fulkit_managed")}
+        style={{
+          display: "block", width: "100%", textAlign: "center",
+          padding: "var(--space-3) var(--space-4)",
+          background: "var(--color-text)", color: "var(--color-bg)",
+          border: "none", borderRadius: "var(--radius-md)",
+          fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)",
+          fontFamily: "var(--font-primary)", cursor: "pointer",
+        }}
+      >
+        Continue
+      </button>
+    </div>
+  );
 
   return (
     <div>
