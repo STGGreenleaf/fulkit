@@ -98,6 +98,29 @@ export function VaultProvider({ children }) {
       // Re-validate structure every scan (user may have renamed/deleted folders)
       await validateVaultStructure(directoryHandle);
 
+      // Pull new/updated notes from Supabase → write to local vault (cross-device sync)
+      if (user?.id) {
+        try {
+          const syncKey = `fulkit-vault-sync-${user.id}`;
+          const lastSync = localStorage.getItem(syncKey) || new Date(0).toISOString();
+          const { data: newNotes } = await supabase
+            .from("notes")
+            .select("title, content, folder, updated_at")
+            .eq("user_id", user.id)
+            .gt("updated_at", lastSync)
+            .order("updated_at", { ascending: true })
+            .limit(20);
+          if (newNotes?.length > 0) {
+            for (const note of newNotes) {
+              await writeLocalNote(directoryHandle, note.folder || "00-INBOX", note.title, note.content || "").catch(() => {});
+            }
+            localStorage.setItem(syncKey, new Date().toISOString());
+          }
+        } catch (err) {
+          console.warn("[vault] Supabase sync failed:", err.message);
+        }
+      }
+
       const notes = await readLocalVault(directoryHandle);
       const hash = notes.map(n => `${n.path}:${n.content.length}`).sort().join("|");
       if (hash !== lastScanHash) {
@@ -111,7 +134,7 @@ export function VaultProvider({ children }) {
       console.error("[vault] Scan failed:", err.message);
       setVaultError("permission");
     }
-  }, [storageMode, directoryHandle, lastScanHash]);
+  }, [storageMode, directoryHandle, lastScanHash, user]);
 
   useEffect(() => {
     if (storageMode !== "local" || !directoryHandle) return;
