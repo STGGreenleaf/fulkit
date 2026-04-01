@@ -3,6 +3,67 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 30 — 2026-03-31: Vault Filesystem Sync + Launch Hardening + Linear + Onboarding Overhaul
+
+### The big one: Vault writes to the user's computer
+- **vault-local.js**: `writeLocalNote()` + `deleteLocalNote()` via File System Access API `createWritable()`
+- **vault.js**: `saveToLocalVault()` + `deleteFromLocalVault()` exposed in VaultProvider. Folder watcher polls every 30s + on focus, re-validates structure, re-checks permissions. `vaultError` state for UI banners.
+- **vault-writeback.js**: expanded from actions-only to full artifact writeback — notes (to appropriate folders), decisions (append to `_FULKIT/decisions.md`), conversation summaries (to `_FULKIT/conversations/`)
+- **use-chat.js**: after each response, syncs newly created notes from Supabase to local vault folder as .md files
+- **settings/page.js**: note deletion syncs to filesystem. "Your Brain" card on Account tab (green/red/grey dot + folder path). Folder tree view on Vault tab.
+- **onboarding**: mandatory vault connection. `showDirectoryPicker()` on download + "I have my own folder". Safari/Firefox auto-set to Model C. No skip option.
+- **Landing page**: "No AI product does this. ChatGPT, Claude, Notion — they all hold your data on their servers. Fülkit writes it to your desktop."
+
+### Linear integration (#23)
+- `linear-server.js`: OAuth token management + GraphQL wrapper (no refresh tokens — Linear tokens don't expire)
+- 4 OAuth routes: connect/callback/status/disconnect
+- 3 chat tools: `linear_issues` (filter by team/status/assignee/keyword), `linear_teams`, `linear_create_issue` (with priority, labels)
+- ECOSYSTEM_KEYWORDS: linear, issue, bug, ticket, sprint, backlog, cycle, triage
+- Settings card with official Linear logo (SVG from linear.app source)
+- Added to REAL_INTEGRATIONS, CUSTOM_CARD_IDS, integration ticker
+
+### Dev loop Phase A (owner-only)
+- `dev_multi_write`: atomic multi-file commits via Git Trees API (up to 20 files, one commit)
+- `dev_run_tests`: triggers CI workflow via GitHub Actions workflow_dispatch, polls up to 60s for results
+
+### Seat type rename: free → trial
+- Renamed across 14 files (chat route, auth, settings, home, webhook, cron, payment preview)
+- DB: CHECK constraint updated to include "trial", column default changed
+- SQL migration script: `fix-seat-type-default.sql`
+- 5 remaining bugs caught by automated grep sweep + fixed
+
+### Onboarding overhaul
+- Removed all skip buttons (SkipLink component deleted)
+- Integration picker: 3-column grid with logos from ticker, "I'll do this later" fills 9th slot
+- Multi-select: black → #D4D1CC on selection, Continue always rendered (no layout shift)
+- Back button: left side on multi-select, below content on other types
+- Tier label: inline in content flow (was position:fixed, caused misalignment)
+- Type sizes bumped: heading 18→28px, body 12→14px
+- text-wrap: balance on question headings (no orphans)
+- All screens: paddingBottom 15vh for consistent vertical centering
+- Auth redirect race fix: 2s delay before redirecting unauthenticated users
+
+### Launch polish
+- `error.js`: custom error boundary matching 404 style
+- `robots.js`: allow crawlers on public pages, block /api/ and app routes
+- `sitemap.js`: 6 public pages with priorities
+- Auth signals: `auth_rate_limit`, `auth_link_expired`, `auth_callback_error` → Radio
+- PKCE magic link fix: fallback to `verifyOtp` when code verifier missing
+- Expired link handler: branded "Link expired" page instead of blank
+- Rage click fix: BroadcastItem touch targets enlarged, title row clickable
+- Slack logo fixed (filled paths replacing incomplete strokes)
+- Referral Whispers section in Owner Playground (18 types + 9 audience + 12 wordplay)
+- 52 "Did you know" tooltips on dashboard (cycling, curated via Playground)
+- Numbrly + TrueGauge tooltips (7 additions)
+- Meta-tool scaling path documented in v3-spec (3-tier: hold→registry→meta-tool)
+
+### Key files created
+- `app/lib/linear-server.js`, `app/app/api/linear/*` (5 files)
+- `app/app/error.js`, `app/app/robots.js`, `app/app/sitemap.js`
+- `app/scripts/fix-seat-type-default.sql`
+
+---
+
 ## Session 29 — 2026-03-31: 429 Cascade Fix + Sonos Direct Transfer + Asana/Monday + Downtime Banner
 
 ### What shipped
