@@ -69,6 +69,17 @@ export const PLANS = {
     support: "self-service",
     platformFee: 0,
   },
+  founder: {
+    label: "Founder",
+    price: 0,
+    priceLabel: "Free",
+    fulPerMonth: Infinity,
+    maxTokens: 2048,
+    model: "claude-sonnet-4-6",
+    compressAt: 80000,
+    integrations: Infinity,
+    vaultNotes: Infinity,
+  },
   owner: {
     label: "Owner",
     price: 0,

@@ -79,6 +79,10 @@ function getModelConfig(role, seatType, hasByok) {
   if (role === "owner") {
     return { model: PLANS.owner.model, maxTokens: PLANS.owner.maxTokens, compressAt: PLANS.owner.compressAt, isByok: false };
   }
+  // Founder → Sonnet unlimited (friends-and-family, no Opus cost)
+  if (role === "founder" || seatType === "founder") {
+    return { model: PLANS.founder.model, maxTokens: PLANS.founder.maxTokens, compressAt: PLANS.founder.compressAt, isByok: false };
+  }
   // Pro → Sonnet 4K
   if (seatType === "pro") {
     return { model: PLANS.pro.model, maxTokens: PLANS.pro.maxTokens, compressAt: PLANS.pro.compressAt, isByok: false };
@@ -4892,7 +4896,7 @@ export async function POST(request) {
     const admin = getSupabaseAdmin();
 
     // Fül cap — enforce message limits per seat tier (BYOK and owners exempt)
-    if (userId && !config.isByok && profile?.role !== "owner") {
+    if (userId && !config.isByok && !["owner", "founder"].includes(profile?.role)) {
       const seatType = profile?.seat_type || "trial";
       const limit = SEAT_LIMITS[seatType] || SEAT_LIMITS.trial;
       const used = profile?.messages_this_month || 0;
@@ -4910,7 +4914,7 @@ export async function POST(request) {
     }
 
     // Cost ceiling — secondary safeguard against API overspend (BYOK and owners exempt)
-    if (userId && !config.isByok && profile?.role !== "owner") {
+    if (userId && !config.isByok && !["owner", "founder"].includes(profile?.role)) {
       const budgetCheck = checkUserBudget(profile?.seat_type || "trial", parseFloat(profile?.api_spend_this_month || 0));
       if (!budgetCheck.allowed) {
         emitServerSignal(userId, "cost_ceiling", "warning", { seat: profile?.seat_type, spend: profile?.api_spend_this_month });
@@ -5056,7 +5060,7 @@ export async function POST(request) {
         .catch(() => [])
       : Promise.resolve([]),
       // Referral profile (conditional)
-      (userId && !config.isByok && profile?.role !== "owner") ? getSupabaseAdmin()
+      (userId && !config.isByok && !["owner", "founder"].includes(profile?.role)) ? getSupabaseAdmin()
         .from("profiles").select("referral_code, total_active_referrals, referral_tier, seat_type")
         .eq("id", userId).single()
         .abortSignal(AbortSignal.timeout(3000))
@@ -5145,7 +5149,7 @@ export async function POST(request) {
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
-    const isTrial = !config.isByok && profile?.role !== "owner" && ["free", "trial"].includes(profile?.seat_type || "trial");
+    const isTrial = !config.isByok && !["owner", "founder"].includes(profile?.role) && ["free", "trial"].includes(profile?.seat_type || "trial");
     if (isTrial) {
       const maxInt = PLANS.trial.integrations; // 1
       const slots = [
@@ -6391,7 +6395,7 @@ Never skip the preview step. The user must see and approve changes before they g
           }
 
           // Track API spend (fire-and-forget) — BYOK and owners exempt
-          if (userId && totalApiCost > 0 && !config.isByok && profile?.role !== "owner") {
+          if (userId && totalApiCost > 0 && !config.isByok && !["owner", "founder"].includes(profile?.role)) {
             trackApiSpend(getSupabaseAdmin(), userId, totalApiCost).catch(() => {});
           }
 

@@ -18,6 +18,7 @@ export const TIERS = {
   free:     { label: PLANS.trial.label,    price: PLANS.trial.price,    priceLabel: PLANS.trial.priceLabel,    messages: PLANS.trial.fulTotal,     model: PLANS.trial.model,    maxTokens: PLANS.trial.maxTokens }, // alias for legacy
   standard: { label: PLANS.standard.label, price: PLANS.standard.price, priceLabel: PLANS.standard.priceLabel, messages: PLANS.standard.fulPerMonth, model: PLANS.standard.model, maxTokens: PLANS.standard.maxTokens },
   pro:      { label: PLANS.pro.label,      price: PLANS.pro.price,      priceLabel: PLANS.pro.priceLabel,      messages: PLANS.pro.fulPerMonth,     model: PLANS.pro.model,     maxTokens: PLANS.pro.maxTokens },
+  founder:  { label: PLANS.founder.label,  price: PLANS.founder.price,  priceLabel: PLANS.founder.priceLabel,  messages: PLANS.founder.fulPerMonth,  model: PLANS.founder.model,  maxTokens: PLANS.founder.maxTokens },
 };
 
 // ── Shorthand maps ───────────────────────────────────────────────────
