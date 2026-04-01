@@ -594,9 +594,11 @@ export default function Onboarding() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
         <ProgressBar pct={totalProgress} />
-        <TierLabel tierNum={tier.tier_num} label={tier.label} />
         <SkipLink />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
+            Tier {tier.tier_num}
+          </div>
           <p style={{ fontSize: "var(--font-size-md)", color: "var(--color-text-secondary)", lineHeight: "var(--line-height-relaxed)", fontStyle: "italic", marginBottom: "var(--space-8)" }}>
             "{showCopyAfter}"
           </p>
@@ -623,8 +625,10 @@ export default function Onboarding() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
         <ProgressBar pct={totalProgress} />
-        <TierLabel tierNum={tier.tier_num} label={tier.label} />
         <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)" }}>
+            Tier {tier.tier_num}
+          </div>
           <div style={{ width: 40, height: 40, borderRadius: "var(--radius-full)", background: "var(--color-success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-5)" }}>
             <Check size={18} strokeWidth={2.5} color="var(--color-success)" />
           </div>
@@ -713,10 +717,12 @@ export default function Onboarding() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--space-6)" }}>
       <ProgressBar pct={totalProgress} />
-      <TierLabel tierNum={tier.tier_num} label={tier.label} />
       <SkipLink />
 
       <div style={{ maxWidth: 480, width: "100%" }}>
+        <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-dim)", marginBottom: "var(--space-4)", textAlign: "center" }}>
+          Tier {tier.tier_num}
+        </div>
         {/* Trust line for this question */}
         {question?.trust_line && (
           <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontStyle: "italic", lineHeight: "var(--line-height-relaxed)", borderLeft: "2px solid var(--color-border)", paddingLeft: "var(--space-3)", marginBottom: "var(--space-6)" }}>
@@ -984,15 +990,6 @@ function ProgressBar({ pct }) {
   );
 }
 
-function TierLabel({ tierNum, label }) {
-  return (
-    <div style={{ position: "absolute", top: "var(--space-4)", left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-      <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", color: "var(--color-text-muted)" }}>
-        Tier {tierNum}: {label}
-      </span>
-    </div>
-  );
-}
 
 function SkipLink() {
   return (
