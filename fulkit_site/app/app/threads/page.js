@@ -275,7 +275,7 @@ function ThreadsContent({ initialFolder, initialView }) {
 
     // Fetch external events in parallel
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const start = now.toISOString();
     const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
 
     Promise.all([
