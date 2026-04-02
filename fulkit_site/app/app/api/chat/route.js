@@ -4611,24 +4611,29 @@ const NOTES_TOOLS = [
 ];
 
 // Threads tools — kanban-aware thread creation
-const THREADS_TOOLS = [
-  {
-    name: "threads_create",
-    description: "Create a thread (kanban card) on the user's Threads board. Use for topics, projects, or initiatives the user wants to track visually. Different from notes_create — threads have status, due dates, and can have checklist items.",
-    input_schema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Thread title" },
-        content: { type: "string", description: "Description/context" },
-        folder: { type: "string", description: "work, personal, ideas, reference. Default: work" },
-        status: { type: "string", enum: ["inbox", "active", "in-progress", "review"], description: "Initial board column. Default: inbox" },
-        due_date: { type: "string", description: "Due date as YYYY-MM-DD. Optional." },
-        labels: { type: "array", items: { type: "string" }, description: "Tags for this thread" },
+// Thread tools — folder list is injected dynamically at runtime to include custom folders
+function getThreadsTools(customFolders) {
+  const allFolders = ["work", "personal", "ideas", "reference", ...(customFolders || [])];
+  const folderDesc = allFolders.join(", ");
+  return [
+    {
+      name: "threads_create",
+      description: "Create a thread (kanban card) on the user's Threads board. Use for topics, projects, or initiatives the user wants to track visually. Different from notes_create — threads have status, due dates, and can have checklist items. Route to the most specific folder — if 'beermaking' exists, use it instead of 'personal'.",
+      input_schema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Thread title" },
+          content: { type: "string", description: "Description/context" },
+          folder: { type: "string", description: `Available folders: ${folderDesc}. Pick the most specific match. Default: work` },
+          status: { type: "string", enum: ["inbox", "active", "in-progress", "review"], description: "Initial board column. Default: inbox" },
+          due_date: { type: "string", description: "Due date as YYYY-MM-DD. Optional." },
+          labels: { type: "array", items: { type: "string" }, description: "Tags for this thread" },
+        },
+        required: ["title"],
       },
-      required: ["title"],
     },
-  },
-];
+  ];
+}
 
 // Execute thread creation
 async function executeThreadCreate(input, userId, conversationId) {
@@ -5703,6 +5708,8 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
+    const customFoldersPref = prefsResult.find(p => p.key === "thread_custom_folders");
+    const userCustomFolders = customFoldersPref ? (() => { try { return JSON.parse(customFoldersPref.value); } catch { return []; } })() : [];
     const householdPaired = !!householdPairResult;
     // Sanitize partner name — prevent prompt injection via the pairs.invitee_name field
     const rawPartnerName = householdPairResult?.invitee_name || null;
@@ -6212,7 +6219,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId && profile?.role === "owner" && ghToken ? DEV_TOOLS : []),
       ...(userId ? MEMORY_TOOLS : []),
       ...(userId ? NOTES_TOOLS : []),
-      ...(userId ? THREADS_TOOLS : []),
+      ...(userId ? getThreadsTools(userCustomFolders) : []),
       ...(userId ? KB_TOOLS : []),
       ...(userId ? FEEDBACK_TOOLS : []),
       ...(userId ? HABIT_TOOLS : []),

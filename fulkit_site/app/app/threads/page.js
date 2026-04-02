@@ -174,11 +174,17 @@ function ThreadsContent({ initialFolder, initialView }) {
     localStorage.setItem("fulkit-thread-folders", JSON.stringify(next));
   }, []);
 
-  // --- Persist custom folders ---
+  // --- Persist custom folders (localStorage + Supabase so chat route can read them) ---
   const persistCustomFolders = useCallback((next) => {
     setCustomFolders(next);
     localStorage.setItem("fulkit-thread-custom-folders", JSON.stringify(next));
-  }, []);
+    if (user?.id) {
+      supabase.from("preferences").upsert({
+        user_id: user.id, key: "thread_custom_folders",
+        value: JSON.stringify(next.map(f => f.key)),
+      }, { onConflict: "user_id,key" }).then(() => {}).catch(() => {});
+    }
+  }, [user?.id]);
 
   const addFolder = useCallback((label) => {
     const key = label.trim().toLowerCase().replace(/\s+/g, "-");
