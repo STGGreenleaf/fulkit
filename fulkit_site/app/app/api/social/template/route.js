@@ -153,7 +153,7 @@ function igPostStack() {
 function igPostVoice() {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
-      <div style={{ fontSize: 34, fontWeight: 400, color: SEC, letterSpacing: 3, marginBottom: 40 }}>{"THE HUM"}</div>
+      <div style={{ fontSize: 42, fontWeight: 400, color: SEC, letterSpacing: 4, marginBottom: 40 }}>{"THE HUM"}</div>
       <div style={{ fontSize: 72, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Talk."}</div>
       <div style={{ fontSize: 72, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Save."}</div>
       <div style={{ fontSize: 72, fontWeight: 700, color: TEXT_INV, letterSpacing: -2, lineHeight: 1.1, textAlign: "center" }}>{"Remember."}</div>
