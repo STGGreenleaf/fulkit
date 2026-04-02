@@ -744,7 +744,7 @@ export default function Dashboard() {
                   {/* Household (+Plus One) — only when paired + items exist */}
                   {householdPair && householdItems.length > 0 && (
                     <>
-                      <SectionLabel icon={Blend}>Household</SectionLabel>
+                      <SectionLabel icon={Blend}>+Plus One</SectionLabel>
                       <HouseholdCard
                         items={householdItems}
                         setItems={setHouseholdItems}

@@ -26,9 +26,9 @@ const BASE_LENSES = [
   { key: "build", label: "Build", Icon: MessageSquareCode },
   { key: "life", label: "Life", Icon: Home },
 ];
-const HOUSEHOLD_LENS = { key: "household", label: "Household", Icon: Blend };
+const HOUSEHOLD_LENS = { key: "household", label: "+Plus One", Icon: Blend };
 const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
-const BUCKET_LABELS = { build: "Build", life: "Life", household: "Household" };
+const BUCKET_LABELS = { build: "Build", life: "Life", household: "+Plus One" };
 
 
 function timeAgo(dateStr) {
@@ -615,7 +615,7 @@ function HouseholdView({ items, setItems, expanded, setExpanded, accessToken, is
   if (items.length === 0) {
     return (
       <div style={{ padding: "var(--space-8)", textAlign: "center", color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)" }}>
-        No household items yet. Try &quot;add milk to the grocery list&quot; in Chat.
+        No +Plus One items yet. Try &quot;+one milk&quot; or &quot;add milk to the grocery list&quot; in Chat.
       </div>
     );
   }

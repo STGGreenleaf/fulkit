@@ -266,7 +266,7 @@ const ECOSYSTEM_KEYWORDS = {
   monday: ["monday", "board", "item", "column", "group", "status", "pulse", "timeline"],
   linear: ["linear", "issue", "bug", "ticket", "sprint", "backlog", "cycle", "triage"],
   vagaro: ["vagaro", "salon", "appointment", "booking", "beauty", "spa", "stylist", "client", "haircut", "nails", "facial", "wax", "lash"],
-  household: ["household", "grocery", "groceries", "packing", "packing list", "errand", "errands", "plus one", "love note", "kid context", "kids", "pickup", "allergy", "allergies", "checklist", "shopping list"],
+  household: ["+one", "+1", "plus one", "household", "grocery", "groceries", "packing", "packing list", "errand", "errands", "love note", "kid context", "kids", "pickup", "allergy", "allergies", "checklist", "shopping list"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -5181,7 +5181,7 @@ async function executeHabitTool(name, input, userId, timezone) {
 const HOUSEHOLD_TOOLS = [
   {
     name: "household_add_item",
-    description: "Add an item to the shared household list. Use for groceries, packing, errands, events, or general tasks. Items are visible to both partners.",
+    description: "Add an item to the shared +Plus One list. Triggered by '+one [item]' or 'add [item] to [list]'. Use for groceries, packing, errands, events, or general tasks. Items are visible to both partners.",
     input_schema: {
       type: "object",
       properties: {
@@ -5216,7 +5216,7 @@ const HOUSEHOLD_TOOLS = [
   },
   {
     name: "household_send_note",
-    description: "Send a quiet note or love note to your partner. It surfaces as a whisper when they open the app. Use for 'tell [name]...' requests.",
+    description: "Send a quiet note or love note to your partner. It surfaces as a whisper when they open the app. Use for 'tell [name]...' or '+one fyi...' requests.",
     input_schema: {
       type: "object",
       properties: {
@@ -5260,7 +5260,7 @@ async function executeHouseholdTool(name, input, userId) {
     .eq("status", "active")
     .maybeSingle();
 
-  if (!pair) throw new Error("No active household pair. Set up +Plus One in Settings first.");
+  if (!pair) throw new Error("No active +Plus One pair. Set up +Plus One in Settings → Profile first.");
 
   const partnerId = pair.inviter_id === userId ? pair.invitee_id : pair.inviter_id;
   const partnerName = pair.invitee_name;
@@ -5772,7 +5772,7 @@ export async function POST(request) {
 
     // Household (+Plus One) context injection
     if (householdPaired && householdPartnerName) {
-      system += `\n\n## Household (+Plus One)\nPaired with ${householdPartnerName}. The user can say "tell ${householdPartnerName}..." to send whispers, manage shared lists (grocery, packing, errands), and access kid context. Items disappear when checked — don't say "marked as done", just confirm it's handled. Love notes arrive as quiet whispers. Never reveal one partner's private chat, vault, notes, or actions to the other.`;
+      system += `\n\n## +Plus One\nPaired with ${householdPartnerName}. Two shortcuts:\n- "+one [item]" — adds to the shared +Plus One channel (e.g. "+one keys are on the table", "+one dinner Saturday at 7")\n- "tell ${householdPartnerName} [message]" — sends a personal whisper/love note\nBoth route to the shared channel. Also supports lists: "+one grocery: milk, eggs, bread" or "add sunscreen to the packing list". Items disappear when checked — don't say "marked as done", just confirm it's handled. Kid context: "+one Jane has soccer at 4". Never reveal one partner's private chat, vault, notes, or actions to the other.`;
     }
 
     // ─── Habit Engine: pattern matching ─────────────────────
