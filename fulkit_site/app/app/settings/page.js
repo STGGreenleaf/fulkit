@@ -4703,6 +4703,7 @@ function ReferralsTab() {
   const [refCode, setRefCode] = useState(null);
   const [stats, setStats] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
+  const [salesBoardOpen, setSalesBoardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ownerView, setOwnerViewRaw] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("fulkit-referrals-owner") === "true";
@@ -4856,6 +4857,31 @@ function ReferralsTab() {
                 </div>
               </div>
             </Card>
+
+            {/* ── Sales Board (collapsible drawer) ── */}
+            <div style={{
+              background: "var(--color-bg-elevated)",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--color-border-light)",
+              marginBottom: "var(--space-3)",
+              overflow: "hidden",
+            }}>
+              <button
+                onClick={() => setSalesBoardOpen(o => !o)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+                  background: "none", border: "none", cursor: "pointer",
+                  padding: "var(--space-3) var(--space-4)",
+                  fontFamily: "var(--font-primary)",
+                }}
+              >
+                <span style={{ ...kpiStyle, marginBottom: 0 }}>Sales Board</span>
+                <ChevronDown size={14} strokeWidth={2} style={{
+                  color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
+                  transform: salesBoardOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                }} />
+              </button>
+            {salesBoardOpen && (<div style={{ padding: "0 var(--space-4) var(--space-4)" }}>
 
             {/* ── Funnel ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
@@ -5011,6 +5037,9 @@ function ReferralsTab() {
                 ))}
               </Card>
             )}
+
+            </div>)}
+            </div>
 
             {/* ── User table ── */}
             <Card style={{ marginBottom: "var(--space-3)", padding: "var(--space-4)" }}>
