@@ -6648,7 +6648,7 @@ function HouseholdPartnerCard() {
                 "Does not show what your partner asked the AI",
                 "Does not track activity, location, or usage",
                 "Does not send push notifications to your partner",
-                "Only shares when you say \"tell,\" \"share with,\" or \"add to household\"",
+                "Nothing is shared unless you explicitly say \"tell,\" \"share with,\" or \"add to household\"",
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
                   <X size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
