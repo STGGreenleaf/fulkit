@@ -327,7 +327,7 @@ export default function Dashboard() {
                       fontWeight: "var(--font-weight-bold)",
                       color: gaugeCapped ? "var(--color-error)" : "var(--color-text-dim)",
                     }}>
-                      {isUnlimited ? "\u221E" : `${seatLimit - messagesUsed} | ${seatLimit}`}
+                      {isUnlimited ? <span style={{ fontSize: 14 }}>{"\u221E"}</span> : `${seatLimit - messagesUsed} | ${seatLimit}`}
                     </span>
                   </div>
                   <div style={{
