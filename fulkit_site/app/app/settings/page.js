@@ -28,7 +28,7 @@ import {
   Bug,
   ChevronDown,
   Ticket,
-  Heart,
+  Blend,
   Send,
 } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
@@ -6594,9 +6594,9 @@ function HouseholdPartnerCard() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <Heart size={14} strokeWidth={1.8} style={{ color: paired ? "var(--color-text)" : "var(--color-text-dim)" }} />
-            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
-              Household Partner
+            <Blend size={14} strokeWidth={1.8} style={{ color: paired ? "var(--color-text)" : "var(--color-text-dim)" }} />
+            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
+              F{"\u00FC"}LKIT <span style={{ fontWeight: "var(--font-weight-bold)" }}>+PLUS ONE</span>
             </span>
             {paired && (
               <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-success)", fontWeight: "var(--font-weight-medium)" }}>
@@ -6614,7 +6614,10 @@ function HouseholdPartnerCard() {
           <div style={{ padding: "0 var(--space-4) var(--space-4)" }}>
 
             {/* Tagline */}
-            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: 1.5, marginBottom: "var(--space-4)" }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: 1.5, marginBottom: "var(--space-1)" }}>
+              One account. Two consenting adults.
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.5, marginBottom: "var(--space-4)" }}>
               Same app. Same quiet. Now there's two of you.
             </div>
 
