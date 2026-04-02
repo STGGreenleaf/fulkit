@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, Check, MoreHorizontal, ArrowDown, ArrowUp, Minus, Copy, Layers, MessageSquareCode, Home, Trash2, Activity, SquareCheckBig, Clock1, BrushCleaning, Blend, ChevronDown, ChevronRight } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
@@ -21,13 +21,14 @@ const FILTERS = [
   { key: "deferred", Icon: Clock1 },
   { key: "dismissed", Icon: BrushCleaning },
 ];
-const LENSES = [
+const BASE_LENSES = [
   { key: "all", label: "All", Icon: Layers },
   { key: "build", label: "Build", Icon: MessageSquareCode },
   { key: "life", label: "Life", Icon: Home },
 ];
+const HOUSEHOLD_LENS = { key: "household", label: "Household", Icon: Blend };
 const PRIORITY_LABELS = { 1: "High", 2: "Normal", 3: "Low" };
-const BUCKET_LABELS = { build: "Build", life: "Life" };
+const BUCKET_LABELS = { build: "Build", life: "Life", household: "Household" };
 
 
 function timeAgo(dateStr) {
@@ -94,7 +95,7 @@ const fieldInputStyle = {
 };
 
 export default function Actions() {
-  const { user, compactMode } = useAuth();
+  const { user, compactMode, accessToken } = useAuth();
   const isMobile = useIsMobile();
   const { setToolbar } = useToolbar();
   const track = useTrack();
@@ -105,6 +106,10 @@ export default function Actions() {
   const [actionsLoaded, setActionsLoaded] = useState(false);
   const [filter, setFilter] = useState("active");
   const [lens, setLens] = useState("all");
+  const [householdPaired, setHouseholdPaired] = useState(false);
+  const [householdItems, setHouseholdItems] = useState([]);
+  const [householdExpanded, setHouseholdExpanded] = useState({});
+  const LENSES = householdPaired ? [...BASE_LENSES, HOUSEHOLD_LENS] : BASE_LENSES;
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [expandedId, setExpandedId] = useState(null);
@@ -115,6 +120,20 @@ export default function Actions() {
   useEffect(() => {
     if (!user) return;
     loadActions();
+    // Check pair status for household tab
+    if (accessToken) {
+      fetch("/api/household/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.paired) {
+            setHouseholdPaired(true);
+            fetch("/api/household/items", { headers: { Authorization: `Bearer ${accessToken}` } })
+              .then(r => r.ok ? r.json() : null)
+              .then(d => { if (d?.items) setHouseholdItems(d.items); })
+              .catch(() => {});
+          }
+        }).catch(() => {});
+    }
   }, [user]);
 
   async function loadActions() {
@@ -314,6 +333,17 @@ export default function Actions() {
 
           {/* Content */}
           <div style={{ flex: 1, overflowY: "auto" }}>
+            {/* Household tab — full expanded view */}
+            {lens === "household" ? (
+              <HouseholdView
+                items={householdItems}
+                setItems={setHouseholdItems}
+                expanded={householdExpanded}
+                setExpanded={setHouseholdExpanded}
+                accessToken={accessToken}
+                isMobile={isMobile}
+              />
+            ) : (<>
             {/* Sub-nav — filters (indented, matches Owner sub-nav pattern) */}
             <div
               style={{
@@ -536,8 +566,141 @@ export default function Actions() {
               )}
             </div>
             </div>
+            </>)}
           </div>
     </AuthGuard>
+  );
+}
+
+function HouseholdView({ items, setItems, expanded, setExpanded, accessToken, isMobile }) {
+  // Group by list_name
+  const grouped = {};
+  const notes = [];
+  for (const item of items) {
+    if (item.type === "note" || item.type === "kid_context") {
+      notes.push(item);
+    } else {
+      const key = item.list_name || "_tasks";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item);
+    }
+  }
+  const listNames = Object.keys(grouped).sort();
+
+  async function checkOff(itemId) {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, _fading: true } : i));
+    setTimeout(() => setItems(prev => prev.filter(i => i.id !== itemId)), 400);
+    fetch("/api/household/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ item_id: itemId }),
+    }).catch(() => {});
+  }
+
+  const listLabel = (name) => name === "_tasks" ? "Tasks" : name.charAt(0).toUpperCase() + name.slice(1);
+
+  if (items.length === 0) {
+    return (
+      <div style={{ padding: "var(--space-8)", textAlign: "center", color: "var(--color-text-dim)", fontSize: "var(--font-size-sm)" }}>
+        No household items yet. Try &quot;add milk to the grocery list&quot; in Chat.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: isMobile ? "var(--space-3)" : "var(--space-4) var(--space-6)" }}>
+      {/* Lists */}
+      {listNames.map(name => {
+        const listItems = grouped[name];
+        const isOpen = expanded[name] !== false; // default open in expanded view
+        return (
+          <div key={name} style={{
+            background: "var(--color-bg-elevated)",
+            border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+            marginBottom: "var(--space-3)", overflow: "hidden",
+          }}>
+            <button
+              onClick={() => setExpanded(prev => ({ ...prev, [name]: !isOpen }))}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+                padding: "var(--space-3) var(--space-4)",
+                background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-primary)",
+              }}
+            >
+              <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                {listLabel(name)} <span style={{ color: "var(--color-text-dim)", fontWeight: "var(--font-weight-normal)" }}>({listItems.length})</span>
+              </span>
+              {isOpen
+                ? <ChevronDown size={14} strokeWidth={2} style={{ color: "var(--color-text-dim)" }} />
+                : <ChevronRight size={14} strokeWidth={2} style={{ color: "var(--color-text-dim)" }} />
+              }
+            </button>
+            {isOpen && (
+              <div style={{ padding: "0 var(--space-4) var(--space-3)" }}>
+                {listItems.map(item => (
+                  <div key={item.id} style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-3)",
+                    padding: "var(--space-2) 0",
+                    borderBottom: "1px solid var(--color-border-light)",
+                    opacity: item._fading ? 0.3 : 1,
+                    transition: "opacity 400ms ease",
+                  }}>
+                    <button
+                      onClick={() => checkOff(item.id)}
+                      style={{
+                        width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                        border: "1.5px solid var(--color-border)", background: "none",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{item.title}</div>
+                      {item.body && <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>{item.body}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Notes & kid context */}
+      {notes.length > 0 && (
+        <div style={{
+          background: "var(--color-bg-elevated)",
+          border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+          padding: "var(--space-3) var(--space-4)", marginBottom: "var(--space-3)",
+        }}>
+          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: "var(--space-2)" }}>
+            Notes & Context
+          </div>
+          {notes.map(note => (
+            <div key={note.id} style={{
+              display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
+              padding: "var(--space-2) 0",
+              borderBottom: "1px solid var(--color-border-light)",
+              opacity: note._fading ? 0.3 : 1,
+              transition: "opacity 400ms ease",
+            }}>
+              <Blend size={13} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{note.body || note.title}</div>
+                {note.type === "kid_context" && note.metadata?.kid_name && (
+                  <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginTop: 2 }}>{note.metadata.kid_name} — {note.metadata.detail_type || "info"}</div>
+                )}
+              </div>
+              <button
+                onClick={() => checkOff(note.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: "var(--space-1)" }}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
