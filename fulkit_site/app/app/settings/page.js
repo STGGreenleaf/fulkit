@@ -28,6 +28,8 @@ import {
   Bug,
   ChevronDown,
   Ticket,
+  Heart,
+  Send,
 } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
@@ -996,6 +998,9 @@ function AccountTab() {
           </div>
         </div>
       </Card>
+
+      {/* Household Partner */}
+      <HouseholdPartnerCard />
 
       {/* Brain summary */}
       <VaultBrainSummary />
@@ -6547,6 +6552,194 @@ function ContextModeToggle({ mode, onChange, disabled }) {
 function formatTokens(n) {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return `${n}`;
+}
+
+function HouseholdPartnerCard() {
+  const { user, accessToken } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  // TODO: load pair status from DB (partner email, pending invite, active pair)
+  const paired = false;
+  const pendingInvite = false;
+  const partnerName = null;
+  const partnerEmail = null;
+
+  async function sendInvite() {
+    if (!email.trim() || !accessToken) return;
+    setSending(true);
+    // TODO: POST /api/household/invite — sends pair request email
+    await new Promise(r => setTimeout(r, 800));
+    setSent(true);
+    setSending(false);
+  }
+
+  return (
+    <div style={{ marginTop: "var(--space-3)" }}>
+      <div style={{
+        background: "var(--color-bg-elevated)",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--color-border-light)",
+        overflow: "hidden",
+      }}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+            background: "none", border: "none", cursor: "pointer",
+            padding: "var(--space-3) var(--space-4)",
+            fontFamily: "var(--font-primary)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <Heart size={14} strokeWidth={1.8} style={{ color: paired ? "var(--color-text)" : "var(--color-text-dim)" }} />
+            <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)" }}>
+              Household Partner
+            </span>
+            {paired && (
+              <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-success)", fontWeight: "var(--font-weight-medium)" }}>
+                Paired
+              </span>
+            )}
+          </div>
+          <ChevronDown size={14} strokeWidth={2} style={{
+            color: "var(--color-text-muted)", transition: "transform var(--duration-fast) var(--ease-default)",
+            transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+          }} />
+        </button>
+
+        {open && (
+          <div style={{ padding: "0 var(--space-4) var(--space-4)" }}>
+
+            {/* Tagline */}
+            <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)", lineHeight: 1.5, marginBottom: "var(--space-4)" }}>
+              Same app. Same quiet. Now there's two of you.
+            </div>
+
+            {/* What it does */}
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              What it does
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1-5)", marginBottom: "var(--space-4)" }}>
+              {[
+                "Shared household checklist — groceries, errands, to-dos",
+                "Whisper relay — quiet notes that surface when your partner opens the app",
+                "Shared event awareness — \"Jane has soccer at 4\"",
+                "Love notes — \"Tell Shandy I love her\" arrives as a gentle moment",
+                "Kid context — schedules, pickups, appointments, allergies",
+                "Household habits — whoever checks it off, it's done for both",
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
+                  <Check size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            {/* What it does NOT do */}
+            <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-2)" }}>
+              What it does not do
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1-5)", marginBottom: "var(--space-4)" }}>
+              {[
+                "Does not share your notes, vault, or chat history",
+                "Does not show what your partner asked the AI",
+                "Does not track activity, location, or usage",
+                "Does not send push notifications to your partner",
+                "Nothing is shared unless you explicitly say so",
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
+                  <X size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            {/* Pair state */}
+            {paired ? (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "var(--space-3) var(--space-4)",
+                background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border-light)",
+              }}>
+                <div>
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
+                    Paired with {partnerName || partnerEmail}
+                  </div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                    Household channel active
+                  </div>
+                </div>
+                <button
+                  style={{
+                    fontSize: "var(--font-size-xs)", color: "var(--color-error)", background: "none",
+                    border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+                  }}
+                >
+                  Unpair
+                </button>
+              </div>
+            ) : sent ? (
+              <div style={{
+                padding: "var(--space-3) var(--space-4)",
+                background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border-light)",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
+                  Invite sent to {email}
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 4 }}>
+                  They'll see a pair request in their Settings when they sign up.
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                  Invite your partner — they'll get their own full Fülkit account.
+                </div>
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") sendInvite(); }}
+                    placeholder="Partner's email"
+                    style={{
+                      flex: 1, fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
+                      padding: "var(--space-2) var(--space-3)",
+                      border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
+                      background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                    }}
+                  />
+                  <button
+                    onClick={sendInvite}
+                    disabled={sending || !email.trim()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-1-5)",
+                      padding: "var(--space-2) var(--space-4)",
+                      background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                      borderRadius: "var(--radius-md)", fontSize: "var(--font-size-sm)",
+                      fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                      cursor: sending ? "default" : "pointer",
+                      opacity: sending || !email.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    <Send size={13} strokeWidth={2} />
+                    {sending ? "Sending..." : "Invite"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function VaultBrainSummary() {
