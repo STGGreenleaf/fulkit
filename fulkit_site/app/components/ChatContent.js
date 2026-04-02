@@ -644,8 +644,8 @@ export default function ChatContent({ isPopout = false }) {
                       </>
                     )}
 
-                    {/* Context nudge */}
-                    {!hasContext && (
+                    {/* Context nudge — only show after profile loaded, never flash during init */}
+                    {profile && !hasContext && (
                       <div style={{
                         display: "flex", alignItems: "center", gap: "var(--space-3)",
                         padding: "var(--space-3) var(--space-4)",
