@@ -6700,12 +6700,12 @@ function HouseholdPartnerCard() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1-5)", marginBottom: "var(--space-4)" }}>
               {[
-                "Shared household checklist — groceries, errands, to-dos",
+                "Just say +one — \"+one grab milk\" \"+one dinner tonight\" \"+one trip Saturday\" \"+one keys are on the table\"",
+                "Shared lists — groceries, packing, errands. Add one or dump a whole list at once",
                 "Whisper relay — quiet notes that surface when your partner opens the app",
-                "Shared event awareness — \"Jane has soccer at 4\"",
                 "Love notes — \"Tell Shandy I love her\" arrives as a gentle moment",
-                "Kid context — schedules, pickups, appointments, allergies",
-                "Household habits — whoever checks it off, it's done for both",
+                "Kid context — \"+one Jane has soccer at 4\" — schedules, allergies, pickups",
+                "Check it off, it's gone — whoever handles it, it's done for both",
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
                   <Check size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
