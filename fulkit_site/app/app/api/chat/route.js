@@ -5704,7 +5704,9 @@ export async function POST(request) {
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
     const householdPaired = !!householdPairResult;
-    const householdPartnerName = householdPairResult?.invitee_name || null;
+    // Sanitize partner name — prevent prompt injection via the pairs.invitee_name field
+    const rawPartnerName = householdPairResult?.invitee_name || null;
+    const householdPartnerName = rawPartnerName ? rawPartnerName.replace(/[^a-zA-Z0-9\s'-]/g, "").slice(0, 30).trim() : null;
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken, vagaroToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)

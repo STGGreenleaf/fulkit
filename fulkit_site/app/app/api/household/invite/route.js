@@ -20,7 +20,11 @@ export async function POST(request) {
     }
 
     const inviteeEmail = email.trim().toLowerCase();
-    const inviteeName = name.trim();
+    // Sanitize name at point of entry — alphanumeric + spaces + apostrophes only, max 30 chars
+    const inviteeName = name.trim().replace(/[^a-zA-Z0-9\s'-]/g, "").slice(0, 30).trim();
+    if (!inviteeName) {
+      return Response.json({ error: "Valid name required" }, { status: 400 });
+    }
 
     // Can't invite yourself
     if (inviteeEmail === user.email) {
