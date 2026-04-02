@@ -31,12 +31,13 @@ export function VaultProvider({ children }) {
     }
 
     async function init() {
-      // Read storage_mode from preferences
+      // Read storage_mode from preferences (3s timeout — default to fulkit if slow)
       const { data, error } = await supabase
         .from("preferences")
         .select("value")
         .eq("key", "storage_mode")
-        .maybeSingle();
+        .maybeSingle()
+        .abortSignal(AbortSignal.timeout(3000));
 
       const mode = error ? "fulkit" : (data?.value || "fulkit");
       setStorageModeState(mode);

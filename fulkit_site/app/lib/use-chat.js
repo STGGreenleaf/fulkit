@@ -77,6 +77,12 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
   const chunkBufferRef = useRef("");
   const flushRafRef = useRef(null);
 
+  // Reset streaming state on mount — prevents stale ref from previous session/aborted stream
+  useEffect(() => {
+    streamingRef.current = false;
+    return () => { streamingRef.current = false; };
+  }, []);
+
   // ─── Conversations ────────────────────────────────────────
 
   const loadConversations = useCallback(async () => {

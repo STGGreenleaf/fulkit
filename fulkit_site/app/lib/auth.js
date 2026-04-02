@@ -41,11 +41,15 @@ export function AuthProvider({ children }) {
     // Dedup: if already fetching for the same user, return existing promise
     if (fetchingRef.current === userId) return;
     fetchingRef.current = userId;
-    const results = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).single(),
-      supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num").then(r => r).catch(() => ({ data: null })),
-      supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num").then(r => r).catch(() => ({ data: null })),
+    // 5s hard cap — never block auth resolution waiting for DB
+    const results = await Promise.race([
+      Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).single().abortSignal(AbortSignal.timeout(5000)),
+        supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", userId).abortSignal(AbortSignal.timeout(5000)),
+        supabase.from("onboarding_progress").select("*").eq("user_id", userId).order("tier_num").abortSignal(AbortSignal.timeout(5000)).then(r => r).catch(() => ({ data: null })),
+        supabase.from("onboarding_tiers").select("tier_num,completion_trigger").order("tier_num").abortSignal(AbortSignal.timeout(5000)).then(r => r).catch(() => ({ data: null })),
+      ]),
+      new Promise(resolve => setTimeout(() => resolve([{ data: null }, { count: 0 }, { data: null }, { data: null }]), 5000)),
     ]);
     let { data } = results[0];
     const { count } = results[1];
