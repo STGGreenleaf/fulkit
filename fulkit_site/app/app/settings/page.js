@@ -4778,9 +4778,9 @@ function ReferralsTab() {
   // ── Export CSV helper ──
   const exportCSV = () => {
     if (!adminStats) return;
-    const rows = [["Name", "Plan", "Referrals", "Tier", "Fül/mo", "API Spend", "Messages", "Joined"]];
+    const rows = [["Name", "Plan", "Referrals", "Fül Left", "Days Left", "API Spend", "Messages", "Joined"]];
     for (const u of adminStats.userTable || []) {
-      rows.push([u.name, u.seat, u.refs, u.tier, u.ful, `$${u.apiSpend}`, u.messages, u.joined ? new Date(u.joined).toLocaleDateString() : ""]);
+      rows.push([u.name, u.seat, u.refs, u.fulLeft ?? "", u.daysLeft ?? "", `$${u.apiSpend}`, u.messages, u.joined ? new Date(u.joined).toLocaleDateString() : ""]);
     }
     // Add summary rows
     rows.push([]);
@@ -5019,7 +5019,7 @@ function ReferralsTab() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr>
-                      {["Name", "Plan", "Refs", "Tier", "F\u00FCl/mo", "API $", "Msgs", "Joined"].map(h => (
+                      {["Name", "Plan", "Refs", "F\u00FCl Left", "Days", "API $", "Msgs", "Joined"].map(h => (
                         <th key={h} style={{ textAlign: h === "Name" ? "left" : "right", padding: "var(--space-1) var(--space-2)", borderBottom: "1px solid var(--color-border-light)", color: "var(--color-text-muted)", fontWeight: "var(--font-weight-medium)", textTransform: "uppercase", letterSpacing: "0.5px", fontSize: "var(--font-size-2xs)" }}>{h}</th>
                       ))}
                     </tr>
@@ -5030,8 +5030,8 @@ function ReferralsTab() {
                         <td style={{ padding: "var(--space-2)", fontWeight: "var(--font-weight-medium)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", textTransform: "capitalize" }}>{u.seat}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>{u.refs}</td>
-                        <td style={{ padding: "var(--space-2)", textAlign: "right" }}>{u.tier}</td>
-                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>{u.ful}</td>
+                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.fulLeft !== null && u.fulLeft < 20 ? "var(--color-warning)" : undefined }}>{u.fulLeft !== null ? u.fulLeft : "—"}</td>
+                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.daysLeft !== null && u.daysLeft < 4 ? "var(--color-warning)" : undefined }}>{u.daysLeft !== null ? u.daysLeft : "—"}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>${u.apiSpend}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>{u.messages}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", color: "var(--color-text-muted)" }}>{u.joined ? new Date(u.joined).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</td>

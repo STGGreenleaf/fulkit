@@ -140,15 +140,27 @@ export async function GET(request) {
   // ── User table (all users, sorted by most valuable) ──
   const userTable = (allProfiles || []).map(p => {
     const tier = getTierForCount(p.total_active_referrals);
+    const seat = p.seat_type || "trial";
+    const isTrial = seat === "trial" || seat === "free";
+    // Trial: days remaining + Fül remaining
+    let daysLeft = null;
+    let fulLeft = null;
+    if (isTrial && p.created_at) {
+      const trialEnd = new Date(new Date(p.created_at).getTime() + PLANS.trial.durationDays * 86400000);
+      daysLeft = Math.max(0, Math.ceil((trialEnd - now) / 86400000));
+      fulLeft = Math.max(0, PLANS.trial.fulTotal - (p.messages_this_month || 0));
+    }
     return {
       name: p.name || p.email?.split("@")[0] || "User",
-      seat: p.seat_type || "trial",
+      seat,
       refs: p.total_active_referrals || 0,
       tier: tier ? tier.label : "—",
       ful: calculateMonthlyFul(p.total_active_referrals || 0),
       apiSpend: Math.round(parseFloat(p.api_spend_this_month || 0) * 100) / 100,
       messages: p.messages_this_month || 0,
       joined: p.created_at,
+      daysLeft,
+      fulLeft,
     };
   }).sort((a, b) => b.refs - a.refs || b.messages - a.messages);
 
