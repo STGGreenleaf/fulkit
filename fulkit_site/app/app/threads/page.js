@@ -75,7 +75,11 @@ function ThreadsContent({ initialFolder, initialView }) {
   // --- Core state ---
   const [notes, setNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [folder, setFolder] = useState(initialFolder || "all");
+  const [folder, setFolder] = useState(() => {
+    if (initialFolder) return initialFolder;
+    if (typeof window !== "undefined") { try { return localStorage.getItem("fulkit-threads-folder") || "all"; } catch {} }
+    return "all";
+  });
   const [view, setView] = useState(initialView || "board");
   const [folders, setFolders] = useState(DEFAULT_FOLDERS);
   const [customColumns, setCustomColumns] = useState([]);
@@ -662,7 +666,7 @@ function ThreadsContent({ initialFolder, initialView }) {
                 >
                   <Tooltip label={f.label} position="bottom">
                     <button
-                      onClick={() => { setFolder(f.key); setSelectedId(null); setMenuFolder(null); updateThreadsUrl(f.key, view); }}
+                      onClick={() => { setFolder(f.key); localStorage.setItem("fulkit-threads-folder", f.key); setSelectedId(null); setMenuFolder(null); updateThreadsUrl(f.key, view); }}
                       style={{
                         display: "flex",
                         alignItems: "center",
