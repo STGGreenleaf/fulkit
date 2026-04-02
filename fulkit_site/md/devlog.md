@@ -3,6 +3,51 @@
 > Claude Code reads this at the start of every session.
 > Newest entries at top. Completed items get archived monthly.
 
+## Session 31 — 2026-04-01: +Plus One, Social Kit, CI Fix, Sales Center
+
+### CI finally green
+- Root cause: `await` in non-async `.then()` callback (settings/page.js vagaro status check)
+- Second layer: Resend client init at module scope → deferred to `getResend()`
+- Third layer: CI missing `SUPABASE_SERVICE_ROLE_KEY` + `ANTHROPIC_API_KEY` placeholders
+- All three fixed. CI passes. No more failure emails.
+
+### Social Kit — Instagram Post pitch library
+- 20 new typographic CTA cards from starred pitches (12 light / 8 dark, 60/40 split)
+- Type-as-design: each card uses weight, scale, spacing, alignment as the only element
+- All text scaled ~15-20% for mobile legibility (floor: 34px canvas)
+- Responsive layout: preview left + thumbnail grid right on desktop, stacked on mobile
+- Per-size preview widths: OG 520px, ig-post/square 420px, stories 280px
+- Hide/restore cards (persisted localStorage), #2 Price fixed ($15→$9)
+- Added to owner portal Emails tab: +Plus One Invite + Accepted previews
+
+### Fülkit +Plus One (new feature — full build)
+- **Concept**: Two consenting adults. One shared channel. Private by default, connected when you say so.
+- **DB**: `pairs` table (inviter/invitee, status, timestamps) + `household_items` (tasks, notes, events, kid_context, collapsible lists)
+- **API**: 5 routes — invite, accept, status, disconnect, items (GET/PATCH)
+- **Settings card**: Profile → +Plus One. Name + email invite, incoming accept/decline, unpair. What it does / doesn't do lists. Tagline: "One account. Two consenting adults."
+- **Email templates**: pair-invite ("Hey Shandy, Collin invited you") + pair-accepted with quick-start tips
+- **Chat integration**: 6 HOUSEHOLD_TOOLS (add_item, list_items, check_item, send_note, add_kid_context, kid_info). ECOSYSTEM_KEYWORDS with "+one" prefix. Dynamic prompt injection with partner name + privacy rules.
+- **Dashboard card**: Collapsible lists (Grocery, Packing, Errands), partner whispers, kid context. Only renders when paired + items exist.
+- **Actions tab**: Blend icon tab appears when paired. Full expanded list view with collapsible groups, check-off → vanish, notes & context section.
+- **Whisper relay**: Partner notes surface in whisper generation context. Incoming invite surfaces as dashboard whisper.
+- **Ful-Up referral**: Accept creates referral row ($1/mo credit), sets referred_by, increments count.
+- **+one hotword**: "+one grab milk", "+one dinner tonight", "+one keys on the table" — fast entry alongside "tell Shandy..."
+
+### Loading mark
+- Responsive: 60px mobile, 80px desktop (was 50px everywhere)
+- All page-centered loading states use animated winking ü (AuthGuard, root page, onboarding)
+- LogoMark (sidebar, nav, login) untouched — only page-centered states changed
+
+### Owner Sales Center
+- Users table: replaced Tier column with Fül Left + Days Left. Warning colors (<20 Fül, <4 days). ∞ for unlimited users.
+- Dashboard Fül meter: ∞ with full bar for owner/founder/BYOK
+- Sales Board: Funnel, Subscribers, Payouts, Referral Network, Monthly Trend, Recent Transfers wrapped in collapsible drawer. Users table always visible underneath.
+
+### Open
+- +Plus One needs live pair activation for Shandy test
+- Mock data removed — all real DB now
+- Nav redesign still needs spec
+
 ## Session 30 — 2026-03-31: Vault Filesystem Sync + Launch Hardening + Linear + Onboarding Overhaul
 
 ### The big one: Vault writes to the user's computer
