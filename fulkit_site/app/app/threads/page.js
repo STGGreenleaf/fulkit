@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DynamicIcon, iconNames } from "lucide-react/dynamic";
-import { Plus, Search, X, LayoutGrid, List, CalendarDays, Table2, MoreVertical } from "lucide-react";
+import { Plus, Search, X, LayoutGrid, List, CalendarDays, Table2, MoreVertical, EyeOff } from "lucide-react";
 // Sidebar + header provided by AppShell in layout
 import AuthGuard from "../../components/AuthGuard";
 import Tooltip from "../../components/Tooltip";
@@ -1228,6 +1228,15 @@ function ThreadsContent({ initialFolder, initialView }) {
                             </div>
                             {/* Urgency dot */}
                             <UrgencyMeter urgency={urgency} />
+                            {note._external && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); dismissEvent(note.id); }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", padding: 2, lineHeight: 0, flexShrink: 0 }}
+                                title="Dismiss"
+                              >
+                                <EyeOff size={13} strokeWidth={1.8} />
+                              </button>
+                            )}
                           </div>
                           <div style={{
                             fontSize: "var(--font-size-xs)",

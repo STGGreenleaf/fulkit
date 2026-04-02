@@ -15,7 +15,16 @@ export async function GET(request) {
     const listRes = await googleFetch(userId, "google_calendar", `${CALENDAR_API}/users/me/calendarList`);
     if (listRes.error) return Response.json({ events: [] });
     const calList = await listRes.json();
-    const calendars = (calList.items || []).filter(c => c.selected !== false);
+    // Filter out holiday and birthday calendars — they flood threads/actions
+    const SKIP_CALENDARS = ["holiday", "holidays", "birthday", "birthdays", "contacts"];
+    const calendars = (calList.items || []).filter(c => {
+      if (c.selected === false) return false;
+      const id = (c.id || "").toLowerCase();
+      const name = (c.summary || "").toLowerCase();
+      if (id.includes("#holiday@") || id.includes("#contacts@") || id.includes("birthday")) return false;
+      if (SKIP_CALENDARS.some(s => name.includes(s))) return false;
+      return true;
+    });
     const calNames = {};
     for (const cal of calendars) {
       calNames[cal.id] = cal.summary || cal.id;
