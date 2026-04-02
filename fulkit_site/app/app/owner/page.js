@@ -5547,100 +5547,118 @@ function SocialsTab() {
                 const url = `/api/social/template?concept=${concept}&size=${sizeParam}`;
                 const prev = () => setSocialConceptIdx((idx - 1 + concepts.length) % concepts.length);
                 const next = () => setSocialConceptIdx((idx + 1) % concepts.length);
-                return (
-                  <div style={{ minWidth: 0 }}>
-                    {/* Main preview */}
-                    <div
-                      onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
-                      style={{
-                        width: "100%", maxWidth: 380, aspectRatio: active.aspect,
-                        border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
-                        overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                        marginBottom: "var(--space-2)",
-                      }}
-                    >
-                      <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
-                    </div>
-
-                    {/* Controls: prev / label / next / download / delete */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-                      <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
-                        <ChevronRight size={20} style={{ transform: "rotate(180deg)" }} />
-                      </button>
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textTransform: "capitalize" }}>
-                          #{idx + 1} {concept}
-                        </span>
-                        <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
-                          {idx + 1}/{concepts.length}
-                        </span>
-                      </div>
-                      <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
-                        <ChevronRight size={20} />
-                      </button>
-                      <a
-                        href={url}
-                        download={`fulkit-${concept}-${active.key}.png`}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-3)",
-                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
-                          textDecoration: "none", cursor: "pointer",
-                        }}
-                      >
-                        <Download size={10} /> PNG
-                      </a>
-                      <button
-                        onClick={(e) => {
-                          const btn = e.currentTarget;
-                          const imgUrl = window.location.origin + url;
-                          navigator.clipboard.writeText(imgUrl).then(() => {
-                            btn.textContent = "Copied!";
-                            setTimeout(() => { btn.textContent = ""; btn.innerHTML = ""; }, 1500);
-                          }).catch(() => {
-                            window.prompt("Copy this URL:", imgUrl);
-                          });
-                        }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "var(--space-1)",
-                          padding: "var(--space-1-5) var(--space-3)",
-                          background: "var(--color-text)", color: "var(--color-bg)", border: "none",
-                          borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
-                          fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer",
-                        }}
-                        title="Copy image URL"
-                      >
-                        <Copy size={10} /> Copy URL
-                      </button>
-                    </div>
-
-                    {/* Thumbnail strip */}
-                    <div style={{ display: "flex", gap: "var(--space-1-5)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
-                      {concepts.map((c, i) => {
-                        const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
-                        const isActive = i === idx;
-                        return (
-                          <div key={c} style={{ flexShrink: 0, textAlign: "center" }}>
-                            <div
-                              onClick={() => setSocialConceptIdx(i)}
-                              style={{
-                                width: 56, height: 56,
-                                border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
-                                borderRadius: "var(--radius-sm)",
-                                overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
-                              }}
-                            >
-                              <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
-                            </div>
-                            <span style={{ fontSize: 9, color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
-                              {i + 1}
-                            </span>
+                const thumbGrid = (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, 56px)",
+                    gap: "var(--space-1-5)",
+                    ...(isMobile ? { overflowX: "auto", display: "flex", paddingBottom: "var(--space-2)" } : {}),
+                  }}>
+                    {concepts.map((c, i) => {
+                      const thumbUrl = `/api/social/template?concept=${c}&size=${sizeParam}`;
+                      const isActive = i === idx;
+                      return (
+                        <div key={c} style={{ flexShrink: 0, textAlign: "center" }}>
+                          <div
+                            onClick={() => setSocialConceptIdx(i)}
+                            style={{
+                              width: 56, height: 56,
+                              border: isActive ? "2px solid var(--color-accent)" : "1px solid var(--color-text-dim)",
+                              borderRadius: "var(--radius-sm)",
+                              overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                            }}
+                          >
+                            <img src={thumbUrl} alt={c} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
                           </div>
-                        );
-                      })}
+                          <span style={{ fontSize: 9, color: isActive ? "var(--color-text)" : "var(--color-text-dim)", textTransform: "capitalize", fontWeight: isActive ? "var(--font-weight-semibold)" : "var(--font-weight-normal)" }}>
+                            {i + 1}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+                return (
+                  <div style={{ minWidth: 0, display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--space-4)" }}>
+                    {/* Left: preview + controls */}
+                    <div style={{ flexShrink: 0 }}>
+                      {/* Main preview */}
+                      <div
+                        onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
+                        style={{
+                          width: isMobile ? "100%" : 340, maxWidth: "100%", aspectRatio: active.aspect,
+                          border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
+                          overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
+                          marginBottom: "var(--space-2)",
+                        }}
+                      >
+                        <img src={url} alt={concept} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} loading="lazy" />
+                      </div>
+
+                      {/* Controls: prev / label / next / download */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                        <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                          <ChevronRight size={20} style={{ transform: "rotate(180deg)" }} />
+                        </button>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                          <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)", textTransform: "capitalize" }}>
+                            #{idx + 1} {concept}
+                          </span>
+                          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-2)" }}>
+                            {idx + 1}/{concepts.length}
+                          </span>
+                        </div>
+                        <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-1)", color: "var(--color-text-muted)" }}>
+                          <ChevronRight size={20} />
+                        </button>
+                        <a
+                          href={url}
+                          download={`fulkit-${concept}-${active.key}.png`}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            padding: "var(--space-1-5) var(--space-3)",
+                            background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                            borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                            fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                            textDecoration: "none", cursor: "pointer",
+                          }}
+                        >
+                          <Download size={10} /> PNG
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            const btn = e.currentTarget;
+                            const imgUrl = window.location.origin + url;
+                            navigator.clipboard.writeText(imgUrl).then(() => {
+                              btn.textContent = "Copied!";
+                              setTimeout(() => { btn.textContent = ""; btn.innerHTML = ""; }, 1500);
+                            }).catch(() => {
+                              window.prompt("Copy this URL:", imgUrl);
+                            });
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            padding: "var(--space-1-5) var(--space-3)",
+                            background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                            borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                            fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)", cursor: "pointer",
+                          }}
+                          title="Copy image URL"
+                        >
+                          <Copy size={10} /> Copy URL
+                        </button>
+                      </div>
+
+                      {/* Thumbnails below on mobile */}
+                      {isMobile && thumbGrid}
                     </div>
+
+                    {/* Right: thumbnail grid on desktop */}
+                    {!isMobile && (
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {thumbGrid}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
