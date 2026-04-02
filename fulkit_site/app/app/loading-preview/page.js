@@ -14,7 +14,7 @@ export default function LoadingPreview() {
         background: "var(--color-bg)",
       }}
     >
-      <LoadingMark size={50} />
+      <LoadingMark size={96} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowRight, ArrowLeft, Check, Mic, MicOff, FolderDown, FolderOpen, Cloud, Folder } from "lucide-react";
 import LogoMark from "../../components/LogoMark";
+import LoadingMark from "../../components/LoadingMark";
 import { useAuth } from "../../lib/auth";
 import { useTrack } from "../../lib/track";
 import { useRouter } from "next/navigation";
@@ -530,7 +531,7 @@ export default function Onboarding() {
   if (loadingData) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <LogoMark size={28} style={{ opacity: 0.5 }} />
+        <LoadingMark size={96} />
       </div>
     );
   }

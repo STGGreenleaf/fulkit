@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "../lib/auth";
-import LogoMark from "../components/LogoMark";
+import LoadingMark from "../components/LoadingMark";
 import dynamic from "next/dynamic";
 
 const Dashboard = dynamic(() => import("./home/page"), { ssr: false });
@@ -21,7 +21,7 @@ export default function Root() {
           justifyContent: "center",
         }}
       >
-        <LogoMark size={24} />
+        <LoadingMark size={96} />
       </div>
     );
   }
