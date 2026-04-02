@@ -5030,8 +5030,8 @@ function ReferralsTab() {
                         <td style={{ padding: "var(--space-2)", fontWeight: "var(--font-weight-medium)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", textTransform: "capitalize" }}>{u.seat}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>{u.refs}</td>
-                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.fulLeft !== null && u.fulLeft < 20 ? "var(--color-warning)" : undefined }}>{u.fulLeft !== null ? u.fulLeft : "—"}</td>
-                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.daysLeft !== null && u.daysLeft < 4 ? "var(--color-warning)" : undefined }}>{u.daysLeft !== null ? u.daysLeft : "—"}</td>
+                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.fulLeft !== null && u.fulLeft < 20 ? "var(--color-warning)" : undefined }}>{u.fulLeft !== null ? u.fulLeft : "\u221E"}</td>
+                        <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)", color: u.daysLeft !== null && u.daysLeft < 4 ? "var(--color-warning)" : undefined }}>{u.daysLeft !== null ? u.daysLeft : "\u221E"}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>${u.apiSpend}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", fontFamily: "var(--font-mono)" }}>{u.messages}</td>
                         <td style={{ padding: "var(--space-2)", textAlign: "right", color: "var(--color-text-muted)" }}>{u.joined ? new Date(u.joined).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</td>

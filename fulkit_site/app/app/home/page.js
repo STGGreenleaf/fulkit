@@ -267,10 +267,11 @@ export default function Dashboard() {
   }, [accessToken, user?.id]);
 
   const messagesUsed = profile?.messages_this_month || 0;
+  const isUnlimited = ["owner", "founder"].includes(profile?.role) || !!profile?.byok_key;
   const seatLimit = SEAT_LIMITS[profile?.seat_type || "trial"] || 100;
-  const gaugeRemaining = seatLimit - messagesUsed;
-  const gaugeLow = gaugeRemaining <= Math.ceil(seatLimit * 0.1);
-  const gaugeCapped = gaugeRemaining <= 0;
+  const gaugeRemaining = isUnlimited ? Infinity : seatLimit - messagesUsed;
+  const gaugeLow = !isUnlimited && gaugeRemaining <= Math.ceil(seatLimit * 0.1);
+  const gaugeCapped = !isUnlimited && gaugeRemaining <= 0;
   const gaugeColor = gaugeCapped ? "var(--color-error)" : gaugeLow ? "var(--color-warning)" : "var(--color-accent)";
   const completeAction = async (id) => {
     setActions((prev) => prev.filter((a) => a.id !== id));
@@ -326,7 +327,7 @@ export default function Dashboard() {
                       fontWeight: "var(--font-weight-bold)",
                       color: gaugeCapped ? "var(--color-error)" : "var(--color-text-dim)",
                     }}>
-                      {seatLimit - messagesUsed} | {seatLimit}
+                      {isUnlimited ? "\u221E" : `${seatLimit - messagesUsed} | ${seatLimit}`}
                     </span>
                   </div>
                   <div style={{
@@ -337,7 +338,7 @@ export default function Dashboard() {
                   }}>
                     <div style={{
                       height: "100%",
-                      width: `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
+                      width: isUnlimited ? "100%" : `${Math.max(0, ((seatLimit - messagesUsed) / seatLimit) * 100)}%`,
                       borderRadius: "var(--radius-full)",
                       background: gaugeColor,
                       transition: "width var(--duration-slow) var(--ease-default)",
