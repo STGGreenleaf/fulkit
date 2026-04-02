@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home, Activity, Flame } from "lucide-react";
+import { Bell, CheckSquare, LineSquiggle, Zap, MessageCircle, MessageCircleX, ListPlus, Sparkles, X, Upload, Home, Activity, Flame, Blend, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 // Sidebar + header provided by AppShell in layout
@@ -115,6 +115,9 @@ export default function Dashboard() {
   const [patterns, setPatterns] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [habits, setHabits] = useState([]);
+  const [householdPair, setHouseholdPair] = useState(null);
+  const [householdItems, setHouseholdItems] = useState([]);
+  const [householdExpanded, setHouseholdExpanded] = useState({});
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [activeTips] = useState(() => {
@@ -207,6 +210,21 @@ export default function Dashboard() {
       .abortSignal(AbortSignal.timeout(5000))
       .then(({ data }) => { if (data) setHabits(data); })
       .catch(() => {});
+
+    // Fetch household pair status + items
+    if (accessToken) {
+      fetch("/api/household/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.paired) {
+            setHouseholdPair(data);
+            fetch("/api/household/items", { headers: { Authorization: `Bearer ${accessToken}` } })
+              .then(r => r.ok ? r.json() : null)
+              .then(d => { if (d?.items) setHouseholdItems(d.items); })
+              .catch(() => {});
+          }
+        }).catch(() => {});
+    }
 
     // Fetch unread notifications (feedback replies, announcements)
     supabase
@@ -710,6 +728,21 @@ export default function Dashboard() {
 
                 {/* Right column — outgoing work */}
                 <div>
+                  {/* Household (+Plus One) — only when paired + items exist */}
+                  {householdPair && householdItems.length > 0 && (
+                    <>
+                      <SectionLabel icon={Blend}>Household</SectionLabel>
+                      <HouseholdCard
+                        items={householdItems}
+                        setItems={setHouseholdItems}
+                        partnerName={householdPair.partnerName}
+                        expanded={householdExpanded}
+                        setExpanded={setHouseholdExpanded}
+                        accessToken={accessToken}
+                      />
+                    </>
+                  )}
+
                   {/* Action Items */}
                   <SectionLabel icon={CheckSquare}>Action items</SectionLabel>
                   {displayActions.length > 0 ? (
@@ -792,6 +825,122 @@ export default function Dashboard() {
             </div>
           </div>
     </AuthGuard>
+  );
+}
+
+function HouseholdCard({ items, setItems, partnerName, expanded, setExpanded, accessToken }) {
+  // Group by list_name
+  const grouped = {};
+  const notes = [];
+  for (const item of items) {
+    if (item.type === "note" || item.type === "kid_context") {
+      notes.push(item);
+    } else {
+      const key = item.list_name || "_tasks";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item);
+    }
+  }
+  const listNames = Object.keys(grouped).sort();
+
+  async function checkOff(itemId) {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, _fading: true } : i));
+    setTimeout(() => setItems(prev => prev.filter(i => i.id !== itemId)), 400);
+    fetch("/api/household/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ item_id: itemId }),
+    }).catch(() => {});
+  }
+
+  const listLabel = (name) => name === "_tasks" ? "Tasks" : name.charAt(0).toUpperCase() + name.slice(1);
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 0,
+      background: "var(--color-bg-elevated)",
+      border: "1px solid var(--color-border-light)", borderRadius: "var(--radius-md)",
+      marginBottom: "var(--space-8)", overflow: "hidden",
+    }}>
+      {/* Collapsible lists */}
+      {listNames.map(name => {
+        const listItems = grouped[name];
+        const isOpen = expanded[name];
+        return (
+          <div key={name}>
+            <button
+              onClick={() => setExpanded(prev => ({ ...prev, [name]: !prev[name] }))}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+                padding: "var(--space-2-5) var(--space-3)",
+                background: "none", border: "none", borderBottom: "1px solid var(--color-border-light)",
+                cursor: "pointer", fontFamily: "var(--font-primary)",
+              }}
+            >
+              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)", color: "var(--color-text)" }}>
+                {listLabel(name)} <span style={{ color: "var(--color-text-dim)", fontWeight: "var(--font-weight-normal)" }}>({listItems.length})</span>
+              </span>
+              {isOpen
+                ? <ChevronDown size={13} strokeWidth={2} style={{ color: "var(--color-text-dim)" }} />
+                : <ChevronRight size={13} strokeWidth={2} style={{ color: "var(--color-text-dim)" }} />
+              }
+            </button>
+            {isOpen && (
+              <div style={{ padding: "var(--space-2) var(--space-3)" }}>
+                {listItems.map(item => (
+                  <div key={item.id} style={{
+                    display: "flex", alignItems: "center", gap: "var(--space-2)",
+                    padding: "var(--space-1-5) 0",
+                    opacity: item._fading ? 0.3 : 1,
+                    transition: "opacity 400ms ease",
+                  }}>
+                    <button
+                      onClick={() => checkOff(item.id)}
+                      style={{
+                        width: 16, height: 16, borderRadius: 3, flexShrink: 0,
+                        border: "1.5px solid var(--color-border)", background: "none",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    />
+                    <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{item.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Notes & partner whispers */}
+      {notes.length > 0 && (
+        <div style={{ padding: "var(--space-2-5) var(--space-3)", borderTop: listNames.length > 0 ? "1px solid var(--color-border-light)" : "none" }}>
+          {notes.map(note => (
+            <div key={note.id} style={{
+              display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
+              padding: "var(--space-1-5) 0",
+              opacity: note._fading ? 0.3 : 1,
+              transition: "opacity 400ms ease",
+            }}>
+              <Blend size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 3 }} />
+              <div>
+                <span style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text)" }}>{note.body || note.title}</span>
+                {note.type === "kid_context" && (
+                  <span style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", marginLeft: "var(--space-1)" }}>
+                    {note.metadata?.kid_name}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => checkOff(note.id)}
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-dim)", fontSize: "var(--font-size-2xs)", padding: "var(--space-0.5)" }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

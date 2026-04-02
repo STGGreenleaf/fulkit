@@ -47,8 +47,33 @@ export async function GET(request) {
     const memories = (memoriesRes?.data || []).map(m => `${m.key.replace("memory:", "")}: ${m.value}`);
     const recentTopics = (convosRes?.data || []).map(c => c.title);
 
+    // Fetch household partner notes (+Plus One whisper relay)
+    let householdWhispers = [];
+    try {
+      const { data: pair } = await admin.from("pairs")
+        .select("id, inviter_id, invitee_id, invitee_name")
+        .or(`inviter_id.eq.${user.id},invitee_id.eq.${user.id}`)
+        .eq("status", "active")
+        .maybeSingle();
+      if (pair) {
+        const partnerId = pair.inviter_id === user.id ? pair.invitee_id : pair.inviter_id;
+        const partnerName = pair.invitee_name;
+        const { data: notes } = await admin.from("household_items")
+          .select("title, body, created_by")
+          .eq("pair_id", pair.id)
+          .eq("created_by", partnerId)
+          .in("type", ["note"])
+          .eq("checked", false)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (notes?.length > 0) {
+          householdWhispers = notes.map(n => `${partnerName} says: ${n.body || n.title}`);
+        }
+      }
+    } catch {}
+
     // If no context at all, return empty
-    if (actions.length === 0 && memories.length === 0 && recentTopics.length === 0) {
+    if (actions.length === 0 && memories.length === 0 && recentTopics.length === 0 && householdWhispers.length === 0) {
       return Response.json({ whispers: [], cached: false });
     }
 
@@ -57,6 +82,7 @@ export async function GET(request) {
       actions.length > 0 ? `Active tasks: ${actions.join(", ")}` : "",
       memories.length > 0 ? `Known facts: ${memories.join("; ")}` : "",
       recentTopics.length > 0 ? `Recent conversations: ${recentTopics.join(", ")}` : "",
+      householdWhispers.length > 0 ? `Partner notes: ${householdWhispers.join("; ")}` : "",
     ].filter(Boolean).join("\n");
 
     const day = new Date().toLocaleDateString("en-US", { weekday: "long" });
