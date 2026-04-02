@@ -6814,7 +6814,7 @@ function HouseholdPartnerCard() {
                   Invite sent to {partnerName || email}
                 </div>
                 <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 4 }}>
-                  {partnerName ? `${partnerName} will` : "They'll"} see a pair request in their Settings when they sign up.
+                  {partnerName || "They"}'ll see a pair request in their Settings.
                 </div>
               </div>
             ) : (
