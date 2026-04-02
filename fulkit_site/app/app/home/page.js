@@ -222,6 +222,8 @@ export default function Dashboard() {
               .then(r => r.ok ? r.json() : null)
               .then(d => { if (d?.items) setHouseholdItems(d.items); })
               .catch(() => {});
+          } else if (data?.incomingInvite) {
+            setWhispers(prev => [`${data.inviterName} invited you to +Plus One. Check Settings → Profile to accept.`, ...(prev || [])]);
           }
         }).catch(() => {});
     }
