@@ -6618,7 +6618,7 @@ function HouseholdPartnerCard() {
               One account. Two consenting adults.
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.5, marginBottom: "var(--space-4)" }}>
-              Same app. Same quiet. Now there's two of you.
+              Private by default. Connected when you say so.
             </div>
 
             {/* What it does */}
