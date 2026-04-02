@@ -5589,7 +5589,7 @@ function SocialsTab() {
                       <div
                         onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                         style={{
-                          width: isMobile ? "100%" : (active.key === "ig-stories" ? 280 : 420), maxWidth: "100%", aspectRatio: active.aspect,
+                          width: isMobile ? "100%" : (active.key === "ig-stories" ? 280 : active.key === "og" ? 520 : 420), maxWidth: "100%", aspectRatio: active.aspect,
                           border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
                           overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                           marginBottom: "var(--space-2)",
