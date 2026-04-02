@@ -6644,10 +6644,12 @@ function HouseholdPartnerCard() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1-5)", marginBottom: "var(--space-4)" }}>
               {[
-                "Does not share your notes, vault, or chat history",
-                "Does not show what your partner asked the AI",
-                "Does not track activity, location, or usage",
-                "Does not send push notifications to your partner",
+                "Your notes, vault, and chat history stay completely private",
+                "Work conversations, goals, and AI responses are never visible to your partner",
+                "Personal habits, health data, and financial integrations remain yours alone",
+                "Your information is gated — your partner sees only what you explicitly send",
+                "No activity tracking, location sharing, or usage monitoring. Ever.",
+                "No push notifications to your partner — whispers arrive quietly, on their time",
                 "Nothing is shared unless you explicitly say \"tell,\" \"share with,\" or \"add to household\"",
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
