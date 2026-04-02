@@ -545,9 +545,23 @@ function ThreadsContent({ initialFolder, initialView }) {
       return;
     }
 
-    setNotes((prev) => prev.map((n) => String(n.id) === String(noteId) ? { ...n, folder: folderKey } : n));
+    // Move the dragged thread + any related threads (matching labels from the same source folder)
+    const draggedNote = notes.find(n => String(n.id) === String(noteId));
+    const draggedLabels = new Set(draggedNote?.labels || []);
+    const sourceFolder = draggedNote?.folder;
+    const relatedIds = new Set([noteId]);
+    if (draggedLabels.size > 0 && sourceFolder && sourceFolder !== folderKey) {
+      for (const n of notes) {
+        if (String(n.id) === String(noteId)) continue;
+        if (n.folder !== sourceFolder) continue;
+        if ((n.labels || []).some(l => draggedLabels.has(l))) relatedIds.add(n.id);
+      }
+    }
+    setNotes((prev) => prev.map((n) => relatedIds.has(n.id) ? { ...n, folder: folderKey } : n));
     setSelectedId(null);
-    supabase.from("notes").update({ folder: folderKey }).eq("id", noteId);
+    for (const id of relatedIds) {
+      supabase.from("notes").update({ folder: folderKey }).eq("id", id).then(() => {}).catch(() => {});
+    }
     setListDragIdx(null);
     setListDragOverIdx(null);
     setDragOverFolder(null);
