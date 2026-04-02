@@ -51,12 +51,49 @@ export async function POST(request) {
 
     // Get inviter info for response + email
     const { data: inviterProfile } = await admin.from("profiles")
-      .select("name, email")
+      .select("name, email, total_active_referrals")
       .eq("id", pair.inviter_id)
       .maybeSingle();
 
     const inviterName = inviterProfile?.name || "Your partner";
     const inviterEmail = inviterProfile?.email;
+
+    // Ful-Up referral credit — $1/mo for the inviter
+    // Same pattern as referrals/claim: create referral row + set referred_by
+    try {
+      const { data: existingRef } = await admin.from("referrals")
+        .select("id")
+        .eq("referrer_id", pair.inviter_id)
+        .eq("referred_id", user.id)
+        .maybeSingle();
+
+      if (!existingRef) {
+        await admin.from("referrals").insert({
+          referrer_id: pair.inviter_id,
+          referred_id: user.id,
+          status: "active",
+          credit_ful_per_month: 1,
+        });
+        // Set referred_by on invitee's profile (if not already set)
+        const { data: inviteeProfile } = await admin.from("profiles")
+          .select("referred_by")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!inviteeProfile?.referred_by) {
+          await admin.from("profiles")
+            .update({ referred_by: pair.inviter_id })
+            .eq("id", user.id);
+        }
+        // Increment inviter's active referral count
+        await admin.rpc("increment_referral_count", { user_id_input: pair.inviter_id }).catch(() => {
+          // Fallback: direct update if RPC doesn't exist
+          admin.from("profiles")
+            .update({ total_active_referrals: (inviterProfile?.total_active_referrals || 0) + 1 })
+            .eq("id", pair.inviter_id)
+            .then(() => {}).catch(() => {});
+        });
+      }
+    } catch {} // Non-fatal — pair activation is what matters
 
     // Notify inviter
     if (inviterEmail) {

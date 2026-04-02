@@ -106,21 +106,8 @@ export default function Actions() {
   const [actionsLoaded, setActionsLoaded] = useState(false);
   const [filter, setFilter] = useState("active");
   const [lens, setLens] = useState("all");
-  // DEBUG: mock household data — remove after review
-  const MOCK_HOUSEHOLD = [
-    { id: "m1", type: "task", list_name: "grocery", title: "Milk" },
-    { id: "m2", type: "task", list_name: "grocery", title: "Eggs" },
-    { id: "m3", type: "task", list_name: "grocery", title: "Bread" },
-    { id: "m4", type: "task", list_name: "packing", title: "Sunscreen" },
-    { id: "m5", type: "task", list_name: "packing", title: "Slippers" },
-    { id: "m6", type: "task", list_name: "packing", title: "Hat" },
-    { id: "m7", type: "task", list_name: "errands", title: "Renew passport" },
-    { id: "m8", type: "task", list_name: "errands", title: "Pick up pharmacy" },
-    { id: "m9", type: "note", list_name: null, title: "Love note", body: "Collin says he loves you" },
-    { id: "m10", type: "kid_context", list_name: null, title: "Jane: allergy", body: "Jane is allergic to peanuts", metadata: { kid_name: "Jane", detail_type: "allergy" } },
-  ];
-  const [householdPaired, setHouseholdPaired] = useState(true);
-  const [householdItems, setHouseholdItems] = useState(MOCK_HOUSEHOLD);
+  const [householdPaired, setHouseholdPaired] = useState(false);
+  const [householdItems, setHouseholdItems] = useState([]);
   const [householdExpanded, setHouseholdExpanded] = useState({});
   const LENSES = householdPaired ? [...BASE_LENSES, HOUSEHOLD_LENS] : BASE_LENSES;
   const [adding, setAdding] = useState(false);
