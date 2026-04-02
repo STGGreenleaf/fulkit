@@ -116,7 +116,7 @@ function igPostPrice() {
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: BG_DARK, fontFamily: "D-DIN", position: "relative" }}>
       {brandMark(90, true)}
       <div style={{ fontSize: 34, fontWeight: 400, color: SEC, marginTop: 16, letterSpacing: 3, marginBottom: 80 }}>{"/ fu:l\u00B7kit /"}</div>
-      <div style={{ fontSize: 176, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{`$${TIERS.pro.price}`}</div>
+      <div style={{ fontSize: 176, fontWeight: 700, color: TEXT_INV, letterSpacing: -6, lineHeight: 1 }}>{`$${TIERS.standard.price}`}</div>
       <div style={{ fontSize: 42, fontWeight: 400, color: SEC, letterSpacing: 3, marginTop: 4, marginBottom: 80 }}>{"/month"}</div>
       <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"An AI with a memory."}</div>
       <div style={{ fontSize: 40, fontWeight: 400, color: MUTED, textAlign: "center" }}>{"Your notes. Your voice. Your bestie."}</div>
