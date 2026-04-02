@@ -6702,7 +6702,7 @@ function HouseholdPartnerCard() {
             ) : (
               <div>
                 <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
-                  Invite your partner — they'll get their own full Fülkit account.
+                  Invite your partner — they get their own Fülkit, you save $1/mo. Because they're worth it.
                 </div>
                 <div style={{ display: "flex", gap: "var(--space-2)" }}>
                   <input
