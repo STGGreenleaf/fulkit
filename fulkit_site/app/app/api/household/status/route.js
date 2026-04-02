@@ -37,7 +37,7 @@ export async function GET(request) {
           .select("name, email")
           .eq("id", active.inviter_id)
           .maybeSingle();
-        partnerName = inviterProfile?.name || "Partner";
+        partnerName = (inviterProfile?.name || "").split(/[\s—\-,]/)[0].slice(0, 30).trim() || "Partner";
         partnerEmail = inviterProfile?.email;
       }
 
@@ -77,7 +77,7 @@ export async function GET(request) {
       return Response.json({
         paired: false,
         incomingInvite: true,
-        inviterName: inviterProfile?.name || "Someone",
+        inviterName: (inviterProfile?.name || "").split(/[\s—\-,]/)[0].slice(0, 30).trim() || "Someone",
         pairId: incoming.id,
       });
     }

@@ -55,7 +55,7 @@ export async function POST(request) {
       .eq("id", pair.inviter_id)
       .maybeSingle();
 
-    const inviterName = inviterProfile?.name || "Your partner";
+    const inviterName = (inviterProfile?.name || "").split(/[\s—\-,]/)[0].slice(0, 30).trim() || "Your partner";
     const inviterEmail = inviterProfile?.email;
 
     // Ful-Up referral credit — $1/mo for the inviter

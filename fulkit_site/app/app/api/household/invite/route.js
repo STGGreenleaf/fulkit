@@ -66,7 +66,9 @@ export async function POST(request) {
       .select("name")
       .eq("id", user.id)
       .maybeSingle();
-    const inviterName = inviterProfile?.name || user.user_metadata?.full_name || "Your partner";
+    // Use profile name or Google name — sanitize to first name only, max 30 chars, no special chars
+    const rawName = inviterProfile?.name || user.user_metadata?.full_name || "";
+    const inviterName = rawName.split(/[\s—\-,]/)[0].slice(0, 30).trim() || "Your partner";
 
     // Send invite email
     try {

@@ -4694,12 +4694,24 @@ async function executeMemoryTool(name, input, userId) {
       { onConflict: "user_id,key" }
     );
     if (error) throw new Error(error.message);
-    // If the user told us their name, update profiles.name so the hero reflects it
+    // Detect if user named their AI persona → store in helper_name (not profiles.name)
     const lk = key.toLowerCase();
-    if (lk.includes("name") || lk.includes("call_me")) {
-      // Extract the actual name from the value (e.g., "Wants to be called Batman" → "Batman")
-      const nameValue = value.replace(/^(wants to be called|prefers to be called|goes by|call (?:me|them))\s+/i, "").trim();
-      admin.from("profiles").update({ name: nameValue }).eq("id", userId).then(() => {}).catch(() => {});
+    const lv = value.toLowerCase();
+    const isPersonaNaming = lk.includes("assistant_name") || lk.includes("helper_name") || lk.includes("persona")
+      || lv.includes("call you ") || lv.includes("named the ai") || lv.includes("named their ai")
+      || lv.includes("wants ai called") || lv.includes("calls the assistant");
+    if (isPersonaNaming) {
+      const personaName = value.replace(/^(wants ai called|calls the assistant|named the ai|named their ai|call you)\s+/i, "").trim();
+      if (personaName && personaName.length < 40) {
+        admin.from("preferences").upsert({ user_id: userId, key: "helper_name", value: personaName }, { onConflict: "user_id,key" }).then(() => {}).catch(() => {});
+      }
+    }
+    // If the user told us their actual name (not their AI's name), update profiles.name
+    else if ((lk.includes("name") || lk.includes("call_me")) && !isPersonaNaming) {
+      const nameValue = value.replace(/^(wants to be called|prefers to be called|goes by|name is|call (?:me|them))\s+/i, "").trim();
+      if (nameValue && nameValue.length < 50 && !nameValue.includes("—") && !nameValue.includes("named after")) {
+        admin.from("profiles").update({ name: nameValue }).eq("id", userId).then(() => {}).catch(() => {});
+      }
     }
     return { saved: true, key, value };
   }
