@@ -24,6 +24,7 @@ import {
   Paperclip,
   Search,
   Crown,
+  ChessKing,
   BookOpenText,
   Bug,
   ChevronDown,
@@ -989,7 +990,8 @@ function AccountTab() {
             <div style={{ fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)", textTransform: "uppercase", letterSpacing: "var(--letter-spacing-wider)", marginBottom: 4 }}>Role</div>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1-5)", fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
               {isOwner && <Crown size={14} strokeWidth={2} color="var(--color-text)" />}
-              {isOwner ? "Owner" : (profile?.role || "Member")}
+              {profile?.role === "founder" && <ChessKing size={14} strokeWidth={2} color="var(--color-text)" />}
+              {isOwner ? "Owner" : profile?.role === "founder" ? "Founder" : (profile?.role || "Member")}
             </div>
           </div>
           <div>
