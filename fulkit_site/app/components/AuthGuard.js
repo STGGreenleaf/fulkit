@@ -54,7 +54,7 @@ export default function AuthGuard({ children }) {
             background: "var(--color-bg, #EFEDE8)",
           }}
         >
-          <LoadingMark size={50} />
+          <LoadingMark size={96} />
         </div>
       )}
 
