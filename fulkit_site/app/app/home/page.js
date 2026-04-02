@@ -115,8 +115,21 @@ export default function Dashboard() {
   const [patterns, setPatterns] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [habits, setHabits] = useState([]);
-  const [householdPair, setHouseholdPair] = useState(null);
-  const [householdItems, setHouseholdItems] = useState([]);
+  // DEBUG: mock household data — remove after review
+  const MOCK_HOUSEHOLD = [
+    { id: "m1", type: "task", list_name: "grocery", title: "Milk", created_by: "x" },
+    { id: "m2", type: "task", list_name: "grocery", title: "Eggs", created_by: "x" },
+    { id: "m3", type: "task", list_name: "grocery", title: "Bread", created_by: "x" },
+    { id: "m4", type: "task", list_name: "packing", title: "Sunscreen", created_by: "x" },
+    { id: "m5", type: "task", list_name: "packing", title: "Slippers", created_by: "x" },
+    { id: "m6", type: "task", list_name: "packing", title: "Hat", created_by: "x" },
+    { id: "m7", type: "task", list_name: "errands", title: "Renew passport", created_by: "x" },
+    { id: "m8", type: "task", list_name: "errands", title: "Pick up pharmacy", created_by: "x" },
+    { id: "m9", type: "note", list_name: null, title: "Love note", body: "Collin says he loves you", created_by: "x" },
+    { id: "m10", type: "kid_context", list_name: null, title: "Jane: peanut allergy", body: "Jane is allergic to peanuts", metadata: { kid_name: "Jane", detail_type: "allergy" }, created_by: "x" },
+  ];
+  const [householdPair, setHouseholdPair] = useState({ paired: true, partnerName: "Shandy" });
+  const [householdItems, setHouseholdItems] = useState(MOCK_HOUSEHOLD);
   const [householdExpanded, setHouseholdExpanded] = useState({});
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
