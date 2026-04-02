@@ -5327,6 +5327,7 @@ function SocialsTab() {
   const [socialsOpen, setSocialsOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialsOpen") === "true");
   const [socialSize, setSocialSize] = useState("og");
   const [socialConceptIdx, setSocialConceptIdx] = useState(0);
+  const [hiddenConcepts, setHiddenConcepts] = useState(() => { try { return JSON.parse(localStorage.getItem("owner-hiddenConcepts") || "[]"); } catch { return []; } });
   const [socialKitOpen, setSocialKitOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-socialKitOpen") === "true");
   const [previewTemplate, setPreviewTemplate] = useState(null); // { url, concept, size, aspect, sizeKey }
   const [localAppOpen, setLocalAppOpen] = useState(() => typeof window !== "undefined" && localStorage.getItem("owner-localAppOpen") === "true");
@@ -5335,6 +5336,7 @@ function SocialsTab() {
   useEffect(() => { localStorage.setItem("owner-metaOpen", metaOpen); }, [metaOpen]);
   useEffect(() => { localStorage.setItem("owner-socialsOpen", socialsOpen); }, [socialsOpen]);
   useEffect(() => { localStorage.setItem("owner-socialKitOpen", socialKitOpen); }, [socialKitOpen]);
+  useEffect(() => { localStorage.setItem("owner-hiddenConcepts", JSON.stringify(hiddenConcepts)); }, [hiddenConcepts]);
   useEffect(() => { localStorage.setItem("owner-localAppOpen", localAppOpen); }, [localAppOpen]);
 
   // Load current metadata
@@ -5497,7 +5499,8 @@ function SocialsTab() {
         ];
         const BASE_CONCEPTS = ["hero", "price", "memory", "stack", "voice", "bestie", "notes"];
         const PITCH_CARDS = ["magic", "chosen", "whitespace", "mascot", "rams", "fewer", "standards", "argue", "quiet", "invisible", "friction", "typeface", "brains", "benefits", "noise", "sorry", "energy", "vault", "ful", "remember"];
-        const concepts = (socialSize === "ig-post" || socialSize === "square") ? [...BASE_CONCEPTS, ...PITCH_CARDS] : BASE_CONCEPTS;
+        const allConcepts = (socialSize === "ig-post" || socialSize === "square") ? [...BASE_CONCEPTS, ...PITCH_CARDS] : BASE_CONCEPTS;
+        const concepts = allConcepts.filter(c => !hiddenConcepts.includes(c));
         const active = PLATFORMS.find(p => p.key === socialSize) || PLATFORMS[0];
         const sizeParam = socialSize;
         return (
@@ -5647,7 +5650,35 @@ function SocialsTab() {
                         >
                           <Copy size={10} /> Copy URL
                         </button>
+                        <button
+                          onClick={() => {
+                            setHiddenConcepts(prev => [...prev, concept]);
+                            setSocialConceptIdx(Math.min(idx, concepts.length - 2));
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "var(--space-1)",
+                            padding: "var(--space-1-5) var(--space-2)",
+                            background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border-light)",
+                            borderRadius: "var(--radius-md)", fontSize: "var(--font-size-2xs)",
+                            fontFamily: "var(--font-primary)", cursor: "pointer",
+                          }}
+                          title="Hide this card"
+                        >
+                          <Trash2 size={10} />
+                        </button>
                       </div>
+                      {hiddenConcepts.length > 0 && (
+                        <button
+                          onClick={() => setHiddenConcepts([])}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            fontSize: "var(--font-size-2xs)", color: "var(--color-text-dim)",
+                            fontFamily: "var(--font-primary)", padding: 0, marginBottom: "var(--space-2)",
+                          }}
+                        >
+                          Restore {hiddenConcepts.length} hidden card{hiddenConcepts.length > 1 ? "s" : ""}
+                        </button>
+                      )}
 
                       {/* Thumbnails below on mobile */}
                       {isMobile && thumbGrid}
