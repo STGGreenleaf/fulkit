@@ -6651,6 +6651,7 @@ function HouseholdPartnerCard() {
                 "No activity tracking, location sharing, or usage monitoring. Ever.",
                 "No push notifications to your partner — whispers arrive quietly, on their time",
                 "Nothing is shared unless you explicitly say \"tell,\" \"share with,\" or \"add to household\"",
+                "Disconnect anytime — your account stays exactly as it was, nothing changes",
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
                   <X size={12} strokeWidth={2} style={{ color: "var(--color-text-dim)", flexShrink: 0, marginTop: 2 }} />
