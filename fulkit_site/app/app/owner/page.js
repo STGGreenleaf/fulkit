@@ -5553,7 +5553,7 @@ function SocialsTab() {
                     <div
                       onClick={() => setPreviewTemplate({ url, concept, size: active.label, aspect: active.aspect, sizeKey: active.key })}
                       style={{
-                        width: "100%", maxWidth: "100%", aspectRatio: active.aspect,
+                        width: "100%", maxWidth: 380, aspectRatio: active.aspect,
                         border: "1px solid var(--color-text-dim)", borderRadius: "var(--radius-lg)",
                         overflow: "hidden", background: "var(--color-bg-alt)", cursor: "pointer",
                         marginBottom: "var(--space-2)",
