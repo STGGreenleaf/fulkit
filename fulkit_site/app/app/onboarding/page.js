@@ -531,7 +531,7 @@ export default function Onboarding() {
   if (loadingData) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <LoadingMark size={96} />
+        <LoadingMark size={typeof window !== "undefined" && window.innerWidth < 768 ? 60 : 80} />
       </div>
     );
   }

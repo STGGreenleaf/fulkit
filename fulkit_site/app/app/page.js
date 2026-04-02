@@ -21,7 +21,7 @@ export default function Root() {
           justifyContent: "center",
         }}
       >
-        <LoadingMark size={96} />
+        <LoadingMark size={typeof window !== "undefined" && window.innerWidth < 768 ? 60 : 80} />
       </div>
     );
   }
