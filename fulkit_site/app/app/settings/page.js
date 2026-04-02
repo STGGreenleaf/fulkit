@@ -6557,23 +6557,96 @@ function formatTokens(n) {
 function HouseholdPartnerCard() {
   const { user, accessToken } = useAuth();
   const [open, setOpen] = useState(false);
+  const [partnerNameInput, setPartnerNameInput] = useState("");
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+
+  // Pair status from DB
+  const [paired, setPaired] = useState(false);
+  const [pendingInvite, setPendingInvite] = useState(false);
+  const [incomingInvite, setIncomingInvite] = useState(false);
+  const [partnerName, setPartnerName] = useState(null);
+  const [partnerEmail, setPartnerEmail] = useState(null);
+  const [inviterName, setInviterName] = useState(null);
+  const [pairId, setPairId] = useState(null);
   const [sent, setSent] = useState(false);
 
-  // TODO: load pair status from DB (partner email, pending invite, active pair)
-  const paired = false;
-  const pendingInvite = false;
-  const partnerName = null;
-  const partnerEmail = null;
+  // Load pair status
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch("/api/household/status", { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.paired) {
+          setPaired(true);
+          setPartnerName(data.partnerName);
+          setPartnerEmail(data.partnerEmail);
+          setPairId(data.pairId);
+        } else if (data.pendingInvite) {
+          setPendingInvite(true);
+          setPartnerEmail(data.inviteeEmail);
+          setPartnerName(data.inviteeName);
+          setSent(true);
+          setEmail(data.inviteeEmail);
+        } else if (data.incomingInvite) {
+          setIncomingInvite(true);
+          setInviterName(data.inviterName);
+          setPairId(data.pairId);
+          setOpen(true);
+        }
+      }).catch(() => {});
+  }, [accessToken]);
 
   async function sendInvite() {
-    if (!email.trim() || !accessToken) return;
+    if (!email.trim() || !partnerNameInput.trim() || !accessToken) return;
     setSending(true);
-    // TODO: POST /api/household/invite — sends pair request email
-    await new Promise(r => setTimeout(r, 800));
-    setSent(true);
-    setSending(false);
+    try {
+      const res = await fetch("/api/household/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ name: partnerNameInput.trim(), email: email.trim() }),
+      });
+      if (res.ok) {
+        setSent(true);
+        setPartnerName(partnerNameInput.trim());
+      }
+    } catch {} finally { setSending(false); }
+  }
+
+  async function acceptInvite() {
+    if (!pairId || !accessToken) return;
+    setAccepting(true);
+    try {
+      const res = await fetch("/api/household/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ pair_id: pairId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPaired(true);
+        setIncomingInvite(false);
+        setPartnerName(data.partner?.name || inviterName);
+        setPartnerEmail(data.partner?.email);
+      }
+    } catch {} finally { setAccepting(false); }
+  }
+
+  async function disconnect() {
+    if (!accessToken) return;
+    setDisconnecting(true);
+    try {
+      await fetch("/api/household/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setPaired(false); setPendingInvite(false); setIncomingInvite(false);
+      setPartnerName(null); setPartnerEmail(null); setPairId(null);
+      setSent(false); setEmail(""); setPartnerNameInput("");
+    } catch {} finally { setDisconnecting(false); }
   }
 
   return (
@@ -6680,13 +6753,55 @@ function HouseholdPartnerCard() {
                   </div>
                 </div>
                 <button
+                  onClick={disconnect}
+                  disabled={disconnecting}
                   style={{
                     fontSize: "var(--font-size-xs)", color: "var(--color-error)", background: "none",
                     border: "none", cursor: "pointer", fontFamily: "var(--font-primary)", fontWeight: "var(--font-weight-medium)",
+                    opacity: disconnecting ? 0.5 : 1,
                   }}
                 >
-                  Unpair
+                  {disconnecting ? "..." : "Unpair"}
                 </button>
+              </div>
+            ) : incomingInvite ? (
+              <div style={{
+                padding: "var(--space-3) var(--space-4)",
+                background: "var(--color-bg-alt)", borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border-light)",
+              }}>
+                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)", marginBottom: "var(--space-2)" }}>
+                  {inviterName} invited you to +Plus One
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
+                  Accept to activate a shared household channel. Your data stays private.
+                </div>
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <button
+                    onClick={acceptInvite}
+                    disabled={accepting}
+                    style={{
+                      flex: 1, padding: "var(--space-2) var(--space-4)",
+                      background: "var(--color-text)", color: "var(--color-bg)", border: "none",
+                      borderRadius: "var(--radius-md)", fontSize: "var(--font-size-sm)",
+                      fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
+                      cursor: accepting ? "default" : "pointer", opacity: accepting ? 0.5 : 1,
+                    }}
+                  >
+                    {accepting ? "Connecting..." : "Accept"}
+                  </button>
+                  <button
+                    onClick={disconnect}
+                    style={{
+                      padding: "var(--space-2) var(--space-4)",
+                      background: "none", color: "var(--color-text-muted)", border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-md)", fontSize: "var(--font-size-sm)",
+                      fontFamily: "var(--font-primary)", cursor: "pointer",
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
             ) : sent ? (
               <div style={{
@@ -6696,10 +6811,10 @@ function HouseholdPartnerCard() {
                 textAlign: "center",
               }}>
                 <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--color-text)" }}>
-                  Invite sent to {email}
+                  Invite sent to {partnerName || email}
                 </div>
                 <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", marginTop: 4 }}>
-                  They'll see a pair request in their Settings when they sign up.
+                  {partnerName ? `${partnerName} will` : "They'll"} see a pair request in their Settings when they sign up.
                 </div>
               </div>
             ) : (
@@ -6709,11 +6824,23 @@ function HouseholdPartnerCard() {
                 </div>
                 <div style={{ display: "flex", gap: "var(--space-2)" }}>
                   <input
+                    type="text"
+                    value={partnerNameInput}
+                    onChange={e => setPartnerNameInput(e.target.value)}
+                    placeholder="First name"
+                    style={{
+                      width: "35%", flexShrink: 0, fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
+                      padding: "var(--space-2) var(--space-3)",
+                      border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
+                      background: "var(--color-bg)", color: "var(--color-text)", outline: "none",
+                    }}
+                  />
+                  <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") sendInvite(); }}
-                    placeholder="Partner's email"
+                    placeholder="Email"
                     style={{
                       flex: 1, fontSize: "var(--font-size-sm)", fontFamily: "var(--font-primary)",
                       padding: "var(--space-2) var(--space-3)",
@@ -6723,7 +6850,7 @@ function HouseholdPartnerCard() {
                   />
                   <button
                     onClick={sendInvite}
-                    disabled={sending || !email.trim()}
+                    disabled={sending || !email.trim() || !partnerNameInput.trim()}
                     style={{
                       display: "flex", alignItems: "center", gap: "var(--space-1-5)",
                       padding: "var(--space-2) var(--space-4)",
@@ -6731,7 +6858,7 @@ function HouseholdPartnerCard() {
                       borderRadius: "var(--radius-md)", fontSize: "var(--font-size-sm)",
                       fontWeight: "var(--font-weight-semibold)", fontFamily: "var(--font-primary)",
                       cursor: sending ? "default" : "pointer",
-                      opacity: sending || !email.trim() ? 0.5 : 1,
+                      opacity: (sending || !email.trim() || !partnerNameInput.trim()) ? 0.5 : 1,
                     }}
                   >
                     <Send size={13} strokeWidth={2} />

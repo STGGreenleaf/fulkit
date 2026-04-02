@@ -72,6 +72,41 @@ export const EMAIL_CONTENTS = {
   custom: (name, message) => `
     <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">${message ? message.replace(/\n/g, "<br>") : "Your custom message goes here. Use the Custom template from the Waitlist fold in the Developer tab to send freeform messages."}</div>
     ${cta("https://fulkit.app", "Open F\u00fclkit")}`,
+
+  "pair-invite": (name, message) => `
+    <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">Hey ${message || "there"}.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">${name || "Your partner"} invited you to <strong style="color:#2A2826;">F\u00fclkit +Plus One</strong>.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">One account. Two consenting adults. A shared channel for the stuff that keeps a household running \u2014 and the stuff that keeps it close.</div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">What you get</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Shared lists</strong> \u2014 groceries, errands, packing. Add by voice or chat.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Whisper relay</strong> \u2014 quiet notes that surface when you open the app. No buzz. No ping.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Love notes</strong> \u2014 "${name} says they love you" arrives as a gentle moment.</div>
+      <div style="margin-bottom:6px;"><strong style="color:#2A2826;">Kid context</strong> \u2014 schedules, allergies, pickups. Both of you can access it.</div>
+      <div><strong style="color:#2A2826;">Household habits</strong> \u2014 whoever checks it off, it\u2019s done for both.</div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">What stays private</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">Your notes, chat history, work conversations, health data, and financial integrations are completely yours. Nothing is shared unless you explicitly say \u201Ctell,\u201D \u201Cshare with,\u201D or \u201Cadd to household.\u201D Disconnect anytime \u2014 nothing changes.</div>
+
+    ${cta("https://fulkit.app/settings/account", "Accept the invite")}
+    <div style="font-size:14px;color:#6B6560;line-height:1.6;">You\u2019ll get your own full F\u00fclkit account. Private by default. Connected when you say so.</div>`,
+
+  "pair-accepted": (name, message) => `
+    <div style="font-size:22px;font-weight:700;color:#2A2826;margin-bottom:8px;line-height:1.3;">You\u2019re paired.</div>
+    <div style="font-size:16px;color:#6B6560;line-height:1.6;margin-bottom:28px;">${message || "Your partner"} accepted your +Plus One invite. Your household channel is live.</div>
+
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9B9590;margin-bottom:16px;">Try it now</div>
+    <div style="font-size:14px;color:#6B6560;line-height:1.7;margin-bottom:28px;">
+      <div style="margin-bottom:6px;">\u201CTell ${message || "them"} I love ${message ? "her" : "them"}.\u201D</div>
+      <div style="margin-bottom:6px;">\u201CAdd milk to the grocery list.\u201D</div>
+      <div style="margin-bottom:6px;">\u201CJane has soccer at 4 Saturday.\u201D</div>
+      <div>\u201CWhat\u2019s on our packing list?\u201D</div>
+    </div>
+
+    ${cta("https://fulkit.app/chat", "Open F\u00fclkit")}
+    <div style="font-size:14px;color:#6B6560;line-height:1.6;">Private by default. Connected when you say so.</div>`,
 };
 
 export const EMAIL_FOOTERS = {
@@ -80,6 +115,8 @@ export const EMAIL_FOOTERS = {
   "added-apple": `You're getting this because you joined the Apple Music waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
   "seat-open": `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
   custom: `You're getting this because you joined the waitlist at <a href="https://fulkit.app" style="color:#6B6560;text-decoration:underline;">fulkit.app</a>.`,
+  "pair-invite": `You're getting this because someone invited you to F\u00fclkit +Plus One.`,
+  "pair-accepted": `You're getting this because your partner accepted your F\u00fclkit +Plus One invite.`,
 };
 
 export function buildEmailHtml(templateId, { name, message } = {}) {

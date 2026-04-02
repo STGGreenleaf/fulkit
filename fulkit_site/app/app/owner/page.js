@@ -6855,6 +6855,8 @@ function PlaygroundTab() {
                 { id: "added-apple", label: "Waitlist: Apple Music" },
                 { id: "seat-open", label: "Waitlist: Seat opened" },
                 { id: "custom", label: "Custom" },
+                { id: "pair-invite", label: "+Plus One: Invite" },
+                { id: "pair-accepted", label: "+Plus One: Accepted" },
               ].map(t => (
                 <button key={t.id} onClick={() => setEmailTemplate(t.id)} style={{
                   padding: "3px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
