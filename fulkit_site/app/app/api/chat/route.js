@@ -266,6 +266,7 @@ const ECOSYSTEM_KEYWORDS = {
   monday: ["monday", "board", "item", "column", "group", "status", "pulse", "timeline"],
   linear: ["linear", "issue", "bug", "ticket", "sprint", "backlog", "cycle", "triage"],
   vagaro: ["vagaro", "salon", "appointment", "booking", "beauty", "spa", "stylist", "client", "haircut", "nails", "facial", "wax", "lash"],
+  household: ["household", "grocery", "groceries", "packing", "packing list", "errand", "errands", "plus one", "love note", "kid context", "kids", "pickup", "allergy", "allergies", "checklist", "shopping list"],
 };
 
 // Numbrly tool schemas — Claude can call these mid-conversation
@@ -5175,6 +5176,186 @@ async function executeHabitTool(name, input, userId, timezone) {
   throw new Error("Unknown habit tool");
 }
 
+// ── Household (+Plus One) tools ──
+
+const HOUSEHOLD_TOOLS = [
+  {
+    name: "household_add_item",
+    description: "Add an item to the shared household list. Use for groceries, packing, errands, events, or general tasks. Items are visible to both partners.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short item title" },
+        list_name: { type: "string", description: "List to add to: 'grocery', 'packing', 'errands', or any custom name. Omit for standalone tasks." },
+        type: { type: "string", enum: ["task", "event"], description: "Item type. Default 'task'." },
+        body: { type: "string", description: "Optional details (event time, notes, etc.)" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "household_list_items",
+    description: "Show household list items. Only shows unchecked items, grouped by list name.",
+    input_schema: {
+      type: "object",
+      properties: {
+        list_name: { type: "string", description: "Filter to a specific list (e.g. 'grocery'). Omit for all lists." },
+      },
+    },
+  },
+  {
+    name: "household_check_item",
+    description: "Check off a household item. It disappears from both partners' views. Match by title (fuzzy).",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Title of the item to check off" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "household_send_note",
+    description: "Send a quiet note or love note to your partner. It surfaces as a whisper when they open the app. Use for 'tell [name]...' requests.",
+    input_schema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "The note to send" },
+      },
+      required: ["message"],
+    },
+  },
+  {
+    name: "household_add_kid_context",
+    description: "Save kid-related context to the household — schedules, allergies, appointments. Both partners can access it.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kid_name: { type: "string", description: "Child's name" },
+        detail: { type: "string", description: "The information to save" },
+        detail_type: { type: "string", enum: ["schedule", "allergy", "appointment", "general"], description: "Type of context" },
+      },
+      required: ["kid_name", "detail"],
+    },
+  },
+  {
+    name: "household_kid_info",
+    description: "Look up stored kid context — schedules, allergies, appointments.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kid_name: { type: "string", description: "Filter by child's name. Omit for all kids." },
+      },
+    },
+  },
+];
+
+async function executeHouseholdTool(name, input, userId) {
+  const admin = getSupabaseAdmin();
+
+  // Find user's active pair
+  const { data: pair } = await admin.from("pairs")
+    .select("id, inviter_id, invitee_id, invitee_name")
+    .or(`inviter_id.eq.${userId},invitee_id.eq.${userId}`)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!pair) throw new Error("No active household pair. Set up +Plus One in Settings first.");
+
+  const partnerId = pair.inviter_id === userId ? pair.invitee_id : pair.inviter_id;
+  const partnerName = pair.invitee_name;
+
+  if (name === "household_add_item") {
+    const { data, error } = await admin.from("household_items").insert({
+      pair_id: pair.id,
+      created_by: userId,
+      type: input.type || "task",
+      list_name: input.list_name || null,
+      title: input.title,
+      body: input.body || null,
+    }).select("id, title, list_name").single();
+    if (error) throw new Error(error.message);
+    return { added: true, item: data, message: `Added "${data.title}"${data.list_name ? ` to ${data.list_name} list` : ""}.` };
+  }
+
+  if (name === "household_list_items") {
+    let query = admin.from("household_items")
+      .select("id, type, list_name, title, body, created_at")
+      .eq("pair_id", pair.id)
+      .eq("checked", false)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (input.list_name) query = query.eq("list_name", input.list_name);
+    const { data } = await query;
+    if (!data?.length) return { items: [], message: input.list_name ? `The ${input.list_name} list is empty.` : "No household items right now." };
+    // Group by list_name
+    const grouped = {};
+    for (const item of data) {
+      const key = item.list_name || "_general";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push({ title: item.title, body: item.body, type: item.type });
+    }
+    return { lists: grouped, total: data.length };
+  }
+
+  if (name === "household_check_item") {
+    const search = input.title.toLowerCase();
+    const { data: items } = await admin.from("household_items")
+      .select("id, title")
+      .eq("pair_id", pair.id)
+      .eq("checked", false);
+    const match = items?.find(i => i.title.toLowerCase() === search)
+      || items?.find(i => i.title.toLowerCase().includes(search))
+      || items?.find(i => search.includes(i.title.toLowerCase()));
+    if (!match) throw new Error(`Couldn't find "${input.title}" on the household list.`);
+    await admin.from("household_items").update({
+      checked: true, checked_by: userId, checked_at: new Date().toISOString(),
+    }).eq("id", match.id);
+    return { checked: true, title: match.title, message: `"${match.title}" — handled.` };
+  }
+
+  if (name === "household_send_note") {
+    const { data, error } = await admin.from("household_items").insert({
+      pair_id: pair.id,
+      created_by: userId,
+      type: "note",
+      title: input.message.slice(0, 100),
+      body: input.message,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return { sent: true, message: `Note sent to ${partnerName}. It'll surface quietly when they open the app.` };
+  }
+
+  if (name === "household_add_kid_context") {
+    const { data, error } = await admin.from("household_items").insert({
+      pair_id: pair.id,
+      created_by: userId,
+      type: "kid_context",
+      title: `${input.kid_name}: ${input.detail.slice(0, 80)}`,
+      body: input.detail,
+      metadata: { kid_name: input.kid_name, detail_type: input.detail_type || "general" },
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return { saved: true, message: `Saved ${input.detail_type || "info"} for ${input.kid_name}. Both of you can access it.` };
+  }
+
+  if (name === "household_kid_info") {
+    let query = admin.from("household_items")
+      .select("title, body, metadata, created_at")
+      .eq("pair_id", pair.id)
+      .eq("type", "kid_context")
+      .eq("checked", false)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (input.kid_name) query = query.ilike("metadata->>kid_name", input.kid_name);
+    const { data } = await query;
+    if (!data?.length) return { items: [], message: input.kid_name ? `No context saved for ${input.kid_name}.` : "No kid context saved yet." };
+    return { items: data.map(d => ({ detail: d.body, type: d.metadata?.detail_type, kid: d.metadata?.kid_name, saved: d.created_at })) };
+  }
+
+  throw new Error("Unknown household tool");
+}
+
 export async function POST(request) {
   try {
     // Authenticate user via Supabase
@@ -5368,7 +5549,7 @@ export async function POST(request) {
       : () => Promise.resolve(null);
 
     // 10s hard cap — if anything in the parallel fetch hangs past its individual timeout, this catches it
-    const SETUP_DEFAULTS = [[], [], [], [], null, Array(24).fill(null), null, [], null];
+    const SETUP_DEFAULTS = [[], [], [], [], null, Array(24).fill(null), null, [], null, null];
     const [
       prefsResult,
       recentConvosResult,
@@ -5379,6 +5560,7 @@ export async function POST(request) {
       stripePrices,
       semanticNotes,
       conversationSummary,
+      householdPairResult,
     ] = await Promise.race([
       Promise.all([
       // Prefs + memories (combined query)
@@ -5485,6 +5667,16 @@ export async function POST(request) {
         .then(({ data }) => data)
         .catch(() => null)
       : Promise.resolve(null),
+      // Household pair status (+Plus One)
+      userId ? admin.from("pairs")
+        .select("id, inviter_id, invitee_id, invitee_name")
+        .or(`inviter_id.eq.${userId},invitee_id.eq.${userId}`)
+        .eq("status", "active")
+        .maybeSingle()
+        .abortSignal(AbortSignal.timeout(3000))
+        .then(({ data }) => data)
+        .catch(() => null)
+      : Promise.resolve(null),
     ]),
       new Promise(resolve => setTimeout(() => {
         console.warn("[chat] setup Promise.all hit 10s cap — proceeding with defaults");
@@ -5499,6 +5691,8 @@ export async function POST(request) {
     const helperName = helperNamePref?.value || null;
     const anchorPref = prefsResult.find(p => p.key === "anchor_context");
     const anchorContext = anchorPref?.value || null;
+    const householdPaired = !!householdPairResult;
+    const householdPartnerName = householdPairResult?.invitee_name || null;
     let [nblKey, tgKey, sqToken, shopifyToken, stripeToken, toastToken, trelloToken, ghToken, gcalToken, gmailToken, gdriveToken, fitbitToken, stravaToken, qbToken, notionToken, dropboxToken, slackToken, onenoteToken, todoistToken, readwiseToken, asanaToken, mondayToken, linearToken, vagaroToken] = integrationTokens;
 
     // Trial users: limit to first N connected integrations (PLANS.trial.integrations)
@@ -5574,6 +5768,11 @@ export async function POST(request) {
       if (conversationSummary.action_items?.length > 0) {
         system += `\nOpen action items: ${conversationSummary.action_items.join("; ")}`;
       }
+    }
+
+    // Household (+Plus One) context injection
+    if (householdPaired && householdPartnerName) {
+      system += `\n\n## Household (+Plus One)\nPaired with ${householdPartnerName}. The user can say "tell ${householdPartnerName}..." to send whispers, manage shared lists (grocery, packing, errands), and access kid context. Items disappear when checked — don't say "marked as done", just confirm it's handled. Love notes arrive as quiet whispers. Never reveal one partner's private chat, vault, notes, or actions to the other.`;
     }
 
     // ─── Habit Engine: pattern matching ─────────────────────
@@ -6003,6 +6202,7 @@ Never skip the preview step. The user must see and approve changes before they g
       ...(userId ? KB_TOOLS : []),
       ...(userId ? FEEDBACK_TOOLS : []),
       ...(userId ? HABIT_TOOLS : []),
+      ...(userId && householdPaired ? HOUSEHOLD_TOOLS : []),
       ...worldTools,
       ...integrationTools,
     ];
@@ -6400,6 +6600,17 @@ Never skip the preview step. The user must see and approve changes before they g
               if (block.name.startsWith("habit_") && userId) {
                 try {
                   const result = await withTimeout(() => executeHabitTool(block.name, block.input || {}, userId, timezone));
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
+                } catch (err) {
+                  toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
+                }
+                continue;
+              }
+
+              // Household (+Plus One) tools
+              if (block.name.startsWith("household_") && userId) {
+                try {
+                  const result = await withTimeout(() => executeHouseholdTool(block.name, block.input || {}, userId));
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });
