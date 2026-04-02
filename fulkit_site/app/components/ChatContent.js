@@ -19,7 +19,10 @@ import { SEAT_LIMITS, TIERS, CREDITS } from "../lib/ful-config";
 import { useIsMobile } from "../lib/use-mobile";
 
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  if (!dateStr) return "";
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return "";
+  const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "now";
   if (mins < 60) return `${mins}m`;

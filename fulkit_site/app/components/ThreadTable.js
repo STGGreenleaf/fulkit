@@ -4,7 +4,10 @@ import { useState, useMemo } from "react";
 import { ArrowUp, ArrowDown, Inbox, Zap, Loader, Eye, CheckCircle } from "lucide-react";
 
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  if (!dateStr) return "";
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return "";
+  const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
