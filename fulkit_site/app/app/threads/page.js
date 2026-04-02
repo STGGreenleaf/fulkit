@@ -44,7 +44,10 @@ const VIEWS = [
 
 
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  if (!dateStr) return "";
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return "";
+  const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -84,6 +87,12 @@ function ThreadsContent({ initialFolder, initialView }) {
   const [editingFolder, setEditingFolder] = useState(null);
   const [editLabelValue, setEditLabelValue] = useState("");
   const [editIconValue, setEditIconValue] = useState("");
+  const [dismissedEvents, setDismissedEvents] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("fulkit-dismissed-events") || "[]"); } catch { return []; }
+  });
+  const dismissEvent = useCallback((id) => {
+    setDismissedEvents(prev => { const next = [...prev, id]; localStorage.setItem("fulkit-dismissed-events", JSON.stringify(next)); return next; });
+  }, []);
   const [detailMode, setDetailMode] = useState("overlap"); // "overlap" or "column"
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -310,9 +319,9 @@ function ThreadsContent({ initialFolder, initialView }) {
     });
   }, [accessToken, user?.id]);
 
-  // Assign folders to external events based on mapping
+  // Assign folders to external events based on mapping, filter dismissed
   const mappedExternalEvents = useMemo(() => {
-    return externalEvents.map((e) => {
+    return externalEvents.filter(e => !dismissedEvents.includes(e.id)).map((e) => {
       const mappedFolder = calendarFolderMap[e._sourceId];
       if (mappedFolder) return { ...e, folder: mappedFolder };
       // Auto-match calendar/board name to folder keys
@@ -320,9 +329,9 @@ function ThreadsContent({ initialFolder, initialView }) {
       for (const f of DEFAULT_FOLDERS) {
         if (f.key !== "all" && name.includes(f.key)) return { ...e, folder: f.key };
       }
-      return { ...e, folder: "work" }; // default
+      return { ...e, folder: "personal" }; // default — calendar events are life, not work
     });
-  }, [externalEvents, calendarFolderMap]);
+  }, [externalEvents, calendarFolderMap, dismissedEvents]);
 
   // --- URL param selection ---
   useEffect(() => {
@@ -400,6 +409,12 @@ function ThreadsContent({ initialFolder, initialView }) {
   }, []);
 
   const deleteNote = useCallback(async (id) => {
+    // External events (calendar, trello) — dismiss, don't delete from DB
+    if (String(id).startsWith("gcal_") || String(id).startsWith("trello_")) {
+      dismissEvent(id);
+      if (String(selectedId) === String(id)) setSelectedId(null);
+      return;
+    }
     setNotes((prev) => prev.filter((n) => String(n.id) !== String(id)));
     if (String(selectedId) === String(id)) setSelectedId(null);
     // Delete linked actions first, then the note
@@ -408,10 +423,8 @@ function ThreadsContent({ initialFolder, initialView }) {
     const { error: noteErr } = await supabase.from("notes").delete().eq("id", id);
     if (noteErr) {
       console.error("[threads] delete failed:", noteErr.message);
-      // Restore note in UI since delete failed
-      // (note is already removed from state — user can refresh to recover)
     }
-  }, [selectedId]);
+  }, [selectedId, dismissEvent]);
 
   // Move a note to a column at a specific position (handles both cross-column and within-column reorder)
   const moveNote = useCallback((noteId, toStatus, toPosition) => {
