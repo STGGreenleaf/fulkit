@@ -6160,8 +6160,8 @@ Never skip the preview step. The user must see and approve changes before they g
     }
 
     const MAX_TOOL_ROUNDS = 5;
-    const TOOL_TIMEOUT_MS = 15000; // 15s per tool call
-    const MAX_TOOL_RESULT_CHARS = 50000; // ~12.5K tokens — prevent context overflow
+    const TOOL_TIMEOUT_MS = 20000; // 20s per tool call — external APIs need breathing room
+    const MAX_TOOL_RESULT_CHARS = 150000; // ~37K tokens — supports 100+ SKU inventory results
 
     // Run a tool function with a timeout
     function withTimeout(fn, ms = TOOL_TIMEOUT_MS) {
@@ -6340,7 +6340,7 @@ Never skip the preview step. The user must see and approve changes before they g
           let totalRounds = 0;
           const toolsUsed = [];
           const loopStart = Date.now();
-          const MAX_LOOP_MS = 90000; // 90s total — Vercel Pro allows 120s (maxDuration)
+          const MAX_LOOP_MS = 110000; // 110s total — 10s margin from Vercel's 120s maxDuration
 
           // Combined abort: fires on client disconnect OR overall timeout (90s hard cap)
           const streamAbort = new AbortController();
@@ -6460,7 +6460,7 @@ Never skip the preview step. The user must see and approve changes before they g
             // Keep-alive pings every 8s during tool execution (prevents client watchdog timeout)
             const toolKeepAlive = setInterval(() => {
               try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { clearInterval(toolKeepAlive); }
-            }, 8000);
+            }, 5000);
             try { controller.enqueue(encoder.encode(":ping\n\n")); } catch { clearInterval(toolKeepAlive); break; }
 
             // Execute each tool call (wrapped so toolKeepAlive always clears)

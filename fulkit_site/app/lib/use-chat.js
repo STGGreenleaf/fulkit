@@ -340,12 +340,12 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
         controller.abort();
       }, 30000);
 
-      // Rolling inactivity watchdog — resets on each chunk (45s for tool execution)
+      // Rolling inactivity watchdog — resets on each chunk (60s — 12 keep-alive pings at 5s each)
       function resetWatchdog() {
         clearTimeout(safetyTimeout);
         safetyTimeout = setTimeout(() => {
           controller.abort();
-        }, 45000);
+        }, 60000);
       }
 
       // Pause watchdog when tab backgrounds — resume when visible
