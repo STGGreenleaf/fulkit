@@ -64,6 +64,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamPhase, setStreamPhase] = useState(null); // "preparing" | "connecting" | "streaming"
+  const [toolProgress, setToolProgress] = useState(null); // { current, total }
   const [streamStartedAt, setStreamStartedAt] = useState(null);
   const [conversationId, setConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
@@ -270,6 +271,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     }
     setStreaming(true);
     setStreamPhase("preparing");
+    setToolProgress(null);
     setStreamStartedAt(Date.now());
     streamingRef.current = true;
 
@@ -443,6 +445,10 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
               setStreamPhase("retrying");
               continue;
             }
+            if (parsed.toolProgress) {
+              setToolProgress(parsed.toolProgress);
+              continue;
+            }
             const { text: chunk, error } = parsed;
             if (error) {
               // Flush any buffered content first, then show error
@@ -533,6 +539,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       console.log("[sendMessage] finally — unlocking, response length:", fullResponse?.length || 0);
       setStreaming(false);
       setStreamPhase(null);
+      setToolProgress(null);
       setStreamStartedAt(null);
       streamingRef.current = false;
       abortRef.current = null;
@@ -705,6 +712,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
     setInput,
     streaming,
     streamPhase,
+    toolProgress,
     streamStartedAt,
     conversationId,
     conversations,

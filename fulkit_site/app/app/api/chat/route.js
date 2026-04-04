@@ -541,7 +541,7 @@ const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", 
 
 // Supabase-backed preview store for Square write ops (5min TTL)
 // Survives cold starts, deploys, and serverless eviction.
-const SQ_PREVIEW_TTL_SEC = 300; // 5 minutes
+const SQ_PREVIEW_TTL_SEC = 900; // 15 minutes — big inventory sheets need time
 
 async function sqStorePreview(userId, data) {
   const id = `sq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -996,12 +996,12 @@ async function executeSquareTool(toolName, input, userId, userToday) {
       return { items: allItems, count: allItems.length };
     }
     case "square_inventory_update": {
-      // ── Confirm mode ──
+      // ── Confirm mode (batched — never loses work) ──
       if (input.preview_id) {
         const preview = await sqGetPreview(input.preview_id, userId);
         if (!preview) return { error: "Preview expired or not found. Please preview again." };
 
-        const changes = preview.changes.map(ch => ({
+        const allChanges = preview.changes.map(ch => ({
           type: "PHYSICAL_COUNT",
           physical_count: {
             catalog_object_id: ch.catalog_object_id,
@@ -1010,24 +1010,58 @@ async function executeSquareTool(toolName, input, userId, userToday) {
             state: "IN_STOCK",
             occurred_at: new Date().toISOString(),
           },
+          _name: ch.name,
         }));
 
-        const idempotencyKey = `fulkit_inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const res = await squareFetch(userId, "/inventory/changes/batch-create", {
-          method: "POST",
-          body: JSON.stringify({ idempotency_key: idempotencyKey, changes }),
-        });
+        // Batch into groups of 5 — never send too many at once
+        const BATCH_SIZE = 5;
+        const batches = [];
+        for (let i = 0; i < allChanges.length; i += BATCH_SIZE) {
+          batches.push(allChanges.slice(i, i + BATCH_SIZE));
+        }
 
-        if (res.error) return { error: res.error };
-        const result = await res.json();
-        if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
+        let successCount = 0;
+        let failCount = 0;
+        const failedItems = [];
+        const onProgress = input._onProgress; // injected from dispatch block
 
-        // Only consume preview after confirmed success — allows retry on failure
-        await sqConsumePreview(input.preview_id);
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          const key = `fulkit_inv_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}`;
+          try {
+            const res = await squareFetch(userId, "/inventory/changes/batch-create", {
+              method: "POST",
+              body: JSON.stringify({ idempotency_key: key, changes: batch.map(({ _name, ...ch }) => ch) }),
+            });
+            if (res.error || !res.ok) {
+              failCount += batch.length;
+              failedItems.push(...batch.map(b => b._name));
+            } else {
+              const result = await res.json();
+              if (result.errors?.length) {
+                failCount += batch.length;
+                failedItems.push(...batch.map(b => b._name));
+              } else {
+                successCount += batch.length;
+              }
+            }
+          } catch {
+            failCount += batch.length;
+            failedItems.push(...batch.map(b => b._name));
+          }
+          // Emit progress after each batch
+          if (onProgress) onProgress(i + 1, batches.length);
+        }
+
+        // Only consume preview if at least some items succeeded
+        if (successCount > 0) await sqConsumePreview(input.preview_id);
 
         return {
-          status: "confirmed",
-          updated: preview.changes.length,
+          status: failCount > 0 ? "partial" : "confirmed",
+          updated: successCount,
+          failed: failCount,
+          total: allChanges.length,
+          failedItems: failedItems.length > 0 ? failedItems : undefined,
           items: preview.changes.map(ch => ({ name: ch.name, quantity: ch.quantity })),
         };
       }
@@ -1122,8 +1156,8 @@ async function executeSquareTool(toolName, input, userId, userToday) {
         await sqConsumePreview(input.preview_id);
         return { status: "confirmed", updated: preview.objects.length, items: preview.items };
       }
-      // Default: inventory update
-      return executeSquareTool("square_inventory_update", { preview_id: input.preview_id }, userId, userToday);
+      // Default: inventory update — pass through onProgress callback
+      return executeSquareTool("square_inventory_update", { preview_id: input.preview_id, _onProgress: input._onProgress }, userId, userToday);
     }
     case "square_86": {
       // Confirm a previous 86 preview
@@ -6655,7 +6689,14 @@ Never skip the preview step. The user must see and approve changes before they g
               // Square tools
               if (block.name.startsWith("square_") && sqToken) {
                 try {
-                  const result = await withTimeout(() => executeSquareTool(block.name, block.input || {}, userId, userToday));
+                  // Inject progress callback for inventory updates
+                  const toolInput = { ...(block.input || {}) };
+                  if (block.name === "square_inventory_update" || block.name === "square_confirm") {
+                    toolInput._onProgress = (current, total) => {
+                      try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ toolProgress: { current, total } })}\n\n`)); } catch {}
+                    };
+                  }
+                  const result = await withTimeout(() => executeSquareTool(block.name, toolInput, userId, userToday), 30000);
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: capResult(result) });
                 } catch (err) {
                   toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ error: err.message }), is_error: true });

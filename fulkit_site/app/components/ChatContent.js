@@ -764,8 +764,19 @@ export default function ChatContent({ isPopout = false }) {
                           </div>
                         </div>
                       ) : chat.streaming && i === chat.messages.length - 1 && msg.role === "assistant" && !msg.content ? (
-                        <ThinkingIndicator
-                        />
+                        <>
+                          <ThinkingIndicator />
+                          {chat.toolProgress && (
+                            <div style={{ maxWidth: 240, marginTop: "var(--space-2)" }}>
+                              <div style={{ height: 4, borderRadius: "var(--radius-full)", background: "var(--color-border-light)", overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${(chat.toolProgress.current / chat.toolProgress.total) * 100}%`, borderRadius: "var(--radius-full)", background: "var(--color-accent)", transition: "width 400ms ease" }} />
+                              </div>
+                              <div style={{ fontSize: 10, color: "var(--color-text-dim)", marginTop: 3, fontFamily: "var(--font-mono)" }}>
+                                {chat.toolProgress.current}/{chat.toolProgress.total}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         msg.role === "assistant" && typeof msg.content === "string"
                           ? <MessageRenderer content={msg.content.trim()} isStreaming={chat.streaming && i === chat.messages.length - 1} onFormSubmit={!chat.streaming ? (formText) => { handleFormSubmit(formText); } : null} />
