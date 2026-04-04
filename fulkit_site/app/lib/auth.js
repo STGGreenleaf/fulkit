@@ -149,26 +149,34 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Real auth — listen to Supabase session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const u = session.user;
-        setUser({
-          id: u.id,
-          email: u.email,
-          name: u.user_metadata?.full_name || "",
-        });
-        setAccessToken(session.access_token);
-        await fetchProfile(u.id);
-        _authResolved = true;
-        // Seed profiles.name from Google if not already set
-        const googleName = u.user_metadata?.full_name;
-        if (googleName) {
-          supabase.from("profiles").update({ name: googleName }).eq("id", u.id).is("name", null).then(() => {});
+    // Real auth — 7s hard cap guarantees loading always resolves
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const u = session.user;
+          setUser({
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.full_name || "",
+          });
+          setAccessToken(session.access_token);
+          await fetchProfile(u.id);
+          _authResolved = true;
+          // Seed profiles.name from Google if not already set
+          const googleName = u.user_metadata?.full_name;
+          if (googleName) {
+            supabase.from("profiles").update({ name: googleName }).eq("id", u.id).is("name", null).then(() => {});
+          }
         }
+      } catch (err) {
+        console.error("[auth] init failed:", err.message);
       }
-      setLoading(false);
-    });
+    };
+    Promise.race([
+      initAuth(),
+      new Promise(resolve => setTimeout(resolve, 7000)), // 7s hard cap
+    ]).then(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {

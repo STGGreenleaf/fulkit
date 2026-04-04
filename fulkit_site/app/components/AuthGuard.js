@@ -30,6 +30,13 @@ export default function AuthGuard({ children }) {
     if (timerDone && !loading) setSplashDone(true);
   }, [timerDone, loading]);
 
+  // 10s absolute hard cap — splash ALWAYS clears, no matter what
+  useEffect(() => {
+    if (splashDone) return;
+    const hardCap = setTimeout(() => setSplashDone(true), 10000);
+    return () => clearTimeout(hardCap);
+  }, [splashDone]);
+
   useEffect(() => {
     if (loading || !splashDone) return;
     if (!user) {

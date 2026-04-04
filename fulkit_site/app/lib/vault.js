@@ -42,23 +42,36 @@ export function VaultProvider({ children }) {
       const mode = error ? "fulkit" : (data?.value || "fulkit");
       setStorageModeState(mode);
 
-      // Model A: try to restore directory handle
+      // Model A: try to restore directory handle (2s timeout + permission verify)
       if (mode === "local" && isFileSystemAccessSupported()) {
         try {
-          const handle = await restoreDirectoryHandle();
-          if (handle) setDirectoryHandle(handle);
+          const handle = await Promise.race([
+            restoreDirectoryHandle(),
+            new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 2000)),
+          ]);
+          if (handle) {
+            // Verify permission is still granted — stale handles get cleared here
+            const perm = await Promise.race([
+              handle.queryPermission({ mode: "readwrite" }),
+              new Promise(resolve => setTimeout(() => resolve("denied"), 1000)),
+            ]);
+            if (perm === "granted") setDirectoryHandle(handle);
+          }
         } catch {
-          // Handle expired or permission denied — user will need to reconnect
+          // Handle expired, permission denied, or timeout — user reconnects from Settings
         }
       }
 
-      // Model B: try to restore cached key from sessionStorage
+      // Model B: try to restore cached key from sessionStorage (2s timeout)
       if (mode === "encrypted") {
         try {
-          const key = await getCachedKey();
+          const key = await Promise.race([
+            getCachedKey(),
+            new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 2000)),
+          ]);
           if (key) setCryptoKey(key);
         } catch {
-          // Key not cached — user will need to enter passphrase
+          // Key not cached or timeout — user will need to enter passphrase
         }
       }
 
