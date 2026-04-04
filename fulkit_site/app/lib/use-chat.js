@@ -335,18 +335,28 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Safety timeout — abort if no chunks arrive within 20 seconds
+      // Safety timeout — abort if no chunks arrive within 30 seconds
       safetyTimeout = setTimeout(() => {
         controller.abort();
-      }, 20000);
+      }, 30000);
 
-      // Rolling inactivity watchdog — resets on each chunk
+      // Rolling inactivity watchdog — resets on each chunk (45s for tool execution)
       function resetWatchdog() {
         clearTimeout(safetyTimeout);
         safetyTimeout = setTimeout(() => {
           controller.abort();
-        }, 15000);
+        }, 45000);
       }
+
+      // Pause watchdog when tab backgrounds — resume when visible
+      const handleVisibility = () => {
+        if (document.hidden) {
+          clearTimeout(safetyTimeout);
+        } else {
+          resetWatchdog();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
 
       msgCount = apiMessages.length;
       console.log("[sendMessage] firing authFetch → /api/chat", { msgCount, hasContext: context.length > 0, convId });
@@ -536,6 +546,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       }
     } finally {
       clearTimeout(safetyTimeout);
+      document.removeEventListener("visibilitychange", handleVisibility);
       console.log("[sendMessage] finally — unlocking, response length:", fullResponse?.length || 0);
       setStreaming(false);
       setStreamPhase(null);
