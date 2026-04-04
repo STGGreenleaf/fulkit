@@ -6306,7 +6306,7 @@ Never skip the preview step. The user must see and approve changes before they g
           let totalRounds = 0;
           const toolsUsed = [];
           const loopStart = Date.now();
-          const MAX_LOOP_MS = 50000; // 50s total — stay under Vercel's 60s limit
+          const MAX_LOOP_MS = 90000; // 90s total — Vercel Pro allows 120s (maxDuration)
 
           // Combined abort: fires on client disconnect OR overall timeout (90s hard cap)
           const streamAbort = new AbortController();
