@@ -636,7 +636,7 @@ export default function Dashboard() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-8)" }}>
                       {displayWhispers.map((whisper, i) => (
                         <div
-                          key={i}
+                          key={`${i}-${typeof whisper === "string" ? whisper.slice(0, 40) : i}`}
                           style={{
                             display: "flex",
                             alignItems: "flex-start",
