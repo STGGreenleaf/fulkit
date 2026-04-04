@@ -218,6 +218,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
 
     // Lock immediately — prevents rapid-fire double-sends
     streamingRef.current = true;
+    let handleVisibility = null;
     console.log("[sendMessage] lock acquired, streamingRef → true");
 
     let convId = null;
@@ -349,7 +350,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       }
 
       // Pause watchdog when tab backgrounds — resume when visible
-      const handleVisibility = () => {
+      handleVisibility = () => {
         if (document.hidden) {
           clearTimeout(safetyTimeout);
         } else {
@@ -546,7 +547,7 @@ export function useChat({ user, accessToken, authFetch, storageMode, directoryHa
       }
     } finally {
       clearTimeout(safetyTimeout);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      if (handleVisibility) document.removeEventListener("visibilitychange", handleVisibility);
       console.log("[sendMessage] finally — unlocking, response length:", fullResponse?.length || 0);
       setStreaming(false);
       setStreamPhase(null);
