@@ -722,7 +722,7 @@ const SQUARE_TOOLS = [
   },
   {
     name: "square_inventory_update",
-    description: "Set inventory counts. Quantity is absolute (not delta). Call catalog_full first to get IDs. Form submissions: preview=false (already reviewed). Manual input: preview=true.",
+    description: "Set inventory counts. Quantity is absolute (not delta). Call catalog_full first to get IDs. Form submissions: preview=false (already reviewed). Manual input: preview=true. When the confirm step returns job_id, include [job:JOB_ID:inventory_update:TOTAL] in your response text — the UI renders a live progress card.",
     input_schema: {
       type: "object",
       properties: {
@@ -748,7 +748,7 @@ const SQUARE_TOOLS = [
   },
   {
     name: "square_confirm",
-    description: "Confirm a previously previewed Square write operation. Pass the preview_id from the preview response.",
+    description: "Confirm a previously previewed Square write operation. Pass the preview_id from the preview response. Returns job_id for background execution — include [job:JOB_ID:TYPE:TOTAL] in your response.",
     input_schema: {
       type: "object",
       properties: {
@@ -996,73 +996,45 @@ async function executeSquareTool(toolName, input, userId, userToday) {
       return { items: allItems, count: allItems.length };
     }
     case "square_inventory_update": {
-      // ── Confirm mode (batched — never loses work) ──
+      // ── Confirm mode → background job (never blocks the stream) ──
       if (input.preview_id) {
         const preview = await sqGetPreview(input.preview_id, userId);
         if (!preview) return { error: "Preview expired or not found. Please preview again." };
 
-        const allChanges = preview.changes.map(ch => ({
-          type: "PHYSICAL_COUNT",
-          physical_count: {
-            catalog_object_id: ch.catalog_object_id,
-            location_id: preview.location_id,
-            quantity: String(ch.quantity),
-            state: "IN_STOCK",
-            occurred_at: new Date().toISOString(),
-          },
-          _name: ch.name,
+        // Create background job
+        const jobItems = preview.changes.map(ch => ({
+          name: ch.name,
+          catalog_object_id: ch.catalog_object_id,
+          quantity: ch.quantity,
         }));
 
-        // Batch into groups of 5 — never send too many at once
-        const BATCH_SIZE = 5;
-        const batches = [];
-        for (let i = 0; i < allChanges.length; i += BATCH_SIZE) {
-          batches.push(allChanges.slice(i, i + BATCH_SIZE));
-        }
+        const { data: job, error: jobErr } = await getSupabaseAdmin().from("jobs").insert({
+          user_id: userId,
+          type: "inventory_update",
+          payload: { items: jobItems, location_id: preview.location_id },
+          total: jobItems.length,
+        }).select("id").single();
 
-        let successCount = 0;
-        let failCount = 0;
-        const failedItems = [];
-        const onProgress = input._onProgress; // injected from dispatch block
+        if (jobErr) return { error: "Failed to create job: " + jobErr.message };
 
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          const key = `fulkit_inv_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}`;
-          try {
-            const res = await squareFetch(userId, "/inventory/changes/batch-create", {
-              method: "POST",
-              body: JSON.stringify({ idempotency_key: key, changes: batch.map(({ _name, ...ch }) => ch) }),
-            });
-            if (res.error || !res.ok) {
-              failCount += batch.length;
-              failedItems.push(...batch.map(b => b._name));
-            } else {
-              const result = await res.json();
-              if (result.errors?.length) {
-                failCount += batch.length;
-                failedItems.push(...batch.map(b => b._name));
-              } else {
-                successCount += batch.length;
-              }
-            }
-          } catch {
-            failCount += batch.length;
-            failedItems.push(...batch.map(b => b._name));
-          }
-          // Emit progress after each batch
-          if (onProgress) onProgress(i + 1, batches.length);
-        }
+        // Consume preview immediately (job has the data now)
+        await sqConsumePreview(input.preview_id);
 
-        // Only consume preview if at least some items succeeded
-        if (successCount > 0) await sqConsumePreview(input.preview_id);
+        // Fire worker (non-blocking)
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
+        fetch(`${siteUrl}/api/jobs/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_id: job.id }),
+        }).catch(() => {});
 
         return {
-          status: failCount > 0 ? "partial" : "confirmed",
-          updated: successCount,
-          failed: failCount,
-          total: allChanges.length,
-          failedItems: failedItems.length > 0 ? failedItems : undefined,
-          items: preview.changes.map(ch => ({ name: ch.name, quantity: ch.quantity })),
+          status: "job_started",
+          job_id: job.id,
+          total: jobItems.length,
+          type: "inventory_update",
+          items: jobItems.map(i => ({ name: i.name, quantity: i.quantity })),
+          message: `Updating ${jobItems.length} items in the background. Track progress above.`,
         };
       }
 

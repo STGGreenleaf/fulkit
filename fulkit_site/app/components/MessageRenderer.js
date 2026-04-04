@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createContext, useContext, useState, useRef, useEffect, memo, Component } from "react";
 import { sanitizeEmoji } from "../lib/sanitize-emoji";
+import JobCard from "./JobCard";
 
 // Error boundary — if markdown rendering crashes, fall back to raw text
 class MarkdownErrorBoundary extends Component {
@@ -609,14 +610,21 @@ function MessageRendererInner({ content, isStreaming = false, onFormSubmit = nul
 
   const sanitized = sanitizeEmoji(displayContent);
 
+  // Detect job markers: [job:UUID:type:total]
+  const jobMatch = sanitized?.match(/\[job:([a-f0-9-]+):([a-z_]+):(\d+)\]/);
+  const jobContent = jobMatch ? sanitized.replace(jobMatch[0], "").trim() : sanitized;
+
   const inner = (
     <FormContext.Provider value={onFormSubmit}>
       <div style={{ overflowWrap: "break-word" }}>
-        <MarkdownErrorBoundary fallback={sanitized}>
+        <MarkdownErrorBoundary fallback={jobContent}>
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-            {sanitized || ""}
+            {jobContent || ""}
           </ReactMarkdown>
         </MarkdownErrorBoundary>
+        {jobMatch && (
+          <JobCard jobId={jobMatch[1]} type={jobMatch[2]} total={parseInt(jobMatch[3], 10)} />
+        )}
       </div>
     </FormContext.Provider>
   );
