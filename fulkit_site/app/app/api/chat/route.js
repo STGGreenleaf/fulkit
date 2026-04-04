@@ -541,7 +541,7 @@ const TG_WRITE_ACTIONS = new Set(["add_expense", "update_day_entry", "confirm", 
 
 // Supabase-backed preview store for Square write ops (5min TTL)
 // Survives cold starts, deploys, and serverless eviction.
-const SQ_PREVIEW_TTL_SEC = 900; // 15 minutes — big inventory sheets need time
+const SQ_PREVIEW_TTL_SEC = 3600; // 1 hour — no rushing the user
 
 async function sqStorePreview(userId, data) {
   const id = `sq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
