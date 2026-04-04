@@ -78,7 +78,7 @@ export default function JobCard({ jobId, type, total: initialTotal }) {
         <span style={{
           fontSize: "var(--font-size-xs)",
           fontWeight: "var(--font-weight-semibold)",
-          color: isDone ? "var(--color-success)" : isFailed ? "var(--color-error)" : "var(--color-text)",
+          color: isFailed ? "var(--color-error)" : "var(--color-text)",
         }}>
           {isDone ? `${label} Complete` : isFailed ? `${label} Failed` : isPartial ? `${label} — ${result?.updated || 0}/${total}` : label}
         </span>
