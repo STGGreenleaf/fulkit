@@ -1078,33 +1078,37 @@ async function executeSquareTool(toolName, input, userId, userToday) {
           : null,
       }));
 
-      // Direct push mode — skip preview when form already reviewed
+      // Direct push mode — route through job system (never blocks the stream)
       if (input.preview === false) {
-        const changes = previewChanges.map(ch => ({
-          type: "PHYSICAL_COUNT",
-          physical_count: {
-            catalog_object_id: ch.catalog_object_id,
-            location_id: locationId,
-            quantity: String(ch.quantity),
-            state: "IN_STOCK",
-            occurred_at: new Date().toISOString(),
-          },
+        const jobItems = previewChanges.map(ch => ({
+          name: ch.name,
+          catalog_object_id: ch.catalog_object_id,
+          quantity: ch.quantity,
         }));
 
-        const idempotencyKey = `fulkit_inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const res = await squareFetch(userId, "/inventory/changes/batch-create", {
-          method: "POST",
-          body: JSON.stringify({ idempotency_key: idempotencyKey, changes }),
-        });
+        const { data: job, error: jobErr } = await getSupabaseAdmin().from("jobs").insert({
+          user_id: userId,
+          type: "inventory_update",
+          payload: { items: jobItems, location_id: locationId },
+          total: jobItems.length,
+        }).select("id").single();
 
-        if (res.error) return { error: res.error };
-        const result = await res.json();
-        if (result.errors?.length) return { error: result.errors[0].detail || "Square API error" };
+        if (jobErr) return { error: "Failed to create job: " + jobErr.message };
+
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
+        fetch(`${siteUrl}/api/jobs/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_id: job.id }),
+        }).catch(() => {});
 
         return {
-          status: "confirmed",
-          updated: previewChanges.length,
-          items: previewChanges.map(ch => ({ name: ch.name, quantity: ch.quantity, previous: ch.current })),
+          status: "job_started",
+          job_id: job.id,
+          total: jobItems.length,
+          type: "inventory_update",
+          items: jobItems.map(i => ({ name: i.name, quantity: i.quantity })),
+          message: `Updating ${jobItems.length} items in the background. Track progress above.`,
         };
       }
 
@@ -1118,15 +1122,31 @@ async function executeSquareTool(toolName, input, userId, userToday) {
       const preview = await sqGetPreview(input.preview_id, userId);
       if (!preview) return { error: "Preview expired or not found. Please start over." };
       if (preview.type === "price_change") {
-        // Execute price change
-        const res = await squareFetch(userId, "/catalog/batch-upsert", {
-          method: "POST",
-          body: JSON.stringify({ idempotency_key: `fulkit_price_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, objects: preview.objects }),
-        });
-        if (res.error) return { error: res.error };
-        const data = await res.json();
+        // Route through job system
+        const { data: job, error: jobErr } = await getSupabaseAdmin().from("jobs").insert({
+          user_id: userId,
+          type: "price_change",
+          payload: { objects: preview.objects, items: preview.items },
+          total: preview.items?.length || preview.objects?.length || 0,
+        }).select("id").single();
+
+        if (jobErr) return { error: "Failed to create job: " + jobErr.message };
         await sqConsumePreview(input.preview_id);
-        return { status: "confirmed", updated: preview.objects.length, items: preview.items };
+
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fulkit.app";
+        fetch(`${siteUrl}/api/jobs/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_id: job.id }),
+        }).catch(() => {});
+
+        return {
+          status: "job_started",
+          job_id: job.id,
+          total: preview.items?.length || 0,
+          type: "price_change",
+          message: `Updating prices in the background.`,
+        };
       }
       // Default: inventory update — pass through onProgress callback
       return executeSquareTool("square_inventory_update", { preview_id: input.preview_id, _onProgress: input._onProgress }, userId, userToday);
